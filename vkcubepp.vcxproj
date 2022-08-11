@@ -23,7 +23,7 @@
     <ProjectGuid>{157661F1-12B5-471E-AE1F-FE80D5466618}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
-    <ProjectName>vkcubepp</ProjectName>
+    <ProjectName>vin</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
