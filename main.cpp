@@ -1,23 +1,3 @@
-/*
- * Copyright (c) 2015-2019 The Khronos Group Inc.
- * Copyright (c) 2015-2019 Valve Corporation
- * Copyright (c) 2015-2019 LunarG, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * Author: Jeremy Hayes <jeremy@lunarg.com>
- */
-
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
 #include <X11/Xutil.h>
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
@@ -49,7 +29,8 @@
 #define VERIFY(x) ((void)(x))
 #endif
 
-#define APP_SHORT_NAME "vkcube"
+#define WINDOW_NAME "vin"
+#define APP_SHORT_NAME "vin"
 #ifdef _WIN32
 #define APP_NAME_STR_LEN 80
 #endif
@@ -3220,7 +3201,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     }
 
     demo.connection = hInstance;
-    strncpy(demo.name, "Vulkan Cube", APP_NAME_STR_LEN);
+    strncpy(demo.name, WINDOW_NAME, APP_NAME_STR_LEN);
     demo.create_window();
     demo.init_vk_swapchain();
 
