@@ -696,8 +696,8 @@ void Demo::init(int argc, char** argv) {
 
     presentMode = vk::PresentModeKHR::eFifo;
     frameCount = UINT32_MAX;
-    width = 500;
-    height = 500;
+    width = 800;
+    height = 600;
     /* Autodetect suitable / best GPU by default */
     gpu_number = -1;
 
@@ -717,10 +717,6 @@ void Demo::init(int argc, char** argv) {
         }
         if (strcmp(argv[i], "--validate") == 0) {
             validate = true;
-            continue;
-        }
-        if (strcmp(argv[i], "--xlib") == 0) {
-            fprintf(stderr, "--xlib is deprecated and no longer does anything");
             continue;
         }
         if (strcmp(argv[i], "--c") == 0 && frameCount == UINT32_MAX && i < argc - 1 &&
