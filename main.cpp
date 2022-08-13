@@ -179,7 +179,6 @@ struct Demo {
     void draw_build_cmd(vk::CommandBuffer);
     void flush_init_cmd();
     void init(int, char**);
-    void init_connection();
     void init_vk();
     void init_vk_swapchain();
     void prepare();
@@ -218,7 +217,6 @@ struct Demo {
     vk::SurfaceKHR surface;
     bool prepared;
     bool use_staging_buffer;
-    bool use_xlib;
     bool separate_present_queue;
     int32_t gpu_number;
 
@@ -320,7 +318,6 @@ Demo::Demo()
     minsize(POINT{ 0, 0 }),  // Use explicit construction to avoid MSVC error C2797.
     prepared{ false },
     use_staging_buffer{ false },
-    use_xlib{ false },
     graphics_queue_family_index{ 0 },
     present_queue_family_index{ 0 },
     enabled_extension_count{ 0 },
@@ -701,7 +698,6 @@ void Demo::init(int argc, char** argv) {
     frameCount = UINT32_MAX;
     width = 500;
     height = 500;
-    use_xlib = false;
     /* Autodetect suitable / best GPU by default */
     gpu_number = -1;
 
@@ -766,10 +762,6 @@ void Demo::init(int argc, char** argv) {
         exit(1);
     }
 
-    if (!use_xlib) {
-        init_connection();
-    }
-
     init_vk();
 
     spin_angle = 4.0f;
@@ -783,8 +775,6 @@ void Demo::init(int argc, char** argv) {
     projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
 }
 
-void Demo::init_connection() {
-}
 void Demo::init_vk() {
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
