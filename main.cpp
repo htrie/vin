@@ -1,10 +1,3 @@
-#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(VK_USE_PLATFORM_XCB_KHR)
-#include <X11/Xutil.h>
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-#include <linux/input.h>
-#include "xdg-shell-client-header.h"
-#include "xdg-decoration-client-header.h"
-#endif
 
 #include <cassert>
 #include <cinttypes>
@@ -31,29 +24,18 @@
 
 #define WINDOW_NAME "vin"
 #define APP_SHORT_NAME "vin"
-#ifdef _WIN32
 #define APP_NAME_STR_LEN 80
-#endif
 
 // Allow a maximum of two outstanding presentation operations.
 #define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-#ifdef _WIN32
 #define ERR_EXIT(err_msg, err_class)                                          \
     do {                                                                      \
         if (!suppress_popups) MessageBox(nullptr, err_msg, err_class, MB_OK); \
         exit(1);                                                              \
     } while (0)
-#else
-#define ERR_EXIT(err_msg, err_class) \
-    do {                             \
-        printf("%s\n", err_msg);     \
-        fflush(stdout);              \
-        exit(1);                     \
-    } while (0)
-#endif
 
 struct texture_object {
     vk::Sampler sampler;
@@ -225,66 +207,13 @@ struct Demo {
     bool loadTexture(const char *, uint8_t *, vk::SubresourceLayout *, int32_t *, int32_t *);
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t *);
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
     void run();
     void create_window();
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    void create_xlib_window();
-    void handle_xlib_event(const XEvent *);
-    void run_xlib();
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    void handle_xcb_event(const xcb_generic_event_t *);
-    void run_xcb();
-    void create_xcb_window();
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    void run();
-    void create_window();
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-    void handle_directfb_event(const DFBInputEvent *);
-    void run_directfb();
-    void create_directfb_window();
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-    void run();
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-    vk::Result create_display_surface();
-    void run_display();
-#endif
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
     HINSTANCE connection;         // hInstance - Windows Instance
     HWND window;                  // hWnd - window handle
     POINT minsize;                // minimum window size
     char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    Window xlib_window;
-    Atom xlib_wm_delete_window;
-    Display *display;
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    xcb_window_t xcb_window;
-    xcb_screen_t *screen;
-    xcb_connection_t *connection;
-    xcb_intern_atom_reply_t *atom_wm_delete_window;
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    wl_display *display;
-    wl_registry *registry;
-    wl_compositor *compositor;
-    wl_surface *window;
-    xdg_wm_base *wm_base;
-    zxdg_decoration_manager_v1 *xdg_decoration_mgr;
-    zxdg_toplevel_decoration_v1 *toplevel_decoration;
-    xdg_surface *window_surface;
-    bool xdg_surface_has_been_configured;
-    xdg_toplevel *window_toplevel;
-    wl_seat *seat;
-    wl_pointer *pointer;
-    wl_keyboard *keyboard;
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-    IDirectFB *dfb;
-    IDirectFBSurface *window;
-    IDirectFBEventBuffer *event_buffer;
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-    void *caMetalLayer;
-#endif
 
     vk::SurfaceKHR surface;
     bool prepared;
@@ -380,152 +309,16 @@ struct Demo {
     uint32_t queue_family_count;
 };
 
-#ifdef _WIN32
 // MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-#endif
 
-#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
-static void pointer_handle_enter(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface, wl_fixed_t sx,
-                                 wl_fixed_t sy) {}
-
-static void pointer_handle_leave(void *data, struct wl_pointer *pointer, uint32_t serial, struct wl_surface *surface) {}
-
-static void pointer_handle_motion(void *data, struct wl_pointer *pointer, uint32_t time, wl_fixed_t sx, wl_fixed_t sy) {}
-
-static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
-                                  uint32_t state) {
-    Demo *demo = (Demo *)data;
-    if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
-        xdg_toplevel_move(demo->window_toplevel, demo->seat, serial);
-    }
-}
-
-static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value) {}
-
-static const struct wl_pointer_listener pointer_listener = {
-    pointer_handle_enter, pointer_handle_leave, pointer_handle_motion, pointer_handle_button, pointer_handle_axis,
-};
-
-static void keyboard_handle_keymap(void *data, struct wl_keyboard *keyboard, uint32_t format, int fd, uint32_t size) {}
-
-static void keyboard_handle_enter(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface,
-                                  struct wl_array *keys) {}
-
-static void keyboard_handle_leave(void *data, struct wl_keyboard *keyboard, uint32_t serial, struct wl_surface *surface) {}
-
-static void keyboard_handle_key(void *data, struct wl_keyboard *keyboard, uint32_t serial, uint32_t time, uint32_t key,
-                                uint32_t state) {
-    if (state != WL_KEYBOARD_KEY_STATE_RELEASED) return;
-    Demo *demo = (Demo *)data;
-    switch (key) {
-        case KEY_ESC:  // Escape
-            demo->quit = true;
-            break;
-        case KEY_LEFT:  // left arrow key
-            demo->spin_angle -= demo->spin_increment;
-            break;
-        case KEY_RIGHT:  // right arrow key
-            demo->spin_angle += demo->spin_increment;
-            break;
-        case KEY_SPACE:  // space bar
-            demo->pause = !demo->pause;
-            break;
-    }
-}
-
-static void keyboard_handle_modifiers(void *data, wl_keyboard *keyboard, uint32_t serial, uint32_t mods_depressed,
-                                      uint32_t mods_latched, uint32_t mods_locked, uint32_t group) {}
-
-static const struct wl_keyboard_listener keyboard_listener = {
-    keyboard_handle_keymap, keyboard_handle_enter, keyboard_handle_leave, keyboard_handle_key, keyboard_handle_modifiers,
-};
-
-static void seat_handle_capabilities(void *data, wl_seat *seat, uint32_t caps) {
-    // Subscribe to pointer events
-    Demo *demo = (Demo *)data;
-    if ((caps & WL_SEAT_CAPABILITY_POINTER) && !demo->pointer) {
-        demo->pointer = wl_seat_get_pointer(seat);
-        wl_pointer_add_listener(demo->pointer, &pointer_listener, demo);
-    } else if (!(caps & WL_SEAT_CAPABILITY_POINTER) && demo->pointer) {
-        wl_pointer_destroy(demo->pointer);
-        demo->pointer = NULL;
-    }
-    // Subscribe to keyboard events
-    if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
-        demo->keyboard = wl_seat_get_keyboard(seat);
-        wl_keyboard_add_listener(demo->keyboard, &keyboard_listener, demo);
-    } else if (!(caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
-        wl_keyboard_destroy(demo->keyboard);
-        demo->keyboard = NULL;
-    }
-}
-
-static const wl_seat_listener seat_listener = {
-    seat_handle_capabilities,
-};
-
-static void wm_base_ping(void *data, xdg_wm_base *xdg_wm_base, uint32_t serial) { xdg_wm_base_pong(xdg_wm_base, serial); }
-
-static const struct xdg_wm_base_listener wm_base_listener = {wm_base_ping};
-
-static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
-    Demo *demo = (Demo *)data;
-    // pickup wayland objects when they appear
-    if (strcmp(interface, wl_compositor_interface.name) == 0) {
-        demo->compositor = (wl_compositor *)wl_registry_bind(registry, id, &wl_compositor_interface, 1);
-    } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
-        demo->wm_base = (xdg_wm_base *)wl_registry_bind(registry, id, &xdg_wm_base_interface, 1);
-        xdg_wm_base_add_listener(demo->wm_base, &wm_base_listener, nullptr);
-    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        demo->seat = (wl_seat *)wl_registry_bind(registry, id, &wl_seat_interface, 1);
-        wl_seat_add_listener(demo->seat, &seat_listener, demo);
-    } else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
-        demo->xdg_decoration_mgr =
-            (zxdg_decoration_manager_v1 *)wl_registry_bind(registry, id, &zxdg_decoration_manager_v1_interface, 1);
-    }
-}
-
-static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
-
-static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
-#endif
 
 Demo::Demo()
     :
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
       connection{nullptr},
       window{nullptr},
       minsize(POINT{0, 0}),  // Use explicit construction to avoid MSVC error C2797.
-#endif
 
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-      xlib_window{0},
-      xlib_wm_delete_window{0},
-      display{nullptr},
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-      xcb_window{0},
-      screen{nullptr},
-      connection{nullptr},
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-      display{nullptr},
-      registry{nullptr},
-      compositor{nullptr},
-      window{nullptr},
-      wm_base{nullptr},
-      xdg_decoration_mgr{nullptr},
-      toplevel_decoration{nullptr},
-      window_surface{nullptr},
-      xdg_surface_has_been_configured{false},
-      window_toplevel{nullptr},
-      seat{nullptr},
-      pointer{nullptr},
-      keyboard{nullptr},
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-      dfb{nullptr},
-      window{nullptr},
-      event_buffer{nullptr},
-#endif
       prepared{false},
       use_staging_buffer{false},
       use_xlib{false},
@@ -549,9 +342,7 @@ Demo::Demo()
       suppress_popups{false},
       current_buffer{0},
       queue_family_count{0} {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
     memset(name, '\0', APP_NAME_STR_LEN);
-#endif
     memset(projection_matrix, 0, sizeof(projection_matrix));
     memset(view_matrix, 0, sizeof(view_matrix));
     memset(model_matrix, 0, sizeof(model_matrix));
@@ -653,35 +444,6 @@ void Demo::cleanup() {
     device.waitIdle();
     device.destroy(nullptr);
     inst.destroySurfaceKHR(surface, nullptr);
-
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
-    XDestroyWindow(display, xlib_window);
-    XCloseDisplay(display);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    xcb_destroy_window(connection, xcb_window);
-    xcb_disconnect(connection);
-    free(atom_wm_delete_window);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    wl_keyboard_destroy(keyboard);
-    wl_pointer_destroy(pointer);
-    wl_seat_destroy(seat);
-    xdg_toplevel_destroy(window_toplevel);
-    xdg_surface_destroy(window_surface);
-    wl_surface_destroy(window);
-    xdg_wm_base_destroy(wm_base);
-    if (xdg_decoration_mgr) {
-        zxdg_toplevel_decoration_v1_destroy(toplevel_decoration);
-        zxdg_decoration_manager_v1_destroy(xdg_decoration_mgr);
-    }
-    wl_compositor_destroy(compositor);
-    wl_registry_destroy(registry);
-    wl_display_disconnect(display);
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-    event_buffer->Release(event_buffer);
-    window->Release(window);
-    dfb->Release(dfb);
-#endif
-
     inst.destroy(nullptr);
 }
 
@@ -1141,42 +903,10 @@ void Demo::init_vk() {
                 surfaceExtFound = 1;
                 extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
             }
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
             if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
                 platformSurfaceExtFound = 1;
                 extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-            if (!strcmp(VK_KHR_XLIB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-            if (!strcmp(VK_KHR_XCB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_KHR_XCB_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            if (!strcmp(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-            if (!strcmp(VK_EXT_DIRECTFB_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_EXT_DIRECTFB_SURFACE_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-            if (!strcmp(VK_KHR_DISPLAY_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_KHR_DISPLAY_EXTENSION_NAME;
-            }
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-            if (!strcmp(VK_EXT_METAL_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-                platformSurfaceExtFound = 1;
-                extension_names[enabled_extension_count++] = VK_EXT_METAL_SURFACE_EXTENSION_NAME;
-            }
-#endif
             assert(enabled_extension_count < 64);
         }
     }
@@ -1190,50 +920,11 @@ void Demo::init_vk() {
     }
 
     if (!platformSurfaceExtFound) {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
                  " extension.\n\n"
                  "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
                  "Please look at the Getting Started guide for additional information.\n",
                  "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
-                 " extension.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-                 "Please look at the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME
-                 " extension.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-                 "Please look at the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-                 " extension.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-                 "Please look at the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_EXT_DIRECTFB_SURFACE_EXTENSION_NAME
-                 " extension.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-                 "Please look at the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_DISPLAY_EXTENSION_NAME
-                 " extension.\n\n"
-                 "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-                 "Please look at the Getting Started guide for additional information.\n",
-                 "vkCreateInstance Failure");
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_EXT_METAL_SURFACE_EXTENSION_NAME
-                 " extension.\n\nDo you have a compatible "
-                 "Vulkan installable client driver (ICD) installed?\nPlease "
-                 "look at the Getting Started guide for additional "
-                 "information.\n",
-                 "vkCreateInstance Failure");
-#endif
     }
     auto const app = vk::ApplicationInfo()
                          .setPApplicationName(APP_SHORT_NAME)
@@ -1389,54 +1080,12 @@ void Demo::init_vk() {
 
 void Demo::create_surface() {
 // Create a WSI surface for the window:
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
     {
         auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
 
         auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
         VERIFY(result == vk::Result::eSuccess);
     }
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-    {
-        auto const createInfo = vk::WaylandSurfaceCreateInfoKHR().setDisplay(display).setSurface(window);
-
-        auto result = inst.createWaylandSurfaceKHR(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-    {
-        auto const createInfo = vk::XlibSurfaceCreateInfoKHR().setDpy(display).setWindow(xlib_window);
-
-        auto result = inst.createXlibSurfaceKHR(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-    {
-        auto const createInfo = vk::XcbSurfaceCreateInfoKHR().setConnection(connection).setWindow(xcb_window);
-
-        auto result = inst.createXcbSurfaceKHR(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#elif defined(VK_USE_PLATFORM_DIRECTFB_EXT)
-    {
-        auto const createInfo = vk::DirectFBSurfaceCreateInfoEXT().setDfb(dfb).setSurface(window);
-
-        auto result = inst.createDirectFBSurfaceEXT(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#elif defined(VK_USE_PLATFORM_METAL_EXT)
-    {
-        auto const createInfo = vk::MetalSurfaceCreateInfoEXT().setPLayer(static_cast<CAMetalLayer *>(caMetalLayer));
-
-        auto result = inst.createMetalSurfaceEXT(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-    {
-        auto result = create_display_surface();
-        VERIFY(result == vk::Result::eSuccess);
-    }
-#endif
 }
 
 void Demo::init_vk_swapchain() {
