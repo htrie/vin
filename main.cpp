@@ -178,7 +178,7 @@ struct Demo {
     void draw();
     void draw_build_cmd(vk::CommandBuffer);
     void flush_init_cmd();
-    void init(int, char**);
+    void init();
     void init_vk();
     void init_vk_swapchain();
     void prepare();
@@ -689,7 +689,7 @@ void Demo::flush_init_cmd() {
     cmd = vk::CommandBuffer();
 }
 
-void Demo::init(int argc, char** argv) {
+void Demo::init() {
     vec3 eye = { 0.0f, 3.0f, 5.0f };
     vec3 origin = { 0, 0, 0 };
     vec3 up = { 0.0f, 1.0f, 0.0 };
@@ -700,63 +700,6 @@ void Demo::init(int argc, char** argv) {
     height = 600;
     /* Autodetect suitable / best GPU by default */
     gpu_number = -1;
-
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--use_staging") == 0) {
-            use_staging_buffer = true;
-            continue;
-        }
-        if ((strcmp(argv[i], "--present_mode") == 0) && (i < argc - 1)) {
-            presentMode = (vk::PresentModeKHR)atoi(argv[i + 1]);
-            i++;
-            continue;
-        }
-        if (strcmp(argv[i], "--break") == 0) {
-            use_break = true;
-            continue;
-        }
-        if (strcmp(argv[i], "--validate") == 0) {
-            validate = true;
-            continue;
-        }
-        if (strcmp(argv[i], "--c") == 0 && frameCount == UINT32_MAX && i < argc - 1 &&
-            sscanf(argv[i + 1], "%" SCNu32, &frameCount) == 1) {
-            i++;
-            continue;
-        }
-        if (strcmp(argv[i], "--width") == 0 && i < argc - 1 && sscanf(argv[i + 1], "%" SCNi32, &width) == 1 && width > 0) {
-            i++;
-            continue;
-        }
-        if (strcmp(argv[i], "--height") == 0 && i < argc - 1 && sscanf(argv[i + 1], "%" SCNi32, &height) == 1 && height > 0) {
-            i++;
-            continue;
-        }
-        if (strcmp(argv[i], "--suppress_popups") == 0) {
-            suppress_popups = true;
-            continue;
-        }
-        if ((strcmp(argv[i], "--gpu_number") == 0) && (i < argc - 1)) {
-            gpu_number = atoi(argv[i + 1]);
-            assert(gpu_number >= 0);
-            i++;
-            continue;
-        }
-        std::stringstream usage;
-        usage << "Usage:\n  " << APP_SHORT_NAME << "\t[--use_staging] [--validate]\n"
-            << "\t[--break] [--c <framecount>] [--suppress_popups]\n"
-            << "\t[--gpu_number <index of physical device>]\n"
-            << "\t[--present_mode <present mode enum>]\n"
-            << "\t[--width <width>] [--height <height>]\n"
-            << "\t<present_mode_enum>\n"
-            << "\t\tVK_PRESENT_MODE_IMMEDIATE_KHR = " << VK_PRESENT_MODE_IMMEDIATE_KHR << "\n"
-            << "\t\tVK_PRESENT_MODE_MAILBOX_KHR = " << VK_PRESENT_MODE_MAILBOX_KHR << "\n"
-            << "\t\tVK_PRESENT_MODE_FIFO_KHR = " << VK_PRESENT_MODE_FIFO_KHR << "\n"
-            << "\t\tVK_PRESENT_MODE_FIFO_RELAXED_KHR = " << VK_PRESENT_MODE_FIFO_RELAXED_KHR << "\n";
-
-        if (!suppress_popups) MessageBox(NULL, usage.str().c_str(), "Usage Error", MB_OK);
-        exit(1);
-    }
 
     init_vk();
 
@@ -2217,58 +2160,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-    // TODO: Gah.. refactor. This isn't 1989.
-    MSG msg;    // message
-    bool done;  // flag saying when app is complete
-    int argc;
-    char** argv;
-
-    // Ensure wParam is initialized.
+    MSG msg;
     msg.wParam = 0;
 
-    // Use the CommandLine functions to get the command line arguments.
-    // Unfortunately, Microsoft outputs
-    // this information as wide characters for Unicode, and we simply want the
-    // Ascii version to be compatible
-    // with the non-Windows side.  So, we have to convert the information to
-    // Ascii character strings.
-    LPWSTR* commandLineArgs = CommandLineToArgvW(GetCommandLineW(), &argc);
-    if (nullptr == commandLineArgs) {
-        argc = 0;
-    }
+    bool done = false;
 
-    if (argc > 0) {
-        argv = (char**)malloc(sizeof(char*) * argc);
-        if (argv == nullptr) {
-            argc = 0;
-        }
-        else {
-            for (int iii = 0; iii < argc; iii++) {
-                size_t wideCharLen = wcslen(commandLineArgs[iii]);
-                size_t numConverted = 0;
-
-                argv[iii] = (char*)malloc(sizeof(char) * (wideCharLen + 1));
-                if (argv[iii] != nullptr) {
-                    wcstombs_s(&numConverted, argv[iii], wideCharLen + 1, commandLineArgs[iii], wideCharLen + 1);
-                }
-            }
-        }
-    }
-    else {
-        argv = nullptr;
-    }
-
-    demo.init(argc, argv);
-
-    // Free up the items we had to allocate for the command line arguments.
-    if (argc > 0 && argv != nullptr) {
-        for (int iii = 0; iii < argc; iii++) {
-            if (argv[iii] != nullptr) {
-                free(argv[iii]);
-            }
-        }
-        free(argv);
-    }
+    demo.init();
 
     demo.connection = hInstance;
     strncpy(demo.name, WINDOW_NAME, APP_NAME_STR_LEN);
@@ -2277,9 +2174,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     demo.prepare();
 
-    done = false;  // initialize loop condition variable
-
-    // main message loop
     while (!done) {
         if (demo.pause) {
             const BOOL succ = WaitMessage();
@@ -2291,12 +2185,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         }
 
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT)  // check for a quit message
-        {
-            done = true;  // if found, quit app
+        if (msg.message == WM_QUIT) {
+            done = true;
         }
         else {
-            /* Translate and dispatch to event queue*/
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
