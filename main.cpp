@@ -1,18 +1,6 @@
 
-#include <cassert>
-#include <cinttypes>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <csignal>
-#include <iostream>
-#include <sstream>
-#include <memory>
-
 #define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_TYPESAFE_CONVERSION
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vk_sdk_platform.h>
 
 #include "linmath.h"
 
@@ -30,6 +18,8 @@
 #define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
+#define LOG(txt) OutputDebugString(txt)
 
 #define ERR_EXIT(err_msg, err_class)                                          \
     do {                                                                      \
@@ -209,24 +199,24 @@ struct Demo {
     void run();
     void create_window();
 
-    HINSTANCE connection;         // hInstance - Windows Instance
-    HWND window;                  // hWnd - window handle
-    POINT minsize;                // minimum window size
+    HINSTANCE connection = nullptr;         // hInstance - Windows Instance
+    HWND window = nullptr;                  // hWnd - window handle
+    POINT minsize = { 0, 0 };                // minimum window size
     char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
 
     vk::SurfaceKHR surface;
-    bool prepared;
-    bool use_staging_buffer;
-    bool separate_present_queue;
-    int32_t gpu_number;
+    bool prepared = false;
+    bool use_staging_buffer = false;
+    bool separate_present_queue = false;
+    int32_t gpu_number = -1;
 
     vk::Instance inst;
     vk::PhysicalDevice gpu;
     vk::Device device;
     vk::Queue graphics_queue;
     vk::Queue present_queue;
-    uint32_t graphics_queue_family_index;
-    uint32_t present_queue_family_index;
+    uint32_t graphics_queue_family_index = 0;
+    uint32_t present_queue_family_index = 0;
     vk::Semaphore image_acquired_semaphores[FRAME_LAG];
     vk::Semaphore draw_complete_semaphores[FRAME_LAG];
     vk::Semaphore image_ownership_semaphores[FRAME_LAG];
@@ -234,22 +224,22 @@ struct Demo {
     std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
     vk::PhysicalDeviceMemoryProperties memory_properties;
 
-    uint32_t enabled_extension_count;
-    uint32_t enabled_layer_count;
+    uint32_t enabled_extension_count = 0;
+    uint32_t enabled_layer_count = 0;
     char const* extension_names[64];
     char const* enabled_layers[64];
 
-    int32_t width;
-    int32_t height;
+    int32_t width = 0;
+    int32_t height = 0;
     vk::Format format;
     vk::ColorSpaceKHR color_space;
 
-    uint32_t swapchainImageCount;
+    uint32_t swapchainImageCount = 0;
     vk::SwapchainKHR swapchain;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
-    vk::PresentModeKHR presentMode;
+    vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
     vk::Fence fences[FRAME_LAG];
-    uint32_t frame_index;
+    uint32_t frame_index = 0;
 
     vk::CommandPool cmd_pool;
     vk::CommandPool present_cmd_pool;
@@ -284,9 +274,9 @@ struct Demo {
     mat4x4 view_matrix;
     mat4x4 model_matrix;
 
-    float spin_angle;
-    float spin_increment;
-    bool pause;
+    float spin_angle = 0.0f;
+    float spin_increment = 0.0f;
+    bool pause = false;
 
     vk::ShaderModule vert_shader_module;
     vk::ShaderModule frag_shader_module;
@@ -296,15 +286,15 @@ struct Demo {
 
     std::unique_ptr<vk::Framebuffer[]> framebuffers;
 
-    bool quit;
-    uint32_t curFrame;
-    uint32_t frameCount;
-    bool validate;
-    bool use_break;
-    bool suppress_popups;
+    bool quit = false;
+    uint32_t curFrame = 0;
+    uint32_t frameCount = 0;
+    bool validate = true; // [TODO] Find another way to toggle.
+    bool use_break = false;
+    bool suppress_popups = false;
 
-    uint32_t current_buffer;
-    uint32_t queue_family_count;
+    uint32_t current_buffer = 0;
+    uint32_t queue_family_count = 0;
 };
 
 // MS-Windows event handling function:
@@ -312,32 +302,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
 Demo::Demo()
-    :
-    connection{ nullptr },
-    window{ nullptr },
-    minsize(POINT{ 0, 0 }),  // Use explicit construction to avoid MSVC error C2797.
-    prepared{ false },
-    use_staging_buffer{ false },
-    graphics_queue_family_index{ 0 },
-    present_queue_family_index{ 0 },
-    enabled_extension_count{ 0 },
-    enabled_layer_count{ 0 },
-    width{ 0 },
-    height{ 0 },
-    swapchainImageCount{ 0 },
-    presentMode{ vk::PresentModeKHR::eFifo },
-    frame_index{ 0 },
-    spin_angle{ 0.0f },
-    spin_increment{ 0.0f },
-    pause{ false },
-    quit{ false },
-    curFrame{ 0 },
-    frameCount{ 0 },
-    validate{ false },
-    use_break{ false },
-    suppress_popups{ false },
-    current_buffer{ 0 },
-    queue_family_count{ 0 } {
+{
     memset(name, '\0', APP_NAME_STR_LEN);
     memset(projection_matrix, 0, sizeof(projection_matrix));
     memset(view_matrix, 0, sizeof(view_matrix));
@@ -387,6 +352,7 @@ vk::Bool32 Demo::check_layers(uint32_t check_count, char const* const* const che
 }
 
 void Demo::cleanup() {
+    LOG("cleanup\n");
     prepared = false;
     device.waitIdle();
 
@@ -690,16 +656,15 @@ void Demo::flush_init_cmd() {
 }
 
 void Demo::init() {
+    LOG("init\n");
+
     vec3 eye = { 0.0f, 3.0f, 5.0f };
     vec3 origin = { 0, 0, 0 };
     vec3 up = { 0.0f, 1.0f, 0.0 };
 
-    presentMode = vk::PresentModeKHR::eFifo;
     frameCount = UINT32_MAX;
     width = 800;
     height = 600;
-    /* Autodetect suitable / best GPU by default */
-    gpu_number = -1;
 
     init_vk();
 
@@ -715,6 +680,7 @@ void Demo::init() {
 }
 
 void Demo::init_vk() {
+
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     char const* const instance_validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -2106,9 +2072,6 @@ void Demo::create_window() {
     minsize.x = GetSystemMetrics(SM_CXMINTRACK);
     minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
-
-// Include header required for parsing the command line options.
-#include <shellapi.h>
 
 Demo demo;
 
