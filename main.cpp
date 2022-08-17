@@ -1459,9 +1459,9 @@ void Demo::prepare_framebuffers() {
 }
 
 vk::ShaderModule Demo::prepare_fs() {
-    const uint32_t fragShaderCode[] = {
-#include "cube.frag.inc"
-    };
+    const uint32_t fragShaderCode[] =
+#include "shader.frag.inc"
+        ;
 
     frag_shader_module = prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
 
@@ -1822,9 +1822,9 @@ void Demo::prepare_textures() {
 }
 
 vk::ShaderModule Demo::prepare_vs() {
-    const uint32_t vertShaderCode[] = {
-#include "cube.vert.inc"
-    };
+    const uint32_t vertShaderCode[] =
+#include "shader.vert.inc"
+        ;
 
     vert_shader_module = prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
 
