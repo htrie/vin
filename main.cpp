@@ -34,7 +34,6 @@ struct Uniforms{
     float attr[12 * 3][4];
 };
 
-// clang-format off
 static const float g_vertex_buffer_data[] = {
     -1.0f,-1.0f,-1.0f,  // -X side
     -1.0f,-1.0f, 1.0f,
@@ -122,7 +121,6 @@ static const float g_uv_buffer_data[] = {
     1.0f, 1.0f,
     1.0f, 0.0f,
 };
-// clang-format on
 
 typedef struct {
     vk::Image image;
@@ -172,10 +170,10 @@ struct Demo {
     void run();
     void create_window();
 
-    HINSTANCE connection = nullptr;         // hInstance - Windows Instance
-    HWND window = nullptr;                  // hWnd - window handle
-    POINT minsize = { 0, 0 };                // minimum window size
-    char name[APP_NAME_STR_LEN];  // Name to put on the window/icon
+    HINSTANCE connection = nullptr;
+    HWND window = nullptr;
+    POINT minsize = { 0, 0 };
+    char name[APP_NAME_STR_LEN];
 
     vk::SurfaceKHR surface;
     bool prepared = false;
@@ -231,7 +229,7 @@ struct Demo {
         vk::DescriptorBufferInfo buffer_info;
     } uniform_data;
 
-    vk::CommandBuffer cmd;  // Buffer for initialization commands
+    vk::CommandBuffer cmd;
     vk::PipelineLayout pipeline_layout;
     vk::DescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
@@ -261,7 +259,6 @@ struct Demo {
     uint32_t queue_family_count = 0;
 };
 
-// MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
@@ -405,8 +402,7 @@ void Demo::draw() {
         result =
             device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
-            // demo->swapchain is out of date (e.g. the window was resized) and
-            // must be recreated:
+            // demo->swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
         }
         else if (result == vk::Result::eSuboptimalKHR) {
@@ -475,8 +471,7 @@ void Demo::draw() {
     frame_index += 1;
     frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        // swapchain is out of date (e.g. the window was resized) and
-        // must be recreated:
+        // swapchain is out of date (e.g. the window was resized) and must be recreated:
         resize();
     }
     else if (result == vk::Result::eSuboptimalKHR) {
@@ -541,19 +536,14 @@ void Demo::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(width, height));
     commandBuffer.setScissor(0, 1, &scissor);
     commandBuffer.draw(12 * 3, 1, 0, 0);
-    // Note that ending the renderpass changes the image's layout from
-    // COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
+    // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
     commandBuffer.endRenderPass();
 
     if (separate_present_queue) {
-        // We have to transfer ownership from the graphics queue family to
-        // the
-        // present queue family to be able to present.  Note that we don't
-        // have
-        // to transfer from present queue family back to graphics queue
-        // family at
-        // the start of the next frame because we don't care about the
-        // image's
+        // We have to transfer ownership from the graphics queue family to the
+        // present queue family to be able to present.  Note that we don't have
+        // to transfer from present queue family back to graphics queue family at
+        // the start of the next frame because we don't care about the image's
         // contents at that point.
         auto const image_ownership_barrier =
             vk::ImageMemoryBarrier()
@@ -615,7 +605,7 @@ void Demo::init() {
     mat4x4_look_at(view_matrix, eye, origin, up);
     mat4x4_identity(model_matrix);
 
-    projection_matrix[1][1] *= -1;  // Flip projection matrix from GL to Vulkan orientation.
+    projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
 }
 
 void Demo::init_vk() {
@@ -653,7 +643,7 @@ void Demo::init_vk() {
         }
     }
 
-    /* Look for instance extensions */
+    // Look for instance extensions
     vk::Bool32 surfaceExtFound = VK_FALSE;
     vk::Bool32 platformSurfaceExtFound = VK_FALSE;
     memset(extension_names, 0, sizeof(extension_names));
@@ -732,7 +722,7 @@ void Demo::init_vk() {
             "vkCreateInstance Failure");
     }
 
-    /* Make initial call to query gpu_count, then second call for gpu info */
+    // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
     result = inst.enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
@@ -753,7 +743,7 @@ void Demo::init_vk() {
         fprintf(stderr, "GPU %d specified is not present, GPU count = %u\n", gpu_number, gpu_count);
         ERR_EXIT("Specified GPU number is not present", "User Error");
     }
-    /* Try to auto select most suitable device */
+    // Try to auto select most suitable device
     if (gpu_number == -1) {
         uint32_t count_device_type[VK_PHYSICAL_DEVICE_TYPE_CPU + 1];
         memset(count_device_type, 0, sizeof(count_device_type));
@@ -792,7 +782,7 @@ void Demo::init_vk() {
     }
     physical_devices.reset();
 
-    /* Look for device extensions */
+    // Look for device extensions
     uint32_t device_extension_count = 0;
     vk::Bool32 swapchainExtFound = VK_FALSE;
     enabled_extension_count = 0;
@@ -829,7 +819,7 @@ void Demo::init_vk() {
 
     gpu.getProperties(&gpu_props);
 
-    /* Call with nullptr data to get count */
+    // Call with nullptr data to get count
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
     assert(queue_family_count >= 1);
 
@@ -837,20 +827,16 @@ void Demo::init_vk() {
     gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
 
     // Query fine-grained feature support for this device.
-    //  If app has specific feature requirements it should check supported
-    //  features based on this query
+    //  If app has specific feature requirements it should check supported features based on this query
     vk::PhysicalDeviceFeatures physDevFeatures;
     gpu.getFeatures(&physDevFeatures);
 }
 
 void Demo::create_surface() {
-    // Create a WSI surface for the window:
-    {
-        auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
+    auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
 
-        auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
-        VERIFY(result == vk::Result::eSuccess);
-    }
+    auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
+    VERIFY(result == vk::Result::eSuccess);
 }
 
 void Demo::init_vk_swapchain() {
@@ -878,8 +864,7 @@ void Demo::init_vk_swapchain() {
     }
 
     if (presentQueueFamilyIndex == UINT32_MAX) {
-        // If didn't find a queue that supports both graphics and present,
-        // then
+        // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
         for (uint32_t i = 0; i < queue_family_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
@@ -936,8 +921,7 @@ void Demo::init_vk_swapchain() {
     // rendering and waiting for drawing to be complete before presenting
     auto const semaphoreCreateInfo = vk::SemaphoreCreateInfo();
 
-    // Create fences that we can use to throttle if we get too far
-    // ahead of the image presents
+    // Create fences that we can use to throttle if we get too far ahead of the image presents
     auto const fence_ci = vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         result = device.createFence(&fence_ci, nullptr, &fences[i]);
@@ -956,7 +940,6 @@ void Demo::init_vk_swapchain() {
     }
     frame_index = 0;
 
-    // Get Memory information and properties
     gpu.getMemoryProperties(&memory_properties);
 }
 
@@ -1020,10 +1003,6 @@ void Demo::prepare() {
         draw_build_cmd(swapchain_image_resources[i].cmd);
     }
 
-    /*
-     * Prepare functions above may generate pipeline commands
-     * that need to be flushed before beginning the render loop.
-     */
     flush_init_cmd();
 
     current_buffer = 0;
@@ -1033,7 +1012,6 @@ void Demo::prepare() {
 void Demo::prepare_buffers() {
     vk::SwapchainKHR oldSwapchain = swapchain;
 
-    // Check the surface capabilities and formats
     vk::SurfaceCapabilitiesKHR surfCapabilities;
     auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surfCapabilities);
     VERIFY(result == vk::Result::eSuccess);
@@ -1118,9 +1096,7 @@ void Demo::prepare_buffers() {
         desiredNumOfSwapchainImages = surfCapabilities.minImageCount;
     }
 
-    // If maxImageCount is 0, we can ask for as many images as we want,
-    // otherwise
-    // we're limited to maxImageCount
+    // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
     if ((surfCapabilities.maxImageCount > 0) && (desiredNumOfSwapchainImages > surfCapabilities.maxImageCount)) {
         // Application must settle for fewer images than desired:
         desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
@@ -1169,11 +1145,8 @@ void Demo::prepare_buffers() {
     result = device.createSwapchainKHR(&swapchain_ci, nullptr, &swapchain);
     VERIFY(result == vk::Result::eSuccess);
 
-    // If we just re-created an existing swapchain, we should destroy the
-    // old
-    // swapchain at this point.
-    // Note: destroying the swapchain also cleans up all its associated
-    // presentable images once the platform is done with them.
+    // If we just re-created an existing swapchain, we should destroy the old swapchain at this point.
+    // Note: destroying the swapchain also cleans up all its associated presentable images once the platform is done with them.
     if (oldSwapchain) {
         device.destroySwapchainKHR(oldSwapchain, nullptr);
     }
@@ -1461,24 +1434,25 @@ void Demo::prepare_render_pass() {
     // the renderpass, the color attachment's layout will be transitioned to
     // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
     // the renderpass, no barriers are necessary.
-    const vk::AttachmentDescription attachments[2] = { vk::AttachmentDescription()
-                                                          .setFormat(format)
-                                                          .setSamples(vk::SampleCountFlagBits::e1)
-                                                          .setLoadOp(vk::AttachmentLoadOp::eClear)
-                                                          .setStoreOp(vk::AttachmentStoreOp::eStore)
-                                                          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-                                                          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                                                          .setInitialLayout(vk::ImageLayout::eUndefined)
-                                                          .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
-                                                      vk::AttachmentDescription()
-                                                          .setFormat(depth.format)
-                                                          .setSamples(vk::SampleCountFlagBits::e1)
-                                                          .setLoadOp(vk::AttachmentLoadOp::eClear)
-                                                          .setStoreOp(vk::AttachmentStoreOp::eDontCare)
-                                                          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-                                                          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-                                                          .setInitialLayout(vk::ImageLayout::eUndefined)
-                                                          .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal) };
+    const vk::AttachmentDescription attachments[2] = {
+        vk::AttachmentDescription()
+          .setFormat(format)
+          .setSamples(vk::SampleCountFlagBits::e1)
+          .setLoadOp(vk::AttachmentLoadOp::eClear)
+          .setStoreOp(vk::AttachmentStoreOp::eStore)
+          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+          .setInitialLayout(vk::ImageLayout::eUndefined)
+          .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
+      vk::AttachmentDescription()
+          .setFormat(depth.format)
+          .setSamples(vk::SampleCountFlagBits::e1)
+          .setLoadOp(vk::AttachmentLoadOp::eClear)
+          .setStoreOp(vk::AttachmentStoreOp::eDontCare)
+          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+          .setInitialLayout(vk::ImageLayout::eUndefined)
+          .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal) };
 
     auto const color_reference = vk::AttachmentReference().setAttachment(0).setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
@@ -1556,8 +1530,7 @@ void Demo::resize() {
         return;
     }
 
-    // In order to properly resize the window, we must re-create the
-    // swapchain
+    // In order to properly resize the window, we must re-create the swapchain
     // AND redo the command buffers, etc.
     //
     // First, perform part of the cleanup() function:
@@ -1660,8 +1633,6 @@ bool Demo::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlag
         }
         typeBits >>= 1;
     }
-
-    // No memory types matched, return failure
     return false;
 }
 
@@ -1681,13 +1652,12 @@ void Demo::run() {
 void Demo::create_window() {
     WNDCLASSEX win_class;
 
-    // Initialize the window class structure:
     win_class.cbSize = sizeof(WNDCLASSEX);
     win_class.style = CS_HREDRAW | CS_VREDRAW;
     win_class.lpfnWndProc = WndProc;
     win_class.cbClsExtra = 0;
     win_class.cbWndExtra = 0;
-    win_class.hInstance = connection;  // hInstance
+    win_class.hInstance = connection;
     win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -1695,15 +1665,12 @@ void Demo::create_window() {
     win_class.lpszClassName = name;
     win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
 
-    // Register window class:
     if (!RegisterClassEx(&win_class)) {
-        // It didn't work, so try to give a useful error:
         printf("Unexpected error trying to start the application!\n");
         fflush(stdout);
         exit(1);
     }
 
-    // Create window with the registered class:
     RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
     window = CreateWindowEx(0,
@@ -1726,15 +1693,13 @@ void Demo::create_window() {
         exit(1);
     }
 
-    // Window client area size must be at least 1 pixel high, to prevent
-    // crash.
+    // Window client area size must be at least 1 pixel high, to prevent crash.
     minsize.x = GetSystemMetrics(SM_CXMINTRACK);
     minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
 
 Demo demo;
 
-// MS-Windows event handling function:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CLOSE:

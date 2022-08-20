@@ -1,2 +1,4 @@
+cleanup code
+rename classes to capital names
 separate files (render, window, app, ...)
 make demo a real class (init on construct)
