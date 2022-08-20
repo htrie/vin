@@ -134,47 +134,7 @@ typedef struct {
     vk::DescriptorSet descriptor_set;
 } SwapchainImageResources;
 
-struct Demo {
-    Demo();
-    void build_image_ownership_cmd(uint32_t const&);
-    vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
-    void cleanup();
-    void create_device();
-    void draw();
-    void draw_build_cmd(vk::CommandBuffer);
-    void flush_init_cmd();
-    void init();
-    void init_vk();
-    void init_vk_swapchain();
-    void prepare();
-    void prepare_buffers();
-    void prepare_uniforms();
-    void prepare_depth();
-    void prepare_descriptor_layout();
-    void prepare_descriptor_pool();
-    void prepare_descriptor_set();
-    void prepare_framebuffers();
-    vk::ShaderModule prepare_shader_module(const uint32_t*, size_t);
-    vk::ShaderModule prepare_vs();
-    vk::ShaderModule prepare_fs();
-    void prepare_pipeline();
-    void prepare_render_pass();
-
-    void resize();
-    void create_surface();
-    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
-        vk::PipelineStageFlags, vk::PipelineStageFlags);
-    void update_data_buffer();
-    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
-
-    void run();
-    void create_window();
-
-    HINSTANCE connection = nullptr;
-    HWND window = nullptr;
-    POINT minsize = { 0, 0 };
-    char name[APP_NAME_STR_LEN];
-
+class Demo {
     vk::SurfaceKHR surface;
     bool prepared = false;
     bool separate_present_queue = false;
@@ -199,8 +159,6 @@ struct Demo {
     char const* extension_names[64];
     char const* enabled_layers[64];
 
-    int32_t width = 0;
-    int32_t height = 0;
     vk::Format format;
     vk::ColorSpaceKHR color_space;
 
@@ -257,6 +215,59 @@ struct Demo {
 
     uint32_t current_buffer = 0;
     uint32_t queue_family_count = 0;
+
+    vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
+
+    void create_device();
+
+    void init_vk();
+
+    void prepare_buffers();
+    void prepare_uniforms();
+    void prepare_depth();
+    void prepare_descriptor_layout();
+    void prepare_descriptor_pool();
+    void prepare_descriptor_set();
+    void prepare_framebuffers();
+    vk::ShaderModule prepare_shader_module(const uint32_t*, size_t);
+    vk::ShaderModule prepare_vs();
+    vk::ShaderModule prepare_fs();
+    void prepare_pipeline();
+    void prepare_render_pass();
+
+    void build_image_ownership_cmd(uint32_t const&);
+    void draw_build_cmd(vk::CommandBuffer);
+    void flush_init_cmd();
+
+    void create_surface();
+
+    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
+        vk::PipelineStageFlags, vk::PipelineStageFlags);
+
+    void update_data_buffer();
+
+    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
+
+    void draw();
+
+public:
+    HINSTANCE connection = nullptr;
+    HWND window = nullptr;
+    char name[APP_NAME_STR_LEN];
+
+    POINT minsize = { 0, 0 }; // TODO: Make private.
+    int32_t width = 0; // TODO: Make private.
+    int32_t height = 0; // TODO: Make private.
+
+    Demo();
+
+    void cleanup();
+    void init();
+    void init_vk_swapchain();
+    void prepare();
+    void resize();
+    void run();
+    void create_window();
 };
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
