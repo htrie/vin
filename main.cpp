@@ -242,10 +242,6 @@ struct Demo {
     mat4x4 view_matrix;
     mat4x4 model_matrix;
 
-    float spin_angle = 0.0f;
-    float spin_increment = 0.0f;
-    bool pause = false;
-
     vk::ShaderModule vert_shader_module;
     vk::ShaderModule frag_shader_module;
 
@@ -614,10 +610,6 @@ void Demo::init() {
     height = 600;
 
     init_vk();
-
-    spin_angle = 4.0f;
-    spin_increment = 0.2f;
-    pause = false;
 
     mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
     mat4x4_look_at(view_matrix, eye, origin, up);
@@ -1615,29 +1607,13 @@ void Demo::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk
         vk::AccessFlags flags;
 
         switch (layout) {
-        case vk::ImageLayout::eTransferDstOptimal:
-            // Make sure anything that was copying from this image has
-            // completed
-            flags = vk::AccessFlagBits::eTransferWrite;
-            break;
-        case vk::ImageLayout::eColorAttachmentOptimal:
-            flags = vk::AccessFlagBits::eColorAttachmentWrite;
-            break;
-        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-            flags = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-            break;
-        case vk::ImageLayout::eShaderReadOnlyOptimal:
-            // Make sure any Copy or CPU writes to image are flushed
-            flags = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead;
-            break;
-        case vk::ImageLayout::eTransferSrcOptimal:
-            flags = vk::AccessFlagBits::eTransferRead;
-            break;
-        case vk::ImageLayout::ePresentSrcKHR:
-            flags = vk::AccessFlagBits::eMemoryRead;
-            break;
-        default:
-            break;
+        case vk::ImageLayout::eTransferDstOptimal: flags = vk::AccessFlagBits::eTransferWrite; break;
+        case vk::ImageLayout::eColorAttachmentOptimal: flags = vk::AccessFlagBits::eColorAttachmentWrite; break;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal: flags = vk::AccessFlagBits::eDepthStencilAttachmentWrite; break;
+        case vk::ImageLayout::eShaderReadOnlyOptimal: flags = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead; break;
+        case vk::ImageLayout::eTransferSrcOptimal: flags = vk::AccessFlagBits::eTransferRead; break;
+        case vk::ImageLayout::ePresentSrcKHR: flags = vk::AccessFlagBits::eMemoryRead; break;
+        default: break;
         }
 
         return flags;
@@ -1663,7 +1639,7 @@ void Demo::update_data_buffer() {
     // Rotate around the Y axis
     mat4x4 Model;
     mat4x4_dup(Model, model_matrix);
-    mat4x4_rotate_Y(model_matrix, Model, (float)degreesToRadians(spin_angle));
+    mat4x4_rotate_Y(model_matrix, Model, (float)degreesToRadians(0.1f));
     mat4x4_orthonormalize(model_matrix, model_matrix);
 
     mat4x4 MVP;
@@ -1787,15 +1763,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case VK_ESCAPE:
             PostQuitMessage(validation_error);
             break;
-        case VK_LEFT:
-            demo.spin_angle -= demo.spin_increment;
-            break;
-        case VK_RIGHT:
-            demo.spin_angle += demo.spin_increment;
-            break;
-        case VK_SPACE:
-            demo.pause = !demo.pause;
-            break;
         }
         return 0;
     default:
@@ -1821,15 +1788,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     demo.prepare();
 
     while (!done) {
-        if (demo.pause) {
-            const BOOL succ = WaitMessage();
-
-            if (!succ) {
-                const auto& suppress_popups = demo.suppress_popups;
-                ERR_EXIT("WaitMessage() failed on paused demo", "event loop error");
-            }
-        }
-
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
         if (msg.message == WM_QUIT) {
             done = true;
