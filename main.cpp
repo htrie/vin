@@ -134,7 +134,7 @@ typedef struct {
     vk::DescriptorSet descriptor_set;
 } SwapchainImageResources;
 
-class Demo {
+class App {
     vk::SurfaceKHR surface;
     bool prepared = false;
     bool separate_present_queue = false;
@@ -259,7 +259,7 @@ public:
     int32_t width = 0; // TODO: Make private.
     int32_t height = 0; // TODO: Make private.
 
-    Demo();
+    App();
 
     void cleanup();
     void init();
@@ -273,7 +273,7 @@ public:
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
-Demo::Demo()
+App::App()
 {
     memset(name, '\0', APP_NAME_STR_LEN);
     memset(projection_matrix, 0, sizeof(projection_matrix));
@@ -281,7 +281,7 @@ Demo::Demo()
     memset(model_matrix, 0, sizeof(model_matrix));
 }
 
-void Demo::build_image_ownership_cmd(uint32_t const& i) {
+void App::build_image_ownership_cmd(uint32_t const& i) {
     auto const cmd_buf_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
     auto result = swapchain_image_resources[i].graphics_to_present_cmd.begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
@@ -305,7 +305,7 @@ void Demo::build_image_ownership_cmd(uint32_t const& i) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::Bool32 Demo::check_layers(uint32_t check_count, char const* const* const check_names, uint32_t layer_count,
+vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const check_names, uint32_t layer_count,
     vk::LayerProperties* layers) {
     for (uint32_t i = 0; i < check_count; i++) {
         vk::Bool32 found = VK_FALSE;
@@ -323,7 +323,7 @@ vk::Bool32 Demo::check_layers(uint32_t check_count, char const* const* const che
     return VK_TRUE;
 }
 
-void Demo::cleanup() {
+void App::cleanup() {
     LOG("cleanup\n");
     prepared = false;
     device.waitIdle();
@@ -375,7 +375,7 @@ void Demo::cleanup() {
     inst.destroy(nullptr);
 }
 
-void Demo::create_device() {
+void App::create_device() {
     float const priorities[1] = { 0.0 };
 
     vk::DeviceQueueCreateInfo queues[2];
@@ -403,7 +403,7 @@ void Demo::create_device() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::draw() {
+void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
     device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
     device.resetFences({ fences[frame_index] });
@@ -413,7 +413,7 @@ void Demo::draw() {
         result =
             device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
-            // demo->swapchain is out of date (e.g. the window was resized) and must be recreated:
+            // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
         }
         else if (result == vk::Result::eSuboptimalKHR) {
@@ -504,7 +504,7 @@ void Demo::draw() {
     }
 }
 
-void Demo::draw_build_cmd(vk::CommandBuffer commandBuffer) {
+void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     auto const commandInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
     vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})),
@@ -575,7 +575,7 @@ void Demo::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::flush_init_cmd() {
+void App::flush_init_cmd() {
     auto result = cmd.end();
     VERIFY(result == vk::Result::eSuccess);
 
@@ -599,7 +599,7 @@ void Demo::flush_init_cmd() {
     cmd = vk::CommandBuffer();
 }
 
-void Demo::init() {
+void App::init() {
     LOG("init\n");
 
     vec3 eye = { 0.0f, 3.0f, 5.0f };
@@ -619,7 +619,7 @@ void Demo::init() {
     projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
 }
 
-void Demo::init_vk() {
+void App::init_vk() {
 
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
@@ -843,14 +843,14 @@ void Demo::init_vk() {
     gpu.getFeatures(&physDevFeatures);
 }
 
-void Demo::create_surface() {
+void App::create_surface() {
     auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
 
     auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::init_vk_swapchain() {
+void App::init_vk_swapchain() {
     create_surface();
     // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
@@ -954,7 +954,7 @@ void Demo::init_vk_swapchain() {
     gpu.getMemoryProperties(&memory_properties);
 }
 
-void Demo::prepare() {
+void App::prepare() {
     auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
     auto result = device.createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
     VERIFY(result == vk::Result::eSuccess);
@@ -1020,7 +1020,7 @@ void Demo::prepare() {
     prepared = true;
 }
 
-void Demo::prepare_buffers() {
+void App::prepare_buffers() {
     vk::SwapchainKHR oldSwapchain = swapchain;
 
     vk::SurfaceCapabilitiesKHR surfCapabilities;
@@ -1186,7 +1186,7 @@ void Demo::prepare_buffers() {
     }
 }
 
-void Demo::prepare_uniforms() {
+void App::prepare_uniforms() {
     mat4x4 VP;
     mat4x4_mul(VP, projection_matrix, view_matrix);
 
@@ -1238,7 +1238,7 @@ void Demo::prepare_uniforms() {
     }
 }
 
-void Demo::prepare_depth() {
+void App::prepare_depth() {
     depth.format = vk::Format::eD16Unorm;
 
     auto const image = vk::ImageCreateInfo()
@@ -1283,7 +1283,7 @@ void Demo::prepare_depth() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::prepare_descriptor_layout() {
+void App::prepare_descriptor_layout() {
     vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
         vk::DescriptorSetLayoutBinding()
            .setBinding(0)
@@ -1303,7 +1303,7 @@ void Demo::prepare_descriptor_layout() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::prepare_descriptor_pool() {
+void App::prepare_descriptor_pool() {
     vk::DescriptorPoolSize const poolSizes[1] = {
         vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount) };
 
@@ -1314,7 +1314,7 @@ void Demo::prepare_descriptor_pool() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::prepare_descriptor_set() {
+void App::prepare_descriptor_set() {
     auto const alloc_info =
         vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
 
@@ -1336,7 +1336,7 @@ void Demo::prepare_descriptor_set() {
     }
 }
 
-void Demo::prepare_framebuffers() {
+void App::prepare_framebuffers() {
     vk::ImageView attachments[2];
     attachments[1] = depth.view;
 
@@ -1355,7 +1355,7 @@ void Demo::prepare_framebuffers() {
     }
 }
 
-vk::ShaderModule Demo::prepare_fs() {
+vk::ShaderModule App::prepare_fs() {
     const uint32_t fragShaderCode[] =
 #include "shader.frag.inc"
         ;
@@ -1365,7 +1365,7 @@ vk::ShaderModule Demo::prepare_fs() {
     return frag_shader_module;
 }
 
-void Demo::prepare_pipeline() {
+void App::prepare_pipeline() {
     vk::PipelineCacheCreateInfo const pipelineCacheInfo;
     auto result = device.createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
     VERIFY(result == vk::Result::eSuccess);
@@ -1436,7 +1436,7 @@ void Demo::prepare_pipeline() {
     device.destroyShaderModule(vert_shader_module, nullptr);
 }
 
-void Demo::prepare_render_pass() {
+void App::prepare_render_pass() {
     // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
     // because at the start of the renderpass, we don't care about their contents.
     // At the start of the subpass, the color attachment's layout will be transitioned
@@ -1513,7 +1513,7 @@ void Demo::prepare_render_pass() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::ShaderModule Demo::prepare_shader_module(const uint32_t* code, size_t size) {
+vk::ShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
     const auto moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode(code);
 
     vk::ShaderModule module;
@@ -1523,7 +1523,7 @@ vk::ShaderModule Demo::prepare_shader_module(const uint32_t* code, size_t size) 
     return module;
 }
 
-vk::ShaderModule Demo::prepare_vs() {
+vk::ShaderModule App::prepare_vs() {
     const uint32_t vertShaderCode[] =
 #include "shader.vert.inc"
         ;
@@ -1533,7 +1533,7 @@ vk::ShaderModule Demo::prepare_vs() {
     return vert_shader_module;
 }
 
-void Demo::resize() {
+void App::resize() {
     uint32_t i;
 
     // Don't react to resize until after first initialization.
@@ -1583,7 +1583,7 @@ void Demo::resize() {
     prepare();
 }
 
-void Demo::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+void App::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
     vk::AccessFlags srcAccessMask, vk::PipelineStageFlags src_stages, vk::PipelineStageFlags dest_stages) {
     assert(cmd);
 
@@ -1616,7 +1616,7 @@ void Demo::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk
     cmd.pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void Demo::update_data_buffer() {
+void App::update_data_buffer() {
     mat4x4 VP;
     mat4x4_mul(VP, projection_matrix, view_matrix);
 
@@ -1632,7 +1632,7 @@ void Demo::update_data_buffer() {
     memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
 }
 
-bool Demo::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
+bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
     // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
@@ -1647,7 +1647,7 @@ bool Demo::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlag
     return false;
 }
 
-void Demo::run() {
+void App::run() {
     if (!prepared) {
         return;
     }
@@ -1660,7 +1660,7 @@ void Demo::run() {
     }
 }
 
-void Demo::create_window() {
+void App::create_window() {
     WNDCLASSEX win_class;
 
     win_class.cbSize = sizeof(WNDCLASSEX);
@@ -1709,7 +1709,7 @@ void Demo::create_window() {
     minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
 
-Demo demo;
+App app;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
@@ -1717,10 +1717,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
-        demo.run();
+        app.run();
         break;
     case WM_GETMINMAXINFO:  // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = demo.minsize;
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = app.minsize;
         return 0;
     case WM_ERASEBKGND:
         return 1;
@@ -1729,9 +1729,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         // it was minimized. Vulkan doesn't support images or swapchains
         // with width=0 and height=0.
         if (wParam != SIZE_MINIMIZED) {
-            demo.width = lParam & 0xffff;
-            demo.height = (lParam & 0xffff0000) >> 16;
-            demo.resize();
+            app.width = lParam & 0xffff;
+            app.height = (lParam & 0xffff0000) >> 16;
+            app.resize();
         }
         break;
     case WM_KEYDOWN:
@@ -1754,14 +1754,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     bool done = false;
 
-    demo.init();
+    app.init();
 
-    demo.connection = hInstance;
-    strncpy(demo.name, WINDOW_NAME, APP_NAME_STR_LEN);
-    demo.create_window();
-    demo.init_vk_swapchain();
+    app.connection = hInstance;
+    strncpy(app.name, WINDOW_NAME, APP_NAME_STR_LEN);
+    app.create_window();
+    app.init_vk_swapchain();
 
-    demo.prepare();
+    app.prepare();
 
     while (!done) {
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
@@ -1772,10 +1772,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        RedrawWindow(demo.window, nullptr, nullptr, RDW_INTERNALPAINT);
+        RedrawWindow(app.window, nullptr, nullptr, RDW_INTERNALPAINT);
     }
 
-    demo.cleanup();
+    app.cleanup();
 
     return (int)msg.wParam;
 }
