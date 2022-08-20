@@ -255,9 +255,9 @@ public:
     HWND window = nullptr;
     char name[APP_NAME_STR_LEN];
 
-    POINT minsize = { 0, 0 }; // TODO: Make private.
-    int32_t width = 0; // TODO: Make private.
-    int32_t height = 0; // TODO: Make private.
+    POINT minsize = { 0, 0 }; // [TODO] Make private.
+    int32_t width = 0; // [TODO] Make private.
+    int32_t height = 0; // [TODO] Make private.
 
     App();
 
@@ -1378,7 +1378,6 @@ void App::prepare_pipeline() {
 
     auto const inputAssemblyInfo = vk::PipelineInputAssemblyStateCreateInfo().setTopology(vk::PrimitiveTopology::eTriangleList);
 
-    // TODO: Where are pViewports and pScissors set?
     auto const viewportInfo = vk::PipelineViewportStateCreateInfo().setViewportCount(1).setScissorCount(1);
 
     auto const rasterizationInfo = vk::PipelineRasterizationStateCreateInfo()
