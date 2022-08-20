@@ -1,3 +1,0 @@
-separate files (render, window, app, ...)
-cleanup code
-make app a real class (init on construct)
