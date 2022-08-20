@@ -14,7 +14,6 @@
 #define APP_SHORT_NAME "vin"
 #define APP_NAME_STR_LEN 80
 
-// Allow a maximum of two outstanding presentation operations.
 #define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -27,33 +26,14 @@
         exit(1);                                                              \
     } while (0)
 
-struct texture_object {
-    vk::Sampler sampler;
-
-    vk::Image image;
-    vk::Buffer buffer;
-    vk::ImageLayout imageLayout{ vk::ImageLayout::eUndefined };
-
-    vk::MemoryAllocateInfo mem_alloc;
-    vk::DeviceMemory mem;
-    vk::ImageView view;
-
-    int32_t tex_width{ 0 };
-    int32_t tex_height{ 0 };
-};
-
 static int validation_error = 0;
 
-struct vktexcube_vs_uniform {
-    // Must start with MVP
+struct Uniforms{
     float mvp[4][4];
     float position[12 * 3][4];
     float attr[12 * 3][4];
 };
 
-//--------------------------------------------------------------------------------------
-// Mesh and VertexFormat Data
-//--------------------------------------------------------------------------------------
 // clang-format off
 static const float g_vertex_buffer_data[] = {
     -1.0f,-1.0f,-1.0f,  // -X side
@@ -162,7 +142,6 @@ struct Demo {
     vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
     void cleanup();
     void create_device();
-    void destroy_texture(texture_object*);
     void draw();
     void draw_build_cmd(vk::CommandBuffer);
     void flush_init_cmd();
@@ -171,7 +150,7 @@ struct Demo {
     void init_vk_swapchain();
     void prepare();
     void prepare_buffers();
-    void prepare_cube_data_buffers();
+    void prepare_uniforms();
     void prepare_depth();
     void prepare_descriptor_layout();
     void prepare_descriptor_pool();
@@ -200,7 +179,6 @@ struct Demo {
 
     vk::SurfaceKHR surface;
     bool prepared = false;
-    bool use_staging_buffer = false;
     bool separate_present_queue = false;
     int32_t gpu_number = -1;
 
@@ -421,13 +399,6 @@ void Demo::create_device() {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void Demo::destroy_texture(texture_object* tex_objs) {
-    // clean up staging resources
-    device.freeMemory(tex_objs->mem, nullptr);
-    if (tex_objs->image) device.destroyImage(tex_objs->image, nullptr);
-    if (tex_objs->buffer) device.destroyBuffer(tex_objs->buffer, nullptr);
-}
-
 void Demo::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
     device.waitForFences(1, &fences[frame_index], VK_TRUE, UINT64_MAX);
@@ -608,14 +579,6 @@ void Demo::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 }
 
 void Demo::flush_init_cmd() {
-    // TODO: hmm.
-    // This function could get called twice if the texture uses a staging
-    // buffer
-    // In that case the second call should be ignored
-    if (!cmd) {
-        return;
-    }
-
     auto result = cmd.end();
     VERIFY(result == vk::Result::eSuccess);
 
@@ -1025,7 +988,7 @@ void Demo::prepare() {
 
     prepare_buffers();
     prepare_depth();
-    prepare_cube_data_buffers();
+    prepare_uniforms();
 
     prepare_descriptor_layout();
     prepare_render_pass();
@@ -1247,16 +1210,15 @@ void Demo::prepare_buffers() {
     }
 }
 
-void Demo::prepare_cube_data_buffers() {
+void Demo::prepare_uniforms() {
     mat4x4 VP;
     mat4x4_mul(VP, projection_matrix, view_matrix);
 
     mat4x4 MVP;
     mat4x4_mul(MVP, VP, model_matrix);
 
-    vktexcube_vs_uniform data;
+    Uniforms data;
     memcpy(data.mvp, MVP, sizeof(MVP));
-    //    dumpMatrix("MVP", MVP)
 
     for (int32_t i = 0; i < 12 * 3; i++) {
         data.position[i][0] = g_vertex_buffer_data[i * 3];
@@ -1380,7 +1342,7 @@ void Demo::prepare_descriptor_set() {
     auto const alloc_info =
         vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
 
-    auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct vktexcube_vs_uniform));
+    auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct Uniforms));
 
     vk::WriteDescriptorSet writes[1];
 

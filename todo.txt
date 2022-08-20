@@ -1,3 +1,2 @@
-remove texture (remove ppm file)
 separate files (render, window, app, ...)
 make demo a real class (init on construct)
