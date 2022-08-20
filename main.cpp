@@ -42,8 +42,6 @@ struct texture_object {
     int32_t tex_height{ 0 };
 };
 
-static char const* const tex_files[] = { "lunarg.ppm" };
-
 static int validation_error = 0;
 
 struct vktexcube_vs_uniform {
@@ -184,16 +182,12 @@ struct Demo {
     vk::ShaderModule prepare_fs();
     void prepare_pipeline();
     void prepare_render_pass();
-    void prepare_texture_image(const char*, texture_object*, vk::ImageTiling, vk::ImageUsageFlags, vk::MemoryPropertyFlags);
-    void prepare_texture_buffer(const char*, texture_object*);
-    void prepare_textures();
 
     void resize();
     void create_surface();
     void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
         vk::PipelineStageFlags, vk::PipelineStageFlags);
     void update_data_buffer();
-    bool loadTexture(const char*, uint8_t*, vk::SubresourceLayout*, int32_t*, int32_t*);
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
 
     void run();
@@ -251,10 +245,6 @@ struct Demo {
         vk::DeviceMemory mem;
         vk::ImageView view;
     } depth;
-
-    static int32_t const texture_count = 1;
-    texture_object textures[texture_count];
-    texture_object staging_texture;
 
     struct {
         vk::Buffer buf;
@@ -378,12 +368,6 @@ void Demo::cleanup() {
     device.destroyPipelineLayout(pipeline_layout, nullptr);
     device.destroyDescriptorSetLayout(desc_layout, nullptr);
 
-    for (uint32_t i = 0; i < texture_count; i++) {
-        device.destroyImageView(textures[i].view, nullptr);
-        device.destroyImage(textures[i].image, nullptr);
-        device.freeMemory(textures[i].mem, nullptr);
-        device.destroySampler(textures[i].sampler, nullptr);
-    }
     device.destroySwapchainKHR(swapchain, nullptr);
 
     device.destroyImageView(depth.view, nullptr);
@@ -1041,7 +1025,6 @@ void Demo::prepare() {
 
     prepare_buffers();
     prepare_depth();
-    prepare_textures();
     prepare_cube_data_buffers();
 
     prepare_descriptor_layout();
@@ -1087,9 +1070,6 @@ void Demo::prepare() {
      * that need to be flushed before beginning the render loop.
      */
     flush_init_cmd();
-    if (staging_texture.buffer) {
-        destroy_texture(&staging_texture);
-    }
 
     current_buffer = 0;
     prepared = true;
@@ -1366,20 +1346,15 @@ void Demo::prepare_depth() {
 }
 
 void Demo::prepare_descriptor_layout() {
-    vk::DescriptorSetLayoutBinding const layout_bindings[2] = { vk::DescriptorSetLayoutBinding()
-                                                                   .setBinding(0)
-                                                                   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-                                                                   .setDescriptorCount(1)
-                                                                   .setStageFlags(vk::ShaderStageFlagBits::eVertex)
-                                                                   .setPImmutableSamplers(nullptr),
-                                                               vk::DescriptorSetLayoutBinding()
-                                                                   .setBinding(1)
-                                                                   .setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-                                                                   .setDescriptorCount(texture_count)
-                                                                   .setStageFlags(vk::ShaderStageFlagBits::eFragment)
-                                                                   .setPImmutableSamplers(nullptr) };
+    vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
+        vk::DescriptorSetLayoutBinding()
+           .setBinding(0)
+           .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+           .setDescriptorCount(1)
+           .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+           .setPImmutableSamplers(nullptr) };
 
-    auto const descriptor_layout = vk::DescriptorSetLayoutCreateInfo().setBindingCount(2).setPBindings(layout_bindings);
+    auto const descriptor_layout = vk::DescriptorSetLayoutCreateInfo().setBindingCount(1).setPBindings(layout_bindings);
 
     auto result = device.createDescriptorSetLayout(&descriptor_layout, nullptr, &desc_layout);
     VERIFY(result == vk::Result::eSuccess);
@@ -1391,14 +1366,11 @@ void Demo::prepare_descriptor_layout() {
 }
 
 void Demo::prepare_descriptor_pool() {
-    vk::DescriptorPoolSize const poolSizes[2] = {
-        vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount),
-        vk::DescriptorPoolSize()
-            .setType(vk::DescriptorType::eCombinedImageSampler)
-            .setDescriptorCount(swapchainImageCount * texture_count) };
+    vk::DescriptorPoolSize const poolSizes[1] = {
+        vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount) };
 
     auto const descriptor_pool =
-        vk::DescriptorPoolCreateInfo().setMaxSets(swapchainImageCount).setPoolSizeCount(2).setPPoolSizes(poolSizes);
+        vk::DescriptorPoolCreateInfo().setMaxSets(swapchainImageCount).setPoolSizeCount(1).setPPoolSizes(poolSizes);
 
     auto result = device.createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
     VERIFY(result == vk::Result::eSuccess);
@@ -1410,23 +1382,11 @@ void Demo::prepare_descriptor_set() {
 
     auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct vktexcube_vs_uniform));
 
-    vk::DescriptorImageInfo tex_descs[texture_count];
-    for (uint32_t i = 0; i < texture_count; i++) {
-        tex_descs[i].setSampler(textures[i].sampler);
-        tex_descs[i].setImageView(textures[i].view);
-        tex_descs[i].setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-    }
-
-    vk::WriteDescriptorSet writes[2];
+    vk::WriteDescriptorSet writes[1];
 
     writes[0].setDescriptorCount(1);
     writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
     writes[0].setPBufferInfo(&buffer_info);
-
-    writes[1].setDstBinding(1);
-    writes[1].setDescriptorCount(texture_count);
-    writes[1].setDescriptorType(vk::DescriptorType::eCombinedImageSampler);
-    writes[1].setPImageInfo(tex_descs);
 
     for (unsigned int i = 0; i < swapchainImageCount; i++) {
         auto result = device.allocateDescriptorSets(&alloc_info, &swapchain_image_resources[i].descriptor_set);
@@ -1434,8 +1394,7 @@ void Demo::prepare_descriptor_set() {
 
         buffer_info.setBuffer(swapchain_image_resources[i].uniform_buffer);
         writes[0].setDstSet(swapchain_image_resources[i].descriptor_set);
-        writes[1].setDstSet(swapchain_image_resources[i].descriptor_set);
-        device.updateDescriptorSets(2, writes, 0, nullptr);
+        device.updateDescriptorSets(1, writes, 0, nullptr);
     }
 }
 
@@ -1625,202 +1584,6 @@ vk::ShaderModule Demo::prepare_shader_module(const uint32_t* code, size_t size) 
     return module;
 }
 
-void Demo::prepare_texture_buffer(const char* filename, texture_object* tex_obj) {
-    int32_t tex_width;
-    int32_t tex_height;
-
-    if (!loadTexture(filename, NULL, NULL, &tex_width, &tex_height)) {
-        ERR_EXIT("Failed to load textures", "Load Texture Failure");
-    }
-
-    tex_obj->tex_width = tex_width;
-    tex_obj->tex_height = tex_height;
-
-    auto const buffer_create_info = vk::BufferCreateInfo()
-        .setSize(tex_width * tex_height * 4)
-        .setUsage(vk::BufferUsageFlagBits::eTransferSrc)
-        .setSharingMode(vk::SharingMode::eExclusive)
-        .setQueueFamilyIndexCount(0)
-        .setPQueueFamilyIndices(nullptr);
-
-    auto result = device.createBuffer(&buffer_create_info, nullptr, &tex_obj->buffer);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::MemoryRequirements mem_reqs;
-    device.getBufferMemoryRequirements(tex_obj->buffer, &mem_reqs);
-
-    tex_obj->mem_alloc.setAllocationSize(mem_reqs.size);
-    tex_obj->mem_alloc.setMemoryTypeIndex(0);
-
-    vk::MemoryPropertyFlags requirements = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-    auto pass = memory_type_from_properties(mem_reqs.memoryTypeBits, requirements, &tex_obj->mem_alloc.memoryTypeIndex);
-    VERIFY(pass == true);
-
-    result = device.allocateMemory(&tex_obj->mem_alloc, nullptr, &(tex_obj->mem));
-    VERIFY(result == vk::Result::eSuccess);
-
-    result = device.bindBufferMemory(tex_obj->buffer, tex_obj->mem, 0);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::SubresourceLayout layout;
-    layout.rowPitch = tex_width * 4;
-    auto data = device.mapMemory(tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize);
-    VERIFY(data.result == vk::Result::eSuccess);
-
-    if (!loadTexture(filename, (uint8_t*)data.value, &layout, &tex_width, &tex_height)) {
-        fprintf(stderr, "Error loading texture: %s\n", filename);
-    }
-
-    device.unmapMemory(tex_obj->mem);
-}
-
-void Demo::prepare_texture_image(const char* filename, texture_object* tex_obj, vk::ImageTiling tiling, vk::ImageUsageFlags usage,
-    vk::MemoryPropertyFlags required_props) {
-    int32_t tex_width;
-    int32_t tex_height;
-    if (!loadTexture(filename, nullptr, nullptr, &tex_width, &tex_height)) {
-        ERR_EXIT("Failed to load textures", "Load Texture Failure");
-    }
-
-    tex_obj->tex_width = tex_width;
-    tex_obj->tex_height = tex_height;
-
-    auto const image_create_info = vk::ImageCreateInfo()
-        .setImageType(vk::ImageType::e2D)
-        .setFormat(vk::Format::eR8G8B8A8Unorm)
-        .setExtent({ (uint32_t)tex_width, (uint32_t)tex_height, 1 })
-        .setMipLevels(1)
-        .setArrayLayers(1)
-        .setSamples(vk::SampleCountFlagBits::e1)
-        .setTiling(tiling)
-        .setUsage(usage)
-        .setSharingMode(vk::SharingMode::eExclusive)
-        .setQueueFamilyIndexCount(0)
-        .setPQueueFamilyIndices(nullptr)
-        .setInitialLayout(vk::ImageLayout::ePreinitialized);
-
-    auto result = device.createImage(&image_create_info, nullptr, &tex_obj->image);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::MemoryRequirements mem_reqs;
-    device.getImageMemoryRequirements(tex_obj->image, &mem_reqs);
-
-    tex_obj->mem_alloc.setAllocationSize(mem_reqs.size);
-    tex_obj->mem_alloc.setMemoryTypeIndex(0);
-
-    auto pass = memory_type_from_properties(mem_reqs.memoryTypeBits, required_props, &tex_obj->mem_alloc.memoryTypeIndex);
-    VERIFY(pass == true);
-
-    result = device.allocateMemory(&tex_obj->mem_alloc, nullptr, &(tex_obj->mem));
-    VERIFY(result == vk::Result::eSuccess);
-
-    result = device.bindImageMemory(tex_obj->image, tex_obj->mem, 0);
-    VERIFY(result == vk::Result::eSuccess);
-
-    if (required_props & vk::MemoryPropertyFlagBits::eHostVisible) {
-        auto const subres = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::eColor).setMipLevel(0).setArrayLayer(0);
-        vk::SubresourceLayout layout;
-        device.getImageSubresourceLayout(tex_obj->image, &subres, &layout);
-
-        auto data = device.mapMemory(tex_obj->mem, 0, tex_obj->mem_alloc.allocationSize);
-        VERIFY(data.result == vk::Result::eSuccess);
-
-        if (!loadTexture(filename, (uint8_t*)data.value, &layout, &tex_width, &tex_height)) {
-            fprintf(stderr, "Error loading texture: %s\n", filename);
-        }
-
-        device.unmapMemory(tex_obj->mem);
-    }
-
-    tex_obj->imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-}
-
-void Demo::prepare_textures() {
-    vk::Format const tex_format = vk::Format::eR8G8B8A8Unorm;
-    vk::FormatProperties props;
-    gpu.getFormatProperties(tex_format, &props);
-
-    for (uint32_t i = 0; i < texture_count; i++) {
-        if ((props.linearTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) && !use_staging_buffer) {
-            /* Device can texture using linear textures */
-            prepare_texture_image(tex_files[i], &textures[i], vk::ImageTiling::eLinear, vk::ImageUsageFlagBits::eSampled,
-                vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-            // Nothing in the pipeline needs to be complete to start, and don't allow fragment
-            // shader to run until layout transition completes
-            set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                textures[i].imageLayout, vk::AccessFlagBits(), vk::PipelineStageFlagBits::eTopOfPipe,
-                vk::PipelineStageFlagBits::eFragmentShader);
-            staging_texture.image = vk::Image();
-        }
-        else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) {
-            /* Must use staging buffer to copy linear texture to optimized */
-
-            prepare_texture_buffer(tex_files[i], &staging_texture);
-
-            prepare_texture_image(tex_files[i], &textures[i], vk::ImageTiling::eOptimal,
-                vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
-                vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-            set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::ePreinitialized,
-                vk::ImageLayout::eTransferDstOptimal, vk::AccessFlagBits(), vk::PipelineStageFlagBits::eTopOfPipe,
-                vk::PipelineStageFlagBits::eTransfer);
-
-            auto const subresource = vk::ImageSubresourceLayers()
-                .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                .setMipLevel(0)
-                .setBaseArrayLayer(0)
-                .setLayerCount(1);
-
-            auto const copy_region =
-                vk::BufferImageCopy()
-                .setBufferOffset(0)
-                .setBufferRowLength(staging_texture.tex_width)
-                .setBufferImageHeight(staging_texture.tex_height)
-                .setImageSubresource(subresource)
-                .setImageOffset({ 0, 0, 0 })
-                .setImageExtent({ (uint32_t)staging_texture.tex_width, (uint32_t)staging_texture.tex_height, 1 });
-
-            cmd.copyBufferToImage(staging_texture.buffer, textures[i].image, vk::ImageLayout::eTransferDstOptimal, 1, &copy_region);
-
-            set_image_layout(textures[i].image, vk::ImageAspectFlagBits::eColor, vk::ImageLayout::eTransferDstOptimal,
-                textures[i].imageLayout, vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
-                vk::PipelineStageFlagBits::eFragmentShader);
-        }
-        else {
-            assert(!"No support for R8G8B8A8_UNORM as texture image format");
-        }
-
-        auto const samplerInfo = vk::SamplerCreateInfo()
-            .setMagFilter(vk::Filter::eNearest)
-            .setMinFilter(vk::Filter::eNearest)
-            .setMipmapMode(vk::SamplerMipmapMode::eNearest)
-            .setAddressModeU(vk::SamplerAddressMode::eClampToEdge)
-            .setAddressModeV(vk::SamplerAddressMode::eClampToEdge)
-            .setAddressModeW(vk::SamplerAddressMode::eClampToEdge)
-            .setMipLodBias(0.0f)
-            .setAnisotropyEnable(VK_FALSE)
-            .setMaxAnisotropy(1)
-            .setCompareEnable(VK_FALSE)
-            .setCompareOp(vk::CompareOp::eNever)
-            .setMinLod(0.0f)
-            .setMaxLod(0.0f)
-            .setBorderColor(vk::BorderColor::eFloatOpaqueWhite)
-            .setUnnormalizedCoordinates(VK_FALSE);
-
-        auto result = device.createSampler(&samplerInfo, nullptr, &textures[i].sampler);
-        VERIFY(result == vk::Result::eSuccess);
-
-        auto const viewInfo = vk::ImageViewCreateInfo()
-            .setImage(textures[i].image)
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(tex_format)
-            .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        result = device.createImageView(&viewInfo, nullptr, &textures[i].view);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-}
-
 vk::ShaderModule Demo::prepare_vs() {
     const uint32_t vertShaderCode[] =
 #include "shader.vert.inc"
@@ -1859,13 +1622,6 @@ void Demo::resize() {
     device.destroyRenderPass(render_pass, nullptr);
     device.destroyPipelineLayout(pipeline_layout, nullptr);
     device.destroyDescriptorSetLayout(desc_layout, nullptr);
-
-    for (i = 0; i < texture_count; i++) {
-        device.destroyImageView(textures[i].view, nullptr);
-        device.destroyImage(textures[i].image, nullptr);
-        device.freeMemory(textures[i].mem, nullptr);
-        device.destroySampler(textures[i].sampler, nullptr);
-    }
 
     device.destroyImageView(depth.view, nullptr);
     device.destroyImage(depth.image, nullptr);
@@ -1952,41 +1708,6 @@ void Demo::update_data_buffer() {
     mat4x4_mul(MVP, VP, model_matrix);
 
     memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
-}
-
-/* Convert ppm image data from header file into RGBA texture image */
-#include "lunarg.ppm.h"
-bool Demo::loadTexture(const char* filename, uint8_t* rgba_data, vk::SubresourceLayout* layout, int32_t* width, int32_t* height) {
-    (void)filename;
-    char* cPtr;
-    cPtr = (char*)lunarg_ppm;
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "P6\n", 3)) {
-        return false;
-    }
-    while (strncmp(cPtr++, "\n", 1))
-        ;
-    sscanf(cPtr, "%u %u", width, height);
-    if (rgba_data == NULL) {
-        return true;
-    }
-    while (strncmp(cPtr++, "\n", 1))
-        ;
-    if ((unsigned char*)cPtr >= (lunarg_ppm + lunarg_ppm_len) || strncmp(cPtr, "255\n", 4)) {
-        return false;
-    }
-    while (strncmp(cPtr++, "\n", 1))
-        ;
-    for (int y = 0; y < *height; y++) {
-        uint8_t* rowPtr = rgba_data;
-        for (int x = 0; x < *width; x++) {
-            memcpy(rowPtr, cPtr, 3);
-            rowPtr[3] = 255; /* Alpha of 1 */
-            rowPtr += 4;
-            cPtr += 3;
-        }
-        rgba_data += layout->rowPitch;
-    }
-    return true;
 }
 
 bool Demo::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
