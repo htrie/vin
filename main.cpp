@@ -20,10 +20,10 @@
 
 #define LOG(txt) OutputDebugString(txt)
 
-#define ERR_EXIT(err_msg, err_class)                                          \
-    do {                                                                      \
-        if (!suppress_popups) MessageBox(nullptr, err_msg, err_class, MB_OK); \
-        exit(1);                                                              \
+#define ERR_EXIT(err_msg, err_class) \
+    do { \
+        MessageBox(nullptr, err_msg, err_class, MB_OK); \
+        exit(1); \
     } while (0)
 
 static int validation_error = 0;
@@ -208,10 +208,8 @@ class App {
 
     bool quit = false;
     uint32_t curFrame = 0;
-    uint32_t frameCount = 0;
+    uint32_t frameCount = UINT32_MAX;
     bool validate = true; // [TODO] Find another way to toggle.
-    bool use_break = false;
-    bool suppress_popups = false;
 
     uint32_t current_buffer = 0;
     uint32_t queue_family_count = 0;
@@ -256,8 +254,8 @@ public:
     char name[APP_NAME_STR_LEN];
 
     POINT minsize = { 0, 0 }; // [TODO] Make private.
-    int32_t width = 0; // [TODO] Make private.
-    int32_t height = 0; // [TODO] Make private.
+    int32_t width = 800; // [TODO] Make private.
+    int32_t height = 600; // [TODO] Make private.
 
     App();
 
@@ -602,15 +600,11 @@ void App::flush_init_cmd() {
 void App::init() {
     LOG("init\n");
 
+    init_vk();
+
     vec3 eye = { 0.0f, 3.0f, 5.0f };
     vec3 origin = { 0, 0, 0 };
     vec3 up = { 0.0f, 1.0f, 0.0 };
-
-    frameCount = UINT32_MAX;
-    width = 800;
-    height = 600;
-
-    init_vk();
 
     mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
     mat4x4_look_at(view_matrix, eye, origin, up);
