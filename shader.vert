@@ -6,7 +6,6 @@
 layout (std140, binding = 0) uniform bufferVals {
     mat4 mvp;
     vec4 pos[12*3];
-    vec4 attr[12*3];
 } myBufferVals;
 
 void main() {

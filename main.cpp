@@ -31,7 +31,6 @@ static int validation_error = 0;
 struct Uniforms{
     float mvp[4][4];
     float position[12 * 3][4];
-    float attr[12 * 3][4];
 };
 
 static const float g_vertex_buffer_data[] = {
@@ -76,50 +75,6 @@ static const float g_vertex_buffer_data[] = {
     -1.0f,-1.0f, 1.0f,
      1.0f,-1.0f, 1.0f,
      1.0f, 1.0f, 1.0f,
-};
-
-static const float g_uv_buffer_data[] = {
-    0.0f, 1.0f,  // -X side
-    1.0f, 1.0f,
-    1.0f, 0.0f,
-    1.0f, 0.0f,
-    0.0f, 0.0f,
-    0.0f, 1.0f,
-
-    1.0f, 1.0f,  // -Z side
-    0.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 0.0f,
-
-    1.0f, 0.0f,  // -Y side
-    1.0f, 1.0f,
-    0.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    0.0f, 0.0f,
-
-    1.0f, 0.0f,  // +Y side
-    0.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
-
-    1.0f, 0.0f,  // +X side
-    0.0f, 0.0f,
-    0.0f, 1.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
-    1.0f, 0.0f,
-
-    0.0f, 0.0f,  // +Z side
-    0.0f, 1.0f,
-    1.0f, 0.0f,
-    0.0f, 1.0f,
-    1.0f, 1.0f,
-    1.0f, 0.0f,
 };
 
 typedef struct {
@@ -1192,10 +1147,6 @@ void App::prepare_uniforms() {
         data.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
         data.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
         data.position[i][3] = 1.0f;
-        data.attr[i][0] = g_uv_buffer_data[2 * i];
-        data.attr[i][1] = g_uv_buffer_data[2 * i + 1];
-        data.attr[i][2] = 0;
-        data.attr[i][3] = 0;
     }
 
     auto const buf_info = vk::BufferCreateInfo().setSize(sizeof(data)).setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
