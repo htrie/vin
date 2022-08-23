@@ -192,8 +192,7 @@ class App {
 
     void create_surface();
 
-    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags,
-        vk::PipelineStageFlags, vk::PipelineStageFlags);
+    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags, vk::PipelineStageFlags, vk::PipelineStageFlags);
 
     void update_data_buffer();
 
@@ -248,9 +247,7 @@ void App::build_image_ownership_cmd(uint32_t const& i) {
         .setImage(swapchain_image_resources[i].image)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-    swapchain_image_resources[i].graphics_to_present_cmd.pipelineBarrier(
-        vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0,
-        nullptr, 1, &image_ownership_barrier);
+    swapchain_image_resources[i].graphics_to_present_cmd.pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
 
     result = swapchain_image_resources[i].graphics_to_present_cmd.end();
     VERIFY(result == vk::Result::eSuccess);
@@ -361,8 +358,7 @@ void App::draw() {
 
     vk::Result result;
     do {
-        result =
-            device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], vk::Fence(), &current_buffer);
+        result = device.acquireNextImageKHR(swapchain, UINT64_MAX, image_acquired_semaphores[frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -458,8 +454,7 @@ void App::draw() {
 void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     auto const commandInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-    vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})),
-                                           vk::ClearDepthStencilValue(1.0f, 0u) };
+    vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})), vk::ClearDepthStencilValue(1.0f, 0u) };
 
     auto const passInfo = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass)
@@ -473,8 +468,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1,
-        &swapchain_image_resources[current_buffer].descriptor_set, 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &swapchain_image_resources[current_buffer].descriptor_set, 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -518,8 +512,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
             .setImage(swapchain_image_resources[current_buffer].image)
             .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-        commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe,
-            vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
+        commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
     }
 
     result = commandBuffer.end();
@@ -585,8 +578,7 @@ void App::init_vk() {
             result = vk::enumerateInstanceLayerProperties(&instance_layer_count, instance_layers.get());
             VERIFY(result == vk::Result::eSuccess);
 
-            validation_found = check_layers(ARRAY_SIZE(instance_validation_layers), instance_validation_layers,
-                instance_layer_count, instance_layers.get());
+            validation_found = check_layers(ARRAY_SIZE(instance_validation_layers), instance_validation_layers, instance_layer_count, instance_layers.get());
             if (validation_found) {
                 enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
                 enabled_layers[0] = "VK_LAYER_KHRONOS_validation";
@@ -606,8 +598,7 @@ void App::init_vk() {
     vk::Bool32 platformSurfaceExtFound = VK_FALSE;
     memset(extension_names, 0, sizeof(extension_names));
 
-    auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count,
-        static_cast<vk::ExtensionProperties*>(nullptr));
+    auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (instance_extension_count > 0) {
@@ -735,8 +726,7 @@ void App::init_vk() {
     gpu = physical_devices[gpu_number];
     {
         auto physicalDeviceProperties = gpu.getProperties();
-        fprintf(stderr, "Selected GPU %d: %s, type: %s\n", gpu_number, physicalDeviceProperties.deviceName.data(),
-            to_string(physicalDeviceProperties.deviceType).c_str());
+        fprintf(stderr, "Selected GPU %d: %s, type: %s\n", gpu_number, physicalDeviceProperties.deviceName.data(), to_string(physicalDeviceProperties.deviceType).c_str());
     }
     physical_devices.reset();
 
@@ -746,8 +736,7 @@ void App::init_vk() {
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
 
-    result =
-        gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (device_extension_count > 0) {
@@ -1160,22 +1149,18 @@ void App::prepare_uniforms() {
 
         auto mem_alloc = vk::MemoryAllocateInfo().setAllocationSize(mem_reqs.size).setMemoryTypeIndex(0);
 
-        bool const pass = memory_type_from_properties(
-            mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-            &mem_alloc.memoryTypeIndex);
+        bool const pass = memory_type_from_properties( mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
         result = device.allocateMemory(&mem_alloc, nullptr, &swapchain_image_resources[i].uniform_memory);
         VERIFY(result == vk::Result::eSuccess);
 
-        result = device.mapMemory(swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(),
-            &swapchain_image_resources[i].uniform_memory_ptr);
+        result = device.mapMemory(swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
 
         memcpy(swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
 
-        result =
-            device.bindBufferMemory(swapchain_image_resources[i].uniform_buffer, swapchain_image_resources[i].uniform_memory, 0);
+        result = device.bindBufferMemory(swapchain_image_resources[i].uniform_buffer, swapchain_image_resources[i].uniform_memory, 0);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1206,8 +1191,7 @@ void App::prepare_depth() {
     depth.mem_alloc.setAllocationSize(mem_reqs.size);
     depth.mem_alloc.setMemoryTypeIndex(0);
 
-    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal,
-        &depth.mem_alloc.memoryTypeIndex);
+    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &depth.mem_alloc.memoryTypeIndex);
     VERIFY(pass);
 
     result = device.allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
@@ -1246,19 +1230,16 @@ void App::prepare_descriptor_layout() {
 }
 
 void App::prepare_descriptor_pool() {
-    vk::DescriptorPoolSize const poolSizes[1] = {
-        vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount) };
+    vk::DescriptorPoolSize const poolSizes[1] = { vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(swapchainImageCount) };
 
-    auto const descriptor_pool =
-        vk::DescriptorPoolCreateInfo().setMaxSets(swapchainImageCount).setPoolSizeCount(1).setPPoolSizes(poolSizes);
+    auto const descriptor_pool = vk::DescriptorPoolCreateInfo().setMaxSets(swapchainImageCount).setPoolSizeCount(1).setPPoolSizes(poolSizes);
 
     auto result = device.createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
     VERIFY(result == vk::Result::eSuccess);
 }
 
 void App::prepare_descriptor_set() {
-    auto const alloc_info =
-        vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
+    auto const alloc_info = vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
 
     auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct Uniforms));
 
@@ -1318,9 +1299,12 @@ void App::prepare_pipeline() {
 
     vk::PipelineVertexInputStateCreateInfo const vertexInputInfo;
 
-    auto const inputAssemblyInfo = vk::PipelineInputAssemblyStateCreateInfo().setTopology(vk::PrimitiveTopology::eTriangleList);
+    auto const inputAssemblyInfo = vk::PipelineInputAssemblyStateCreateInfo()
+        .setTopology(vk::PrimitiveTopology::eTriangleList);
 
-    auto const viewportInfo = vk::PipelineViewportStateCreateInfo().setViewportCount(1).setScissorCount(1);
+    auto const viewportInfo = vk::PipelineViewportStateCreateInfo()
+        .setViewportCount(1)
+        .setScissorCount(1);
 
     auto const rasterizationInfo = vk::PipelineRasterizationStateCreateInfo()
         .setDepthClampEnable(VK_FALSE)
@@ -1333,8 +1317,10 @@ void App::prepare_pipeline() {
 
     auto const multisampleInfo = vk::PipelineMultisampleStateCreateInfo();
 
-    auto const stencilOp =
-        vk::StencilOpState().setFailOp(vk::StencilOp::eKeep).setPassOp(vk::StencilOp::eKeep).setCompareOp(vk::CompareOp::eAlways);
+    auto const stencilOp = vk::StencilOpState()
+        .setFailOp(vk::StencilOp::eKeep)
+        .setPassOp(vk::StencilOp::eKeep)
+        .setCompareOp(vk::CompareOp::eAlways);
 
     auto const depthStencilInfo = vk::PipelineDepthStencilStateCreateInfo()
         .setDepthTestEnable(VK_TRUE)
@@ -1346,15 +1332,18 @@ void App::prepare_pipeline() {
         .setBack(stencilOp);
 
     vk::PipelineColorBlendAttachmentState const colorBlendAttachments[1] = {
-        vk::PipelineColorBlendAttachmentState().setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
-                                                                  vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
+        vk::PipelineColorBlendAttachmentState()
+            .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
 
-    auto const colorBlendInfo =
-        vk::PipelineColorBlendStateCreateInfo().setAttachmentCount(1).setPAttachments(colorBlendAttachments);
+    auto const colorBlendInfo = vk::PipelineColorBlendStateCreateInfo()
+        .setAttachmentCount(1)
+        .setPAttachments(colorBlendAttachments);
 
     vk::DynamicState const dynamicStates[2] = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
 
-    auto const dynamicStateInfo = vk::PipelineDynamicStateCreateInfo().setPDynamicStates(dynamicStates).setDynamicStateCount(2);
+    auto const dynamicStateInfo = vk::PipelineDynamicStateCreateInfo()
+        .setPDynamicStates(dynamicStates)
+        .setDynamicStateCount(2);
 
     auto const pipeline = vk::GraphicsPipelineCreateInfo()
         .setStageCount(2)
@@ -1408,8 +1397,9 @@ void App::prepare_render_pass() {
 
     auto const color_reference = vk::AttachmentReference().setAttachment(0).setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-    auto const depth_reference =
-        vk::AttachmentReference().setAttachment(1).setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    auto const depth_reference = vk::AttachmentReference()
+        .setAttachment(1)
+        .setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
     auto const subpass = vk::SubpassDescription()
         .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
@@ -1455,7 +1445,9 @@ void App::prepare_render_pass() {
 }
 
 vk::ShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
-    const auto moduleCreateInfo = vk::ShaderModuleCreateInfo().setCodeSize(size).setPCode(code);
+    const auto moduleCreateInfo = vk::ShaderModuleCreateInfo()
+        .setCodeSize(size)
+        .setPCode(code);
 
     vk::ShaderModule module;
     auto result = device.createShaderModule(&moduleCreateInfo, nullptr, &module);
