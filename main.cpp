@@ -206,10 +206,8 @@ class App {
 
     std::unique_ptr<vk::Framebuffer[]> framebuffers;
 
-    bool quit = false;
     uint32_t curFrame = 0;
     uint32_t frameCount = UINT32_MAX;
-    bool validate = true; // [TODO] Find another way to toggle.
 
     uint32_t current_buffer = 0;
     uint32_t queue_family_count = 0;
@@ -623,7 +621,7 @@ void App::init_vk() {
 
     // Look for validation layers
     vk::Bool32 validation_found = VK_FALSE;
-    if (validate) {
+    if (true) {
         auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
         VERIFY(result == vk::Result::eSuccess);
 
@@ -919,7 +917,6 @@ void App::init_vk_swapchain() {
     }
     color_space = surfFormats[0].colorSpace;
 
-    quit = false;
     curFrame = 0;
 
     // Create semaphores to synchronize acquiring presentable buffers before
