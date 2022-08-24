@@ -77,6 +77,15 @@ static const float g_vertex_buffer_data[] = {
      1.0f, 1.0f, 1.0f,
 };
 
+struct Window {
+    HINSTANCE hinstance = nullptr;
+    HWND hwnd = nullptr;
+    char name[APP_NAME_STR_LEN];
+    POINT minsize = { 0, 0 }; // [TODO] Make private.
+    int32_t width = 800; // [TODO] Make private.
+    int32_t height = 600; // [TODO] Make private.
+};
+
 typedef struct {
     vk::Image image;
     vk::CommandBuffer cmd;
@@ -89,19 +98,10 @@ typedef struct {
     vk::DescriptorSet descriptor_set;
 } SwapchainImageResources;
 
-struct Window {
-    HINSTANCE hinstance = nullptr;
-    HWND hwnd = nullptr;
-    char name[APP_NAME_STR_LEN];
-
-    POINT minsize = { 0, 0 }; // [TODO] Make private.
-    int32_t width = 800; // [TODO] Make private.
-    int32_t height = 600; // [TODO] Make private.
-};
-
 class App {
-    vk::SurfaceKHR surface;
     bool prepared = false;
+
+    vk::SurfaceKHR surface;
     bool separate_present_queue = false;
     int32_t gpu_number = -1;
 
@@ -1688,8 +1688,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     MSG msg;
     msg.wParam = 0;
 
-    bool done = false;
-
     app.init();
 
     app.window.hinstance = hInstance;
@@ -1699,10 +1697,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     app.prepare();
 
-    while (!done) {
+    while (true) {
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
         if (msg.message == WM_QUIT) {
-            done = true;
+            break;
         }
         else {
             TranslateMessage(&msg);
