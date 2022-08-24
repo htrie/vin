@@ -89,6 +89,16 @@ typedef struct {
     vk::DescriptorSet descriptor_set;
 } SwapchainImageResources;
 
+struct Window {
+    HINSTANCE hinstance = nullptr;
+    HWND hwnd = nullptr;
+    char name[APP_NAME_STR_LEN];
+
+    POINT minsize = { 0, 0 }; // [TODO] Make private.
+    int32_t width = 800; // [TODO] Make private.
+    int32_t height = 600; // [TODO] Make private.
+};
+
 class App {
     vk::SurfaceKHR surface;
     bool prepared = false;
@@ -198,13 +208,7 @@ class App {
     void draw();
 
 public:
-    HINSTANCE connection = nullptr;
-    HWND window = nullptr;
-    char name[APP_NAME_STR_LEN];
-
-    POINT minsize = { 0, 0 }; // [TODO] Make private.
-    int32_t width = 800; // [TODO] Make private.
-    int32_t height = 600; // [TODO] Make private.
+    Window window;
 
     App();
 
@@ -222,7 +226,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 App::App()
 {
-    memset(name, '\0', APP_NAME_STR_LEN);
+    memset(window.name, '\0', APP_NAME_STR_LEN);
     memset(projection_matrix, 0, sizeof(projection_matrix));
     memset(view_matrix, 0, sizeof(view_matrix));
     memset(model_matrix, 0, sizeof(model_matrix));
@@ -433,7 +437,7 @@ void App::draw() {
         vk::SurfaceCapabilitiesKHR surfCapabilities;
         result = gpu.getSurfaceCapabilitiesKHR(surface, &surfCapabilities);
         VERIFY(result == vk::Result::eSuccess);
-        if (surfCapabilities.currentExtent.width != static_cast<uint32_t>(width) || surfCapabilities.currentExtent.height != static_cast<uint32_t>(height)) {
+        if (surfCapabilities.currentExtent.width != static_cast<uint32_t>(window.width) || surfCapabilities.currentExtent.height != static_cast<uint32_t>(window.height)) {
             resize();
         }
     }
@@ -455,7 +459,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     auto const passInfo = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass)
         .setFramebuffer(swapchain_image_resources[current_buffer].framebuffer)
-        .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)width, (uint32_t)height)))
+        .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
         .setPClearValues(clearValues);
 
@@ -468,13 +472,13 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
-    if (width < height) {
-        viewport_dimension = (float)width;
-        viewport_y = (height - width) / 2.0f;
+    if (window.width < window.height) {
+        viewport_dimension = (float)window.width;
+        viewport_y = (window.height - window.width) / 2.0f;
     }
     else {
-        viewport_dimension = (float)height;
-        viewport_x = (width - height) / 2.0f;
+        viewport_dimension = (float)window.height;
+        viewport_x = (window.width - window.height) / 2.0f;
     }
     auto const viewport = vk::Viewport()
         .setX(viewport_x)
@@ -485,7 +489,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
         .setMaxDepth((float)1.0f);
     commandBuffer.setViewport(0, 1, &viewport);
 
-    vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(width, height));
+    vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(window.width, window.height));
     commandBuffer.setScissor(0, 1, &scissor);
     commandBuffer.draw(12 * 3, 1, 0, 0);
     // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
@@ -780,7 +784,7 @@ void App::init_vk() {
 }
 
 void App::create_surface() {
-    auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(connection).setHwnd(window);
+    auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
 
     auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
     VERIFY(result == vk::Result::eSuccess);
@@ -977,14 +981,14 @@ void App::prepare_buffers() {
     if (surfCapabilities.currentExtent.width == (uint32_t)-1) {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapchainExtent.width = width;
-        swapchainExtent.height = height;
+        swapchainExtent.width = window.width;
+        swapchainExtent.height = window.height;
     }
     else {
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfCapabilities.currentExtent;
-        width = surfCapabilities.currentExtent.width;
-        height = surfCapabilities.currentExtent.height;
+        window.width = surfCapabilities.currentExtent.width;
+        window.height = surfCapabilities.currentExtent.height;
     }
 
     // The FIFO present mode is guaranteed by the spec to be supported
@@ -1173,7 +1177,7 @@ void App::prepare_depth() {
     auto const image = vk::ImageCreateInfo()
         .setImageType(vk::ImageType::e2D)
         .setFormat(depth.format)
-        .setExtent({ (uint32_t)width, (uint32_t)height, 1 })
+        .setExtent({ (uint32_t)window.width, (uint32_t)window.height, 1 })
         .setMipLevels(1)
         .setArrayLayers(1)
         .setSamples(vk::SampleCountFlagBits::e1)
@@ -1269,8 +1273,8 @@ void App::prepare_framebuffers() {
         .setRenderPass(render_pass)
         .setAttachmentCount(2)
         .setPAttachments(attachments)
-        .setWidth((uint32_t)width)
-        .setHeight((uint32_t)height)
+        .setWidth((uint32_t)window.width)
+        .setHeight((uint32_t)window.height)
         .setLayers(1);
 
     for (uint32_t i = 0; i < swapchainImageCount; i++) {
@@ -1600,12 +1604,12 @@ void App::create_window() {
     win_class.lpfnWndProc = WndProc;
     win_class.cbClsExtra = 0;
     win_class.cbWndExtra = 0;
-    win_class.hInstance = connection;
+    win_class.hInstance = window.hinstance;
     win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
     win_class.lpszMenuName = nullptr;
-    win_class.lpszClassName = name;
+    win_class.lpszClassName = window.name;
     win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
 
     if (!RegisterClassEx(&win_class)) {
@@ -1614,11 +1618,11 @@ void App::create_window() {
         exit(1);
     }
 
-    RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+    RECT wr = { 0, 0, static_cast<LONG>(window.width), static_cast<LONG>(window.height) };
     AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-    window = CreateWindowEx(0,
-        name,                  // class name
-        name,                  // app name
+    window.hwnd = CreateWindowEx(0,
+        window.name,                  // class name
+        window.name,                  // app name
         WS_OVERLAPPEDWINDOW |  // window style
         WS_VISIBLE | WS_SYSMENU,
         100, 100,            // x/y coords
@@ -1626,10 +1630,10 @@ void App::create_window() {
         wr.bottom - wr.top,  // height
         nullptr,             // handle to parent
         nullptr,             // handle to menu
-        connection,          // hInstance
+        window.hinstance,          // hInstance
         nullptr);            // no extra parameters
 
-    if (!window) {
+    if (!window.hwnd) {
         // It didn't work, so try to give a useful error:
         printf("Cannot create a window in which to draw!\n");
         fflush(stdout);
@@ -1637,8 +1641,8 @@ void App::create_window() {
     }
 
     // Window client area size must be at least 1 pixel high, to prevent crash.
-    minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-    minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
+    window.minsize.x = GetSystemMetrics(SM_CXMINTRACK);
+    window.minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 }
 
 App app;
@@ -1652,7 +1656,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         app.run();
         break;
     case WM_GETMINMAXINFO:  // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = app.minsize;
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = app.window.minsize;
         return 0;
     case WM_ERASEBKGND:
         return 1;
@@ -1661,8 +1665,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         // it was minimized. Vulkan doesn't support images or swapchains
         // with width=0 and height=0.
         if (wParam != SIZE_MINIMIZED) {
-            app.width = lParam & 0xffff;
-            app.height = (lParam & 0xffff0000) >> 16;
+            app.window.width = lParam & 0xffff;
+            app.window.height = (lParam & 0xffff0000) >> 16;
             app.resize();
         }
         break;
@@ -1688,8 +1692,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     app.init();
 
-    app.connection = hInstance;
-    strncpy(app.name, WINDOW_NAME, APP_NAME_STR_LEN);
+    app.window.hinstance = hInstance;
+    strncpy(app.window.name, WINDOW_NAME, APP_NAME_STR_LEN);
     app.create_window();
     app.init_vk_swapchain();
 
@@ -1704,7 +1708,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        RedrawWindow(app.window, nullptr, nullptr, RDW_INTERNALPAINT);
+        RedrawWindow(app.window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
     }
 
     app.cleanup();
