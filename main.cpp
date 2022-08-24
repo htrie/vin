@@ -153,9 +153,6 @@ class App {
     mat4x4 view_matrix;
     mat4x4 model_matrix;
 
-    vk::ShaderModule vert_shader_module;
-    vk::ShaderModule frag_shader_module;
-
     vk::DescriptorPool desc_pool;
     vk::DescriptorSet desc_set;
 
@@ -419,8 +416,7 @@ void App::draw() {
     // otherwise wait for draw complete
     auto const presentInfo = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(separate_present_queue ? &image_ownership_semaphores[frame_index]
-            : &draw_complete_semaphores[frame_index])
+        .setPWaitSemaphores(separate_present_queue ? &image_ownership_semaphores[frame_index] : &draw_complete_semaphores[frame_index])
         .setSwapchainCount(1)
         .setPSwapchains(&swapchain)
         .setPImageIndices(&current_buffer);
@@ -704,9 +700,13 @@ void App::init_vk() {
         }
 
         const vk::PhysicalDeviceType device_type_preference[] = {
-            vk::PhysicalDeviceType::eDiscreteGpu, vk::PhysicalDeviceType::eIntegratedGpu, vk::PhysicalDeviceType::eVirtualGpu,
-            vk::PhysicalDeviceType::eCpu, vk::PhysicalDeviceType::eOther };
-        vk::PhysicalDeviceType search_for_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
+            vk::PhysicalDeviceType::eDiscreteGpu,
+            vk::PhysicalDeviceType::eIntegratedGpu,
+            vk::PhysicalDeviceType::eVirtualGpu,
+            vk::PhysicalDeviceType::eCpu,
+            vk::PhysicalDeviceType::eOther
+        };
+        auto search_for_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
         for (uint32_t i = 0; i < sizeof(device_type_preference) / sizeof(vk::PhysicalDeviceType); i++) {
             if (count_device_type[static_cast<int>(device_type_preference[i])]) {
                 search_for_device_type = device_type_preference[i];
@@ -890,6 +890,8 @@ void App::init_vk_swapchain() {
 }
 
 void App::prepare() {
+    LOG("prepare\n");
+
     auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
     auto result = device.createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
     VERIFY(result == vk::Result::eSuccess);
@@ -1282,10 +1284,7 @@ vk::ShaderModule App::prepare_fs() {
     const uint32_t fragShaderCode[] =
 #include "shader.frag.inc"
         ;
-
-    frag_shader_module = prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
-
-    return frag_shader_module;
+    return prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
 }
 
 void App::prepare_pipeline() {
@@ -1293,9 +1292,12 @@ void App::prepare_pipeline() {
     auto result = device.createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
     VERIFY(result == vk::Result::eSuccess);
 
+    vk::ShaderModule vert_shader_module = prepare_vs();
+    vk::ShaderModule frag_shader_module = prepare_fs();
+
     vk::PipelineShaderStageCreateInfo const shaderStageInfo[2] = {
-        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eVertex).setModule(prepare_vs()).setPName("main"),
-        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eFragment).setModule(prepare_fs()).setPName("main") };
+        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eVertex).setModule(vert_shader_module).setPName("main"),
+        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eFragment).setModule(frag_shader_module).setPName("main") };
 
     vk::PipelineVertexInputStateCreateInfo const vertexInputInfo;
 
@@ -1460,10 +1462,7 @@ vk::ShaderModule App::prepare_vs() {
     const uint32_t vertShaderCode[] =
 #include "shader.vert.inc"
         ;
-
-    vert_shader_module = prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
-
-    return vert_shader_module;
+    return prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
 }
 
 void App::resize() {
