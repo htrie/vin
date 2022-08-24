@@ -83,6 +83,8 @@ struct Matrices {
     mat4x4 model_matrix;
 };
 
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
 struct Window {
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
@@ -90,6 +92,60 @@ struct Window {
     POINT minsize = { 0, 0 }; // [TODO] Make private.
     int32_t width = 800; // [TODO] Make private.
     int32_t height = 600; // [TODO] Make private.
+
+    Window() {
+        memset(name, '\0', APP_NAME_STR_LEN);
+        strncpy(name, WINDOW_NAME, APP_NAME_STR_LEN);
+    }
+
+    void create() {
+        WNDCLASSEX win_class;
+
+        win_class.cbSize = sizeof(WNDCLASSEX);
+        win_class.style = CS_HREDRAW | CS_VREDRAW;
+        win_class.lpfnWndProc = WndProc;
+        win_class.cbClsExtra = 0;
+        win_class.cbWndExtra = 0;
+        win_class.hInstance = hinstance;
+        win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+        win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
+        win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        win_class.lpszMenuName = nullptr;
+        win_class.lpszClassName = name;
+        win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
+
+        if (!RegisterClassEx(&win_class)) {
+            printf("Unexpected error trying to start the application!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+        AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+        hwnd = CreateWindowEx(0,
+            name,                  // class name
+            name,                  // app name
+            WS_OVERLAPPEDWINDOW |  // window style
+            WS_VISIBLE | WS_SYSMENU,
+            100, 100,            // x/y coords
+            wr.right - wr.left,  // width
+            wr.bottom - wr.top,  // height
+            nullptr,             // handle to parent
+            nullptr,             // handle to menu
+            hinstance,          // hInstance
+            nullptr);            // no extra parameters
+
+        if (!hwnd) {
+            // It didn't work, so try to give a useful error:
+            printf("Cannot create a window in which to draw!\n");
+            fflush(stdout);
+            exit(1);
+        }
+
+        // Window client area size must be at least 1 pixel high, to prevent crash.
+        minsize.x = GetSystemMetrics(SM_CXMINTRACK);
+        minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
+    }
 };
 
 struct SwapchainImageResources {
@@ -226,15 +282,11 @@ public:
     void prepare();
     void resize();
     void run();
-    void create_window();
 };
-
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 
 App::App()
 {
-    memset(window.name, '\0', APP_NAME_STR_LEN);
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
@@ -1604,55 +1656,6 @@ void App::run() {
     }
 }
 
-void App::create_window() {
-    WNDCLASSEX win_class;
-
-    win_class.cbSize = sizeof(WNDCLASSEX);
-    win_class.style = CS_HREDRAW | CS_VREDRAW;
-    win_class.lpfnWndProc = WndProc;
-    win_class.cbClsExtra = 0;
-    win_class.cbWndExtra = 0;
-    win_class.hInstance = window.hinstance;
-    win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-    win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-    win_class.lpszMenuName = nullptr;
-    win_class.lpszClassName = window.name;
-    win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
-
-    if (!RegisterClassEx(&win_class)) {
-        printf("Unexpected error trying to start the application!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    RECT wr = { 0, 0, static_cast<LONG>(window.width), static_cast<LONG>(window.height) };
-    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-    window.hwnd = CreateWindowEx(0,
-        window.name,                  // class name
-        window.name,                  // app name
-        WS_OVERLAPPEDWINDOW |  // window style
-        WS_VISIBLE | WS_SYSMENU,
-        100, 100,            // x/y coords
-        wr.right - wr.left,  // width
-        wr.bottom - wr.top,  // height
-        nullptr,             // handle to parent
-        nullptr,             // handle to menu
-        window.hinstance,          // hInstance
-        nullptr);            // no extra parameters
-
-    if (!window.hwnd) {
-        // It didn't work, so try to give a useful error:
-        printf("Cannot create a window in which to draw!\n");
-        fflush(stdout);
-        exit(1);
-    }
-
-    // Window client area size must be at least 1 pixel high, to prevent crash.
-    window.minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-    window.minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
-}
-
 App app;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -1699,8 +1702,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     app.init();
 
     app.window.hinstance = hInstance;
-    strncpy(app.window.name, WINDOW_NAME, APP_NAME_STR_LEN);
-    app.create_window();
+    app.window.create();
     app.init_vk_swapchain();
 
     app.prepare();
