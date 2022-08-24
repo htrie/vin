@@ -100,7 +100,6 @@ struct Window {
 
     void create() {
         WNDCLASSEX win_class;
-
         win_class.cbSize = sizeof(WNDCLASSEX);
         win_class.style = CS_HREDRAW | CS_VREDRAW;
         win_class.lpfnWndProc = WndProc;
@@ -115,13 +114,12 @@ struct Window {
         win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
 
         if (!RegisterClassEx(&win_class)) {
-            printf("Unexpected error trying to start the application!\n");
-            fflush(stdout);
-            exit(1);
+            ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
         }
 
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+
         hwnd = CreateWindowEx(0,
             name,                  // class name
             name,                  // app name
@@ -136,10 +134,7 @@ struct Window {
             nullptr);            // no extra parameters
 
         if (!hwnd) {
-            // It didn't work, so try to give a useful error:
-            printf("Cannot create a window in which to draw!\n");
-            fflush(stdout);
-            exit(1);
+            ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
         }
 
         // Window client area size must be at least 1 pixel high, to prevent crash.
