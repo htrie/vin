@@ -77,6 +77,12 @@ static const float g_vertex_buffer_data[] = {
      1.0f, 1.0f, 1.0f,
 };
 
+struct Matrices {
+    mat4x4 projection_matrix;
+    mat4x4 view_matrix;
+    mat4x4 model_matrix;
+};
+
 struct Window {
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
@@ -114,6 +120,8 @@ class App {
     bool prepared = false;
 
     Chain chain;
+
+    Matrices matrices;
 
     vk::SurfaceKHR surface;
     bool separate_present_queue = false;
@@ -162,10 +170,6 @@ class App {
     vk::PipelineCache pipelineCache;
     vk::RenderPass render_pass;
     vk::Pipeline pipeline;
-
-    mat4x4 projection_matrix;
-    mat4x4 view_matrix;
-    mat4x4 model_matrix;
 
     vk::DescriptorPool desc_pool;
     vk::DescriptorSet desc_set;
@@ -231,9 +235,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 App::App()
 {
     memset(window.name, '\0', APP_NAME_STR_LEN);
-    memset(projection_matrix, 0, sizeof(projection_matrix));
-    memset(view_matrix, 0, sizeof(view_matrix));
-    memset(model_matrix, 0, sizeof(model_matrix));
+    memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
+    memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
+    memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
 }
 
 void App::build_image_ownership_cmd(uint32_t const& i) {
@@ -556,11 +560,11 @@ void App::init() {
     vec3 origin = { 0, 0, 0 };
     vec3 up = { 0.0f, 1.0f, 0.0 };
 
-    mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-    mat4x4_look_at(view_matrix, eye, origin, up);
-    mat4x4_identity(model_matrix);
+    mat4x4_perspective(matrices.projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+    mat4x4_look_at(matrices.view_matrix, eye, origin, up);
+    mat4x4_identity(matrices.model_matrix);
 
-    projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
+    matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
 }
 
 void App::init_vk() {
@@ -1133,10 +1137,10 @@ void App::prepare_buffers() {
 
 void App::prepare_uniforms() {
     mat4x4 VP;
-    mat4x4_mul(VP, projection_matrix, view_matrix);
+    mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
     mat4x4 MVP;
-    mat4x4_mul(MVP, VP, model_matrix);
+    mat4x4_mul(MVP, VP, matrices.model_matrix);
 
     Uniforms data;
     memcpy(data.mvp, MVP, sizeof(MVP));
@@ -1558,16 +1562,16 @@ void App::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk:
 
 void App::update_data_buffer() {
     mat4x4 VP;
-    mat4x4_mul(VP, projection_matrix, view_matrix);
+    mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
     // Rotate around the Y axis
     mat4x4 Model;
-    mat4x4_dup(Model, model_matrix);
-    mat4x4_rotate_Y(model_matrix, Model, (float)degreesToRadians(0.1f));
-    mat4x4_orthonormalize(model_matrix, model_matrix);
+    mat4x4_dup(Model, matrices.model_matrix);
+    mat4x4_rotate_Y(matrices.model_matrix, Model, (float)degreesToRadians(1.5f));
+    mat4x4_orthonormalize(matrices.model_matrix, matrices.model_matrix);
 
     mat4x4 MVP;
-    mat4x4_mul(MVP, VP, model_matrix);
+    mat4x4_mul(MVP, VP, matrices.model_matrix);
 
     memcpy(chain.swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
 }
