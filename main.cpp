@@ -1651,7 +1651,7 @@ void App::run() {
     }
 }
 
-App app;
+std::unique_ptr<App> app;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
@@ -1659,10 +1659,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         PostQuitMessage(validation_error);
         break;
     case WM_PAINT:
-        app.run();
+        app->run();
         break;
     case WM_GETMINMAXINFO:  // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = app.window.minsize;
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = app->window.minsize;
         return 0;
     case WM_ERASEBKGND:
         return 1;
@@ -1671,9 +1671,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         // it was minimized. Vulkan doesn't support images or swapchains
         // with width=0 and height=0.
         if (wParam != SIZE_MINIMIZED) {
-            app.window.width = lParam & 0xffff;
-            app.window.height = (lParam & 0xffff0000) >> 16;
-            app.resize();
+            app->window.width = lParam & 0xffff;
+            app->window.height = (lParam & 0xffff0000) >> 16;
+            app->resize();
         }
         break;
     case WM_KEYDOWN:
@@ -1694,13 +1694,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     MSG msg;
     msg.wParam = 0;
 
-    app.init();
+    app = std::make_unique<App>();
+    app->init();
 
-    app.window.hinstance = hInstance;
-    app.window.create();
-    app.init_vk_swapchain();
+    app->window.hinstance = hInstance;
+    app->window.create();
+    app->init_vk_swapchain();
 
-    app.prepare();
+    app->prepare();
 
     while (true) {
         PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
@@ -1711,10 +1712,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        RedrawWindow(app.window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
+        RedrawWindow(app->window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
     }
 
-    app.cleanup();
+    app->cleanup();
+    app.reset();
 
     return (int)msg.wParam;
 }
