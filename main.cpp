@@ -269,7 +269,7 @@ class App {
 public:
     Window window;
 
-    App();
+    App(HINSTANCE hInstance);
 
     void cleanup();
     void init();
@@ -280,8 +280,10 @@ public:
 };
 
 
-App::App()
+App::App(HINSTANCE hInstance)
 {
+    window.hinstance = hInstance;
+
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
@@ -1689,9 +1691,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     MSG msg;
     msg.wParam = 0;
 
-    app = std::make_unique<App>();
+    app = std::make_unique<App>(hInstance);
 
-    app->window.hinstance = hInstance;
     app->window.create();
     app->init_vk_swapchain();
 
