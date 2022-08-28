@@ -1,5 +1,7 @@
 // [TODO] use vk::unique_ptr
 
+#define _HAS_EXCEPTIONS 0
+
 #define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 
