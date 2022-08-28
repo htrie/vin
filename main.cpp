@@ -285,6 +285,18 @@ App::App()
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
+
+    init_vk();
+
+    vec3 eye = { 0.0f, 3.0f, 5.0f };
+    vec3 origin = { 0, 0, 0 };
+    vec3 up = { 0.0f, 1.0f, 0.0 };
+
+    mat4x4_perspective(matrices.projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+    mat4x4_look_at(matrices.view_matrix, eye, origin, up);
+    mat4x4_identity(matrices.model_matrix);
+
+    matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
 }
 
 void App::build_image_ownership_cmd(uint32_t const& i) {
@@ -598,24 +610,7 @@ void App::flush_init_cmd() {
     cmd = vk::CommandBuffer();
 }
 
-void App::init() {
-    LOG("init\n");
-
-    init_vk();
-
-    vec3 eye = { 0.0f, 3.0f, 5.0f };
-    vec3 origin = { 0, 0, 0 };
-    vec3 up = { 0.0f, 1.0f, 0.0 };
-
-    mat4x4_perspective(matrices.projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-    mat4x4_look_at(matrices.view_matrix, eye, origin, up);
-    mat4x4_identity(matrices.model_matrix);
-
-    matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
-}
-
 void App::init_vk() {
-
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     char const* const instance_validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -1695,7 +1690,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     msg.wParam = 0;
 
     app = std::make_unique<App>();
-    app->init();
 
     app->window.hinstance = hInstance;
     app->window.create();
