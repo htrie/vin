@@ -1,3 +1,4 @@
+// [TODO] use vk::unique_ptr
 
 #define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
@@ -270,8 +271,8 @@ public:
     Window window;
 
     App(HINSTANCE hInstance);
+    ~App();
 
-    void cleanup();
     void init();
     void init_vk_swapchain();
     void prepare();
@@ -341,8 +342,7 @@ vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const chec
     return VK_TRUE;
 }
 
-void App::cleanup() {
-    LOG("cleanup\n");
+App::~App() {
     prepared = false;
     device.waitIdle();
 
@@ -946,8 +946,6 @@ void App::init_vk_swapchain() {
 }
 
 void App::prepare() {
-    LOG("prepare\n");
-
     auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
     auto result = device.createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
     VERIFY(result == vk::Result::eSuccess);
@@ -1710,7 +1708,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         RedrawWindow(app->window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
     }
 
-    app->cleanup();
     app.reset();
 
     return (int)msg.wParam;
