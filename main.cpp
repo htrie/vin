@@ -1,4 +1,5 @@
 // [TODO] use vk::unique_ptr
+// [TODO] use constructor for window
 
 #define _HAS_EXCEPTIONS 0
 
@@ -346,11 +347,14 @@ vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const chec
 
 App::~App() {
     prepared = false;
-    device.waitIdle();
+
+    auto result = device.waitIdle();
+    VERIFY(result == vk::Result::eSuccess);
 
     // Wait for fences from present operations
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        device.waitForFences(1, &chain.fences[i], VK_TRUE, UINT64_MAX);
+        result = device.waitForFences(1, &chain.fences[i], VK_TRUE, UINT64_MAX);
+        VERIFY(result == vk::Result::eSuccess);
         device.destroyFence(chain.fences[i], nullptr);
         device.destroySemaphore(chain.image_acquired_semaphores[i], nullptr);
         device.destroySemaphore(chain.draw_complete_semaphores[i], nullptr);
@@ -389,7 +393,7 @@ App::~App() {
     if (separate_present_queue) {
         device.destroyCommandPool(present_cmd_pool, nullptr);
     }
-    device.waitIdle();
+
     device.destroy(nullptr);
     inst.destroySurfaceKHR(surface, nullptr);
     inst.destroy(nullptr);
@@ -425,10 +429,11 @@ void App::create_device() {
 
 void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    device.waitForFences(1, &chain.fences[chain.frame_index], VK_TRUE, UINT64_MAX);
+    auto result = device.waitForFences(1, &chain.fences[chain.frame_index], VK_TRUE, UINT64_MAX);
+    VERIFY(result == vk::Result::eSuccess);
+
     device.resetFences({ chain.fences[chain.frame_index] });
 
-    vk::Result result;
     do {
         result = device.acquireNextImageKHR(chain.swapchain, UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
@@ -849,7 +854,8 @@ void App::init_vk_swapchain() {
     // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
-        gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
+        auto result = gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
+        VERIFY(result == vk::Result::eSuccess);
     }
 
     uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
