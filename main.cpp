@@ -198,8 +198,8 @@ class App {
     vk::Format format;
     vk::ColorSpaceKHR color_space;
 
-    vk::CommandPool cmd_pool;
-    vk::CommandPool present_cmd_pool;
+    vk::UniqueCommandPool cmd_pool;
+    vk::UniqueCommandPool present_cmd_pool;
 
     struct {
         vk::Format format;
@@ -379,16 +379,16 @@ App::~App() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
-        device->freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
+        device->freeCommandBuffers(cmd_pool.get(), { chain.swapchain_image_resources[i].cmd });
         device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
         device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
 
-    device->destroyCommandPool(cmd_pool, nullptr);
+    cmd_pool.reset();
 
     if (separate_present_queue) {
-        device->destroyCommandPool(present_cmd_pool, nullptr);
+        present_cmd_pool.reset();
     }
 
     device.reset();
@@ -611,7 +611,7 @@ void App::flush_init_cmd() {
     result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device->freeCommandBuffers(cmd_pool, 1, commandBuffers);
+    device->freeCommandBuffers(cmd_pool.get(), 1, commandBuffers);
     device->destroyFence(fence, nullptr);
 
     cmd = vk::CommandBuffer();
@@ -955,15 +955,17 @@ void App::init_vk_swapchain() {
 
 void App::prepare() {
     auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
-    auto result = device->createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
-    VERIFY(result == vk::Result::eSuccess);
+
+    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
+    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    cmd_pool = std::move(cmd_pool_handle.value);
 
     auto const cmd = vk::CommandBufferAllocateInfo()
-        .setCommandPool(cmd_pool)
+        .setCommandPool(cmd_pool.get())
         .setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandBufferCount(1);
 
-    result = device->allocateCommandBuffers(&cmd, &this->cmd);
+    auto result = device->allocateCommandBuffers(&cmd, &this->cmd);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const cmd_buf_info = vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
@@ -987,11 +989,12 @@ void App::prepare() {
     if (separate_present_queue) {
         auto const present_cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(present_queue_family_index);
 
-        result = device->createCommandPool(&present_cmd_pool_info, nullptr, &present_cmd_pool);
-        VERIFY(result == vk::Result::eSuccess);
+        auto present_cmd_pool_handle = device->createCommandPoolUnique(present_cmd_pool_info);
+        VERIFY(present_cmd_pool_handle.result == vk::Result::eSuccess);
+        present_cmd_pool = std::move(present_cmd_pool_handle.value);
 
         auto const present_cmd = vk::CommandBufferAllocateInfo()
-            .setCommandPool(present_cmd_pool)
+            .setCommandPool(present_cmd_pool.get())
             .setLevel(vk::CommandBufferLevel::ePrimary)
             .setCommandBufferCount(1);
 
@@ -1561,15 +1564,15 @@ void App::resize() {
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
         device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
-        device->freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
+        device->freeCommandBuffers(cmd_pool.get() , { chain.swapchain_image_resources[i].cmd });
         device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
         device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
 
-    device->destroyCommandPool(cmd_pool, nullptr);
+    cmd_pool.reset();
     if (separate_present_queue) {
-        device->destroyCommandPool(present_cmd_pool, nullptr);
+        present_cmd_pool.reset();
     }
 
     // Second, re-perform the prepare() function, which will re-create the
