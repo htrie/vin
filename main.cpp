@@ -1,6 +1,3 @@
-// [TODO] use vk::unique_ptr
-// [TODO] use constructor for window
-
 #define _HAS_EXCEPTIONS 0
 
 #define VULKAN_HPP_NO_EXCEPTIONS
@@ -93,9 +90,9 @@ struct Window {
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
     char name[APP_NAME_STR_LEN];
-    POINT minsize = { 0, 0 }; // [TODO] Make private.
-    int32_t width = 800; // [TODO] Make private.
-    int32_t height = 600; // [TODO] Make private.
+    POINT minsize = { 0, 0 };
+    int32_t width = 800;
+    int32_t height = 600;
 
     Window() {
         memset(name, '\0', APP_NAME_STR_LEN);
