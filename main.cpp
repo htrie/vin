@@ -181,7 +181,7 @@ class App {
 
     vk::UniqueInstance inst;
     vk::PhysicalDevice gpu;
-    vk::Device device;
+    vk::UniqueDevice device;
     vk::Queue graphics_queue;
     vk::Queue present_queue;
     uint32_t graphics_queue_family_index = 0;
@@ -345,53 +345,53 @@ vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const chec
 App::~App() {
     prepared = false;
 
-    auto result = device.waitIdle();
+    auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
     // Wait for fences from present operations
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device.waitForFences(1, &chain.fences[i], VK_TRUE, UINT64_MAX);
+        result = device->waitForFences(1, &chain.fences[i], VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
-        device.destroyFence(chain.fences[i], nullptr);
-        device.destroySemaphore(chain.image_acquired_semaphores[i], nullptr);
-        device.destroySemaphore(chain.draw_complete_semaphores[i], nullptr);
+        device->destroyFence(chain.fences[i], nullptr);
+        device->destroySemaphore(chain.image_acquired_semaphores[i], nullptr);
+        device->destroySemaphore(chain.draw_complete_semaphores[i], nullptr);
         if (separate_present_queue) {
-            device.destroySemaphore(chain.image_ownership_semaphores[i], nullptr);
+            device->destroySemaphore(chain.image_ownership_semaphores[i], nullptr);
         }
     }
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        device.destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
+        device->destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
     }
-    device.destroyDescriptorPool(desc_pool, nullptr);
+    device->destroyDescriptorPool(desc_pool, nullptr);
 
-    device.destroyPipeline(pipeline, nullptr);
-    device.destroyPipelineCache(pipelineCache, nullptr);
-    device.destroyRenderPass(render_pass, nullptr);
-    device.destroyPipelineLayout(pipeline_layout, nullptr);
-    device.destroyDescriptorSetLayout(desc_layout, nullptr);
+    device->destroyPipeline(pipeline, nullptr);
+    device->destroyPipelineCache(pipelineCache, nullptr);
+    device->destroyRenderPass(render_pass, nullptr);
+    device->destroyPipelineLayout(pipeline_layout, nullptr);
+    device->destroyDescriptorSetLayout(desc_layout, nullptr);
 
-    device.destroySwapchainKHR(chain.swapchain, nullptr);
+    device->destroySwapchainKHR(chain.swapchain, nullptr);
 
-    device.destroyImageView(depth.view, nullptr);
-    device.destroyImage(depth.image, nullptr);
-    device.freeMemory(depth.mem, nullptr);
+    device->destroyImageView(depth.view, nullptr);
+    device->destroyImage(depth.image, nullptr);
+    device->freeMemory(depth.mem, nullptr);
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        device.destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
-        device.freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
-        device.destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
-        device.unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
-        device.freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
+        device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
+        device->freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
+        device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
+        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
+        device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
 
-    device.destroyCommandPool(cmd_pool, nullptr);
+    device->destroyCommandPool(cmd_pool, nullptr);
 
     if (separate_present_queue) {
-        device.destroyCommandPool(present_cmd_pool, nullptr);
+        device->destroyCommandPool(present_cmd_pool, nullptr);
     }
 
-    device.destroy(nullptr);
+    device.reset();
     surface.reset();
     inst.reset();
 }
@@ -420,19 +420,20 @@ void App::create_device() {
         deviceInfo.setQueueCreateInfoCount(2);
     }
 
-    auto result = gpu.createDevice(&deviceInfo, nullptr, &device);
-    VERIFY(result == vk::Result::eSuccess);
+    auto device_handle = gpu.createDeviceUnique(deviceInfo);
+    VERIFY(device_handle.result == vk::Result::eSuccess);
+    device = std::move(device_handle.value);
 }
 
 void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    auto result = device.waitForFences(1, &chain.fences[chain.frame_index], VK_TRUE, UINT64_MAX);
+    auto result = device->waitForFences(1, &chain.fences[chain.frame_index], VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device.resetFences({ chain.fences[chain.frame_index] });
+    device->resetFences({ chain.fences[chain.frame_index] });
 
     do {
-        result = device.acquireNextImageKHR(chain.swapchain, UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
+        result = device->acquireNextImageKHR(chain.swapchain, UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -598,7 +599,7 @@ void App::flush_init_cmd() {
 
     auto const fenceInfo = vk::FenceCreateInfo();
     vk::Fence fence;
-    result = device.createFence(&fenceInfo, nullptr, &fence);
+    result = device->createFence(&fenceInfo, nullptr, &fence);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::CommandBuffer const commandBuffers[] = { cmd };
@@ -607,11 +608,11 @@ void App::flush_init_cmd() {
     result = graphics_queue.submit(1, &submitInfo, fence);
     VERIFY(result == vk::Result::eSuccess);
 
-    result = device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
+    result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device.freeCommandBuffers(cmd_pool, 1, commandBuffers);
-    device.destroyFence(fence, nullptr);
+    device->freeCommandBuffers(cmd_pool, 1, commandBuffers);
+    device->destroyFence(fence, nullptr);
 
     cmd = vk::CommandBuffer();
 }
@@ -895,12 +896,12 @@ void App::init_vk_swapchain() {
 
     create_device();
 
-    device.getQueue(graphics_queue_family_index, 0, &graphics_queue);
+    device->getQueue(graphics_queue_family_index, 0, &graphics_queue);
     if (!separate_present_queue) {
         present_queue = graphics_queue;
     }
     else {
-        device.getQueue(present_queue_family_index, 0, &present_queue);
+        device->getQueue(present_queue_family_index, 0, &present_queue);
     }
 
     // Get the list of VkFormat's that are supported:
@@ -933,17 +934,17 @@ void App::init_vk_swapchain() {
     // Create fences that we can use to throttle if we get too far ahead of the image presents
     auto const fence_ci = vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device.createFence(&fence_ci, nullptr, &chain.fences[i]);
+        result = device->createFence(&fence_ci, nullptr, &chain.fences[i]);
         VERIFY(result == vk::Result::eSuccess);
 
-        result = device.createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_acquired_semaphores[i]);
+        result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_acquired_semaphores[i]);
         VERIFY(result == vk::Result::eSuccess);
 
-        result = device.createSemaphore(&semaphoreCreateInfo, nullptr, &chain.draw_complete_semaphores[i]);
+        result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.draw_complete_semaphores[i]);
         VERIFY(result == vk::Result::eSuccess);
 
         if (separate_present_queue) {
-            result = device.createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_ownership_semaphores[i]);
+            result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_ownership_semaphores[i]);
             VERIFY(result == vk::Result::eSuccess);
         }
     }
@@ -954,7 +955,7 @@ void App::init_vk_swapchain() {
 
 void App::prepare() {
     auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
-    auto result = device.createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
+    auto result = device->createCommandPool(&cmd_pool_info, nullptr, &cmd_pool);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const cmd = vk::CommandBufferAllocateInfo()
@@ -962,7 +963,7 @@ void App::prepare() {
         .setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandBufferCount(1);
 
-    result = device.allocateCommandBuffers(&cmd, &this->cmd);
+    result = device->allocateCommandBuffers(&cmd, &this->cmd);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const cmd_buf_info = vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
@@ -979,14 +980,14 @@ void App::prepare() {
     prepare_pipeline();
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
-        result = device.allocateCommandBuffers(&cmd, &chain.swapchain_image_resources[i].cmd);
+        result = device->allocateCommandBuffers(&cmd, &chain.swapchain_image_resources[i].cmd);
         VERIFY(result == vk::Result::eSuccess);
     }
 
     if (separate_present_queue) {
         auto const present_cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(present_queue_family_index);
 
-        result = device.createCommandPool(&present_cmd_pool_info, nullptr, &present_cmd_pool);
+        result = device->createCommandPool(&present_cmd_pool_info, nullptr, &present_cmd_pool);
         VERIFY(result == vk::Result::eSuccess);
 
         auto const present_cmd = vk::CommandBufferAllocateInfo()
@@ -995,7 +996,7 @@ void App::prepare() {
             .setCommandBufferCount(1);
 
         for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-            result = device.allocateCommandBuffers(&present_cmd, &chain.swapchain_image_resources[i].graphics_to_present_cmd);
+            result = device->allocateCommandBuffers(&present_cmd, &chain.swapchain_image_resources[i].graphics_to_present_cmd);
             VERIFY(result == vk::Result::eSuccess);
 
             build_image_ownership_cmd(i);
@@ -1151,20 +1152,20 @@ void App::prepare_buffers() {
         .setClipped(true)
         .setOldSwapchain(oldSwapchain);
 
-    result = device.createSwapchainKHR(&swapchain_ci, nullptr, &chain.swapchain);
+    result = device->createSwapchainKHR(&swapchain_ci, nullptr, &chain.swapchain);
     VERIFY(result == vk::Result::eSuccess);
 
     // If we just re-created an existing swapchain, we should destroy the old swapchain at this point.
     // Note: destroying the swapchain also cleans up all its associated presentable images once the platform is done with them.
     if (oldSwapchain) {
-        device.destroySwapchainKHR(oldSwapchain, nullptr);
+        device->destroySwapchainKHR(oldSwapchain, nullptr);
     }
 
-    result = device.getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, static_cast<vk::Image*>(nullptr));
+    result = device->getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain.swapchainImageCount]);
-    result = device.getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, swapchainImages.get());
+    result = device->getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, swapchainImages.get());
     VERIFY(result == vk::Result::eSuccess);
 
     chain.swapchain_image_resources.reset(new SwapchainImageResources[chain.swapchainImageCount]);
@@ -1179,7 +1180,7 @@ void App::prepare_buffers() {
 
         color_image_view.image = chain.swapchain_image_resources[i].image;
 
-        result = device.createImageView(&color_image_view, nullptr, &chain.swapchain_image_resources[i].view);
+        result = device->createImageView(&color_image_view, nullptr, &chain.swapchain_image_resources[i].view);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1204,26 +1205,26 @@ void App::prepare_uniforms() {
     auto const buf_info = vk::BufferCreateInfo().setSize(sizeof(data)).setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
     for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
-        auto result = device.createBuffer(&buf_info, nullptr, &chain.swapchain_image_resources[i].uniform_buffer);
+        auto result = device->createBuffer(&buf_info, nullptr, &chain.swapchain_image_resources[i].uniform_buffer);
         VERIFY(result == vk::Result::eSuccess);
 
         vk::MemoryRequirements mem_reqs;
-        device.getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer, &mem_reqs);
+        device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer, &mem_reqs);
 
         auto mem_alloc = vk::MemoryAllocateInfo().setAllocationSize(mem_reqs.size).setMemoryTypeIndex(0);
 
         bool const pass = memory_type_from_properties( mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
-        result = device.allocateMemory(&mem_alloc, nullptr, &chain.swapchain_image_resources[i].uniform_memory);
+        result = device->allocateMemory(&mem_alloc, nullptr, &chain.swapchain_image_resources[i].uniform_memory);
         VERIFY(result == vk::Result::eSuccess);
 
-        result = device.mapMemory(chain.swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain.swapchain_image_resources[i].uniform_memory_ptr);
+        result = device->mapMemory(chain.swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain.swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
 
         memcpy(chain.swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
 
-        result = device.bindBufferMemory(chain.swapchain_image_resources[i].uniform_buffer, chain.swapchain_image_resources[i].uniform_memory, 0);
+        result = device->bindBufferMemory(chain.swapchain_image_resources[i].uniform_buffer, chain.swapchain_image_resources[i].uniform_memory, 0);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1245,11 +1246,11 @@ void App::prepare_depth() {
         .setPQueueFamilyIndices(nullptr)
         .setInitialLayout(vk::ImageLayout::eUndefined);
 
-    auto result = device.createImage(&image, nullptr, &depth.image);
+    auto result = device->createImage(&image, nullptr, &depth.image);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::MemoryRequirements mem_reqs;
-    device.getImageMemoryRequirements(depth.image, &mem_reqs);
+    device->getImageMemoryRequirements(depth.image, &mem_reqs);
 
     depth.mem_alloc.setAllocationSize(mem_reqs.size);
     depth.mem_alloc.setMemoryTypeIndex(0);
@@ -1257,10 +1258,10 @@ void App::prepare_depth() {
     auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &depth.mem_alloc.memoryTypeIndex);
     VERIFY(pass);
 
-    result = device.allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
+    result = device->allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
     VERIFY(result == vk::Result::eSuccess);
 
-    result = device.bindImageMemory(depth.image, depth.mem, 0);
+    result = device->bindImageMemory(depth.image, depth.mem, 0);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const view = vk::ImageViewCreateInfo()
@@ -1268,7 +1269,7 @@ void App::prepare_depth() {
         .setViewType(vk::ImageViewType::e2D)
         .setFormat(depth.format)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
-    result = device.createImageView(&view, nullptr, &depth.view);
+    result = device->createImageView(&view, nullptr, &depth.view);
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -1283,12 +1284,12 @@ void App::prepare_descriptor_layout() {
 
     auto const descriptor_layout = vk::DescriptorSetLayoutCreateInfo().setBindingCount(1).setPBindings(layout_bindings);
 
-    auto result = device.createDescriptorSetLayout(&descriptor_layout, nullptr, &desc_layout);
+    auto result = device->createDescriptorSetLayout(&descriptor_layout, nullptr, &desc_layout);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const pPipelineLayoutCreateInfo = vk::PipelineLayoutCreateInfo().setSetLayoutCount(1).setPSetLayouts(&desc_layout);
 
-    result = device.createPipelineLayout(&pPipelineLayoutCreateInfo, nullptr, &pipeline_layout);
+    result = device->createPipelineLayout(&pPipelineLayoutCreateInfo, nullptr, &pipeline_layout);
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -1297,7 +1298,7 @@ void App::prepare_descriptor_pool() {
 
     auto const descriptor_pool = vk::DescriptorPoolCreateInfo().setMaxSets(chain.swapchainImageCount).setPoolSizeCount(1).setPPoolSizes(poolSizes);
 
-    auto result = device.createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
+    auto result = device->createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -1313,12 +1314,12 @@ void App::prepare_descriptor_set() {
     writes[0].setPBufferInfo(&buffer_info);
 
     for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
-        auto result = device.allocateDescriptorSets(&alloc_info, &chain.swapchain_image_resources[i].descriptor_set);
+        auto result = device->allocateDescriptorSets(&alloc_info, &chain.swapchain_image_resources[i].descriptor_set);
         VERIFY(result == vk::Result::eSuccess);
 
         buffer_info.setBuffer(chain.swapchain_image_resources[i].uniform_buffer);
         writes[0].setDstSet(chain.swapchain_image_resources[i].descriptor_set);
-        device.updateDescriptorSets(1, writes, 0, nullptr);
+        device->updateDescriptorSets(1, writes, 0, nullptr);
     }
 }
 
@@ -1336,7 +1337,7 @@ void App::prepare_framebuffers() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         attachments[0] = chain.swapchain_image_resources[i].view;
-        auto const result = device.createFramebuffer(&fb_info, nullptr, &chain.swapchain_image_resources[i].framebuffer);
+        auto const result = device->createFramebuffer(&fb_info, nullptr, &chain.swapchain_image_resources[i].framebuffer);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1350,7 +1351,7 @@ vk::ShaderModule App::prepare_fs() {
 
 void App::prepare_pipeline() {
     vk::PipelineCacheCreateInfo const pipelineCacheInfo;
-    auto result = device.createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
+    auto result = device->createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::ShaderModule vert_shader_module = prepare_vs();
@@ -1422,11 +1423,11 @@ void App::prepare_pipeline() {
         .setLayout(pipeline_layout)
         .setRenderPass(render_pass);
 
-    result = device.createGraphicsPipelines(pipelineCache, 1, &pipeline, nullptr, &this->pipeline);
+    result = device->createGraphicsPipelines(pipelineCache, 1, &pipeline, nullptr, &this->pipeline);
     VERIFY(result == vk::Result::eSuccess);
 
-    device.destroyShaderModule(frag_shader_module, nullptr);
-    device.destroyShaderModule(vert_shader_module, nullptr);
+    device->destroyShaderModule(frag_shader_module, nullptr);
+    device->destroyShaderModule(vert_shader_module, nullptr);
 }
 
 void App::prepare_render_pass() {
@@ -1503,7 +1504,7 @@ void App::prepare_render_pass() {
         .setDependencyCount(2)
         .setPDependencies(dependencies);
 
-    auto result = device.createRenderPass(&rp_info, nullptr, &render_pass);
+    auto result = device->createRenderPass(&rp_info, nullptr, &render_pass);
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -1513,7 +1514,7 @@ vk::ShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
         .setPCode(code);
 
     vk::ShaderModule module;
-    auto result = device.createShaderModule(&moduleCreateInfo, nullptr, &module);
+    auto result = device->createShaderModule(&moduleCreateInfo, nullptr, &module);
     VERIFY(result == vk::Result::eSuccess);
 
     return module;
@@ -1539,36 +1540,36 @@ void App::resize() {
     //
     // First, perform part of the cleanup() function:
     prepared = false;
-    auto result = device.waitIdle();
+    auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
-        device.destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
+        device->destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
     }
 
-    device.destroyDescriptorPool(desc_pool, nullptr);
+    device->destroyDescriptorPool(desc_pool, nullptr);
 
-    device.destroyPipeline(pipeline, nullptr);
-    device.destroyPipelineCache(pipelineCache, nullptr);
-    device.destroyRenderPass(render_pass, nullptr);
-    device.destroyPipelineLayout(pipeline_layout, nullptr);
-    device.destroyDescriptorSetLayout(desc_layout, nullptr);
+    device->destroyPipeline(pipeline, nullptr);
+    device->destroyPipelineCache(pipelineCache, nullptr);
+    device->destroyRenderPass(render_pass, nullptr);
+    device->destroyPipelineLayout(pipeline_layout, nullptr);
+    device->destroyDescriptorSetLayout(desc_layout, nullptr);
 
-    device.destroyImageView(depth.view, nullptr);
-    device.destroyImage(depth.image, nullptr);
-    device.freeMemory(depth.mem, nullptr);
+    device->destroyImageView(depth.view, nullptr);
+    device->destroyImage(depth.image, nullptr);
+    device->freeMemory(depth.mem, nullptr);
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
-        device.destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
-        device.freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
-        device.destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
-        device.unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
-        device.freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
+        device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
+        device->freeCommandBuffers(cmd_pool, { chain.swapchain_image_resources[i].cmd });
+        device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
+        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
+        device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
 
-    device.destroyCommandPool(cmd_pool, nullptr);
+    device->destroyCommandPool(cmd_pool, nullptr);
     if (separate_present_queue) {
-        device.destroyCommandPool(present_cmd_pool, nullptr);
+        device->destroyCommandPool(present_cmd_pool, nullptr);
     }
 
     // Second, re-perform the prepare() function, which will re-create the
