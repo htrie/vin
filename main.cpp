@@ -175,11 +175,11 @@ class App {
 
     Matrices matrices;
 
-    vk::SurfaceKHR surface;
+    vk::UniqueSurfaceKHR surface;
     bool separate_present_queue = false;
     int32_t gpu_number = -1;
 
-    vk::Instance inst;
+    vk::UniqueInstance inst;
     vk::PhysicalDevice gpu;
     vk::Device device;
     vk::Queue graphics_queue;
@@ -392,8 +392,8 @@ App::~App() {
     }
 
     device.destroy(nullptr);
-    inst.destroySurfaceKHR(surface, nullptr);
-    inst.destroy(nullptr);
+    surface.reset();
+    inst.reset();
 }
 
 void App::create_device() {
@@ -443,7 +443,7 @@ void App::draw() {
             break;
         }
         else if (result == vk::Result::eErrorSurfaceLostKHR) {
-            inst.destroySurfaceKHR(surface, nullptr);
+            inst->destroySurfaceKHR(surface.get(), nullptr);
             create_surface();
             resize();
         }
@@ -508,14 +508,14 @@ void App::draw() {
     else if (result == vk::Result::eSuboptimalKHR) {
         // SUBOPTIMAL could be due to resize
         vk::SurfaceCapabilitiesKHR surfCapabilities;
-        result = gpu.getSurfaceCapabilitiesKHR(surface, &surfCapabilities);
+        result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
         VERIFY(result == vk::Result::eSuccess);
         if (surfCapabilities.currentExtent.width != static_cast<uint32_t>(window.width) || surfCapabilities.currentExtent.height != static_cast<uint32_t>(window.height)) {
             resize();
         }
     }
     else if (result == vk::Result::eErrorSurfaceLostKHR) {
-        inst.destroySurfaceKHR(surface, nullptr);
+        inst->destroySurfaceKHR(surface.get(), nullptr);
         create_surface();
         resize();
     }
@@ -706,30 +706,31 @@ void App::init_vk() {
         .setEnabledExtensionCount(enabled_extension_count)
         .setPpEnabledExtensionNames(extension_names);
 
-    result = vk::createInstance(&inst_info, nullptr, &inst);
-    if (result == vk::Result::eErrorIncompatibleDriver) {
+    auto inst_handle = vk::createInstanceUnique(inst_info);
+    if (inst_handle.result == vk::Result::eErrorIncompatibleDriver) {
         ERR_EXIT(
             "Cannot find a compatible Vulkan installable client driver (ICD).\n\n"
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-    else if (result == vk::Result::eErrorExtensionNotPresent) {
+    else if (inst_handle.result == vk::Result::eErrorExtensionNotPresent) {
         ERR_EXIT(
             "Cannot find a specified extension library.\n"
             "Make sure your layers path is set appropriately.\n",
             "vkCreateInstance Failure");
     }
-    else if (result != vk::Result::eSuccess) {
+    else if (inst_handle.result != vk::Result::eSuccess) {
         ERR_EXIT(
             "vkCreateInstance failed.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
+    inst = std::move(inst_handle.value);
 
     // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
-    result = inst.enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
+    result = inst->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (gpu_count <= 0) {
@@ -741,7 +742,7 @@ void App::init_vk() {
     }
 
     std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
-    result = inst.enumeratePhysicalDevices(&gpu_count, physical_devices.get());
+    result = inst->enumeratePhysicalDevices(&gpu_count, physical_devices.get());
     VERIFY(result == vk::Result::eSuccess);
 
     if (gpu_number >= 0 && !((uint32_t)gpu_number < gpu_count)) {
@@ -842,8 +843,9 @@ void App::init_vk() {
 void App::create_surface() {
     auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
 
-    auto result = inst.createWin32SurfaceKHR(&createInfo, nullptr, &surface);
-    VERIFY(result == vk::Result::eSuccess);
+    auto surface_handle = inst->createWin32SurfaceKHRUnique(createInfo);
+    VERIFY(surface_handle.result == vk::Result::eSuccess);
+    surface = std::move(surface_handle.value);
 }
 
 void App::init_vk_swapchain() {
@@ -851,7 +853,7 @@ void App::init_vk_swapchain() {
     // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
-        auto result = gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
+        auto result = gpu.getSurfaceSupportKHR(i, surface.get(), &supportsPresent[i]);
         VERIFY(result == vk::Result::eSuccess);
     }
 
@@ -903,11 +905,11 @@ void App::init_vk_swapchain() {
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
-    auto result = gpu.getSurfaceFormatsKHR(surface, &formatCount, static_cast<vk::SurfaceFormatKHR*>(nullptr));
+    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &formatCount, static_cast<vk::SurfaceFormatKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::SurfaceFormatKHR[]> surfFormats(new vk::SurfaceFormatKHR[formatCount]);
-    result = gpu.getSurfaceFormatsKHR(surface, &formatCount, surfFormats.get());
+    result = gpu.getSurfaceFormatsKHR(surface.get(), &formatCount, surfFormats.get());
     VERIFY(result == vk::Result::eSuccess);
 
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
@@ -1020,15 +1022,15 @@ void App::prepare_buffers() {
     vk::SwapchainKHR oldSwapchain = chain.swapchain;
 
     vk::SurfaceCapabilitiesKHR surfCapabilities;
-    auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surfCapabilities);
+    auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
     VERIFY(result == vk::Result::eSuccess);
 
     uint32_t presentModeCount;
-    result = gpu.getSurfacePresentModesKHR(surface, &presentModeCount, static_cast<vk::PresentModeKHR*>(nullptr));
+    result = gpu.getSurfacePresentModesKHR(surface.get(), &presentModeCount, static_cast<vk::PresentModeKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::PresentModeKHR[]> presentModes(new vk::PresentModeKHR[presentModeCount]);
-    result = gpu.getSurfacePresentModesKHR(surface, &presentModeCount, presentModes.get());
+    result = gpu.getSurfacePresentModesKHR(surface.get(), &presentModeCount, presentModes.get());
     VERIFY(result == vk::Result::eSuccess);
 
     vk::Extent2D swapchainExtent;
@@ -1133,7 +1135,7 @@ void App::prepare_buffers() {
     }
 
     auto const swapchain_ci = vk::SwapchainCreateInfoKHR()
-        .setSurface(surface)
+        .setSurface(surface.get())
         .setMinImageCount(desiredNumOfSwapchainImages)
         .setImageFormat(format)
         .setImageColorSpace(color_space)
