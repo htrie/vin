@@ -216,7 +216,7 @@ class App {
         vk::DescriptorBufferInfo buffer_info;
     } uniform_data;
 
-    vk::CommandBuffer cmd;
+    vk::UniqueCommandBuffer cmd;
     vk::PipelineLayout pipeline_layout;
     vk::DescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
@@ -594,7 +594,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 }
 
 void App::flush_init_cmd() {
-    auto result = cmd.end();
+    auto result = cmd->end();
     VERIFY(result == vk::Result::eSuccess);
 
     auto const fenceInfo = vk::FenceCreateInfo();
@@ -602,7 +602,7 @@ void App::flush_init_cmd() {
     result = device->createFence(&fenceInfo, nullptr, &fence);
     VERIFY(result == vk::Result::eSuccess);
 
-    vk::CommandBuffer const commandBuffers[] = { cmd };
+    vk::CommandBuffer const commandBuffers[] = { cmd.get() };
     auto const submitInfo = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
 
     result = graphics_queue.submit(1, &submitInfo, fence);
@@ -611,10 +611,9 @@ void App::flush_init_cmd() {
     result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device->freeCommandBuffers(cmd_pool.get(), 1, commandBuffers);
     device->destroyFence(fence, nullptr);
 
-    cmd = vk::CommandBuffer();
+    cmd.reset();
 }
 
 void App::init_vk() {
@@ -960,17 +959,18 @@ void App::prepare() {
     VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
     cmd_pool = std::move(cmd_pool_handle.value);
 
-    auto const cmd = vk::CommandBufferAllocateInfo()
+    auto const cmd_info = vk::CommandBufferAllocateInfo()
         .setCommandPool(cmd_pool.get())
         .setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandBufferCount(1);
 
-    auto result = device->allocateCommandBuffers(&cmd, &this->cmd);
-    VERIFY(result == vk::Result::eSuccess);
+    auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
+    VERIFY(cmd_handles.result == vk::Result::eSuccess);
+    cmd = std::move(cmd_handles.value[0]);
 
     auto const cmd_buf_info = vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
 
-    result = this->cmd.begin(&cmd_buf_info);
+    auto result = cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
     prepare_buffers();
@@ -982,7 +982,7 @@ void App::prepare() {
     prepare_pipeline();
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
-        result = device->allocateCommandBuffers(&cmd, &chain.swapchain_image_resources[i].cmd);
+        result = device->allocateCommandBuffers(&cmd_info, &chain.swapchain_image_resources[i].cmd);
         VERIFY(result == vk::Result::eSuccess);
     }
 
@@ -1610,7 +1610,7 @@ void App::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk:
         .setImage(image)
         .setSubresourceRange(vk::ImageSubresourceRange(aspectMask, 0, 1, 0, 1));
 
-    cmd.pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
+    cmd->pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void App::update_data_buffer() {
