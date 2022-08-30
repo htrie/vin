@@ -146,7 +146,7 @@ struct Window {
 
 struct SwapchainImageResources {
     vk::Image image;
-    vk::CommandBuffer cmd;
+    vk::UniqueCommandBuffer cmd;
     vk::UniqueCommandBuffer graphics_to_present_cmd;
     vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
@@ -380,7 +380,7 @@ App::~App() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
-        device->freeCommandBuffers(cmd_pool.get(), { chain.swapchain_image_resources[i].cmd });
+        chain.swapchain_image_resources[i].cmd.reset();
         chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
@@ -467,7 +467,7 @@ void App::draw() {
         .setWaitSemaphoreCount(1)
         .setPWaitSemaphores(&chain.image_acquired_semaphores[chain.frame_index])
         .setCommandBufferCount(1)
-        .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].cmd)
+        .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].cmd.get())
         .setSignalSemaphoreCount(1)
         .setPSignalSemaphores(&chain.draw_complete_semaphores[chain.frame_index]);
 
@@ -984,8 +984,9 @@ void App::prepare() {
     prepare_pipeline();
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
-        result = device->allocateCommandBuffers(&cmd_info, &chain.swapchain_image_resources[i].cmd);
-        VERIFY(result == vk::Result::eSuccess);
+        auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
+        VERIFY(cmd_handles.result == vk::Result::eSuccess);
+        chain.swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
     }
 
     if (separate_present_queue) {
@@ -1016,7 +1017,7 @@ void App::prepare() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
         current_buffer = i;
-        draw_build_cmd(chain.swapchain_image_resources[i].cmd);
+        draw_build_cmd(chain.swapchain_image_resources[i].cmd.get());
     }
 
     flush_init_cmd();
@@ -1577,7 +1578,7 @@ void App::resize() {
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
-        device->freeCommandBuffers(cmd_pool.get() , { chain.swapchain_image_resources[i].cmd });
+        chain.swapchain_image_resources[i].cmd.reset();
         chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
