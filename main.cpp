@@ -205,7 +205,7 @@ class App {
         vk::Format format;
         vk::UniqueImage image;
         vk::MemoryAllocateInfo mem_alloc;
-        vk::DeviceMemory mem;
+        vk::UniqueDeviceMemory mem;
         vk::UniqueImageView view;
     } depth;
 
@@ -376,7 +376,7 @@ App::~App() {
 
     depth.view.reset();
     depth.image.reset();
-    device->freeMemory(depth.mem, nullptr);
+    depth.mem.reset();
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
@@ -1269,10 +1269,11 @@ void App::prepare_depth() {
     auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &depth.mem_alloc.memoryTypeIndex);
     VERIFY(pass);
 
-    auto result = device->allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
-    VERIFY(result == vk::Result::eSuccess);
+    auto mem_handle = device->allocateMemoryUnique(depth.mem_alloc);
+    VERIFY(mem_handle.result == vk::Result::eSuccess);
+    depth.mem = std::move(mem_handle.value);
 
-    result = device->bindImageMemory(depth.image.get(), depth.mem, 0);
+    auto result = device->bindImageMemory(depth.image.get(), depth.mem.get(), 0);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const view_info = vk::ImageViewCreateInfo()
@@ -1577,7 +1578,7 @@ void App::resize() {
 
     depth.view.reset();
     depth.image.reset();
-    device->freeMemory(depth.mem, nullptr);
+    depth.mem.reset();
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
