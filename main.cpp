@@ -152,7 +152,7 @@ struct SwapchainImageResources {
     vk::UniqueBuffer uniform_buffer;
     vk::DeviceMemory uniform_memory;
     void* uniform_memory_ptr;
-    vk::Framebuffer framebuffer;
+    vk::UniqueFramebuffer framebuffer;
     vk::DescriptorSet descriptor_set;
 };
 
@@ -361,7 +361,7 @@ App::~App() {
     }
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        device->destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
+        chain.swapchain_image_resources[i].framebuffer.reset();
     }
     device->destroyDescriptorPool(desc_pool, nullptr);
 
@@ -532,7 +532,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     auto const passInfo = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass)
-        .setFramebuffer(chain.swapchain_image_resources[current_buffer].framebuffer)
+        .setFramebuffer(chain.swapchain_image_resources[current_buffer].framebuffer.get())
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
         .setPClearValues(clearValues);
@@ -1341,8 +1341,9 @@ void App::prepare_framebuffers() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         attachments[0] = chain.swapchain_image_resources[i].view;
-        auto const result = device->createFramebuffer(&fb_info, nullptr, &chain.swapchain_image_resources[i].framebuffer);
-        VERIFY(result == vk::Result::eSuccess);
+        auto framebuffer_handle = device->createFramebufferUnique(fb_info);
+        VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
+        chain.swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
     }
 }
 
@@ -1548,7 +1549,7 @@ void App::resize() {
     VERIFY(result == vk::Result::eSuccess);
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
-        device->destroyFramebuffer(chain.swapchain_image_resources[i].framebuffer, nullptr);
+        chain.swapchain_image_resources[i].framebuffer.reset();
     }
 
     device->destroyDescriptorPool(desc_pool, nullptr);
