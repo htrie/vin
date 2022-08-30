@@ -148,7 +148,7 @@ struct SwapchainImageResources {
     vk::Image image;
     vk::CommandBuffer cmd;
     vk::CommandBuffer graphics_to_present_cmd;
-    vk::ImageView view;
+    vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
     void* uniform_memory_ptr;
@@ -379,7 +379,7 @@ App::~App() {
     device->freeMemory(depth.mem, nullptr);
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
+        chain.swapchain_image_resources[i].view.reset();
         device->freeCommandBuffers(cmd_pool.get(), { chain.swapchain_image_resources[i].cmd });
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
@@ -1184,8 +1184,9 @@ void App::prepare_buffers() {
 
         color_image_view.image = chain.swapchain_image_resources[i].image;
 
-        result = device->createImageView(&color_image_view, nullptr, &chain.swapchain_image_resources[i].view);
-        VERIFY(result == vk::Result::eSuccess);
+        auto view_handle = device->createImageViewUnique(color_image_view);
+        VERIFY(view_handle.result == vk::Result::eSuccess);
+        chain.swapchain_image_resources[i].view = std::move(view_handle.value);
     }
 }
 
@@ -1343,7 +1344,7 @@ void App::prepare_framebuffers() {
         .setLayers(1);
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        attachments[0] = chain.swapchain_image_resources[i].view;
+        attachments[0] = chain.swapchain_image_resources[i].view.get();
         auto framebuffer_handle = device->createFramebufferUnique(fb_info);
         VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
         chain.swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
@@ -1568,7 +1569,7 @@ void App::resize() {
     device->freeMemory(depth.mem, nullptr);
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
-        device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
+        chain.swapchain_image_resources[i].view.reset();
         device->freeCommandBuffers(cmd_pool.get() , { chain.swapchain_image_resources[i].cmd });
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
