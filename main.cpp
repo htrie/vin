@@ -204,17 +204,9 @@ class App {
     struct {
         vk::Format format;
         vk::UniqueImage image;
-        vk::MemoryAllocateInfo mem_alloc;
         vk::UniqueDeviceMemory mem;
         vk::UniqueImageView view;
     } depth;
-
-    struct {
-        vk::Buffer buf;
-        vk::MemoryAllocateInfo mem_alloc;
-        vk::DeviceMemory mem;
-        vk::DescriptorBufferInfo buffer_info;
-    } uniform_data;
 
     vk::UniqueCommandBuffer cmd;
     vk::PipelineLayout pipeline_layout;
@@ -1220,9 +1212,11 @@ void App::prepare_uniforms() {
         vk::MemoryRequirements mem_reqs;
         device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
 
-        auto mem_alloc = vk::MemoryAllocateInfo().setAllocationSize(mem_reqs.size).setMemoryTypeIndex(0);
+        auto mem_alloc = vk::MemoryAllocateInfo()
+            .setAllocationSize(mem_reqs.size)
+            .setMemoryTypeIndex(0);
 
-        bool const pass = memory_type_from_properties( mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
+        bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
         auto memory_handle = device->allocateMemoryUnique(mem_alloc);
@@ -1263,13 +1257,14 @@ void App::prepare_depth() {
     vk::MemoryRequirements mem_reqs;
     device->getImageMemoryRequirements(depth.image.get(), &mem_reqs);
 
-    depth.mem_alloc.setAllocationSize(mem_reqs.size);
-    depth.mem_alloc.setMemoryTypeIndex(0);
+    auto mem_alloc = vk::MemoryAllocateInfo()
+        .setAllocationSize(mem_reqs.size)
+        .setMemoryTypeIndex(0);
 
-    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &depth.mem_alloc.memoryTypeIndex);
+    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_alloc.memoryTypeIndex);
     VERIFY(pass);
 
-    auto mem_handle = device->allocateMemoryUnique(depth.mem_alloc);
+    auto mem_handle = device->allocateMemoryUnique(mem_alloc);
     VERIFY(mem_handle.result == vk::Result::eSuccess);
     depth.mem = std::move(mem_handle.value);
 
