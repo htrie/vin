@@ -203,7 +203,7 @@ class App {
 
     struct {
         vk::Format format;
-        vk::Image image;
+        vk::UniqueImage image;
         vk::MemoryAllocateInfo mem_alloc;
         vk::DeviceMemory mem;
         vk::UniqueImageView view;
@@ -375,7 +375,7 @@ App::~App() {
     device->destroySwapchainKHR(chain.swapchain, nullptr);
 
     depth.view.reset();
-    device->destroyImage(depth.image, nullptr);
+    depth.image.reset();
     device->freeMemory(depth.mem, nullptr);
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
@@ -1242,7 +1242,7 @@ void App::prepare_uniforms() {
 void App::prepare_depth() {
     depth.format = vk::Format::eD16Unorm;
 
-    auto const image = vk::ImageCreateInfo()
+    auto const image_info = vk::ImageCreateInfo()
         .setImageType(vk::ImageType::e2D)
         .setFormat(depth.format)
         .setExtent({ (uint32_t)window.width, (uint32_t)window.height, 1 })
@@ -1256,11 +1256,12 @@ void App::prepare_depth() {
         .setPQueueFamilyIndices(nullptr)
         .setInitialLayout(vk::ImageLayout::eUndefined);
 
-    auto result = device->createImage(&image, nullptr, &depth.image);
-    VERIFY(result == vk::Result::eSuccess);
+    auto image_handle = device->createImageUnique(image_info);
+    VERIFY(image_handle.result == vk::Result::eSuccess);
+    depth.image = std::move(image_handle.value);
 
     vk::MemoryRequirements mem_reqs;
-    device->getImageMemoryRequirements(depth.image, &mem_reqs);
+    device->getImageMemoryRequirements(depth.image.get(), &mem_reqs);
 
     depth.mem_alloc.setAllocationSize(mem_reqs.size);
     depth.mem_alloc.setMemoryTypeIndex(0);
@@ -1268,14 +1269,14 @@ void App::prepare_depth() {
     auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &depth.mem_alloc.memoryTypeIndex);
     VERIFY(pass);
 
-    result = device->allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
+    auto result = device->allocateMemory(&depth.mem_alloc, nullptr, &depth.mem);
     VERIFY(result == vk::Result::eSuccess);
 
-    result = device->bindImageMemory(depth.image, depth.mem, 0);
+    result = device->bindImageMemory(depth.image.get(), depth.mem, 0);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const view_info = vk::ImageViewCreateInfo()
-        .setImage(depth.image)
+        .setImage(depth.image.get())
         .setViewType(vk::ImageViewType::e2D)
         .setFormat(depth.format)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
@@ -1575,7 +1576,7 @@ void App::resize() {
     device->destroyDescriptorSetLayout(desc_layout, nullptr);
 
     depth.view.reset();
-    device->destroyImage(depth.image, nullptr);
+    depth.image.reset();
     device->freeMemory(depth.mem, nullptr);
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
