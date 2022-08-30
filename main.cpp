@@ -1305,7 +1305,11 @@ void App::prepare_descriptor_layout() {
 void App::prepare_descriptor_pool() {
     vk::DescriptorPoolSize const poolSizes[1] = { vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(chain.swapchainImageCount) };
 
-    auto const descriptor_pool = vk::DescriptorPoolCreateInfo().setMaxSets(chain.swapchainImageCount).setPoolSizeCount(1).setPPoolSizes(poolSizes);
+    auto const descriptor_pool = vk::DescriptorPoolCreateInfo()
+        .setMaxSets(chain.swapchainImageCount)
+        .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
+        .setPoolSizeCount(1)
+        .setPPoolSizes(poolSizes);
 
     auto result = device->createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
     VERIFY(result == vk::Result::eSuccess);
@@ -1556,6 +1560,7 @@ void App::resize() {
 
     for (i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].framebuffer.reset();
+        chain.swapchain_image_resources[i].descriptor_set.reset();
     }
 
     device->destroyDescriptorPool(desc_pool, nullptr);
