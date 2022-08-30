@@ -153,7 +153,7 @@ struct SwapchainImageResources {
     vk::DeviceMemory uniform_memory;
     void* uniform_memory_ptr;
     vk::UniqueFramebuffer framebuffer;
-    vk::DescriptorSet descriptor_set;
+    vk::UniqueDescriptorSet descriptor_set;
 };
 
 struct Chain {
@@ -362,6 +362,7 @@ App::~App() {
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].framebuffer.reset();
+        chain.swapchain_image_resources[i].descriptor_set.reset();
     }
     device->destroyDescriptorPool(desc_pool, nullptr);
 
@@ -542,7 +543,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set, 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -1318,11 +1319,12 @@ void App::prepare_descriptor_set() {
     writes[0].setPBufferInfo(&buffer_info);
 
     for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
-        auto result = device->allocateDescriptorSets(&alloc_info, &chain.swapchain_image_resources[i].descriptor_set);
-        VERIFY(result == vk::Result::eSuccess);
+        auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
+        VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
+        chain.swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
 
         buffer_info.setBuffer(chain.swapchain_image_resources[i].uniform_buffer.get());
-        writes[0].setDstSet(chain.swapchain_image_resources[i].descriptor_set);
+        writes[0].setDstSet(chain.swapchain_image_resources[i].descriptor_set.get());
         device->updateDescriptorSets(1, writes, 0, nullptr);
     }
 }
