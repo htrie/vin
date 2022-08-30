@@ -149,7 +149,7 @@ struct SwapchainImageResources {
     vk::CommandBuffer cmd;
     vk::CommandBuffer graphics_to_present_cmd;
     vk::ImageView view;
-    vk::Buffer uniform_buffer;
+    vk::UniqueBuffer uniform_buffer;
     vk::DeviceMemory uniform_memory;
     void* uniform_memory_ptr;
     vk::Framebuffer framebuffer;
@@ -380,7 +380,7 @@ App::~App() {
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
         device->freeCommandBuffers(cmd_pool.get(), { chain.swapchain_image_resources[i].cmd });
-        device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
+        chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
         device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
@@ -1208,18 +1208,19 @@ void App::prepare_uniforms() {
     auto const buf_info = vk::BufferCreateInfo().setSize(sizeof(data)).setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
     for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
-        auto result = device->createBuffer(&buf_info, nullptr, &chain.swapchain_image_resources[i].uniform_buffer);
-        VERIFY(result == vk::Result::eSuccess);
+        auto buffer_handle = device->createBufferUnique(buf_info);
+        VERIFY(buffer_handle.result == vk::Result::eSuccess);
+        chain.swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
 
         vk::MemoryRequirements mem_reqs;
-        device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer, &mem_reqs);
+        device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
 
         auto mem_alloc = vk::MemoryAllocateInfo().setAllocationSize(mem_reqs.size).setMemoryTypeIndex(0);
 
         bool const pass = memory_type_from_properties( mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
         VERIFY(pass);
 
-        result = device->allocateMemory(&mem_alloc, nullptr, &chain.swapchain_image_resources[i].uniform_memory);
+        auto result = device->allocateMemory(&mem_alloc, nullptr, &chain.swapchain_image_resources[i].uniform_memory);
         VERIFY(result == vk::Result::eSuccess);
 
         result = device->mapMemory(chain.swapchain_image_resources[i].uniform_memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain.swapchain_image_resources[i].uniform_memory_ptr);
@@ -1227,7 +1228,7 @@ void App::prepare_uniforms() {
 
         memcpy(chain.swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
 
-        result = device->bindBufferMemory(chain.swapchain_image_resources[i].uniform_buffer, chain.swapchain_image_resources[i].uniform_memory, 0);
+        result = device->bindBufferMemory(chain.swapchain_image_resources[i].uniform_buffer.get(), chain.swapchain_image_resources[i].uniform_memory, 0);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1320,7 +1321,7 @@ void App::prepare_descriptor_set() {
         auto result = device->allocateDescriptorSets(&alloc_info, &chain.swapchain_image_resources[i].descriptor_set);
         VERIFY(result == vk::Result::eSuccess);
 
-        buffer_info.setBuffer(chain.swapchain_image_resources[i].uniform_buffer);
+        buffer_info.setBuffer(chain.swapchain_image_resources[i].uniform_buffer.get());
         writes[0].setDstSet(chain.swapchain_image_resources[i].descriptor_set);
         device->updateDescriptorSets(1, writes, 0, nullptr);
     }
@@ -1565,7 +1566,7 @@ void App::resize() {
     for (i = 0; i < chain.swapchainImageCount; i++) {
         device->destroyImageView(chain.swapchain_image_resources[i].view, nullptr);
         device->freeCommandBuffers(cmd_pool.get() , { chain.swapchain_image_resources[i].cmd });
-        device->destroyBuffer(chain.swapchain_image_resources[i].uniform_buffer, nullptr);
+        chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory);
         device->freeMemory(chain.swapchain_image_resources[i].uniform_memory, nullptr);
     }
