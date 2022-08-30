@@ -147,7 +147,7 @@ struct Window {
 struct SwapchainImageResources {
     vk::Image image;
     vk::CommandBuffer cmd;
-    vk::CommandBuffer graphics_to_present_cmd;
+    vk::UniqueCommandBuffer graphics_to_present_cmd;
     vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
@@ -304,7 +304,7 @@ App::App(HINSTANCE hInstance)
 
 void App::build_image_ownership_cmd(uint32_t const& i) {
     auto const cmd_buf_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-    auto result = chain.swapchain_image_resources[i].graphics_to_present_cmd.begin(&cmd_buf_info);
+    auto result = chain.swapchain_image_resources[i].graphics_to_present_cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const image_ownership_barrier =
@@ -318,9 +318,9 @@ void App::build_image_ownership_cmd(uint32_t const& i) {
         .setImage(chain.swapchain_image_resources[i].image)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-    chain.swapchain_image_resources[i].graphics_to_present_cmd.pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
+    chain.swapchain_image_resources[i].graphics_to_present_cmd->pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
 
-    result = chain.swapchain_image_resources[i].graphics_to_present_cmd.end();
+    result = chain.swapchain_image_resources[i].graphics_to_present_cmd->end();
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -381,6 +381,7 @@ App::~App() {
     for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
         device->freeCommandBuffers(cmd_pool.get(), { chain.swapchain_image_resources[i].cmd });
+        chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
         chain.swapchain_image_resources[i].uniform_memory.reset();
@@ -483,7 +484,7 @@ void App::draw() {
             .setWaitSemaphoreCount(1)
             .setPWaitSemaphores(&chain.draw_complete_semaphores[chain.frame_index])
             .setCommandBufferCount(1)
-            .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].graphics_to_present_cmd)
+            .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].graphics_to_present_cmd.get())
             .setSignalSemaphoreCount(1)
             .setPSignalSemaphores(&chain.image_ownership_semaphores[chain.frame_index]);
 
@@ -1000,8 +1001,9 @@ void App::prepare() {
             .setCommandBufferCount(1);
 
         for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-            result = device->allocateCommandBuffers(&present_cmd, &chain.swapchain_image_resources[i].graphics_to_present_cmd);
-            VERIFY(result == vk::Result::eSuccess);
+            auto cmd_handles = device->allocateCommandBuffersUnique(present_cmd);
+            VERIFY(cmd_handles.result == vk::Result::eSuccess);
+            chain.swapchain_image_resources[i].graphics_to_present_cmd = std::move(cmd_handles.value[0]);
 
             build_image_ownership_cmd(i);
         }
@@ -1571,6 +1573,7 @@ void App::resize() {
     for (i = 0; i < chain.swapchainImageCount; i++) {
         chain.swapchain_image_resources[i].view.reset();
         device->freeCommandBuffers(cmd_pool.get() , { chain.swapchain_image_resources[i].cmd });
+        chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
         chain.swapchain_image_resources[i].uniform_buffer.reset();
         device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
         chain.swapchain_image_resources[i].uniform_memory.reset();
