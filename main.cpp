@@ -206,7 +206,7 @@ class App {
         vk::Image image;
         vk::MemoryAllocateInfo mem_alloc;
         vk::DeviceMemory mem;
-        vk::ImageView view;
+        vk::UniqueImageView view;
     } depth;
 
     struct {
@@ -374,7 +374,7 @@ App::~App() {
 
     device->destroySwapchainKHR(chain.swapchain, nullptr);
 
-    device->destroyImageView(depth.view, nullptr);
+    depth.view.reset();
     device->destroyImage(depth.image, nullptr);
     device->freeMemory(depth.mem, nullptr);
 
@@ -1274,13 +1274,15 @@ void App::prepare_depth() {
     result = device->bindImageMemory(depth.image, depth.mem, 0);
     VERIFY(result == vk::Result::eSuccess);
 
-    auto const view = vk::ImageViewCreateInfo()
+    auto const view_info = vk::ImageViewCreateInfo()
         .setImage(depth.image)
         .setViewType(vk::ImageViewType::e2D)
         .setFormat(depth.format)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
-    result = device->createImageView(&view, nullptr, &depth.view);
-    VERIFY(result == vk::Result::eSuccess);
+
+    auto view_handle = device->createImageViewUnique(view_info);
+    VERIFY(view_handle.result == vk::Result::eSuccess);
+    depth.view = std::move(view_handle.value);
 }
 
 void App::prepare_descriptor_layout() {
@@ -1340,7 +1342,7 @@ void App::prepare_descriptor_set() {
 
 void App::prepare_framebuffers() {
     vk::ImageView attachments[2];
-    attachments[1] = depth.view;
+    attachments[1] = depth.view.get();
 
     auto const fb_info = vk::FramebufferCreateInfo()
         .setRenderPass(render_pass)
@@ -1572,7 +1574,7 @@ void App::resize() {
     device->destroyPipelineLayout(pipeline_layout, nullptr);
     device->destroyDescriptorSetLayout(desc_layout, nullptr);
 
-    device->destroyImageView(depth.view, nullptr);
+    depth.view.reset();
     device->destroyImage(depth.image, nullptr);
     device->freeMemory(depth.mem, nullptr);
 
