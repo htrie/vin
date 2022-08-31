@@ -213,7 +213,7 @@ class App {
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineCache pipeline_cache;
     vk::UniqueRenderPass render_pass;
-    vk::Pipeline pipeline;
+    vk::UniquePipeline pipeline;
 
     vk::DescriptorPool desc_pool;
     vk::DescriptorSet desc_set;
@@ -358,7 +358,7 @@ App::~App() {
     }
     device->destroyDescriptorPool(desc_pool, nullptr);
 
-    device->destroyPipeline(pipeline, nullptr);
+    pipeline.reset();
     pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
@@ -535,7 +535,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 
     commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
@@ -1429,7 +1429,7 @@ void App::prepare_pipeline() {
         .setPDynamicStates(dynamicStates)
         .setDynamicStateCount(2);
 
-    auto const pipeline = vk::GraphicsPipelineCreateInfo()
+    auto const pipeline_info = vk::GraphicsPipelineCreateInfo()
         .setStageCount(2)
         .setPStages(shaderStageInfo)
         .setPVertexInputState(&vertexInputInfo)
@@ -1443,8 +1443,9 @@ void App::prepare_pipeline() {
         .setLayout(pipeline_layout.get())
         .setRenderPass(render_pass.get());
 
-    auto result = device->createGraphicsPipelines(pipeline_cache.get(), 1, &pipeline, nullptr, &this->pipeline);
-    VERIFY(result == vk::Result::eSuccess);
+    auto pipeline_handles = device->createGraphicsPipelinesUnique(pipeline_cache.get(), pipeline_info);
+    VERIFY(pipeline_handles.result == vk::Result::eSuccess);
+    pipeline = std::move(pipeline_handles.value[0]);
 
     device->destroyShaderModule(frag_shader_module, nullptr);
     device->destroyShaderModule(vert_shader_module, nullptr);
@@ -1571,7 +1572,7 @@ void App::resize() {
 
     device->destroyDescriptorPool(desc_pool, nullptr);
 
-    device->destroyPipeline(pipeline, nullptr);
+    pipeline.reset();
     pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
