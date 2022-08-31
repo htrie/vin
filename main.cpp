@@ -151,7 +151,7 @@ struct SwapchainImageResources {
     vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
-    void* uniform_memory_ptr;
+    void* uniform_memory_ptr = nullptr;
     vk::UniqueFramebuffer framebuffer;
     vk::UniqueDescriptorSet descriptor_set;
 };
@@ -161,7 +161,7 @@ struct Chain {
     vk::UniqueSwapchainKHR swapchain;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
-    vk::Fence fences[FRAME_LAG];
+    vk::UniqueFence fences[FRAME_LAG];
     vk::Semaphore image_acquired_semaphores[FRAME_LAG];
     vk::Semaphore draw_complete_semaphores[FRAME_LAG];
     vk::Semaphore image_ownership_semaphores[FRAME_LAG];
@@ -341,9 +341,9 @@ App::~App() {
 
     // Wait for fences from present operations
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device->waitForFences(1, &chain.fences[i], VK_TRUE, UINT64_MAX);
+        result = device->waitForFences(1, &chain.fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
-        device->destroyFence(chain.fences[i], nullptr);
+        chain.fences[i].reset();
         device->destroySemaphore(chain.image_acquired_semaphores[i], nullptr);
         device->destroySemaphore(chain.draw_complete_semaphores[i], nullptr);
         if (separate_present_queue) {
@@ -420,10 +420,10 @@ void App::create_device() {
 
 void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    auto result = device->waitForFences(1, &chain.fences[chain.frame_index], VK_TRUE, UINT64_MAX);
+    auto result = device->waitForFences(1, &chain.fences[chain.frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device->resetFences({ chain.fences[chain.frame_index] });
+    device->resetFences({ chain.fences[chain.frame_index].get() });
 
     do {
         result = device->acquireNextImageKHR(chain.swapchain.get(), UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
@@ -462,7 +462,7 @@ void App::draw() {
         .setSignalSemaphoreCount(1)
         .setPSignalSemaphores(&chain.draw_complete_semaphores[chain.frame_index]);
 
-    result = graphics_queue.submit(1, &submit_info, chain.fences[chain.frame_index]);
+    result = graphics_queue.submit(1, &submit_info, chain.fences[chain.frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 
     if (separate_present_queue) {
@@ -924,10 +924,13 @@ void App::init_vk_swapchain() {
     auto const semaphoreCreateInfo = vk::SemaphoreCreateInfo();
 
     // Create fences that we can use to throttle if we get too far ahead of the image presents
-    auto const fence_ci = vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
+    auto const fence_ci = vk::FenceCreateInfo()
+        .setFlags(vk::FenceCreateFlagBits::eSignaled);
+
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device->createFence(&fence_ci, nullptr, &chain.fences[i]);
-        VERIFY(result == vk::Result::eSuccess);
+        auto fence_handle = device->createFenceUnique(fence_ci);
+        VERIFY(fence_handle.result == vk::Result::eSuccess);
+        chain.fences[i] = std::move(fence_handle.value);
 
         result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_acquired_semaphores[i]);
         VERIFY(result == vk::Result::eSuccess);
