@@ -162,9 +162,9 @@ struct Chain {
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
     vk::UniqueFence fences[FRAME_LAG];
-    vk::Semaphore image_acquired_semaphores[FRAME_LAG];
-    vk::Semaphore draw_complete_semaphores[FRAME_LAG];
-    vk::Semaphore image_ownership_semaphores[FRAME_LAG];
+    vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
+    vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
+    vk::UniqueSemaphore image_ownership_semaphores[FRAME_LAG];
     uint32_t frame_index = 0;
 };
 
@@ -344,10 +344,10 @@ App::~App() {
         result = device->waitForFences(1, &chain.fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
         chain.fences[i].reset();
-        device->destroySemaphore(chain.image_acquired_semaphores[i], nullptr);
-        device->destroySemaphore(chain.draw_complete_semaphores[i], nullptr);
+        chain.image_acquired_semaphores[i].reset();
+        chain.draw_complete_semaphores[i].reset();
         if (separate_present_queue) {
-            device->destroySemaphore(chain.image_ownership_semaphores[i], nullptr);
+            chain.image_ownership_semaphores[i].reset();
         }
     }
 
@@ -426,7 +426,7 @@ void App::draw() {
     device->resetFences({ chain.fences[chain.frame_index].get() });
 
     do {
-        result = device->acquireNextImageKHR(chain.swapchain.get(), UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
+        result = device->acquireNextImageKHR(chain.swapchain.get(), UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index].get(), vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -456,11 +456,11 @@ void App::draw() {
     auto const submit_info = vk::SubmitInfo()
         .setPWaitDstStageMask(&pipe_stage_flags)
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&chain.image_acquired_semaphores[chain.frame_index])
+        .setPWaitSemaphores(&chain.image_acquired_semaphores[chain.frame_index].get())
         .setCommandBufferCount(1)
         .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].cmd.get())
         .setSignalSemaphoreCount(1)
-        .setPSignalSemaphores(&chain.draw_complete_semaphores[chain.frame_index]);
+        .setPSignalSemaphores(&chain.draw_complete_semaphores[chain.frame_index].get());
 
     result = graphics_queue.submit(1, &submit_info, chain.fences[chain.frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
@@ -473,11 +473,11 @@ void App::draw() {
         auto const present_submit_info = vk::SubmitInfo()
             .setPWaitDstStageMask(&pipe_stage_flags)
             .setWaitSemaphoreCount(1)
-            .setPWaitSemaphores(&chain.draw_complete_semaphores[chain.frame_index])
+            .setPWaitSemaphores(&chain.draw_complete_semaphores[chain.frame_index].get())
             .setCommandBufferCount(1)
             .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].graphics_to_present_cmd.get())
             .setSignalSemaphoreCount(1)
-            .setPSignalSemaphores(&chain.image_ownership_semaphores[chain.frame_index]);
+            .setPSignalSemaphores(&chain.image_ownership_semaphores[chain.frame_index].get());
 
         result = present_queue.submit(1, &present_submit_info, vk::Fence());
         VERIFY(result == vk::Result::eSuccess);
@@ -487,7 +487,7 @@ void App::draw() {
     // otherwise wait for draw complete
     auto const presentInfo = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(separate_present_queue ? &chain.image_ownership_semaphores[chain.frame_index] : &chain.draw_complete_semaphores[chain.frame_index])
+        .setPWaitSemaphores(separate_present_queue ? &chain.image_ownership_semaphores[chain.frame_index].get() : &chain.draw_complete_semaphores[chain.frame_index].get())
         .setSwapchainCount(1)
         .setPSwapchains(&chain.swapchain.get())
         .setPImageIndices(&current_buffer);
@@ -932,15 +932,18 @@ void App::init_vk_swapchain() {
         VERIFY(fence_handle.result == vk::Result::eSuccess);
         chain.fences[i] = std::move(fence_handle.value);
 
-        result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_acquired_semaphores[i]);
+        auto semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
         VERIFY(result == vk::Result::eSuccess);
+        chain.image_acquired_semaphores[i] = std::move(semaphore_handle.value);
 
-        result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.draw_complete_semaphores[i]);
+        semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
         VERIFY(result == vk::Result::eSuccess);
+        chain.draw_complete_semaphores[i] = std::move(semaphore_handle.value);
 
         if (separate_present_queue) {
-            result = device->createSemaphore(&semaphoreCreateInfo, nullptr, &chain.image_ownership_semaphores[i]);
+            semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
             VERIFY(result == vk::Result::eSuccess);
+            chain.image_ownership_semaphores[i] = std::move(semaphore_handle.value);
         }
     }
     chain.frame_index = 0;
