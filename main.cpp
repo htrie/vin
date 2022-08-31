@@ -212,7 +212,7 @@ class App {
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
-    vk::RenderPass render_pass;
+    vk::UniqueRenderPass render_pass;
     vk::Pipeline pipeline;
 
     vk::DescriptorPool desc_pool;
@@ -360,7 +360,7 @@ App::~App() {
 
     device->destroyPipeline(pipeline, nullptr);
     device->destroyPipelineCache(pipelineCache, nullptr);
-    device->destroyRenderPass(render_pass, nullptr);
+    render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
 
@@ -525,7 +525,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})), vk::ClearDepthStencilValue(1.0f, 0u) };
 
     auto const passInfo = vk::RenderPassBeginInfo()
-        .setRenderPass(render_pass)
+        .setRenderPass(render_pass.get())
         .setFramebuffer(chain.swapchain_image_resources[current_buffer].framebuffer.get())
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
@@ -1346,7 +1346,7 @@ void App::prepare_framebuffers() {
     attachments[1] = depth.view.get();
 
     auto const fb_info = vk::FramebufferCreateInfo()
-        .setRenderPass(render_pass)
+        .setRenderPass(render_pass.get())
         .setAttachmentCount(2)
         .setPAttachments(attachments)
         .setWidth((uint32_t)window.width)
@@ -1440,7 +1440,7 @@ void App::prepare_pipeline() {
         .setPColorBlendState(&colorBlendInfo)
         .setPDynamicState(&dynamicStateInfo)
         .setLayout(pipeline_layout.get())
-        .setRenderPass(render_pass);
+        .setRenderPass(render_pass.get());
 
     result = device->createGraphicsPipelines(pipelineCache, 1, &pipeline, nullptr, &this->pipeline);
     VERIFY(result == vk::Result::eSuccess);
@@ -1523,8 +1523,9 @@ void App::prepare_render_pass() {
         .setDependencyCount(2)
         .setPDependencies(dependencies);
 
-    auto result = device->createRenderPass(&rp_info, nullptr, &render_pass);
-    VERIFY(result == vk::Result::eSuccess);
+    auto render_pass_handle = device->createRenderPassUnique(rp_info);
+    VERIFY(render_pass_handle.result == vk::Result::eSuccess);
+    render_pass = std::move(render_pass_handle.value);
 }
 
 vk::ShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
@@ -1571,7 +1572,7 @@ void App::resize() {
 
     device->destroyPipeline(pipeline, nullptr);
     device->destroyPipelineCache(pipelineCache, nullptr);
-    device->destroyRenderPass(render_pass, nullptr);
+    render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
 
