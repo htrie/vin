@@ -294,7 +294,9 @@ App::App(HINSTANCE hInstance)
 }
 
 void App::build_image_ownership_cmd(uint32_t const& i) {
-    auto const cmd_buf_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+    auto const cmd_buf_info = vk::CommandBufferBeginInfo()
+        .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+
     auto result = chain.swapchain_image_resources[i].graphics_to_present_cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
@@ -397,7 +399,7 @@ void App::create_device() {
     queues[0].setQueueCount(1);
     queues[0].setPQueuePriorities(priorities);
 
-    auto deviceInfo = vk::DeviceCreateInfo()
+    auto device_info = vk::DeviceCreateInfo()
         .setQueueCreateInfoCount(1)
         .setPQueueCreateInfos(queues)
         .setEnabledLayerCount(0)
@@ -410,10 +412,10 @@ void App::create_device() {
         queues[1].setQueueFamilyIndex(present_queue_family_index);
         queues[1].setQueueCount(1);
         queues[1].setPQueuePriorities(priorities);
-        deviceInfo.setQueueCreateInfoCount(2);
+        device_info.setQueueCreateInfoCount(2);
     }
 
-    auto device_handle = gpu.createDeviceUnique(deviceInfo);
+    auto device_handle = gpu.createDeviceUnique(device_info);
     VERIFY(device_handle.result == vk::Result::eSuccess);
     device = std::move(device_handle.value);
 }
@@ -485,14 +487,14 @@ void App::draw() {
 
     // If we are using separate queues we have to wait for image ownership,
     // otherwise wait for draw complete
-    auto const presentInfo = vk::PresentInfoKHR()
+    auto const present_info = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
         .setPWaitSemaphores(separate_present_queue ? &chain.image_ownership_semaphores[chain.frame_index].get() : &chain.draw_complete_semaphores[chain.frame_index].get())
         .setSwapchainCount(1)
         .setPSwapchains(&chain.swapchain.get())
         .setPImageIndices(&current_buffer);
 
-    result = present_queue.presentKHR(&presentInfo);
+    result = present_queue.presentKHR(&present_info);
     chain.frame_index += 1;
     chain.frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
@@ -519,21 +521,21 @@ void App::draw() {
 }
 
 void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
-    auto const commandInfo = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+    auto const command_buffer_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
     vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})), vk::ClearDepthStencilValue(1.0f, 0u) };
 
-    auto const passInfo = vk::RenderPassBeginInfo()
+    auto const pass_info = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass.get())
         .setFramebuffer(chain.swapchain_image_resources[current_buffer].framebuffer.get())
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
         .setPClearValues(clearValues);
 
-    auto result = commandBuffer.begin(&commandInfo);
+    auto result = commandBuffer.begin(&command_buffer_info);
     VERIFY(result == vk::Result::eSuccess);
 
-    commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
+    commandBuffer.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
@@ -590,15 +592,15 @@ void App::flush_init_cmd() {
     auto result = cmd->end();
     VERIFY(result == vk::Result::eSuccess);
 
-    auto const fenceInfo = vk::FenceCreateInfo();
+    auto const fence_info = vk::FenceCreateInfo();
     vk::Fence fence;
-    result = device->createFence(&fenceInfo, nullptr, &fence);
+    result = device->createFence(&fence_info, nullptr, &fence);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::CommandBuffer const commandBuffers[] = { cmd.get() };
-    auto const submitInfo = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
+    auto const submit_info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
 
-    result = graphics_queue.submit(1, &submitInfo, fence);
+    result = graphics_queue.submit(1, &submit_info, fence);
     VERIFY(result == vk::Result::eSuccess);
 
     result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
@@ -686,14 +688,14 @@ void App::init_vk() {
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-    auto const app = vk::ApplicationInfo()
+    auto const app_info = vk::ApplicationInfo()
         .setPApplicationName(APP_SHORT_NAME)
         .setApplicationVersion(0)
         .setPEngineName(APP_SHORT_NAME)
         .setEngineVersion(0)
         .setApiVersion(VK_API_VERSION_1_0);
     auto const inst_info = vk::InstanceCreateInfo()
-        .setPApplicationInfo(&app)
+        .setPApplicationInfo(&app_info)
         .setEnabledLayerCount(enabled_layer_count)
         .setPpEnabledLayerNames(instance_validation_layers)
         .setEnabledExtensionCount(enabled_extension_count)
@@ -834,9 +836,9 @@ void App::init_vk() {
 }
 
 void App::create_surface() {
-    auto const createInfo = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
+    auto const surf_info = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
 
-    auto surface_handle = inst->createWin32SurfaceKHRUnique(createInfo);
+    auto surface_handle = inst->createWin32SurfaceKHRUnique(surf_info);
     VERIFY(surface_handle.result == vk::Result::eSuccess);
     surface = std::move(surface_handle.value);
 }
@@ -921,27 +923,27 @@ void App::init_vk_swapchain() {
 
     // Create semaphores to synchronize acquiring presentable buffers before
     // rendering and waiting for drawing to be complete before presenting
-    auto const semaphoreCreateInfo = vk::SemaphoreCreateInfo();
+    auto const semaphore_info = vk::SemaphoreCreateInfo();
 
     // Create fences that we can use to throttle if we get too far ahead of the image presents
-    auto const fence_ci = vk::FenceCreateInfo()
+    auto const fence_info = vk::FenceCreateInfo()
         .setFlags(vk::FenceCreateFlagBits::eSignaled);
 
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        auto fence_handle = device->createFenceUnique(fence_ci);
+        auto fence_handle = device->createFenceUnique(fence_info);
         VERIFY(fence_handle.result == vk::Result::eSuccess);
         chain.fences[i] = std::move(fence_handle.value);
 
-        auto semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
+        auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
         VERIFY(result == vk::Result::eSuccess);
         chain.image_acquired_semaphores[i] = std::move(semaphore_handle.value);
 
-        semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
+        semaphore_handle = device->createSemaphoreUnique(semaphore_info);
         VERIFY(result == vk::Result::eSuccess);
         chain.draw_complete_semaphores[i] = std::move(semaphore_handle.value);
 
         if (separate_present_queue) {
-            semaphore_handle = device->createSemaphoreUnique(semaphoreCreateInfo);
+            semaphore_handle = device->createSemaphoreUnique(semaphore_info);
             VERIFY(result == vk::Result::eSuccess);
             chain.image_ownership_semaphores[i] = std::move(semaphore_handle.value);
         }
@@ -952,7 +954,8 @@ void App::init_vk_swapchain() {
 }
 
 void App::prepare() {
-    auto const cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(graphics_queue_family_index);
+    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setQueueFamilyIndex(graphics_queue_family_index);
 
     auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
     VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
@@ -967,7 +970,8 @@ void App::prepare() {
     VERIFY(cmd_handles.result == vk::Result::eSuccess);
     cmd = std::move(cmd_handles.value[0]);
 
-    auto const cmd_buf_info = vk::CommandBufferBeginInfo().setPInheritanceInfo(nullptr);
+    auto const cmd_buf_info = vk::CommandBufferBeginInfo()
+        .setPInheritanceInfo(nullptr);
 
     auto result = cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
@@ -987,19 +991,20 @@ void App::prepare() {
     }
 
     if (separate_present_queue) {
-        auto const present_cmd_pool_info = vk::CommandPoolCreateInfo().setQueueFamilyIndex(present_queue_family_index);
+        auto const present_cmd_pool_info = vk::CommandPoolCreateInfo()
+            .setQueueFamilyIndex(present_queue_family_index);
 
         auto present_cmd_pool_handle = device->createCommandPoolUnique(present_cmd_pool_info);
         VERIFY(present_cmd_pool_handle.result == vk::Result::eSuccess);
         present_cmd_pool = std::move(present_cmd_pool_handle.value);
 
-        auto const present_cmd = vk::CommandBufferAllocateInfo()
+        auto const present_cmd_info = vk::CommandBufferAllocateInfo()
             .setCommandPool(present_cmd_pool.get())
             .setLevel(vk::CommandBufferLevel::ePrimary)
             .setCommandBufferCount(1);
 
         for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-            auto cmd_handles = device->allocateCommandBuffersUnique(present_cmd);
+            auto cmd_handles = device->allocateCommandBuffersUnique(present_cmd_info);
             VERIFY(cmd_handles.result == vk::Result::eSuccess);
             chain.swapchain_image_resources[i].graphics_to_present_cmd = std::move(cmd_handles.value[0]);
 
@@ -1168,16 +1173,15 @@ void App::prepare_buffers() {
     chain.swapchain_image_resources.reset(new SwapchainImageResources[chain.swapchainImageCount]);
 
     for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
-        auto color_image_view = vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
-            .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
         chain.swapchain_image_resources[i].image = swapchainImages[i];
 
-        color_image_view.image = chain.swapchain_image_resources[i].image;
+        auto view_info = vk::ImageViewCreateInfo()
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(format)
+            .setImage(chain.swapchain_image_resources[i].image)
+            .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-        auto view_handle = device->createImageViewUnique(color_image_view);
+        auto view_handle = device->createImageViewUnique(view_info);
         VERIFY(view_handle.result == vk::Result::eSuccess);
         chain.swapchain_image_resources[i].view = std::move(view_handle.value);
     }
@@ -1200,7 +1204,9 @@ void App::prepare_uniforms() {
         data.position[i][3] = 1.0f;
     }
 
-    auto const buf_info = vk::BufferCreateInfo().setSize(sizeof(data)).setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
+    auto const buf_info = vk::BufferCreateInfo()
+        .setSize(sizeof(data))
+        .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
     for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
         auto buffer_handle = device->createBufferUnique(buf_info);
@@ -1210,14 +1216,14 @@ void App::prepare_uniforms() {
         vk::MemoryRequirements mem_reqs;
         device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
 
-        auto mem_alloc = vk::MemoryAllocateInfo()
+        auto mem_info = vk::MemoryAllocateInfo()
             .setAllocationSize(mem_reqs.size)
             .setMemoryTypeIndex(0);
 
-        bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_alloc.memoryTypeIndex);
+        bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
         VERIFY(pass);
 
-        auto memory_handle = device->allocateMemoryUnique(mem_alloc);
+        auto memory_handle = device->allocateMemoryUnique(mem_info);
         VERIFY(memory_handle.result == vk::Result::eSuccess);
         chain.swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
 
@@ -1255,14 +1261,14 @@ void App::prepare_depth() {
     vk::MemoryRequirements mem_reqs;
     device->getImageMemoryRequirements(depth.image.get(), &mem_reqs);
 
-    auto mem_alloc = vk::MemoryAllocateInfo()
+    auto mem_info = vk::MemoryAllocateInfo()
         .setAllocationSize(mem_reqs.size)
         .setMemoryTypeIndex(0);
 
-    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_alloc.memoryTypeIndex);
+    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_info.memoryTypeIndex);
     VERIFY(pass);
 
-    auto mem_handle = device->allocateMemoryUnique(mem_alloc);
+    auto mem_handle = device->allocateMemoryUnique(mem_info);
     VERIFY(mem_handle.result == vk::Result::eSuccess);
     depth.mem = std::move(mem_handle.value);
 
@@ -1388,7 +1394,7 @@ void App::prepare_pipeline() {
     auto vert_shader_module = prepare_vs();
     auto frag_shader_module = prepare_fs();
 
-    vk::PipelineShaderStageCreateInfo const shaderStageInfo[2] = {
+    vk::PipelineShaderStageCreateInfo const shader_stage_info[2] = {
         vk::PipelineShaderStageCreateInfo()
             .setStage(vk::ShaderStageFlagBits::eVertex)
             .setModule(vert_shader_module.get())
@@ -1398,16 +1404,16 @@ void App::prepare_pipeline() {
             .setModule(frag_shader_module.get())
             .setPName("main") };
 
-    vk::PipelineVertexInputStateCreateInfo const vertexInputInfo;
+    vk::PipelineVertexInputStateCreateInfo const vertex_input_info;
 
-    auto const inputAssemblyInfo = vk::PipelineInputAssemblyStateCreateInfo()
+    auto const input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
         .setTopology(vk::PrimitiveTopology::eTriangleList);
 
-    auto const viewportInfo = vk::PipelineViewportStateCreateInfo()
+    auto const viewport_info = vk::PipelineViewportStateCreateInfo()
         .setViewportCount(1)
         .setScissorCount(1);
 
-    auto const rasterizationInfo = vk::PipelineRasterizationStateCreateInfo()
+    auto const rasterization_info = vk::PipelineRasterizationStateCreateInfo()
         .setDepthClampEnable(VK_FALSE)
         .setRasterizerDiscardEnable(VK_FALSE)
         .setPolygonMode(vk::PolygonMode::eFill)
@@ -1416,14 +1422,14 @@ void App::prepare_pipeline() {
         .setDepthBiasEnable(VK_FALSE)
         .setLineWidth(1.0f);
 
-    auto const multisampleInfo = vk::PipelineMultisampleStateCreateInfo();
+    auto const multisample_info = vk::PipelineMultisampleStateCreateInfo();
 
     auto const stencilOp = vk::StencilOpState()
         .setFailOp(vk::StencilOp::eKeep)
         .setPassOp(vk::StencilOp::eKeep)
         .setCompareOp(vk::CompareOp::eAlways);
 
-    auto const depthStencilInfo = vk::PipelineDepthStencilStateCreateInfo()
+    auto const depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo()
         .setDepthTestEnable(VK_TRUE)
         .setDepthWriteEnable(VK_TRUE)
         .setDepthCompareOp(vk::CompareOp::eLessOrEqual)
@@ -1432,31 +1438,31 @@ void App::prepare_pipeline() {
         .setFront(stencilOp)
         .setBack(stencilOp);
 
-    vk::PipelineColorBlendAttachmentState const colorBlendAttachments[1] = {
+    vk::PipelineColorBlendAttachmentState const color_blend_attachments[1] = {
         vk::PipelineColorBlendAttachmentState()
             .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
 
-    auto const colorBlendInfo = vk::PipelineColorBlendStateCreateInfo()
+    auto const color_blend_info = vk::PipelineColorBlendStateCreateInfo()
         .setAttachmentCount(1)
-        .setPAttachments(colorBlendAttachments);
+        .setPAttachments(color_blend_attachments);
 
-    vk::DynamicState const dynamicStates[2] = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+    vk::DynamicState const dynamic_states[2] = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
 
-    auto const dynamicStateInfo = vk::PipelineDynamicStateCreateInfo()
-        .setPDynamicStates(dynamicStates)
+    auto const dynamic_state_info = vk::PipelineDynamicStateCreateInfo()
+        .setPDynamicStates(dynamic_states)
         .setDynamicStateCount(2);
 
     auto const pipeline_info = vk::GraphicsPipelineCreateInfo()
         .setStageCount(2)
-        .setPStages(shaderStageInfo)
-        .setPVertexInputState(&vertexInputInfo)
-        .setPInputAssemblyState(&inputAssemblyInfo)
-        .setPViewportState(&viewportInfo)
-        .setPRasterizationState(&rasterizationInfo)
-        .setPMultisampleState(&multisampleInfo)
-        .setPDepthStencilState(&depthStencilInfo)
-        .setPColorBlendState(&colorBlendInfo)
-        .setPDynamicState(&dynamicStateInfo)
+        .setPStages(shader_stage_info)
+        .setPVertexInputState(&vertex_input_info)
+        .setPInputAssemblyState(&input_assembly_info)
+        .setPViewportState(&viewport_info)
+        .setPRasterizationState(&rasterization_info)
+        .setPMultisampleState(&multisample_info)
+        .setPDepthStencilState(&depth_stencil_info)
+        .setPColorBlendState(&color_blend_info)
+        .setPDynamicState(&dynamic_state_info)
         .setLayout(pipeline_layout.get())
         .setRenderPass(render_pass.get());
 
