@@ -215,8 +215,7 @@ class App {
     vk::UniqueRenderPass render_pass;
     vk::UniquePipeline pipeline;
 
-    vk::DescriptorPool desc_pool;
-    vk::DescriptorSet desc_set;
+    vk::UniqueDescriptorPool desc_pool;
 
     std::unique_ptr<vk::Framebuffer[]> framebuffers;
 
@@ -356,7 +355,7 @@ App::~App() {
         chain.swapchain_image_resources[i].framebuffer.reset();
         chain.swapchain_image_resources[i].descriptor_set.reset();
     }
-    device->destroyDescriptorPool(desc_pool, nullptr);
+    desc_pool.reset();
 
     pipeline.reset();
     pipeline_cache.reset();
@@ -1302,21 +1301,26 @@ void App::prepare_descriptor_layout() {
 }
 
 void App::prepare_descriptor_pool() {
-    vk::DescriptorPoolSize const poolSizes[1] = { vk::DescriptorPoolSize().setType(vk::DescriptorType::eUniformBuffer).setDescriptorCount(chain.swapchainImageCount) };
+    vk::DescriptorPoolSize const pool_sizes[1] = { 
+        vk::DescriptorPoolSize()
+            .setType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorCount(chain.swapchainImageCount)
+    };
 
-    auto const descriptor_pool = vk::DescriptorPoolCreateInfo()
+    auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
         .setMaxSets(chain.swapchainImageCount)
         .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setPoolSizeCount(1)
-        .setPPoolSizes(poolSizes);
+        .setPPoolSizes(pool_sizes);
 
-    auto result = device->createDescriptorPool(&descriptor_pool, nullptr, &desc_pool);
-    VERIFY(result == vk::Result::eSuccess);
+    auto desc_pool_handle = device->createDescriptorPoolUnique(desc_pool_info);
+    VERIFY(desc_pool_handle.result == vk::Result::eSuccess);
+    desc_pool = std::move(desc_pool_handle.value);
 }
 
 void App::prepare_descriptor_set() {
     auto const alloc_info = vk::DescriptorSetAllocateInfo()
-        .setDescriptorPool(desc_pool)
+        .setDescriptorPool(desc_pool.get())
         .setDescriptorSetCount(1)
         .setPSetLayouts(&desc_layout.get());
 
@@ -1570,7 +1574,7 @@ void App::resize() {
         chain.swapchain_image_resources[i].descriptor_set.reset();
     }
 
-    device->destroyDescriptorPool(desc_pool, nullptr);
+    desc_pool.reset();
 
     pipeline.reset();
     pipeline_cache.reset();
