@@ -209,7 +209,7 @@ class App {
     } depth;
 
     vk::UniqueCommandBuffer cmd;
-    vk::PipelineLayout pipeline_layout;
+    vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
     vk::RenderPass render_pass;
@@ -361,7 +361,7 @@ App::~App() {
     device->destroyPipeline(pipeline, nullptr);
     device->destroyPipelineCache(pipelineCache, nullptr);
     device->destroyRenderPass(render_pass, nullptr);
-    device->destroyPipelineLayout(pipeline_layout, nullptr);
+    pipeline_layout.reset();
     desc_layout.reset();
 
     chain.swapchain.reset();
@@ -536,7 +536,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     commandBuffer.beginRenderPass(&passInfo, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -1296,8 +1296,9 @@ void App::prepare_descriptor_layout() {
         .setSetLayoutCount(1)
         .setPSetLayouts(&desc_layout.get());
 
-    auto result = device->createPipelineLayout(&pipeline_layout_info, nullptr, &pipeline_layout);
-    VERIFY(result == vk::Result::eSuccess);
+    auto pipeline_layout_handle = device->createPipelineLayoutUnique(pipeline_layout_info);
+    VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
+    pipeline_layout = std::move(pipeline_layout_handle.value);
 }
 
 void App::prepare_descriptor_pool() {
@@ -1438,7 +1439,7 @@ void App::prepare_pipeline() {
         .setPDepthStencilState(&depthStencilInfo)
         .setPColorBlendState(&colorBlendInfo)
         .setPDynamicState(&dynamicStateInfo)
-        .setLayout(pipeline_layout)
+        .setLayout(pipeline_layout.get())
         .setRenderPass(render_pass);
 
     result = device->createGraphicsPipelines(pipelineCache, 1, &pipeline, nullptr, &this->pipeline);
@@ -1571,8 +1572,8 @@ void App::resize() {
     device->destroyPipeline(pipeline, nullptr);
     device->destroyPipelineCache(pipelineCache, nullptr);
     device->destroyRenderPass(render_pass, nullptr);
-    device->destroyPipelineLayout(pipeline_layout, nullptr);
-    device->destroyDescriptorSetLayout(desc_layout.get(), nullptr);
+    pipeline_layout.reset();
+    desc_layout.reset();
 
     depth.view.reset();
     depth.image.reset();
