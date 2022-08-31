@@ -210,7 +210,7 @@ class App {
 
     vk::UniqueCommandBuffer cmd;
     vk::PipelineLayout pipeline_layout;
-    vk::DescriptorSetLayout desc_layout;
+    vk::UniqueDescriptorSetLayout desc_layout;
     vk::PipelineCache pipelineCache;
     vk::RenderPass render_pass;
     vk::Pipeline pipeline;
@@ -362,7 +362,7 @@ App::~App() {
     device->destroyPipelineCache(pipelineCache, nullptr);
     device->destroyRenderPass(render_pass, nullptr);
     device->destroyPipelineLayout(pipeline_layout, nullptr);
-    device->destroyDescriptorSetLayout(desc_layout, nullptr);
+    desc_layout.reset();
 
     chain.swapchain.reset();
 
@@ -1284,14 +1284,19 @@ void App::prepare_descriptor_layout() {
            .setStageFlags(vk::ShaderStageFlagBits::eVertex)
            .setPImmutableSamplers(nullptr) };
 
-    auto const descriptor_layout = vk::DescriptorSetLayoutCreateInfo().setBindingCount(1).setPBindings(layout_bindings);
+    auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
+        .setBindingCount(1)
+        .setPBindings(layout_bindings);
 
-    auto result = device->createDescriptorSetLayout(&descriptor_layout, nullptr, &desc_layout);
-    VERIFY(result == vk::Result::eSuccess);
+    auto desc_layout_handle = device->createDescriptorSetLayoutUnique(desc_layout_info);
+    VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
+    desc_layout = std::move(desc_layout_handle.value);
 
-    auto const pPipelineLayoutCreateInfo = vk::PipelineLayoutCreateInfo().setSetLayoutCount(1).setPSetLayouts(&desc_layout);
+    auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+        .setSetLayoutCount(1)
+        .setPSetLayouts(&desc_layout.get());
 
-    result = device->createPipelineLayout(&pPipelineLayoutCreateInfo, nullptr, &pipeline_layout);
+    auto result = device->createPipelineLayout(&pipeline_layout_info, nullptr, &pipeline_layout);
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -1309,9 +1314,14 @@ void App::prepare_descriptor_pool() {
 }
 
 void App::prepare_descriptor_set() {
-    auto const alloc_info = vk::DescriptorSetAllocateInfo().setDescriptorPool(desc_pool).setDescriptorSetCount(1).setPSetLayouts(&desc_layout);
+    auto const alloc_info = vk::DescriptorSetAllocateInfo()
+        .setDescriptorPool(desc_pool)
+        .setDescriptorSetCount(1)
+        .setPSetLayouts(&desc_layout.get());
 
-    auto buffer_info = vk::DescriptorBufferInfo().setOffset(0).setRange(sizeof(struct Uniforms));
+    auto buffer_info = vk::DescriptorBufferInfo()
+        .setOffset(0)
+        .setRange(sizeof(struct Uniforms));
 
     vk::WriteDescriptorSet writes[1];
 
@@ -1562,7 +1572,7 @@ void App::resize() {
     device->destroyPipelineCache(pipelineCache, nullptr);
     device->destroyRenderPass(render_pass, nullptr);
     device->destroyPipelineLayout(pipeline_layout, nullptr);
-    device->destroyDescriptorSetLayout(desc_layout, nullptr);
+    device->destroyDescriptorSetLayout(desc_layout.get(), nullptr);
 
     depth.view.reset();
     depth.image.reset();
