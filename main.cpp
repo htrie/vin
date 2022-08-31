@@ -211,7 +211,7 @@ class App {
     vk::UniqueCommandBuffer cmd;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
-    vk::PipelineCache pipelineCache;
+    vk::UniquePipelineCache pipeline_cache;
     vk::UniqueRenderPass render_pass;
     vk::Pipeline pipeline;
 
@@ -359,7 +359,7 @@ App::~App() {
     device->destroyDescriptorPool(desc_pool, nullptr);
 
     device->destroyPipeline(pipeline, nullptr);
-    device->destroyPipelineCache(pipelineCache, nullptr);
+    pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
@@ -1369,9 +1369,10 @@ vk::ShaderModule App::prepare_fs() {
 }
 
 void App::prepare_pipeline() {
-    vk::PipelineCacheCreateInfo const pipelineCacheInfo;
-    auto result = device->createPipelineCache(&pipelineCacheInfo, nullptr, &pipelineCache);
-    VERIFY(result == vk::Result::eSuccess);
+    vk::PipelineCacheCreateInfo const pipeline_cache_info;
+    auto pipeline_cache_handle = device->createPipelineCacheUnique(pipeline_cache_info);
+    VERIFY(pipeline_cache_handle.result == vk::Result::eSuccess);
+    pipeline_cache = std::move(pipeline_cache_handle.value);
 
     vk::ShaderModule vert_shader_module = prepare_vs();
     vk::ShaderModule frag_shader_module = prepare_fs();
@@ -1442,7 +1443,7 @@ void App::prepare_pipeline() {
         .setLayout(pipeline_layout.get())
         .setRenderPass(render_pass.get());
 
-    result = device->createGraphicsPipelines(pipelineCache, 1, &pipeline, nullptr, &this->pipeline);
+    auto result = device->createGraphicsPipelines(pipeline_cache.get(), 1, &pipeline, nullptr, &this->pipeline);
     VERIFY(result == vk::Result::eSuccess);
 
     device->destroyShaderModule(frag_shader_module, nullptr);
@@ -1571,7 +1572,7 @@ void App::resize() {
     device->destroyDescriptorPool(desc_pool, nullptr);
 
     device->destroyPipeline(pipeline, nullptr);
-    device->destroyPipelineCache(pipelineCache, nullptr);
+    pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
