@@ -158,7 +158,7 @@ struct SwapchainImageResources {
 
 struct Chain {
     uint32_t swapchainImageCount = 0;
-    vk::SwapchainKHR swapchain;
+    vk::UniqueSwapchainKHR swapchain;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
     vk::Fence fences[FRAME_LAG];
@@ -364,7 +364,7 @@ App::~App() {
     device->destroyPipelineLayout(pipeline_layout, nullptr);
     device->destroyDescriptorSetLayout(desc_layout, nullptr);
 
-    device->destroySwapchainKHR(chain.swapchain, nullptr);
+    chain.swapchain.reset();
 
     depth.view.reset();
     depth.image.reset();
@@ -427,7 +427,7 @@ void App::draw() {
     device->resetFences({ chain.fences[chain.frame_index] });
 
     do {
-        result = device->acquireNextImageKHR(chain.swapchain, UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
+        result = device->acquireNextImageKHR(chain.swapchain.get(), UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index], vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -490,7 +490,7 @@ void App::draw() {
         .setWaitSemaphoreCount(1)
         .setPWaitSemaphores(separate_present_queue ? &chain.image_ownership_semaphores[chain.frame_index] : &chain.draw_complete_semaphores[chain.frame_index])
         .setSwapchainCount(1)
-        .setPSwapchains(&chain.swapchain)
+        .setPSwapchains(&chain.swapchain.get())
         .setPImageIndices(&current_buffer);
 
     result = present_queue.presentKHR(&presentInfo);
@@ -1019,8 +1019,6 @@ void App::prepare() {
 }
 
 void App::prepare_buffers() {
-    vk::SwapchainKHR oldSwapchain = chain.swapchain;
-
     vk::SurfaceCapabilitiesKHR surfCapabilities;
     auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
     VERIFY(result == vk::Result::eSuccess);
@@ -1134,7 +1132,7 @@ void App::prepare_buffers() {
         }
     }
 
-    auto const swapchain_ci = vk::SwapchainCreateInfoKHR()
+    auto const swapchain_info = vk::SwapchainCreateInfoKHR()
         .setSurface(surface.get())
         .setMinImageCount(desiredNumOfSwapchainImages)
         .setImageFormat(format)
@@ -1149,22 +1147,17 @@ void App::prepare_buffers() {
         .setCompositeAlpha(compositeAlpha)
         .setPresentMode(swapchainPresentMode)
         .setClipped(true)
-        .setOldSwapchain(oldSwapchain);
+        .setOldSwapchain(chain.swapchain.get());
 
-    result = device->createSwapchainKHR(&swapchain_ci, nullptr, &chain.swapchain);
-    VERIFY(result == vk::Result::eSuccess);
+    auto swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
+    VERIFY(swapchain_handle.result == vk::Result::eSuccess);
+    chain.swapchain = std::move(swapchain_handle.value);
 
-    // If we just re-created an existing swapchain, we should destroy the old swapchain at this point.
-    // Note: destroying the swapchain also cleans up all its associated presentable images once the platform is done with them.
-    if (oldSwapchain) {
-        device->destroySwapchainKHR(oldSwapchain, nullptr);
-    }
-
-    result = device->getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, static_cast<vk::Image*>(nullptr));
+    result = device->getSwapchainImagesKHR(chain.swapchain.get(), &chain.swapchainImageCount, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain.swapchainImageCount]);
-    result = device->getSwapchainImagesKHR(chain.swapchain, &chain.swapchainImageCount, swapchainImages.get());
+    result = device->getSwapchainImagesKHR(chain.swapchain.get(), &chain.swapchainImageCount, swapchainImages.get());
     VERIFY(result == vk::Result::eSuccess);
 
     chain.swapchain_image_resources.reset(new SwapchainImageResources[chain.swapchainImageCount]);
