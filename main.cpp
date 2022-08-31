@@ -238,9 +238,9 @@ class App {
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
     void prepare_framebuffers();
-    vk::ShaderModule prepare_shader_module(const uint32_t*, size_t);
-    vk::ShaderModule prepare_vs();
-    vk::ShaderModule prepare_fs();
+    vk::UniqueShaderModule prepare_shader_module(const uint32_t*, size_t);
+    vk::UniqueShaderModule prepare_vs();
+    vk::UniqueShaderModule prepare_fs();
     void prepare_pipeline();
     void prepare_render_pass();
 
@@ -1365,7 +1365,7 @@ void App::prepare_framebuffers() {
     }
 }
 
-vk::ShaderModule App::prepare_fs() {
+vk::UniqueShaderModule App::prepare_fs() {
     const uint32_t fragShaderCode[] =
 #include "shader.frag.inc"
         ;
@@ -1374,16 +1374,23 @@ vk::ShaderModule App::prepare_fs() {
 
 void App::prepare_pipeline() {
     vk::PipelineCacheCreateInfo const pipeline_cache_info;
+
     auto pipeline_cache_handle = device->createPipelineCacheUnique(pipeline_cache_info);
     VERIFY(pipeline_cache_handle.result == vk::Result::eSuccess);
     pipeline_cache = std::move(pipeline_cache_handle.value);
 
-    vk::ShaderModule vert_shader_module = prepare_vs();
-    vk::ShaderModule frag_shader_module = prepare_fs();
+    auto vert_shader_module = prepare_vs();
+    auto frag_shader_module = prepare_fs();
 
     vk::PipelineShaderStageCreateInfo const shaderStageInfo[2] = {
-        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eVertex).setModule(vert_shader_module).setPName("main"),
-        vk::PipelineShaderStageCreateInfo().setStage(vk::ShaderStageFlagBits::eFragment).setModule(frag_shader_module).setPName("main") };
+        vk::PipelineShaderStageCreateInfo()
+            .setStage(vk::ShaderStageFlagBits::eVertex)
+            .setModule(vert_shader_module.get())
+            .setPName("main"),
+        vk::PipelineShaderStageCreateInfo()
+            .setStage(vk::ShaderStageFlagBits::eFragment)
+            .setModule(frag_shader_module.get())
+            .setPName("main") };
 
     vk::PipelineVertexInputStateCreateInfo const vertexInputInfo;
 
@@ -1450,9 +1457,6 @@ void App::prepare_pipeline() {
     auto pipeline_handles = device->createGraphicsPipelinesUnique(pipeline_cache.get(), pipeline_info);
     VERIFY(pipeline_handles.result == vk::Result::eSuccess);
     pipeline = std::move(pipeline_handles.value[0]);
-
-    device->destroyShaderModule(frag_shader_module, nullptr);
-    device->destroyShaderModule(vert_shader_module, nullptr);
 }
 
 void App::prepare_render_pass() {
@@ -1534,19 +1538,17 @@ void App::prepare_render_pass() {
     render_pass = std::move(render_pass_handle.value);
 }
 
-vk::ShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
-    const auto moduleCreateInfo = vk::ShaderModuleCreateInfo()
+vk::UniqueShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
+    const auto module_info = vk::ShaderModuleCreateInfo()
         .setCodeSize(size)
         .setPCode(code);
 
-    vk::ShaderModule module;
-    auto result = device->createShaderModule(&moduleCreateInfo, nullptr, &module);
-    VERIFY(result == vk::Result::eSuccess);
-
-    return module;
+    auto module_handle = device->createShaderModuleUnique(module_info);
+    VERIFY(module_handle.result == vk::Result::eSuccess);
+    return std::move(module_handle.value);
 }
 
-vk::ShaderModule App::prepare_vs() {
+vk::UniqueShaderModule App::prepare_vs() {
     const uint32_t vertShaderCode[] =
 #include "shader.vert.inc"
         ;
