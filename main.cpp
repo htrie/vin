@@ -232,8 +232,8 @@ class App {
 
     vk::UniqueDescriptorPool desc_pool;
 
-    uint32_t curFrame = 0;
-    uint32_t frameCount = UINT32_MAX;
+    uint32_t current_frame = 0;
+    uint32_t frame_count = UINT32_MAX;
 
     uint32_t current_buffer = 0;
     uint32_t queue_family_count = 0;
@@ -809,7 +809,7 @@ void App::init_vk_swapchain() {
     }
     color_space = surfFormats[0].colorSpace;
 
-    curFrame = 0;
+    current_frame = 0;
 
     gpu.getMemoryProperties(&memory_properties);
 }
@@ -1475,9 +1475,9 @@ void App::run() {
     }
 
     draw();
-    curFrame++;
+    current_frame++;
 
-    if (frameCount != UINT32_MAX && curFrame == frameCount) {
+    if (frame_count != UINT32_MAX && current_frame == frame_count) {
         PostQuitMessage(validation_error);
     }
 }
