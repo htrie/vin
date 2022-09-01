@@ -167,18 +167,15 @@ struct Chain {
     uint32_t frame_index = 0;
 
     Chain(vk::Device& device) {
-        // Create semaphores to synchronize acquiring presentable buffers before
-        // rendering and waiting for drawing to be complete before presenting
-        auto const semaphore_info = vk::SemaphoreCreateInfo();
-
-        // Create fences that we can use to throttle if we get too far ahead of the image presents
-        auto const fence_info = vk::FenceCreateInfo()
-            .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
         for (uint32_t i = 0; i < FRAME_LAG; i++) {
+            auto const fence_info = vk::FenceCreateInfo()
+                .setFlags(vk::FenceCreateFlagBits::eSignaled);
+
             auto fence_handle = device.createFenceUnique(fence_info);
             VERIFY(fence_handle.result == vk::Result::eSuccess);
             fences[i] = std::move(fence_handle.value);
+
+            auto const semaphore_info = vk::SemaphoreCreateInfo();
 
             auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
             VERIFY(semaphore_handle.result == vk::Result::eSuccess);
