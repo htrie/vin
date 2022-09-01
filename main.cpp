@@ -166,24 +166,12 @@ struct Chain {
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
     vk::UniqueSemaphore image_ownership_semaphores[FRAME_LAG];
     uint32_t frame_index = 0;
-
-    void Clear() {
-        for (uint32_t i = 0; i < swapchainImageCount; i++) {
-            swapchain_image_resources[i].view.reset();
-            swapchain_image_resources[i].cmd.reset();
-            swapchain_image_resources[i].graphics_to_present_cmd.reset();
-            swapchain_image_resources[i].uniform_buffer.reset();
-            swapchain_image_resources[i].uniform_memory.reset();
-        }
-
-        swapchain.reset();
-    }
 };
 
 class App {
     bool prepared = false;
 
-    Chain chain;
+    std::unique_ptr<Chain> chain;
 
     Matrices matrices;
 
@@ -288,6 +276,8 @@ App::App(HINSTANCE hInstance)
 {
     window.hinstance = hInstance;
 
+    chain = std::make_unique<Chain>();
+
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
@@ -309,7 +299,7 @@ void App::build_image_ownership_cmd(uint32_t const& i) {
     auto const cmd_buf_info = vk::CommandBufferBeginInfo()
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-    auto result = chain.swapchain_image_resources[i].graphics_to_present_cmd->begin(&cmd_buf_info);
+    auto result = chain->swapchain_image_resources[i].graphics_to_present_cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
     auto const image_ownership_barrier =
@@ -320,12 +310,12 @@ void App::build_image_ownership_cmd(uint32_t const& i) {
         .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
         .setSrcQueueFamilyIndex(graphics_queue_family_index)
         .setDstQueueFamilyIndex(present_queue_family_index)
-        .setImage(chain.swapchain_image_resources[i].image)
+        .setImage(chain->swapchain_image_resources[i].image)
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-    chain.swapchain_image_resources[i].graphics_to_present_cmd->pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
+    chain->swapchain_image_resources[i].graphics_to_present_cmd->pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
 
-    result = chain.swapchain_image_resources[i].graphics_to_present_cmd->end();
+    result = chain->swapchain_image_resources[i].graphics_to_present_cmd->end();
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -355,19 +345,19 @@ App::~App() {
 
     // Wait for fences from present operations
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device->waitForFences(1, &chain.fences[i].get(), VK_TRUE, UINT64_MAX);
+        result = device->waitForFences(1, &chain->fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
-        chain.fences[i].reset();
-        chain.image_acquired_semaphores[i].reset();
-        chain.draw_complete_semaphores[i].reset();
+        chain->fences[i].reset();
+        chain->image_acquired_semaphores[i].reset();
+        chain->draw_complete_semaphores[i].reset();
         if (separate_present_queue) {
-            chain.image_ownership_semaphores[i].reset();
+            chain->image_ownership_semaphores[i].reset();
         }
     }
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        chain.swapchain_image_resources[i].framebuffer.reset();
-        chain.swapchain_image_resources[i].descriptor_set.reset();
+    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
+        chain->swapchain_image_resources[i].framebuffer.reset();
+        chain->swapchain_image_resources[i].descriptor_set.reset();
     }
     desc_pool.reset();
 
@@ -377,11 +367,11 @@ App::~App() {
     pipeline_layout.reset();
     desc_layout.reset();
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
+    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
+        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
     }
 
-    chain.Clear();
+    chain.reset();
 
     depth.view.reset();
     depth.image.reset();
@@ -429,13 +419,13 @@ void App::create_device() {
 
 void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    auto result = device->waitForFences(1, &chain.fences[chain.frame_index].get(), VK_TRUE, UINT64_MAX);
+    auto result = device->waitForFences(1, &chain->fences[chain->frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device->resetFences({ chain.fences[chain.frame_index].get() });
+    device->resetFences({ chain->fences[chain->frame_index].get() });
 
     do {
-        result = device->acquireNextImageKHR(chain.swapchain.get(), UINT64_MAX, chain.image_acquired_semaphores[chain.frame_index].get(), vk::Fence(), &current_buffer);
+        result = device->acquireNextImageKHR(chain->swapchain.get(), UINT64_MAX, chain->image_acquired_semaphores[chain->frame_index].get(), vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -465,13 +455,13 @@ void App::draw() {
     auto const submit_info = vk::SubmitInfo()
         .setPWaitDstStageMask(&pipe_stage_flags)
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&chain.image_acquired_semaphores[chain.frame_index].get())
+        .setPWaitSemaphores(&chain->image_acquired_semaphores[chain->frame_index].get())
         .setCommandBufferCount(1)
-        .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].cmd.get())
+        .setPCommandBuffers(&chain->swapchain_image_resources[current_buffer].cmd.get())
         .setSignalSemaphoreCount(1)
-        .setPSignalSemaphores(&chain.draw_complete_semaphores[chain.frame_index].get());
+        .setPSignalSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get());
 
-    result = graphics_queue.submit(1, &submit_info, chain.fences[chain.frame_index].get());
+    result = graphics_queue.submit(1, &submit_info, chain->fences[chain->frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 
     if (separate_present_queue) {
@@ -482,11 +472,11 @@ void App::draw() {
         auto const present_submit_info = vk::SubmitInfo()
             .setPWaitDstStageMask(&pipe_stage_flags)
             .setWaitSemaphoreCount(1)
-            .setPWaitSemaphores(&chain.draw_complete_semaphores[chain.frame_index].get())
+            .setPWaitSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get())
             .setCommandBufferCount(1)
-            .setPCommandBuffers(&chain.swapchain_image_resources[current_buffer].graphics_to_present_cmd.get())
+            .setPCommandBuffers(&chain->swapchain_image_resources[current_buffer].graphics_to_present_cmd.get())
             .setSignalSemaphoreCount(1)
-            .setPSignalSemaphores(&chain.image_ownership_semaphores[chain.frame_index].get());
+            .setPSignalSemaphores(&chain->image_ownership_semaphores[chain->frame_index].get());
 
         result = present_queue.submit(1, &present_submit_info, vk::Fence());
         VERIFY(result == vk::Result::eSuccess);
@@ -496,14 +486,14 @@ void App::draw() {
     // otherwise wait for draw complete
     auto const present_info = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(separate_present_queue ? &chain.image_ownership_semaphores[chain.frame_index].get() : &chain.draw_complete_semaphores[chain.frame_index].get())
+        .setPWaitSemaphores(separate_present_queue ? &chain->image_ownership_semaphores[chain->frame_index].get() : &chain->draw_complete_semaphores[chain->frame_index].get())
         .setSwapchainCount(1)
-        .setPSwapchains(&chain.swapchain.get())
+        .setPSwapchains(&chain->swapchain.get())
         .setPImageIndices(&current_buffer);
 
     result = present_queue.presentKHR(&present_info);
-    chain.frame_index += 1;
-    chain.frame_index %= FRAME_LAG;
+    chain->frame_index += 1;
+    chain->frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
         // swapchain is out of date (e.g. the window was resized) and must be recreated:
         resize();
@@ -534,7 +524,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     auto const pass_info = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass.get())
-        .setFramebuffer(chain.swapchain_image_resources[current_buffer].framebuffer.get())
+        .setFramebuffer(chain->swapchain_image_resources[current_buffer].framebuffer.get())
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
         .setPClearValues(clearValues);
@@ -544,7 +534,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     commandBuffer.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain.swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain->swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -585,7 +575,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
             .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
             .setSrcQueueFamilyIndex(graphics_queue_family_index)
             .setDstQueueFamilyIndex(present_queue_family_index)
-            .setImage(chain.swapchain_image_resources[current_buffer].image)
+            .setImage(chain->swapchain_image_resources[current_buffer].image)
             .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
@@ -939,23 +929,23 @@ void App::init_vk_swapchain() {
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         auto fence_handle = device->createFenceUnique(fence_info);
         VERIFY(fence_handle.result == vk::Result::eSuccess);
-        chain.fences[i] = std::move(fence_handle.value);
+        chain->fences[i] = std::move(fence_handle.value);
 
         auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
         VERIFY(result == vk::Result::eSuccess);
-        chain.image_acquired_semaphores[i] = std::move(semaphore_handle.value);
+        chain->image_acquired_semaphores[i] = std::move(semaphore_handle.value);
 
         semaphore_handle = device->createSemaphoreUnique(semaphore_info);
         VERIFY(result == vk::Result::eSuccess);
-        chain.draw_complete_semaphores[i] = std::move(semaphore_handle.value);
+        chain->draw_complete_semaphores[i] = std::move(semaphore_handle.value);
 
         if (separate_present_queue) {
             semaphore_handle = device->createSemaphoreUnique(semaphore_info);
             VERIFY(result == vk::Result::eSuccess);
-            chain.image_ownership_semaphores[i] = std::move(semaphore_handle.value);
+            chain->image_ownership_semaphores[i] = std::move(semaphore_handle.value);
         }
     }
-    chain.frame_index = 0;
+    chain->frame_index = 0;
 
     gpu.getMemoryProperties(&memory_properties);
 }
@@ -991,10 +981,10 @@ void App::prepare() {
     prepare_render_pass();
     prepare_pipeline();
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
+    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
         auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
         VERIFY(cmd_handles.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
+        chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
     }
 
     if (separate_present_queue) {
@@ -1010,10 +1000,10 @@ void App::prepare() {
             .setLevel(vk::CommandBufferLevel::ePrimary)
             .setCommandBufferCount(1);
 
-        for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
+        for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
             auto cmd_handles = device->allocateCommandBuffersUnique(present_cmd_info);
             VERIFY(cmd_handles.result == vk::Result::eSuccess);
-            chain.swapchain_image_resources[i].graphics_to_present_cmd = std::move(cmd_handles.value[0]);
+            chain->swapchain_image_resources[i].graphics_to_present_cmd = std::move(cmd_handles.value[0]);
 
             build_image_ownership_cmd(i);
         }
@@ -1024,9 +1014,9 @@ void App::prepare() {
 
     prepare_framebuffers();
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
+    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
         current_buffer = i;
-        draw_build_cmd(chain.swapchain_image_resources[i].cmd.get());
+        draw_build_cmd(chain->swapchain_image_resources[i].cmd.get());
     }
 
     flush_init_cmd();
@@ -1099,16 +1089,16 @@ void App::prepare_buffers() {
     // even
     // though that may mean some tearing.
 
-    if (chain.presentMode != swapchainPresentMode) {
+    if (chain->presentMode != swapchainPresentMode) {
         for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == chain.presentMode) {
-                swapchainPresentMode = chain.presentMode;
+            if (presentModes[i] == chain->presentMode) {
+                swapchainPresentMode = chain->presentMode;
                 break;
             }
         }
     }
 
-    if (swapchainPresentMode != chain.presentMode) {
+    if (swapchainPresentMode != chain->presentMode) {
         ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
     }
 
@@ -1164,33 +1154,33 @@ void App::prepare_buffers() {
         .setCompositeAlpha(compositeAlpha)
         .setPresentMode(swapchainPresentMode)
         .setClipped(true)
-        .setOldSwapchain(chain.swapchain.get());
+        .setOldSwapchain(chain->swapchain.get());
 
     auto swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
     VERIFY(swapchain_handle.result == vk::Result::eSuccess);
-    chain.swapchain = std::move(swapchain_handle.value);
+    chain->swapchain = std::move(swapchain_handle.value);
 
-    result = device->getSwapchainImagesKHR(chain.swapchain.get(), &chain.swapchainImageCount, static_cast<vk::Image*>(nullptr));
+    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchainImageCount, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain.swapchainImageCount]);
-    result = device->getSwapchainImagesKHR(chain.swapchain.get(), &chain.swapchainImageCount, swapchainImages.get());
+    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain->swapchainImageCount]);
+    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchainImageCount, swapchainImages.get());
     VERIFY(result == vk::Result::eSuccess);
 
-    chain.swapchain_image_resources.reset(new SwapchainImageResources[chain.swapchainImageCount]);
+    chain->swapchain_image_resources.reset(new SwapchainImageResources[chain->swapchainImageCount]);
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; ++i) {
-        chain.swapchain_image_resources[i].image = swapchainImages[i];
+    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
+        chain->swapchain_image_resources[i].image = swapchainImages[i];
 
         auto view_info = vk::ImageViewCreateInfo()
             .setViewType(vk::ImageViewType::e2D)
             .setFormat(format)
-            .setImage(chain.swapchain_image_resources[i].image)
+            .setImage(chain->swapchain_image_resources[i].image)
             .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         auto view_handle = device->createImageViewUnique(view_info);
         VERIFY(view_handle.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].view = std::move(view_handle.value);
+        chain->swapchain_image_resources[i].view = std::move(view_handle.value);
     }
 }
 
@@ -1215,13 +1205,13 @@ void App::prepare_uniforms() {
         .setSize(sizeof(data))
         .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
-    for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
+    for (unsigned int i = 0; i < chain->swapchainImageCount; i++) {
         auto buffer_handle = device->createBufferUnique(buf_info);
         VERIFY(buffer_handle.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
+        chain->swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
 
         vk::MemoryRequirements mem_reqs;
-        device->getBufferMemoryRequirements(chain.swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
+        device->getBufferMemoryRequirements(chain->swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
 
         auto mem_info = vk::MemoryAllocateInfo()
             .setAllocationSize(mem_reqs.size)
@@ -1232,14 +1222,14 @@ void App::prepare_uniforms() {
 
         auto memory_handle = device->allocateMemoryUnique(mem_info);
         VERIFY(memory_handle.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
+        chain->swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
 
-        auto result = device->mapMemory(chain.swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain.swapchain_image_resources[i].uniform_memory_ptr);
+        auto result = device->mapMemory(chain->swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain->swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
 
-        memcpy(chain.swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
+        memcpy(chain->swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
 
-        result = device->bindBufferMemory(chain.swapchain_image_resources[i].uniform_buffer.get(), chain.swapchain_image_resources[i].uniform_memory.get(), 0);
+        result = device->bindBufferMemory(chain->swapchain_image_resources[i].uniform_buffer.get(), chain->swapchain_image_resources[i].uniform_memory.get(), 0);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -1323,11 +1313,11 @@ void App::prepare_descriptor_pool() {
     vk::DescriptorPoolSize const pool_sizes[1] = { 
         vk::DescriptorPoolSize()
             .setType(vk::DescriptorType::eUniformBuffer)
-            .setDescriptorCount(chain.swapchainImageCount)
+            .setDescriptorCount(chain->swapchainImageCount)
     };
 
     auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
-        .setMaxSets(chain.swapchainImageCount)
+        .setMaxSets(chain->swapchainImageCount)
         .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setPoolSizeCount(1)
         .setPPoolSizes(pool_sizes);
@@ -1353,13 +1343,13 @@ void App::prepare_descriptor_set() {
     writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
     writes[0].setPBufferInfo(&buffer_info);
 
-    for (unsigned int i = 0; i < chain.swapchainImageCount; i++) {
+    for (unsigned int i = 0; i < chain->swapchainImageCount; i++) {
         auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
         VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
+        chain->swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
 
-        buffer_info.setBuffer(chain.swapchain_image_resources[i].uniform_buffer.get());
-        writes[0].setDstSet(chain.swapchain_image_resources[i].descriptor_set.get());
+        buffer_info.setBuffer(chain->swapchain_image_resources[i].uniform_buffer.get());
+        writes[0].setDstSet(chain->swapchain_image_resources[i].descriptor_set.get());
         device->updateDescriptorSets(1, writes, 0, nullptr);
     }
 }
@@ -1376,11 +1366,11 @@ void App::prepare_framebuffers() {
         .setHeight((uint32_t)window.height)
         .setLayers(1);
 
-    for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        attachments[0] = chain.swapchain_image_resources[i].view.get();
+    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
+        attachments[0] = chain->swapchain_image_resources[i].view.get();
         auto framebuffer_handle = device->createFramebufferUnique(fb_info);
         VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
-        chain.swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
+        chain->swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
     }
 }
 
@@ -1590,9 +1580,9 @@ void App::resize() {
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
-    for (i = 0; i < chain.swapchainImageCount; i++) {
-        chain.swapchain_image_resources[i].framebuffer.reset();
-        chain.swapchain_image_resources[i].descriptor_set.reset();
+    for (i = 0; i < chain->swapchainImageCount; i++) {
+        chain->swapchain_image_resources[i].framebuffer.reset();
+        chain->swapchain_image_resources[i].descriptor_set.reset();
     }
 
     desc_pool.reset();
@@ -1607,13 +1597,13 @@ void App::resize() {
     depth.image.reset();
     depth.mem.reset();
 
-    for (i = 0; i < chain.swapchainImageCount; i++) {
-        chain.swapchain_image_resources[i].view.reset();
-        chain.swapchain_image_resources[i].cmd.reset();
-        chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
-        chain.swapchain_image_resources[i].uniform_buffer.reset();
-        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
-        chain.swapchain_image_resources[i].uniform_memory.reset();
+    for (i = 0; i < chain->swapchainImageCount; i++) {
+        chain->swapchain_image_resources[i].view.reset();
+        chain->swapchain_image_resources[i].cmd.reset();
+        chain->swapchain_image_resources[i].graphics_to_present_cmd.reset();
+        chain->swapchain_image_resources[i].uniform_buffer.reset();
+        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
+        chain->swapchain_image_resources[i].uniform_memory.reset();
     }
 
     cmd_pool.reset();
@@ -1672,7 +1662,7 @@ void App::update_data_buffer() {
     mat4x4 MVP;
     mat4x4_mul(MVP, VP, matrices.model_matrix);
 
-    memcpy(chain.swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
+    memcpy(chain->swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
 }
 
 bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
