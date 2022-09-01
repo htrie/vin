@@ -19,8 +19,6 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-#define LOG(txt) OutputDebugString(txt)
-
 #define ERR_EXIT(err_msg, err_class) \
     do { \
         MessageBox(nullptr, err_msg, err_class, MB_OK); \
@@ -198,7 +196,6 @@ class App {
     Matrices matrices;
 
     vk::UniqueSurfaceKHR surface;
-    int32_t gpu_number = -1;
 
     vk::UniqueInstance inst;
     vk::PhysicalDevice gpu;
@@ -696,12 +693,9 @@ void App::init_vk() {
     result = inst->enumeratePhysicalDevices(&gpu_count, physical_devices.get());
     VERIFY(result == vk::Result::eSuccess);
 
-    if (gpu_number >= 0 && !((uint32_t)gpu_number < gpu_count)) {
-        fprintf(stderr, "GPU %d specified is not present, GPU count = %u\n", gpu_number, gpu_count);
-        ERR_EXIT("Specified GPU number is not present", "User Error");
-    }
     // Try to auto select most suitable device
-    if (gpu_number == -1) {
+    int32_t gpu_number = -1;
+    {
         uint32_t count_device_type[VK_PHYSICAL_DEVICE_TYPE_CPU + 1];
         memset(count_device_type, 0, sizeof(count_device_type));
 
@@ -734,12 +728,11 @@ void App::init_vk() {
             }
         }
     }
+    if (gpu_number == (uint32_t)-1) {
+        ERR_EXIT("physical device auto-select failed.\n", "Device Selection Failure");
+    }
     assert(gpu_number >= 0);
     gpu = physical_devices[gpu_number];
-    {
-        auto physicalDeviceProperties = gpu.getProperties();
-        fprintf(stderr, "Selected GPU %d: %s, type: %s\n", gpu_number, physicalDeviceProperties.deviceName.data(), to_string(physicalDeviceProperties.deviceType).c_str());
-    }
     physical_devices.reset();
 
     // Look for device extensions
