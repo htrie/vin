@@ -145,7 +145,6 @@ struct Window {
 struct SwapchainImageResources {
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
-    vk::UniqueCommandBuffer graphics_to_present_cmd;
     vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
@@ -195,9 +194,9 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueSurfaceKHR surface;
+    vk::UniqueSurfaceKHR surface; // [TODO] Move to Surface.
 
-    vk::UniqueInstance inst;
+    vk::UniqueInstance inst; // [TODO] Move to Device.
     vk::PhysicalDevice gpu;
     vk::UniqueDevice device;
     vk::Queue graphics_queue;
@@ -261,7 +260,6 @@ class App {
     void prepare_pipeline();
     void prepare_render_pass();
 
-    void build_image_ownership_cmd(uint32_t const&);
     void draw_build_cmd(vk::CommandBuffer);
     void flush_init_cmd();
 
@@ -308,30 +306,6 @@ App::App(HINSTANCE hInstance)
     mat4x4_identity(matrices.model_matrix);
 
     matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
-}
-
-void App::build_image_ownership_cmd(uint32_t const& i) {
-    auto const cmd_buf_info = vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-
-    auto result = chain->swapchain_image_resources[i].graphics_to_present_cmd->begin(&cmd_buf_info);
-    VERIFY(result == vk::Result::eSuccess);
-
-    auto const image_ownership_barrier =
-        vk::ImageMemoryBarrier()
-        .setSrcAccessMask(vk::AccessFlags())
-        .setDstAccessMask(vk::AccessFlags())
-        .setOldLayout(vk::ImageLayout::ePresentSrcKHR)
-        .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-        .setSrcQueueFamilyIndex(graphics_queue_family_index)
-        .setDstQueueFamilyIndex(present_queue_family_index)
-        .setImage(chain->swapchain_image_resources[i].image)
-        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-    chain->swapchain_image_resources[i].graphics_to_present_cmd->pipelineBarrier( vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
-
-    result = chain->swapchain_image_resources[i].graphics_to_present_cmd->end();
-    VERIFY(result == vk::Result::eSuccess);
 }
 
 vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const check_names, uint32_t layer_count,
@@ -622,7 +596,7 @@ void App::init_vk() {
                 platformSurfaceExtFound = 1;
                 extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-            assert(enabled_extension_count < 64);
+            VERIFY(enabled_extension_count < 64);
         }
     }
 
@@ -701,7 +675,7 @@ void App::init_vk() {
 
         for (uint32_t i = 0; i < gpu_count; i++) {
             const auto physicalDeviceProperties = physical_devices[i].getProperties();
-            assert(static_cast<int>(physicalDeviceProperties.deviceType) <= VK_PHYSICAL_DEVICE_TYPE_CPU);
+            VERIFY(static_cast<int>(physicalDeviceProperties.deviceType) <= VK_PHYSICAL_DEVICE_TYPE_CPU);
             count_device_type[static_cast<int>(physicalDeviceProperties.deviceType)]++;
         }
 
@@ -731,7 +705,6 @@ void App::init_vk() {
     if (gpu_number == (uint32_t)-1) {
         ERR_EXIT("physical device auto-select failed.\n", "Device Selection Failure");
     }
-    assert(gpu_number >= 0);
     gpu = physical_devices[gpu_number];
     physical_devices.reset();
 
@@ -757,7 +730,7 @@ void App::init_vk() {
             if (!strcmp("VK_KHR_portability_subset", device_extensions[i].extensionName)) {
                 extension_names[enabled_extension_count++] = "VK_KHR_portability_subset";
             }
-            assert(enabled_extension_count < 64);
+            VERIFY(enabled_extension_count < 64);
         }
     }
 
@@ -773,7 +746,7 @@ void App::init_vk() {
 
     // Call with nullptr data to get count
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
-    assert(queue_family_count >= 1);
+    VERIFY(queue_family_count >= 1);
 
     queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
     gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
@@ -859,7 +832,7 @@ void App::init_vk_swapchain() {
         format = vk::Format::eB8G8R8A8Unorm;
     }
     else {
-        assert(formatCount >= 1);
+        VERIFY(formatCount >= 1);
         format = surfFormats[0].format;
     }
     color_space = surfFormats[0].colorSpace;
@@ -1507,7 +1480,7 @@ void App::resize() {
 
 void App::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
     vk::AccessFlags srcAccessMask, vk::PipelineStageFlags src_stages, vk::PipelineStageFlags dest_stages) {
-    assert(cmd);
+    VERIFY(cmd);
 
     auto DstAccessMask = [](vk::ImageLayout const& layout) {
         vk::AccessFlags flags;
