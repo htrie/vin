@@ -166,6 +166,38 @@ struct Chain {
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
     vk::UniqueSemaphore image_ownership_semaphores[FRAME_LAG];
     uint32_t frame_index = 0;
+
+    Chain(vk::Device& device, bool separate_present_queue) {
+        // Create semaphores to synchronize acquiring presentable buffers before
+        // rendering and waiting for drawing to be complete before presenting
+        auto const semaphore_info = vk::SemaphoreCreateInfo();
+
+        // Create fences that we can use to throttle if we get too far ahead of the image presents
+        auto const fence_info = vk::FenceCreateInfo()
+            .setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+        for (uint32_t i = 0; i < FRAME_LAG; i++) {
+            auto fence_handle = device.createFenceUnique(fence_info);
+            VERIFY(fence_handle.result == vk::Result::eSuccess);
+            fences[i] = std::move(fence_handle.value);
+
+            auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
+            VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+            image_acquired_semaphores[i] = std::move(semaphore_handle.value);
+
+            semaphore_handle = device.createSemaphoreUnique(semaphore_info);
+            VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+            draw_complete_semaphores[i] = std::move(semaphore_handle.value);
+
+            if (separate_present_queue) {
+                semaphore_handle = device.createSemaphoreUnique(semaphore_info);
+                VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+                image_ownership_semaphores[i] = std::move(semaphore_handle.value);
+            }
+        }
+
+        frame_index = 0;
+    }
 };
 
 class App {
@@ -276,8 +308,6 @@ App::App(HINSTANCE hInstance)
 {
     window.hinstance = hInstance;
 
-    chain = std::make_unique<Chain>();
-
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
@@ -347,18 +377,14 @@ App::~App() {
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         result = device->waitForFences(1, &chain->fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
-        chain->fences[i].reset();
-        chain->image_acquired_semaphores[i].reset();
-        chain->draw_complete_semaphores[i].reset();
-        if (separate_present_queue) {
-            chain->image_ownership_semaphores[i].reset();
-        }
     }
 
     for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
-        chain->swapchain_image_resources[i].framebuffer.reset();
-        chain->swapchain_image_resources[i].descriptor_set.reset();
+        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
     }
+
+    chain.reset();
+
     desc_pool.reset();
 
     pipeline.reset();
@@ -366,12 +392,6 @@ App::~App() {
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
-
-    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
-        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
-    }
-
-    chain.reset();
 
     depth.view.reset();
     depth.image.reset();
@@ -918,35 +938,6 @@ void App::init_vk_swapchain() {
 
     curFrame = 0;
 
-    // Create semaphores to synchronize acquiring presentable buffers before
-    // rendering and waiting for drawing to be complete before presenting
-    auto const semaphore_info = vk::SemaphoreCreateInfo();
-
-    // Create fences that we can use to throttle if we get too far ahead of the image presents
-    auto const fence_info = vk::FenceCreateInfo()
-        .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-    for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        auto fence_handle = device->createFenceUnique(fence_info);
-        VERIFY(fence_handle.result == vk::Result::eSuccess);
-        chain->fences[i] = std::move(fence_handle.value);
-
-        auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-        VERIFY(result == vk::Result::eSuccess);
-        chain->image_acquired_semaphores[i] = std::move(semaphore_handle.value);
-
-        semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-        VERIFY(result == vk::Result::eSuccess);
-        chain->draw_complete_semaphores[i] = std::move(semaphore_handle.value);
-
-        if (separate_present_queue) {
-            semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-            VERIFY(result == vk::Result::eSuccess);
-            chain->image_ownership_semaphores[i] = std::move(semaphore_handle.value);
-        }
-    }
-    chain->frame_index = 0;
-
     gpu.getMemoryProperties(&memory_properties);
 }
 
@@ -972,6 +963,8 @@ void App::prepare() {
 
     auto result = cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
+
+    chain = std::make_unique<Chain>(device.get(), separate_present_queue);
 
     prepare_buffers();
     prepare_depth();
@@ -1597,14 +1590,7 @@ void App::resize() {
     depth.image.reset();
     depth.mem.reset();
 
-    for (i = 0; i < chain->swapchainImageCount; i++) {
-        chain->swapchain_image_resources[i].view.reset();
-        chain->swapchain_image_resources[i].cmd.reset();
-        chain->swapchain_image_resources[i].graphics_to_present_cmd.reset();
-        chain->swapchain_image_resources[i].uniform_buffer.reset();
-        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
-        chain->swapchain_image_resources[i].uniform_memory.reset();
-    }
+    chain.reset();
 
     cmd_pool.reset();
     if (separate_present_queue) {
