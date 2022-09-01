@@ -164,10 +164,9 @@ struct Chain {
     vk::UniqueFence fences[FRAME_LAG];
     vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
-    vk::UniqueSemaphore image_ownership_semaphores[FRAME_LAG];
     uint32_t frame_index = 0;
 
-    Chain(vk::Device& device, bool separate_present_queue) {
+    Chain(vk::Device& device) {
         // Create semaphores to synchronize acquiring presentable buffers before
         // rendering and waiting for drawing to be complete before presenting
         auto const semaphore_info = vk::SemaphoreCreateInfo();
@@ -188,12 +187,6 @@ struct Chain {
             semaphore_handle = device.createSemaphoreUnique(semaphore_info);
             VERIFY(semaphore_handle.result == vk::Result::eSuccess);
             draw_complete_semaphores[i] = std::move(semaphore_handle.value);
-
-            if (separate_present_queue) {
-                semaphore_handle = device.createSemaphoreUnique(semaphore_info);
-                VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-                image_ownership_semaphores[i] = std::move(semaphore_handle.value);
-            }
         }
 
         frame_index = 0;
@@ -208,7 +201,6 @@ class App {
     Matrices matrices;
 
     vk::UniqueSurfaceKHR surface;
-    bool separate_present_queue = false;
     int32_t gpu_number = -1;
 
     vk::UniqueInstance inst;
@@ -231,7 +223,6 @@ class App {
     vk::ColorSpaceKHR color_space;
 
     vk::UniqueCommandPool cmd_pool;
-    vk::UniqueCommandPool present_cmd_pool;
 
     struct {
         vk::Format format;
@@ -399,10 +390,6 @@ App::~App() {
 
     cmd_pool.reset();
 
-    if (separate_present_queue) {
-        present_cmd_pool.reset();
-    }
-
     device.reset();
     surface.reset();
     inst.reset();
@@ -424,13 +411,6 @@ void App::create_device() {
         .setEnabledExtensionCount(enabled_extension_count)
         .setPpEnabledExtensionNames((const char* const*)extension_names)
         .setPEnabledFeatures(nullptr);
-
-    if (separate_present_queue) {
-        queues[1].setQueueFamilyIndex(present_queue_family_index);
-        queues[1].setQueueCount(1);
-        queues[1].setPQueuePriorities(priorities);
-        device_info.setQueueCreateInfoCount(2);
-    }
 
     auto device_handle = gpu.createDeviceUnique(device_info);
     VERIFY(device_handle.result == vk::Result::eSuccess);
@@ -484,29 +464,11 @@ void App::draw() {
     result = graphics_queue.submit(1, &submit_info, chain->fences[chain->frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 
-    if (separate_present_queue) {
-        // If we are using separate queues, change image ownership to the
-        // present queue before presenting, waiting for the draw complete
-        // semaphore and signalling the ownership released semaphore when
-        // finished
-        auto const present_submit_info = vk::SubmitInfo()
-            .setPWaitDstStageMask(&pipe_stage_flags)
-            .setWaitSemaphoreCount(1)
-            .setPWaitSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get())
-            .setCommandBufferCount(1)
-            .setPCommandBuffers(&chain->swapchain_image_resources[current_buffer].graphics_to_present_cmd.get())
-            .setSignalSemaphoreCount(1)
-            .setPSignalSemaphores(&chain->image_ownership_semaphores[chain->frame_index].get());
-
-        result = present_queue.submit(1, &present_submit_info, vk::Fence());
-        VERIFY(result == vk::Result::eSuccess);
-    }
-
     // If we are using separate queues we have to wait for image ownership,
     // otherwise wait for draw complete
     auto const present_info = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(separate_present_queue ? &chain->image_ownership_semaphores[chain->frame_index].get() : &chain->draw_complete_semaphores[chain->frame_index].get())
+        .setPWaitSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get())
         .setSwapchainCount(1)
         .setPSwapchains(&chain->swapchain.get())
         .setPImageIndices(&current_buffer);
@@ -580,26 +542,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     commandBuffer.draw(12 * 3, 1, 0, 0);
     // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
     commandBuffer.endRenderPass();
-
-    if (separate_present_queue) {
-        // We have to transfer ownership from the graphics queue family to the
-        // present queue family to be able to present.  Note that we don't have
-        // to transfer from present queue family back to graphics queue family at
-        // the start of the next frame because we don't care about the image's
-        // contents at that point.
-        auto const image_ownership_barrier =
-            vk::ImageMemoryBarrier()
-            .setSrcAccessMask(vk::AccessFlags())
-            .setDstAccessMask(vk::AccessFlags())
-            .setOldLayout(vk::ImageLayout::ePresentSrcKHR)
-            .setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-            .setSrcQueueFamilyIndex(graphics_queue_family_index)
-            .setDstQueueFamilyIndex(present_queue_family_index)
-            .setImage(chain->swapchain_image_resources[current_buffer].image)
-            .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &image_ownership_barrier);
-    }
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
@@ -903,17 +845,13 @@ void App::init_vk_swapchain() {
 
     graphics_queue_family_index = graphicsQueueFamilyIndex;
     present_queue_family_index = presentQueueFamilyIndex;
-    separate_present_queue = (graphics_queue_family_index != present_queue_family_index);
+    if (graphics_queue_family_index != present_queue_family_index)
+        ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
 
     create_device();
 
     device->getQueue(graphics_queue_family_index, 0, &graphics_queue);
-    if (!separate_present_queue) {
-        present_queue = graphics_queue;
-    }
-    else {
-        device->getQueue(present_queue_family_index, 0, &present_queue);
-    }
+    present_queue = graphics_queue;
 
     // Get the list of VkFormat's that are supported:
     uint32_t formatCount;
@@ -964,7 +902,7 @@ void App::prepare() {
     auto result = cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
-    chain = std::make_unique<Chain>(device.get(), separate_present_queue);
+    chain = std::make_unique<Chain>(device.get());
 
     prepare_buffers();
     prepare_depth();
@@ -978,28 +916,6 @@ void App::prepare() {
         auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
         VERIFY(cmd_handles.result == vk::Result::eSuccess);
         chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
-    }
-
-    if (separate_present_queue) {
-        auto const present_cmd_pool_info = vk::CommandPoolCreateInfo()
-            .setQueueFamilyIndex(present_queue_family_index);
-
-        auto present_cmd_pool_handle = device->createCommandPoolUnique(present_cmd_pool_info);
-        VERIFY(present_cmd_pool_handle.result == vk::Result::eSuccess);
-        present_cmd_pool = std::move(present_cmd_pool_handle.value);
-
-        auto const present_cmd_info = vk::CommandBufferAllocateInfo()
-            .setCommandPool(present_cmd_pool.get())
-            .setLevel(vk::CommandBufferLevel::ePrimary)
-            .setCommandBufferCount(1);
-
-        for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
-            auto cmd_handles = device->allocateCommandBuffersUnique(present_cmd_info);
-            VERIFY(cmd_handles.result == vk::Result::eSuccess);
-            chain->swapchain_image_resources[i].graphics_to_present_cmd = std::move(cmd_handles.value[0]);
-
-            build_image_ownership_cmd(i);
-        }
     }
 
     prepare_descriptor_pool();
@@ -1593,9 +1509,6 @@ void App::resize() {
     chain.reset();
 
     cmd_pool.reset();
-    if (separate_present_queue) {
-        present_cmd_pool.reset();
-    }
 
     // Second, re-perform the prepare() function, which will re-create the
     // swapchain.
