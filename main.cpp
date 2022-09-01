@@ -217,13 +217,6 @@ class App {
 
     vk::UniqueCommandPool cmd_pool;
 
-    struct {
-        vk::Format format;
-        vk::UniqueImage image;
-        vk::UniqueDeviceMemory mem;
-        vk::UniqueImageView view;
-    } depth;
-
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineCache pipeline_cache;
@@ -246,7 +239,6 @@ class App {
 
     void prepare_buffers();
     void prepare_uniforms();
-    void prepare_depth();
     void prepare_descriptor_layout();
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
@@ -345,10 +337,6 @@ App::~App() {
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
-
-    depth.view.reset();
-    depth.image.reset();
-    depth.mem.reset();
 
     cmd_pool.reset();
 
@@ -465,7 +453,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     auto const command_buffer_info = vk::CommandBufferBeginInfo()
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-    vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})), vk::ClearDepthStencilValue(1.0f, 0u) };
+    vk::ClearValue const clearValues[1] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})) };
 
     auto const pass_info = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass.get())
@@ -830,7 +818,6 @@ void App::prepare() {
     chain = std::make_unique<Chain>(device.get());
 
     prepare_buffers();
-    prepare_depth();
     prepare_uniforms();
 
     prepare_descriptor_layout();
@@ -1066,55 +1053,6 @@ void App::prepare_uniforms() {
     }
 }
 
-void App::prepare_depth() {
-    depth.format = vk::Format::eD16Unorm;
-
-    auto const image_info = vk::ImageCreateInfo()
-        .setImageType(vk::ImageType::e2D)
-        .setFormat(depth.format)
-        .setExtent({ (uint32_t)window.width, (uint32_t)window.height, 1 })
-        .setMipLevels(1)
-        .setArrayLayers(1)
-        .setSamples(vk::SampleCountFlagBits::e1)
-        .setTiling(vk::ImageTiling::eOptimal)
-        .setUsage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
-        .setSharingMode(vk::SharingMode::eExclusive)
-        .setQueueFamilyIndexCount(0)
-        .setPQueueFamilyIndices(nullptr)
-        .setInitialLayout(vk::ImageLayout::eUndefined);
-
-    auto image_handle = device->createImageUnique(image_info);
-    VERIFY(image_handle.result == vk::Result::eSuccess);
-    depth.image = std::move(image_handle.value);
-
-    vk::MemoryRequirements mem_reqs;
-    device->getImageMemoryRequirements(depth.image.get(), &mem_reqs);
-
-    auto mem_info = vk::MemoryAllocateInfo()
-        .setAllocationSize(mem_reqs.size)
-        .setMemoryTypeIndex(0);
-
-    auto const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal, &mem_info.memoryTypeIndex);
-    VERIFY(pass);
-
-    auto mem_handle = device->allocateMemoryUnique(mem_info);
-    VERIFY(mem_handle.result == vk::Result::eSuccess);
-    depth.mem = std::move(mem_handle.value);
-
-    auto result = device->bindImageMemory(depth.image.get(), depth.mem.get(), 0);
-    VERIFY(result == vk::Result::eSuccess);
-
-    auto const view_info = vk::ImageViewCreateInfo()
-        .setImage(depth.image.get())
-        .setViewType(vk::ImageViewType::e2D)
-        .setFormat(depth.format)
-        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
-
-    auto view_handle = device->createImageViewUnique(view_info);
-    VERIFY(view_handle.result == vk::Result::eSuccess);
-    depth.view = std::move(view_handle.value);
-}
-
 void App::prepare_descriptor_layout() {
     vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
         vk::DescriptorSetLayoutBinding()
@@ -1187,12 +1125,11 @@ void App::prepare_descriptor_set() {
 }
 
 void App::prepare_framebuffers() {
-    vk::ImageView attachments[2];
-    attachments[1] = depth.view.get();
+    vk::ImageView attachments[1];
 
     auto const fb_info = vk::FramebufferCreateInfo()
         .setRenderPass(render_pass.get())
-        .setAttachmentCount(2)
+        .setAttachmentCount(1)
         .setPAttachments(attachments)
         .setWidth((uint32_t)window.width)
         .setHeight((uint32_t)window.height)
@@ -1253,19 +1190,11 @@ void App::prepare_pipeline() {
 
     auto const multisample_info = vk::PipelineMultisampleStateCreateInfo();
 
-    auto const stencilOp = vk::StencilOpState()
-        .setFailOp(vk::StencilOp::eKeep)
-        .setPassOp(vk::StencilOp::eKeep)
-        .setCompareOp(vk::CompareOp::eAlways);
-
     auto const depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo()
-        .setDepthTestEnable(VK_TRUE)
-        .setDepthWriteEnable(VK_TRUE)
-        .setDepthCompareOp(vk::CompareOp::eLessOrEqual)
+        .setDepthTestEnable(VK_FALSE)
+        .setDepthWriteEnable(VK_FALSE)
         .setDepthBoundsTestEnable(VK_FALSE)
-        .setStencilTestEnable(VK_FALSE)
-        .setFront(stencilOp)
-        .setBack(stencilOp);
+        .setStencilTestEnable(VK_FALSE);
 
     vk::PipelineColorBlendAttachmentState const color_blend_attachments[1] = {
         vk::PipelineColorBlendAttachmentState()
@@ -1309,7 +1238,7 @@ void App::prepare_render_pass() {
     // the renderpass, the color attachment's layout will be transitioned to
     // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
     // the renderpass, no barriers are necessary.
-    const vk::AttachmentDescription attachments[2] = {
+    const vk::AttachmentDescription attachments[1] = {
         vk::AttachmentDescription()
           .setFormat(format)
           .setSamples(vk::SampleCountFlagBits::e1)
@@ -1318,22 +1247,12 @@ void App::prepare_render_pass() {
           .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
           .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
           .setInitialLayout(vk::ImageLayout::eUndefined)
-          .setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
-      vk::AttachmentDescription()
-          .setFormat(depth.format)
-          .setSamples(vk::SampleCountFlagBits::e1)
-          .setLoadOp(vk::AttachmentLoadOp::eClear)
-          .setStoreOp(vk::AttachmentStoreOp::eDontCare)
-          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
-          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
-          .setInitialLayout(vk::ImageLayout::eUndefined)
-          .setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal) };
+          .setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
+    };
 
-    auto const color_reference = vk::AttachmentReference().setAttachment(0).setLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-    auto const depth_reference = vk::AttachmentReference()
-        .setAttachment(1)
-        .setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+    auto const color_reference = vk::AttachmentReference()
+        .setAttachment(0)
+        .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
     auto const subpass = vk::SubpassDescription()
         .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
@@ -1342,20 +1261,10 @@ void App::prepare_render_pass() {
         .setColorAttachmentCount(1)
         .setPColorAttachments(&color_reference)
         .setPResolveAttachments(nullptr)
-        .setPDepthStencilAttachment(&depth_reference)
         .setPreserveAttachmentCount(0)
         .setPPreserveAttachments(nullptr);
 
-    vk::PipelineStageFlags stages = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
-    vk::SubpassDependency const dependencies[2] = {
-        vk::SubpassDependency()  // Depth buffer is shared between swapchain images
-            .setSrcSubpass(VK_SUBPASS_EXTERNAL)
-            .setDstSubpass(0)
-            .setSrcStageMask(stages)
-            .setDstStageMask(stages)
-            .setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite)
-            .setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite)
-            .setDependencyFlags(vk::DependencyFlags()),
+    vk::SubpassDependency const dependencies[1] = {
         vk::SubpassDependency()  // Image layout transition
             .setSrcSubpass(VK_SUBPASS_EXTERNAL)
             .setDstSubpass(0)
@@ -1367,11 +1276,11 @@ void App::prepare_render_pass() {
     };
 
     auto const rp_info = vk::RenderPassCreateInfo()
-        .setAttachmentCount(2)
+        .setAttachmentCount(1)
         .setPAttachments(attachments)
         .setSubpassCount(1)
         .setPSubpasses(&subpass)
-        .setDependencyCount(2)
+        .setDependencyCount(1)
         .setPDependencies(dependencies);
 
     auto render_pass_handle = device->createRenderPassUnique(rp_info);
@@ -1424,10 +1333,6 @@ void App::resize() {
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
-
-    depth.view.reset();
-    depth.image.reset();
-    depth.mem.reset();
 
     chain.reset();
 
