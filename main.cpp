@@ -190,7 +190,7 @@ struct Chain {
 class App {
     bool prepared = false;
 
-    std::unique_ptr<Chain> chain;
+    std::unique_ptr<Chain> chain; // [TODO] Rename to SwapChain.
 
     Matrices matrices;
 
@@ -231,8 +231,6 @@ class App {
     vk::UniquePipeline pipeline;
 
     vk::UniqueDescriptorPool desc_pool;
-
-    std::unique_ptr<vk::Framebuffer[]> framebuffers;
 
     uint32_t curFrame = 0;
     uint32_t frameCount = UINT32_MAX;
@@ -829,16 +827,6 @@ void App::prepare() {
         .setLevel(vk::CommandBufferLevel::ePrimary)
         .setCommandBufferCount(1);
 
-    auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
-    VERIFY(cmd_handles.result == vk::Result::eSuccess);
-    auto init_cmd = std::move(cmd_handles.value[0]);
-
-    auto const cmd_buf_info = vk::CommandBufferBeginInfo()
-        .setPInheritanceInfo(nullptr);
-
-    auto result = init_cmd->begin(&cmd_buf_info);
-    VERIFY(result == vk::Result::eSuccess);
-
     chain = std::make_unique<Chain>(device.get());
 
     prepare_buffers();
@@ -864,27 +852,6 @@ void App::prepare() {
         current_buffer = i;
         draw_build_cmd(chain->swapchain_image_resources[i].cmd.get());
     }
-
-    result = init_cmd->end();
-    VERIFY(result == vk::Result::eSuccess);
-
-    auto const fence_info = vk::FenceCreateInfo();
-    vk::Fence fence;
-    result = device->createFence(&fence_info, nullptr, &fence);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::CommandBuffer const commandBuffers[] = { init_cmd.get() };
-    auto const submit_info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
-
-    result = graphics_queue.submit(1, &submit_info, fence);
-    VERIFY(result == vk::Result::eSuccess);
-
-    result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
-    VERIFY(result == vk::Result::eSuccess);
-
-    device->destroyFence(fence, nullptr);
-
-    init_cmd.reset();
 
     current_buffer = 0;
     prepared = true;
