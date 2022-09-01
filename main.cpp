@@ -224,7 +224,6 @@ class App {
         vk::UniqueImageView view;
     } depth;
 
-    vk::UniqueCommandBuffer cmd;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineCache pipeline_cache;
@@ -261,11 +260,8 @@ class App {
     void prepare_render_pass();
 
     void draw_build_cmd(vk::CommandBuffer);
-    void flush_init_cmd();
 
     void create_surface();
-
-    void set_image_layout(vk::Image, vk::ImageAspectFlags, vk::ImageLayout, vk::ImageLayout, vk::AccessFlags, vk::PipelineStageFlags, vk::PipelineStageFlags);
 
     void update_data_buffer();
 
@@ -468,7 +464,8 @@ void App::draw() {
 }
 
 void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
-    auto const command_buffer_info = vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+    auto const command_buffer_info = vk::CommandBufferBeginInfo()
+        .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
     vk::ClearValue const clearValues[2] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})), vk::ClearDepthStencilValue(1.0f, 0u) };
 
@@ -513,29 +510,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-void App::flush_init_cmd() {
-    auto result = cmd->end();
-    VERIFY(result == vk::Result::eSuccess);
-
-    auto const fence_info = vk::FenceCreateInfo();
-    vk::Fence fence;
-    result = device->createFence(&fence_info, nullptr, &fence);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::CommandBuffer const commandBuffers[] = { cmd.get() };
-    auto const submit_info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
-
-    result = graphics_queue.submit(1, &submit_info, fence);
-    VERIFY(result == vk::Result::eSuccess);
-
-    result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
-    VERIFY(result == vk::Result::eSuccess);
-
-    device->destroyFence(fence, nullptr);
-
-    cmd.reset();
 }
 
 void App::init_vk() {
@@ -857,12 +831,12 @@ void App::prepare() {
 
     auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
     VERIFY(cmd_handles.result == vk::Result::eSuccess);
-    cmd = std::move(cmd_handles.value[0]);
+    auto init_cmd = std::move(cmd_handles.value[0]);
 
     auto const cmd_buf_info = vk::CommandBufferBeginInfo()
         .setPInheritanceInfo(nullptr);
 
-    auto result = cmd->begin(&cmd_buf_info);
+    auto result = init_cmd->begin(&cmd_buf_info);
     VERIFY(result == vk::Result::eSuccess);
 
     chain = std::make_unique<Chain>(device.get());
@@ -891,7 +865,26 @@ void App::prepare() {
         draw_build_cmd(chain->swapchain_image_resources[i].cmd.get());
     }
 
-    flush_init_cmd();
+    result = init_cmd->end();
+    VERIFY(result == vk::Result::eSuccess);
+
+    auto const fence_info = vk::FenceCreateInfo();
+    vk::Fence fence;
+    result = device->createFence(&fence_info, nullptr, &fence);
+    VERIFY(result == vk::Result::eSuccess);
+
+    vk::CommandBuffer const commandBuffers[] = { init_cmd.get() };
+    auto const submit_info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(commandBuffers);
+
+    result = graphics_queue.submit(1, &submit_info, fence);
+    VERIFY(result == vk::Result::eSuccess);
+
+    result = device->waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
+    VERIFY(result == vk::Result::eSuccess);
+
+    device->destroyFence(fence, nullptr);
+
+    init_cmd.reset();
 
     current_buffer = 0;
     prepared = true;
@@ -1476,39 +1469,6 @@ void App::resize() {
     // Second, re-perform the prepare() function, which will re-create the
     // swapchain.
     prepare();
-}
-
-void App::set_image_layout(vk::Image image, vk::ImageAspectFlags aspectMask, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
-    vk::AccessFlags srcAccessMask, vk::PipelineStageFlags src_stages, vk::PipelineStageFlags dest_stages) {
-    VERIFY(cmd);
-
-    auto DstAccessMask = [](vk::ImageLayout const& layout) {
-        vk::AccessFlags flags;
-
-        switch (layout) {
-        case vk::ImageLayout::eTransferDstOptimal: flags = vk::AccessFlagBits::eTransferWrite; break;
-        case vk::ImageLayout::eColorAttachmentOptimal: flags = vk::AccessFlagBits::eColorAttachmentWrite; break;
-        case vk::ImageLayout::eDepthStencilAttachmentOptimal: flags = vk::AccessFlagBits::eDepthStencilAttachmentWrite; break;
-        case vk::ImageLayout::eShaderReadOnlyOptimal: flags = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead; break;
-        case vk::ImageLayout::eTransferSrcOptimal: flags = vk::AccessFlagBits::eTransferRead; break;
-        case vk::ImageLayout::ePresentSrcKHR: flags = vk::AccessFlagBits::eMemoryRead; break;
-        default: break;
-        }
-
-        return flags;
-    };
-
-    auto const barrier = vk::ImageMemoryBarrier()
-        .setSrcAccessMask(srcAccessMask)
-        .setDstAccessMask(DstAccessMask(newLayout))
-        .setOldLayout(oldLayout)
-        .setNewLayout(newLayout)
-        .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-        .setImage(image)
-        .setSubresourceRange(vk::ImageSubresourceRange(aspectMask, 0, 1, 0, 1));
-
-    cmd->pipelineBarrier(src_stages, dest_stages, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void App::update_data_buffer() {
