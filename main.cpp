@@ -219,7 +219,6 @@ class App {
 
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniqueDescriptorSetLayout desc_layout;
-    vk::UniquePipelineCache pipeline_cache;
     vk::UniqueRenderPass render_pass;
     vk::UniquePipeline pipeline;
 
@@ -333,7 +332,6 @@ App::~App() {
     desc_pool.reset();
 
     pipeline.reset();
-    pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
@@ -1151,12 +1149,6 @@ vk::UniqueShaderModule App::prepare_fs() {
 }
 
 void App::prepare_pipeline() {
-    vk::PipelineCacheCreateInfo const pipeline_cache_info;
-
-    auto pipeline_cache_handle = device->createPipelineCacheUnique(pipeline_cache_info);
-    VERIFY(pipeline_cache_handle.result == vk::Result::eSuccess);
-    pipeline_cache = std::move(pipeline_cache_handle.value);
-
     auto vert_shader_module = prepare_vs();
     auto frag_shader_module = prepare_fs();
 
@@ -1224,7 +1216,7 @@ void App::prepare_pipeline() {
         .setLayout(pipeline_layout.get())
         .setRenderPass(render_pass.get());
 
-    auto pipeline_handles = device->createGraphicsPipelinesUnique(pipeline_cache.get(), pipeline_info);
+    auto pipeline_handles = device->createGraphicsPipelinesUnique(nullptr, pipeline_info);
     VERIFY(pipeline_handles.result == vk::Result::eSuccess);
     pipeline = std::move(pipeline_handles.value[0]);
 }
@@ -1329,7 +1321,6 @@ void App::resize() {
     desc_pool.reset();
 
     pipeline.reset();
-    pipeline_cache.reset();
     render_pass.reset();
     pipeline_layout.reset();
     desc_layout.reset();
