@@ -166,6 +166,18 @@ struct Chain {
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
     vk::UniqueSemaphore image_ownership_semaphores[FRAME_LAG];
     uint32_t frame_index = 0;
+
+    void Clear() {
+        for (uint32_t i = 0; i < swapchainImageCount; i++) {
+            swapchain_image_resources[i].view.reset();
+            swapchain_image_resources[i].cmd.reset();
+            swapchain_image_resources[i].graphics_to_present_cmd.reset();
+            swapchain_image_resources[i].uniform_buffer.reset();
+            swapchain_image_resources[i].uniform_memory.reset();
+        }
+
+        swapchain.reset();
+    }
 };
 
 class App {
@@ -365,20 +377,15 @@ App::~App() {
     pipeline_layout.reset();
     desc_layout.reset();
 
-    chain.swapchain.reset();
+    for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
+        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
+    }
+
+    chain.Clear();
 
     depth.view.reset();
     depth.image.reset();
     depth.mem.reset();
-
-    for (uint32_t i = 0; i < chain.swapchainImageCount; i++) {
-        chain.swapchain_image_resources[i].view.reset();
-        chain.swapchain_image_resources[i].cmd.reset();
-        chain.swapchain_image_resources[i].graphics_to_present_cmd.reset();
-        chain.swapchain_image_resources[i].uniform_buffer.reset();
-        device->unmapMemory(chain.swapchain_image_resources[i].uniform_memory.get());
-        chain.swapchain_image_resources[i].uniform_memory.reset();
-    }
 
     cmd_pool.reset();
 
