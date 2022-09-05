@@ -188,13 +188,11 @@ struct Chain {
 };
 
 class App {
-    bool prepared = false;
-
     std::unique_ptr<Chain> chain; // [TODO] Rename to SwapChain.
 
     Matrices matrices;
 
-    vk::UniqueSurfaceKHR surface; // [TODO] Move to Surface.
+    vk::UniqueSurfaceKHR surface; // [TODO] Move to Device.
 
     vk::UniqueInstance inst; // [TODO] Move to Device.
     vk::PhysicalDevice gpu;
@@ -217,7 +215,7 @@ class App {
 
     vk::UniqueCommandPool cmd_pool;
 
-    vk::UniquePipelineLayout pipeline_layout;
+    vk::UniquePipelineLayout pipeline_layout; // [TODO] Move to Pipeline.
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniqueRenderPass render_pass;
     vk::UniquePipeline pipeline;
@@ -312,8 +310,6 @@ vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const chec
 }
 
 App::~App() {
-    prepared = false;
-
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
@@ -839,7 +835,6 @@ void App::prepare() {
     }
 
     current_buffer = 0;
-    prepared = true;
 }
 
 void App::prepare_buffers() {
@@ -1301,7 +1296,7 @@ void App::resize() {
     uint32_t i;
 
     // Don't react to resize until after first initialization.
-    if (!prepared) {
+    if (!device) {
         return;
     }
 
@@ -1309,7 +1304,6 @@ void App::resize() {
     // AND redo the command buffers, etc.
     //
     // First, perform part of the cleanup() function:
-    prepared = false;
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
@@ -1366,10 +1360,6 @@ bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags
 }
 
 void App::run() {
-    if (!prepared) {
-        return;
-    }
-
     draw();
     current_frame++;
 
