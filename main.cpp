@@ -192,14 +192,13 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueSurfaceKHR surface; // [TODO] Move to Device.
+    vk::UniqueSurfaceKHR surface; // [TODO] Move to Surface.
 
     vk::UniqueInstance inst; // [TODO] Move to Device.
     vk::PhysicalDevice gpu;
     vk::UniqueDevice device;
     vk::Queue graphics_queue;
     vk::Queue present_queue;
-    vk::PhysicalDeviceProperties gpu_props;
     std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
     vk::PhysicalDeviceMemoryProperties memory_properties;
 
@@ -208,7 +207,7 @@ class App {
     char const* extension_names[64];
     char const* enabled_layers[64];
 
-    vk::Format format;
+    vk::Format format; // [TODO] Move to Surface.
     vk::ColorSpaceKHR color_space;
 
     vk::UniqueCommandPool cmd_pool;
@@ -669,8 +668,6 @@ void App::init_vk() {
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-
-    gpu.getProperties(&gpu_props);
 
     // Call with nullptr data to get count
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
