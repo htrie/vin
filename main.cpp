@@ -794,9 +794,7 @@ void App::init_vk_swapchain() {
     current_frame = 0;
 
     gpu.getMemoryProperties(&memory_properties);
-}
 
-void App::prepare() {
     auto const cmd_pool_info = vk::CommandPoolCreateInfo()
         .setQueueFamilyIndex(graphics_queue_family_index);
 
@@ -804,6 +802,9 @@ void App::prepare() {
     VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
     cmd_pool = std::move(cmd_pool_handle.value);
 
+}
+
+void App::prepare() {
     auto const cmd_info = vk::CommandBufferAllocateInfo()
         .setCommandPool(cmd_pool.get())
         .setLevel(vk::CommandBufferLevel::ePrimary)
@@ -1320,8 +1321,6 @@ void App::resize() {
     desc_layout.reset();
 
     chain.reset();
-
-    cmd_pool.reset();
 
     // Second, re-perform the prepare() function, which will re-create the
     // swapchain.
