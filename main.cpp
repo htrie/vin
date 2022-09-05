@@ -199,8 +199,6 @@ class App {
     vk::UniqueDevice device;
     vk::Queue graphics_queue;
     vk::Queue present_queue;
-    uint32_t graphics_queue_family_index = 0;
-    uint32_t present_queue_family_index = 0;
     vk::PhysicalDeviceProperties gpu_props;
     std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
     vk::PhysicalDeviceMemoryProperties memory_properties;
@@ -704,42 +702,40 @@ void App::init_vk_swapchain() {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
-    uint32_t presentQueueFamilyIndex = UINT32_MAX;
+    uint32_t graphics_queue_family_index = UINT32_MAX;
+    uint32_t present_queue_family_index = UINT32_MAX;
     for (uint32_t i = 0; i < queue_family_count; i++) {
         if (queue_props[i].queueFlags & vk::QueueFlagBits::eGraphics) {
-            if (graphicsQueueFamilyIndex == UINT32_MAX) {
-                graphicsQueueFamilyIndex = i;
+            if (graphics_queue_family_index == UINT32_MAX) {
+                graphics_queue_family_index = i;
             }
 
             if (supportsPresent[i] == VK_TRUE) {
-                graphicsQueueFamilyIndex = i;
-                presentQueueFamilyIndex = i;
+                graphics_queue_family_index = i;
+                present_queue_family_index = i;
                 break;
             }
         }
     }
 
-    if (presentQueueFamilyIndex == UINT32_MAX) {
+    if (present_queue_family_index == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
         for (uint32_t i = 0; i < queue_family_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
-                presentQueueFamilyIndex = i;
+                present_queue_family_index = i;
                 break;
             }
         }
     }
 
     // Generate error if could not find both a graphics and a present queue
-    if (graphicsQueueFamilyIndex == UINT32_MAX || presentQueueFamilyIndex == UINT32_MAX) {
+    if (graphics_queue_family_index == UINT32_MAX || present_queue_family_index == UINT32_MAX) {
         ERR_EXIT("Could not find both graphics and present queues\n", "Swapchain Initialization Failure");
     }
-
-    graphics_queue_family_index = graphicsQueueFamilyIndex;
-    present_queue_family_index = presentQueueFamilyIndex;
-    if (graphics_queue_family_index != present_queue_family_index)
+    if (graphics_queue_family_index != present_queue_family_index) {
         ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
+    }
 
     float const priorities[1] = { 0.0 };
 
