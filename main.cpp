@@ -230,8 +230,6 @@ class App {
 
     vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
 
-    void create_device();
-
     void init_vk();
 
     void prepare_buffers();
@@ -337,28 +335,6 @@ App::~App() {
     device.reset();
     surface.reset();
     inst.reset();
-}
-
-void App::create_device() {
-    float const priorities[1] = { 0.0 };
-
-    vk::DeviceQueueCreateInfo queues[2];
-    queues[0].setQueueFamilyIndex(graphics_queue_family_index);
-    queues[0].setQueueCount(1);
-    queues[0].setPQueuePriorities(priorities);
-
-    auto device_info = vk::DeviceCreateInfo()
-        .setQueueCreateInfoCount(1)
-        .setPQueueCreateInfos(queues)
-        .setEnabledLayerCount(0)
-        .setPpEnabledLayerNames(nullptr)
-        .setEnabledExtensionCount(enabled_extension_count)
-        .setPpEnabledExtensionNames((const char* const*)extension_names)
-        .setPEnabledFeatures(nullptr);
-
-    auto device_handle = gpu.createDeviceUnique(device_info);
-    VERIFY(device_handle.result == vk::Result::eSuccess);
-    device = std::move(device_handle.value);
 }
 
 void App::draw() {
@@ -765,7 +741,25 @@ void App::init_vk_swapchain() {
     if (graphics_queue_family_index != present_queue_family_index)
         ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
 
-    create_device();
+    float const priorities[1] = { 0.0 };
+
+    vk::DeviceQueueCreateInfo queues[2];
+    queues[0].setQueueFamilyIndex(graphics_queue_family_index);
+    queues[0].setQueueCount(1);
+    queues[0].setPQueuePriorities(priorities);
+
+    auto device_info = vk::DeviceCreateInfo()
+        .setQueueCreateInfoCount(1)
+        .setPQueueCreateInfos(queues)
+        .setEnabledLayerCount(0)
+        .setPpEnabledLayerNames(nullptr)
+        .setEnabledExtensionCount(enabled_extension_count)
+        .setPpEnabledExtensionNames((const char* const*)extension_names)
+        .setPEnabledFeatures(nullptr);
+
+    auto device_handle = gpu.createDeviceUnique(device_info);
+    VERIFY(device_handle.result == vk::Result::eSuccess);
+    device = std::move(device_handle.value);
 
     device->getQueue(graphics_queue_family_index, 0, &graphics_queue);
     present_queue = graphics_queue;
