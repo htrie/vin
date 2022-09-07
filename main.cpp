@@ -106,7 +106,7 @@ struct Window {
         win_class.hInstance = hinstance;
         win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        win_class.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+        win_class.hbrBackground = CreateSolidBrush(0);
         win_class.lpszMenuName = nullptr;
         win_class.lpszClassName = name;
         win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
@@ -116,12 +116,12 @@ struct Window {
         }
     }
 
-    void create() {
+    void create(int nCmdShow) {
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
         hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
-            100, 100, wr.right - wr.left, wr.bottom - wr.top,
+            CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
             nullptr, nullptr, hinstance, nullptr);
         if (!hwnd) {
             ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
@@ -130,6 +130,8 @@ struct Window {
         // Window client area size must be at least 1 pixel high, to prevent crash.
         minsize.x = GetSystemMetrics(SM_CXMINTRACK);
         minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
+
+        ShowWindow(hwnd, nCmdShow);
     }
 };
 
@@ -1352,7 +1354,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     app = std::make_unique<App>(hInstance);
 
-    app->window.create(); // [TODO] Remove.
+    app->window.create(nCmdShow); // [TODO] Remove.
     app->init_vk_swapchain();
 
     app->prepare();
