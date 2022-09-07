@@ -92,12 +92,11 @@ struct Window {
     int32_t width = 800;
     int32_t height = 600;
 
-    Window() {
+    Window(HINSTANCE hInstance)
+        : hinstance(hInstance) {
         memset(name, '\0', APP_NAME_STR_LEN);
         strncpy(name, WINDOW_NAME, APP_NAME_STR_LEN);
-    }
 
-    void create() {
         WNDCLASSEX win_class;
         win_class.cbSize = sizeof(WNDCLASSEX);
         win_class.style = CS_HREDRAW | CS_VREDRAW;
@@ -107,7 +106,7 @@ struct Window {
         win_class.hInstance = hinstance;
         win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        win_class.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        win_class.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
         win_class.lpszMenuName = nullptr;
         win_class.lpszClassName = name;
         win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
@@ -115,23 +114,15 @@ struct Window {
         if (!RegisterClassEx(&win_class)) {
             ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
         }
+    }
 
+    void create() {
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-        hwnd = CreateWindowEx(0,
-            name,                  // class name
-            name,                  // app name
-            WS_OVERLAPPEDWINDOW |  // window style
-            WS_VISIBLE | WS_SYSMENU,
-            100, 100,            // x/y coords
-            wr.right - wr.left,  // width
-            wr.bottom - wr.top,  // height
-            nullptr,             // handle to parent
-            nullptr,             // handle to menu
-            hinstance,          // hInstance
-            nullptr);            // no extra parameters
-
+        hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
+            100, 100, wr.right - wr.left, wr.bottom - wr.top,
+            nullptr, nullptr, hinstance, nullptr);
         if (!hwnd) {
             ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
         }
@@ -254,9 +245,7 @@ public:
 
 
 App::App(HINSTANCE hInstance)
-{
-    window.hinstance = hInstance;
-
+    : window(hInstance) {
     memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
@@ -1363,7 +1352,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     app = std::make_unique<App>(hInstance);
 
-    app->window.create();
+    app->window.create(); // [TODO] Remove.
     app->init_vk_swapchain();
 
     app->prepare();
