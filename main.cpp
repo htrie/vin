@@ -225,6 +225,7 @@ class App {
     void init_vk();
 
     void create_instance();
+    void pick_gpu();
     void create_surface();
     void create_device();
 
@@ -575,9 +576,7 @@ void App::create_instance() {
     instance = std::move(instance_handle.value);
 }
 
-void App::init_vk() {
-    create_instance();
-
+void App::pick_gpu() {
     // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
     auto result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
@@ -635,6 +634,12 @@ void App::init_vk() {
     }
     gpu = physical_devices[gpu_number];
     physical_devices.reset();
+}
+
+void App::init_vk() {
+    create_instance();
+
+    pick_gpu();
 
     // Look for device extensions
     uint32_t device_extension_count = 0;
@@ -642,7 +647,7 @@ void App::init_vk() {
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
 
-    result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (device_extension_count > 0) {
