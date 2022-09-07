@@ -89,7 +89,7 @@ struct Window {
     int32_t width = 800;
     int32_t height = 600;
 
-    Window(HINSTANCE hInstance)
+    Window(HINSTANCE hInstance, int nCmdShow, void* data)
         : hinstance(hInstance) {
         memset(name, '\0', APP_NAME_STR_LEN);
         strncpy(name, WINDOW_NAME, APP_NAME_STR_LEN);
@@ -111,9 +111,7 @@ struct Window {
         if (!RegisterClassEx(&win_class)) {
             ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
         }
-    }
 
-    void create(void* data) {
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -123,6 +121,8 @@ struct Window {
         if (!hwnd) {
             ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
         }
+
+        ShowWindow(hwnd, nCmdShow);
     }
 };
 
@@ -223,7 +223,7 @@ class App {
 public:
     Window window;
 
-    App(HINSTANCE hInstance);
+    App(HINSTANCE hInstance, int nCmdShow);
     ~App();
 
     void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
@@ -233,19 +233,20 @@ public:
 };
 
 
-App::App(HINSTANCE hInstance)
-    : window(hInstance) {
-    memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
-    memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
-    memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
-
+App::App(HINSTANCE hInstance, int nCmdShow)
+    : window(hInstance, nCmdShow, this) {
     create_instance();
-
     pick_gpu();
+    init_vk_swapchain();
+    prepare();
 
     vec3 eye = { 0.0f, 3.0f, 5.0f };
     vec3 origin = { 0, 0, 0 };
     vec3 up = { 0.0f, 1.0f, 0.0 };
+
+    memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
+    memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
+    memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
 
     mat4x4_perspective(matrices.projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
     mat4x4_look_at(matrices.view_matrix, eye, origin, up);
@@ -1292,12 +1293,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_CREATE: {
         LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+        return 0;
     }
-    break;
     case WM_CLOSE: PostQuitMessage(0); break;
     case WM_PAINT:
         if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
             app->draw();
+            return 0;
         }
         break;
     case WM_GETMINMAXINFO: {
@@ -1306,7 +1308,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
         return 0;
     }
-    case WM_ERASEBKGND: return 1;
     case WM_SIZE:
         if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
             // Resize the application to the new window size, except when
@@ -1317,6 +1318,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 app->window.height = (lParam & 0xffff0000) >> 16;
                 app->resize();
             }
+            return 0;
         }
         break;
     default: break;
@@ -1326,30 +1328,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-    MSG msg;
-    msg.wParam = 0;
+    App app(hInstance, nCmdShow);
 
-    {
-        App app(hInstance);
-        app.window.create(&app); // [TODO] Remove.
-        app.init_vk_swapchain();
-        app.prepare();
-
-        ShowWindow(app.window.hwnd, nCmdShow);
-
-        while (true) {
-            PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-            if (msg.message == WM_QUIT) {
-                break;
-            }
-            else {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-            RedrawWindow(app.window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
-        }
+    MSG msg = {};
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
 
-    return (int)msg.wParam;
+    return 0;
 }
 
