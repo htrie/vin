@@ -199,7 +199,6 @@ class App {
     vk::UniqueDevice device;
     vk::Queue graphics_queue;
     vk::Queue present_queue;
-    std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
 
     uint32_t enabled_extension_count = 0;
     uint32_t enabled_layer_count = 0;
@@ -222,7 +221,6 @@ class App {
     uint32_t frame_count = UINT32_MAX;
 
     uint32_t current_buffer = 0;
-    uint32_t queue_family_count = 0;
 
     vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
 
@@ -667,13 +665,6 @@ void App::init_vk() {
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-
-    // Call with nullptr data to get count
-    gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
-    VERIFY(queue_family_count >= 1);
-
-    queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
-    gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
 }
 
 void App::create_surface() {
@@ -686,6 +677,16 @@ void App::create_surface() {
 
 void App::init_vk_swapchain() {
     create_surface();
+
+    // Call with nullptr data to get count
+    uint32_t queue_family_count = 0;
+    gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
+    VERIFY(queue_family_count >= 1);
+
+    std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
+    queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
+    gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
+
     // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
