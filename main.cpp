@@ -200,7 +200,6 @@ class App {
     vk::Queue graphics_queue;
     vk::Queue present_queue;
     std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
-    vk::PhysicalDeviceMemoryProperties memory_properties;
 
     uint32_t enabled_extension_count = 0;
     uint32_t enabled_layer_count = 0;
@@ -775,8 +774,6 @@ void App::init_vk_swapchain() {
 
     current_frame = 0;
 
-    gpu.getMemoryProperties(&memory_properties);
-
     auto const cmd_pool_info = vk::CommandPoolCreateInfo()
         .setQueueFamilyIndex(graphics_queue_family_index);
 
@@ -1326,6 +1323,9 @@ void App::update_data_buffer() {
 }
 
 bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
+    vk::PhysicalDeviceMemoryProperties memory_properties;
+    gpu.getMemoryProperties(&memory_properties);
+
     // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
