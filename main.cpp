@@ -197,8 +197,7 @@ class App {
     vk::UniqueInstance instance; // [TODO] Move to Device.
     vk::PhysicalDevice gpu;
     vk::UniqueDevice device;
-    vk::Queue graphics_queue;
-    vk::Queue present_queue;
+    vk::Queue queue;
 
     uint32_t enabled_extension_count = 0;
     uint32_t enabled_layer_count = 0;
@@ -374,7 +373,7 @@ void App::draw() {
         .setSignalSemaphoreCount(1)
         .setPSignalSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get());
 
-    result = graphics_queue.submit(1, &submit_info, chain->fences[chain->frame_index].get());
+    result = queue.submit(1, &submit_info, chain->fences[chain->frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 
     // If we are using separate queues we have to wait for image ownership,
@@ -386,7 +385,7 @@ void App::draw() {
         .setPSwapchains(&chain->swapchain.get())
         .setPImageIndices(&current_buffer);
 
-    result = present_queue.presentKHR(&present_info);
+    result = queue.presentKHR(&present_info);
     chain->frame_index += 1;
     chain->frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
@@ -748,8 +747,7 @@ void App::init_vk_swapchain() {
     VERIFY(device_handle.result == vk::Result::eSuccess);
     device = std::move(device_handle.value);
 
-    device->getQueue(graphics_queue_family_index, 0, &graphics_queue);
-    present_queue = graphics_queue;
+    device->getQueue(graphics_queue_family_index, 0, &queue);
 
     // Get the list of VkFormat's that are supported:
     uint32_t format_count;
