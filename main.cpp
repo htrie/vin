@@ -13,61 +13,66 @@
 
 #define FRAME_LAG 2
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
 #define ERR_EXIT(err_msg, err_class) \
     do { \
         MessageBox(nullptr, err_msg, err_class, MB_OK); \
         exit(1); \
     } while (0)
 
+const uint32_t vert_bytecode[] =
+#include "shader.vert.inc"
+;
+const uint32_t frag_bytecode[] =
+#include "shader.frag.inc"
+;
+
 struct Uniforms{
     float mvp[4][4];
     float position[12 * 3][4];
-};
 
-static const float g_vertex_buffer_data[] = {
-    -1.0f,-1.0f,-1.0f,  // -X side
-    -1.0f,-1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
+    static inline const float vertex_data[] = {
+        -1.0f,-1.0f,-1.0f,  // -X side
+        -1.0f,-1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,
 
-    -1.0f,-1.0f,-1.0f,  // -Z side
-     1.0f, 1.0f,-1.0f,
-     1.0f,-1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,  // -Z side
+         1.0f, 1.0f,-1.0f,
+         1.0f,-1.0f,-1.0f,
+        -1.0f,-1.0f,-1.0f,
+        -1.0f, 1.0f,-1.0f,
+         1.0f, 1.0f,-1.0f,
 
-    -1.0f,-1.0f,-1.0f,  // -Y side
-     1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f,-1.0f,  // -Y side
+         1.0f,-1.0f,-1.0f,
+         1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f,-1.0f,
+         1.0f,-1.0f, 1.0f,
+        -1.0f,-1.0f, 1.0f,
 
-    -1.0f, 1.0f,-1.0f,  // +Y side
-    -1.0f, 1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-     1.0f, 1.0f, 1.0f,
-     1.0f, 1.0f,-1.0f,
+        -1.0f, 1.0f,-1.0f,  // +Y side
+        -1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f,-1.0f,
+         1.0f, 1.0f, 1.0f,
+         1.0f, 1.0f,-1.0f,
 
-     1.0f, 1.0f,-1.0f,  // +X side
-     1.0f, 1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
+         1.0f, 1.0f,-1.0f,  // +X side
+         1.0f, 1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f,
+         1.0f,-1.0f,-1.0f,
+         1.0f, 1.0f,-1.0f,
 
-    -1.0f, 1.0f, 1.0f,  // +Z side
-    -1.0f,-1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
+        -1.0f, 1.0f, 1.0f,  // +Z side
+        -1.0f,-1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+        -1.0f,-1.0f, 1.0f,
+         1.0f,-1.0f, 1.0f,
+         1.0f, 1.0f, 1.0f,
+    };
 };
 
 struct Matrices {
@@ -218,8 +223,6 @@ class App {
     void prepare_descriptor_set();
     void prepare_framebuffers();
     vk::UniqueShaderModule prepare_shader_module(const uint32_t*, size_t);
-    vk::UniqueShaderModule prepare_vs();
-    vk::UniqueShaderModule prepare_fs();
     void prepare_pipeline();
     void prepare_render_pass();
 
@@ -918,7 +921,7 @@ void App::prepare_buffers() {
         vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
         vk::CompositeAlphaFlagBitsKHR::eInherit,
     };
-    for (uint32_t i = 0; i < ARRAY_SIZE(compositeAlphaFlags); i++) {
+    for (uint32_t i = 0; i < 4; i++) {
         if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
             compositeAlpha = compositeAlphaFlags[i];
             break;
@@ -977,18 +980,18 @@ void App::prepare_uniforms() {
     mat4x4 MVP;
     mat4x4_mul(MVP, VP, matrices.model_matrix);
 
-    Uniforms data;
-    memcpy(data.mvp, MVP, sizeof(MVP));
+    Uniforms uniforms;
+    memcpy(uniforms.mvp, MVP, sizeof(MVP));
 
     for (int32_t i = 0; i < 12 * 3; i++) {
-        data.position[i][0] = g_vertex_buffer_data[i * 3];
-        data.position[i][1] = g_vertex_buffer_data[i * 3 + 1];
-        data.position[i][2] = g_vertex_buffer_data[i * 3 + 2];
-        data.position[i][3] = 1.0f;
+        uniforms.position[i][0] = uniforms.vertex_data[i * 3];
+        uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
+        uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
+        uniforms.position[i][3] = 1.0f;
     }
 
     auto const buf_info = vk::BufferCreateInfo()
-        .setSize(sizeof(data))
+        .setSize(sizeof(uniforms))
         .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
     for (unsigned int i = 0; i < chain->swapchain_image_count; i++) {
@@ -1013,7 +1016,7 @@ void App::prepare_uniforms() {
         auto result = device->mapMemory(chain->swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain->swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
 
-        memcpy(chain->swapchain_image_resources[i].uniform_memory_ptr, &data, sizeof data);
+        memcpy(chain->swapchain_image_resources[i].uniform_memory_ptr, &uniforms, sizeof uniforms);
 
         result = device->bindBufferMemory(chain->swapchain_image_resources[i].uniform_buffer.get(), chain->swapchain_image_resources[i].uniform_memory.get(), 0);
         VERIFY(result == vk::Result::eSuccess);
@@ -1110,16 +1113,9 @@ void App::prepare_framebuffers() {
     }
 }
 
-vk::UniqueShaderModule App::prepare_fs() {
-    const uint32_t fragShaderCode[] =
-#include "shader.frag.inc"
-        ;
-    return prepare_shader_module(fragShaderCode, sizeof(fragShaderCode));
-}
-
 void App::prepare_pipeline() {
-    auto vert_shader_module = prepare_vs();
-    auto frag_shader_module = prepare_fs();
+    const auto vert_shader_module = prepare_shader_module(vert_bytecode, sizeof(vert_bytecode));
+    const auto frag_shader_module = prepare_shader_module(frag_bytecode, sizeof(frag_bytecode));
 
     vk::PipelineShaderStageCreateInfo const shader_stage_info[2] = {
         vk::PipelineShaderStageCreateInfo()
@@ -1257,13 +1253,6 @@ vk::UniqueShaderModule App::prepare_shader_module(const uint32_t* code, size_t s
     auto module_handle = device->createShaderModuleUnique(module_info);
     VERIFY(module_handle.result == vk::Result::eSuccess);
     return std::move(module_handle.value);
-}
-
-vk::UniqueShaderModule App::prepare_vs() {
-    const uint32_t vertShaderCode[] =
-#include "shader.vert.inc"
-        ;
-    return prepare_shader_module(vertShaderCode, sizeof(vertShaderCode));
 }
 
 void App::resize() {
