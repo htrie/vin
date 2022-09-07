@@ -675,11 +675,6 @@ void App::init_vk() {
 
     queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
     gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
-
-    // Query fine-grained feature support for this device.
-    //  If app has specific feature requirements it should check supported features based on this query
-    vk::PhysicalDeviceFeatures physDevFeatures;
-    gpu.getFeatures(&physDevFeatures);
 }
 
 void App::create_surface() {
