@@ -224,6 +224,7 @@ class App {
 
     void init_vk();
 
+    void create_instance();
     void create_surface();
     void create_device();
 
@@ -461,7 +462,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void App::init_vk() {
+void App::create_instance() {
     uint32_t instance_extension_count = 0;
     uint32_t instance_layer_count = 0;
     char const* const instance_validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
@@ -572,10 +573,14 @@ void App::init_vk() {
             "vkCreateInstance Failure");
     }
     instance = std::move(instance_handle.value);
+}
+
+void App::init_vk() {
+    create_instance();
 
     // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
-    result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
+    auto result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (gpu_count <= 0) {
