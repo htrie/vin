@@ -88,7 +88,6 @@ struct Window {
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
     char name[APP_NAME_STR_LEN];
-    POINT minsize = { 0, 0 };
     int32_t width = 800;
     int32_t height = 600;
 
@@ -116,20 +115,16 @@ struct Window {
         }
     }
 
-    void create(int nCmdShow) {
+    void create(int nCmdShow, void* data) {
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
         hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
             CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
-            nullptr, nullptr, hinstance, nullptr);
+            nullptr, nullptr, hinstance, data);
         if (!hwnd) {
             ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
         }
-
-        // Window client area size must be at least 1 pixel high, to prevent crash.
-        minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-        minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
 
         ShowWindow(hwnd, nCmdShow);
     }
@@ -1309,29 +1304,35 @@ void App::run() {
     }
 }
 
-std::unique_ptr<App> app;
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_CLOSE:
-        PostQuitMessage(validation_error);
-        break;
+    case WM_CREATE: {
+        LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+    }
+    break;
+    case WM_CLOSE: PostQuitMessage(validation_error); break;
     case WM_PAINT:
-        app->run();
+        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+            app->run();
         break;
-    case WM_GETMINMAXINFO:  // set window's minimum size
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = app->window.minsize;
+    case WM_GETMINMAXINFO: {
+        // Window client area size must be at least 1 pixel high, to prevent crash.
+        const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
         return 0;
-    case WM_ERASEBKGND:
-        return 1;
+    }
+    case WM_ERASEBKGND: return 1;
     case WM_SIZE:
-        // Resize the application to the new window size, except when
-        // it was minimized. Vulkan doesn't support images or swapchains
-        // with width=0 and height=0.
-        if (wParam != SIZE_MINIMIZED) {
-            app->window.width = lParam & 0xffff;
-            app->window.height = (lParam & 0xffff0000) >> 16;
-            app->resize();
+        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+            // Resize the application to the new window size, except when
+            // it was minimized. Vulkan doesn't support images or swapchains
+            // with width=0 and height=0.
+            if (wParam != SIZE_MINIMIZED) {
+                app->window.width = lParam & 0xffff;
+                app->window.height = (lParam & 0xffff0000) >> 16;
+                app->resize();
+            }
         }
         break;
     case WM_KEYDOWN:
@@ -1341,8 +1342,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             break;
         }
         return 0;
-    default:
-        break;
+    default: break;
     }
 
     return (DefWindowProc(hWnd, uMsg, wParam, lParam));
@@ -1352,26 +1352,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     MSG msg;
     msg.wParam = 0;
 
-    app = std::make_unique<App>(hInstance);
+    {
+        App app(hInstance);
+        app.window.create(nCmdShow, &app); // [TODO] Remove.
+        app.init_vk_swapchain();
+        app.prepare();
 
-    app->window.create(nCmdShow); // [TODO] Remove.
-    app->init_vk_swapchain();
-
-    app->prepare();
-
-    while (true) {
-        PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-        if (msg.message == WM_QUIT) {
-            break;
+        while (true) {
+            PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
+            if (msg.message == WM_QUIT) {
+                break;
+            }
+            else {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            RedrawWindow(app.window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
         }
-        else {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        RedrawWindow(app->window.hwnd, nullptr, nullptr, RDW_INTERNALPAINT);
     }
-
-    app.reset();
 
     return (int)msg.wParam;
 }
