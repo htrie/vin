@@ -11,10 +11,6 @@
 #define VERIFY(x) ((void)(x))
 #endif
 
-#define WINDOW_NAME "vin"
-#define APP_SHORT_NAME "vin"
-#define APP_NAME_STR_LEN 80
-
 #define FRAME_LAG 2
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -99,14 +95,13 @@ struct Matrices {
 struct Window {
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
-    char name[APP_NAME_STR_LEN];
     int32_t width = 800;
     int32_t height = 600;
 
     Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data)
         : hinstance(hInstance) {
-        memset(name, '\0', APP_NAME_STR_LEN);
-        strncpy(name, WINDOW_NAME, APP_NAME_STR_LEN);
+
+        const char* name = "vin";
 
         WNDCLASSEX win_class;
         win_class.cbSize = sizeof(WNDCLASSEX);
@@ -536,9 +531,7 @@ void App::create_instance() {
             "vkCreateInstance Failure");
     }
     auto const app_info = vk::ApplicationInfo()
-        .setPApplicationName(APP_SHORT_NAME)
         .setApplicationVersion(0)
-        .setPEngineName(APP_SHORT_NAME)
         .setEngineVersion(0)
         .setApiVersion(VK_API_VERSION_1_0);
     auto const inst_info = vk::InstanceCreateInfo()
