@@ -199,8 +199,6 @@ class App {
 
     vk::UniqueDescriptorPool desc_pool;
 
-    uint32_t current_frame = 0;
-    uint32_t frame_count = UINT32_MAX;
     uint32_t current_buffer = 0;
 
     void create_instance();
@@ -226,8 +224,6 @@ class App {
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
 
-    void draw();
-
 public:
     Window window;
 
@@ -237,7 +233,7 @@ public:
     void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
     void prepare();
     void resize();
-    void run();
+    void draw();
 };
 
 
@@ -1295,15 +1291,6 @@ bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags
     return false;
 }
 
-void App::run() {
-    draw();
-    current_frame++;
-
-    if (frame_count != UINT32_MAX && current_frame == frame_count) {
-        PostQuitMessage(validation_error);
-    }
-}
-
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CREATE: {
@@ -1314,7 +1301,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     case WM_CLOSE: PostQuitMessage(validation_error); break;
     case WM_PAINT:
         if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-            app->run();
+            app->draw();
         break;
     case WM_GETMINMAXINFO: {
         // Window client area size must be at least 1 pixel high, to prevent crash.
