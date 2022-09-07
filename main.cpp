@@ -224,6 +224,9 @@ class App {
 
     void init_vk();
 
+    void create_surface();
+    void create_device();
+
     void prepare_buffers();
     void prepare_uniforms();
     void prepare_descriptor_layout();
@@ -237,8 +240,6 @@ class App {
     void prepare_render_pass();
 
     void draw_build_cmd(vk::CommandBuffer);
-
-    void create_surface();
 
     void update_data_buffer();
 
@@ -673,9 +674,7 @@ void App::create_surface() {
     surface = std::move(surface_handle.value);
 }
 
-void App::init_vk_swapchain() {
-    create_surface();
-
+void App::create_device() {
     // Call with nullptr data to get count
     uint32_t queue_family_count = 0;
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
@@ -749,6 +748,18 @@ void App::init_vk_swapchain() {
 
     device->getQueue(graphics_queue_family_index, 0, &queue);
 
+    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setQueueFamilyIndex(graphics_queue_family_index);
+
+    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
+    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    cmd_pool = std::move(cmd_pool_handle.value);
+}
+
+void App::init_vk_swapchain() {
+    create_surface();
+    create_device();
+
     // Get the list of VkFormat's that are supported:
     uint32_t format_count;
     auto result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
@@ -769,14 +780,6 @@ void App::init_vk_swapchain() {
         format = surface_formats[0].format;
     }
     color_space = surface_formats[0].colorSpace;
-
-    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
-        .setQueueFamilyIndex(graphics_queue_family_index);
-
-    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
-    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
-    cmd_pool = std::move(cmd_pool_handle.value);
-
 }
 
 void App::prepare() {
