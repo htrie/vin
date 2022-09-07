@@ -215,10 +215,6 @@ class App {
     uint32_t frame_count = UINT32_MAX;
     uint32_t current_buffer = 0;
 
-    vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
-
-    void init_vk();
-
     void create_instance();
     void pick_gpu();
     void create_surface();
@@ -250,8 +246,7 @@ public:
     App(HINSTANCE hInstance);
     ~App();
 
-    void init();
-    void init_vk_swapchain();
+    void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
     void prepare();
     void resize();
     void run();
@@ -266,7 +261,9 @@ App::App(HINSTANCE hInstance)
     memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
     memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
 
-    init_vk();
+    create_instance();
+
+    pick_gpu();
 
     vec3 eye = { 0.0f, 3.0f, 5.0f };
     vec3 origin = { 0, 0, 0 };
@@ -277,24 +274,6 @@ App::App(HINSTANCE hInstance)
     mat4x4_identity(matrices.model_matrix);
 
     matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
-}
-
-vk::Bool32 App::check_layers(uint32_t check_count, char const* const* const check_names, uint32_t layer_count,
-    vk::LayerProperties* layers) {
-    for (uint32_t i = 0; i < check_count; i++) {
-        vk::Bool32 found = VK_FALSE;
-        for (uint32_t j = 0; j < layer_count; j++) {
-            if (!strcmp(check_names[i], layers[j].layerName)) {
-                found = VK_TRUE;
-                break;
-            }
-        }
-        if (!found) {
-            fprintf(stderr, "Cannot find layer: %s\n", check_names[i]);
-            return 0;
-        }
-    }
-    return VK_TRUE;
 }
 
 App::~App() {
@@ -459,49 +438,34 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 }
 
 void App::create_instance() {
-    uint32_t instance_extension_count = 0;
-    uint32_t instance_layer_count = 0;
-    char const* const instance_validation_layers[] = { "VK_LAYER_KHRONOS_validation" };
-
     // Look for validation layers
     uint32_t enabled_layer_count = 0;
     char const* enabled_layers[64];
 
-    vk::Bool32 validation_found = VK_FALSE;
-    if (true) {
+#if !defined(NDEBUG)
+    {
+        uint32_t instance_layer_count = 0;
         auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
         VERIFY(result == vk::Result::eSuccess);
 
         if (instance_layer_count > 0) {
-            std::unique_ptr<vk::LayerProperties[]> instance_layers(new vk::LayerProperties[instance_layer_count]);
-            result = vk::enumerateInstanceLayerProperties(&instance_layer_count, instance_layers.get());
-            VERIFY(result == vk::Result::eSuccess);
-
-            validation_found = check_layers(ARRAY_SIZE(instance_validation_layers), instance_validation_layers, instance_layer_count, instance_layers.get());
-            if (validation_found) {
-                enabled_layer_count = ARRAY_SIZE(instance_validation_layers);
-                enabled_layers[0] = "VK_LAYER_KHRONOS_validation";
-            }
-        }
-
-        if (!validation_found) {
-            ERR_EXIT(
-                "vkEnumerateInstanceLayerProperties failed to find required validation layer.\n\n"
-                "Please look at the Getting Started guide for additional information.\n",
-                "vkCreateInstance Failure");
+            enabled_layer_count = 1;
+            enabled_layers[0] = "VK_LAYER_KHRONOS_validation";
         }
     }
+#endif
 
     // Look for instance extensions
+    uint32_t instance_extension_count = 0;
+    auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+
     uint32_t enabled_extension_count = 0;
     char const* extension_names[64];
+    memset(extension_names, 0, sizeof(extension_names));
 
     vk::Bool32 surfaceExtFound = VK_FALSE;
     vk::Bool32 platformSurfaceExtFound = VK_FALSE;
-    memset(extension_names, 0, sizeof(extension_names));
-
-    auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
 
     if (instance_extension_count > 0) {
         std::unique_ptr<vk::ExtensionProperties[]> instance_extensions(new vk::ExtensionProperties[instance_extension_count]);
@@ -548,7 +512,7 @@ void App::create_instance() {
     auto const inst_info = vk::InstanceCreateInfo()
         .setPApplicationInfo(&app_info)
         .setEnabledLayerCount(enabled_layer_count)
-        .setPpEnabledLayerNames(instance_validation_layers)
+        .setPpEnabledLayerNames(enabled_layers)
         .setEnabledExtensionCount(enabled_extension_count)
         .setPpEnabledExtensionNames(extension_names);
 
@@ -633,12 +597,6 @@ void App::pick_gpu() {
     }
     gpu = physical_devices[gpu_number];
     physical_devices.reset();
-}
-
-void App::init_vk() {
-    create_instance();
-
-    pick_gpu();
 }
 
 void App::create_surface() {
