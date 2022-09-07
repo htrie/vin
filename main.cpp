@@ -113,18 +113,16 @@ struct Window {
         }
     }
 
-    void create(int nCmdShow, void* data) {
+    void create(void* data) {
         RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
         AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-        hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU,
+        hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
             nullptr, nullptr, hinstance, data);
         if (!hwnd) {
             ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
         }
-
-        ShowWindow(hwnd, nCmdShow);
     }
 };
 
@@ -1298,8 +1296,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     break;
     case WM_CLOSE: PostQuitMessage(0); break;
     case WM_PAINT:
-        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
             app->draw();
+        }
         break;
     case WM_GETMINMAXINFO: {
         // Window client area size must be at least 1 pixel high, to prevent crash.
@@ -1332,9 +1331,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     {
         App app(hInstance);
-        app.window.create(nCmdShow, &app); // [TODO] Remove.
+        app.window.create(&app); // [TODO] Remove.
         app.init_vk_swapchain();
         app.prepare();
+
+        ShowWindow(app.window.hwnd, nCmdShow);
 
         while (true) {
             PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
