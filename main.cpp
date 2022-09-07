@@ -25,8 +25,6 @@
         exit(1); \
     } while (0)
 
-static int validation_error = 0;
-
 struct Uniforms{
     float mvp[4][4];
     float position[12 * 3][4];
@@ -1298,7 +1296,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
     }
     break;
-    case WM_CLOSE: PostQuitMessage(validation_error); break;
+    case WM_CLOSE: PostQuitMessage(0); break;
     case WM_PAINT:
         if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
             app->draw();
@@ -1322,13 +1320,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             }
         }
         break;
-    case WM_KEYDOWN:
-        switch (wParam) {
-        case VK_ESCAPE:
-            PostQuitMessage(validation_error);
-            break;
-        }
-        return 0;
     default: break;
     }
 
