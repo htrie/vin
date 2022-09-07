@@ -78,9 +78,23 @@ struct Matrices {
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
-};
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    Matrices() {
+        vec3 eye = { 0.0f, 3.0f, 5.0f };
+        vec3 origin = { 0, 0, 0 };
+        vec3 up = { 0.0f, 1.0f, 0.0 };
+
+        memset(projection_matrix, 0, sizeof(projection_matrix));
+        memset(view_matrix, 0, sizeof(view_matrix));
+        memset(model_matrix, 0, sizeof(model_matrix));
+
+        mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+        mat4x4_look_at(view_matrix, eye, origin, up);
+        mat4x4_identity(model_matrix);
+
+        projection_matrix[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
+    }
+};
 
 struct Window {
     HINSTANCE hinstance = nullptr;
@@ -89,7 +103,7 @@ struct Window {
     int32_t width = 800;
     int32_t height = 600;
 
-    Window(HINSTANCE hInstance, int nCmdShow, void* data)
+    Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data)
         : hinstance(hInstance) {
         memset(name, '\0', APP_NAME_STR_LEN);
         strncpy(name, WINDOW_NAME, APP_NAME_STR_LEN);
@@ -97,7 +111,7 @@ struct Window {
         WNDCLASSEX win_class;
         win_class.cbSize = sizeof(WNDCLASSEX);
         win_class.style = CS_HREDRAW | CS_VREDRAW;
-        win_class.lpfnWndProc = WndProc;
+        win_class.lpfnWndProc = proc;
         win_class.cbClsExtra = 0;
         win_class.cbWndExtra = 0;
         win_class.hInstance = hinstance;
@@ -220,39 +234,70 @@ class App {
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
 
+    void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
+    void prepare();
+    void resize();
+    void draw();
+
+    bool proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+    static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
 public:
     Window window;
 
     App(HINSTANCE hInstance, int nCmdShow);
     ~App();
 
-    void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
-    void prepare();
-    void resize();
-    void draw();
+    void run();
 };
 
+LRESULT CALLBACK App::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_CREATE: {
+        LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+        return 0;
+    }
+    case WM_CLOSE: PostQuitMessage(0); break;
+    case WM_GETMINMAXINFO: {
+        // Window client area size must be at least 1 pixel high, to prevent crash.
+        const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
+        ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
+        return 0;
+    }
+    }
+
+    if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+        if (app->proc(hWnd, uMsg, wParam, lParam))
+            return 0;
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_PAINT: draw(); return true;
+    case WM_SIZE: {
+            // Resize the application to the new window size, except when
+            // it was minimized. Vulkan doesn't support images or swapchains
+            // with width=0 and height=0.
+            if (wParam != SIZE_MINIMIZED) {
+                window.width = lParam & 0xffff;
+                window.height = (lParam & 0xffff0000) >> 16;
+                resize();
+            }
+            return true;
+        }
+    }
+    return false;
+}
 
 App::App(HINSTANCE hInstance, int nCmdShow)
-    : window(hInstance, nCmdShow, this) {
+    : window(WndProc, hInstance, nCmdShow, this) {
     create_instance();
     pick_gpu();
     init_vk_swapchain();
     prepare();
-
-    vec3 eye = { 0.0f, 3.0f, 5.0f };
-    vec3 origin = { 0, 0, 0 };
-    vec3 up = { 0.0f, 1.0f, 0.0 };
-
-    memset(matrices.projection_matrix, 0, sizeof(matrices.projection_matrix));
-    memset(matrices.view_matrix, 0, sizeof(matrices.view_matrix));
-    memset(matrices.model_matrix, 0, sizeof(matrices.model_matrix));
-
-    mat4x4_perspective(matrices.projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-    mat4x4_look_at(matrices.view_matrix, eye, origin, up);
-    mat4x4_identity(matrices.model_matrix);
-
-    matrices.projection_matrix[1][1] *= -1; // Flip projection matrix from GL to Vulkan orientation.
 }
 
 App::~App() {
@@ -283,6 +328,14 @@ App::~App() {
     device.reset();
     surface.reset();
     instance.reset();
+}
+
+void App::run() {
+    MSG msg = {};
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
 }
 
 void App::draw() {
@@ -1288,54 +1341,9 @@ bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags
     return false;
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CREATE: {
-        LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
-        return 0;
-    }
-    case WM_CLOSE: PostQuitMessage(0); break;
-    case WM_PAINT:
-        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-            app->draw();
-            return 0;
-        }
-        break;
-    case WM_GETMINMAXINFO: {
-        // Window client area size must be at least 1 pixel high, to prevent crash.
-        const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
-        return 0;
-    }
-    case WM_SIZE:
-        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-            // Resize the application to the new window size, except when
-            // it was minimized. Vulkan doesn't support images or swapchains
-            // with width=0 and height=0.
-            if (wParam != SIZE_MINIMIZED) {
-                app->window.width = lParam & 0xffff;
-                app->window.height = (lParam & 0xffff0000) >> 16;
-                app->resize();
-            }
-            return 0;
-        }
-        break;
-    default: break;
-    }
-
-    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
-}
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
     App app(hInstance, nCmdShow);
-
-    MSG msg = {};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
+    app.run();
     return 0;
 }
 
