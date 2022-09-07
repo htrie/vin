@@ -154,7 +154,7 @@ struct SwapchainImageResources {
 };
 
 struct Chain {
-    uint32_t swapchainImageCount = 0;
+    uint32_t swapchain_image_count = 0;
     vk::UniqueSwapchainKHR swapchain;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
@@ -194,7 +194,7 @@ class App {
 
     vk::UniqueSurfaceKHR surface; // [TODO] Move to Surface.
 
-    vk::UniqueInstance inst; // [TODO] Move to Device.
+    vk::UniqueInstance instance; // [TODO] Move to Device.
     vk::PhysicalDevice gpu;
     vk::UniqueDevice device;
     vk::Queue graphics_queue;
@@ -219,7 +219,6 @@ class App {
 
     uint32_t current_frame = 0;
     uint32_t frame_count = UINT32_MAX;
-
     uint32_t current_buffer = 0;
 
     vk::Bool32 check_layers(uint32_t, const char* const*, uint32_t, vk::LayerProperties*);
@@ -311,7 +310,7 @@ App::~App() {
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < chain->swapchain_image_count; i++) {
         device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
     }
 
@@ -328,7 +327,7 @@ App::~App() {
 
     device.reset();
     surface.reset();
-    inst.reset();
+    instance.reset();
 }
 
 void App::draw() {
@@ -350,7 +349,7 @@ void App::draw() {
             break;
         }
         else if (result == vk::Result::eErrorSurfaceLostKHR) {
-            inst->destroySurfaceKHR(surface.get(), nullptr);
+            instance->destroySurfaceKHR(surface.get(), nullptr);
             create_surface();
             resize();
         }
@@ -404,7 +403,7 @@ void App::draw() {
         }
     }
     else if (result == vk::Result::eErrorSurfaceLostKHR) {
-        inst->destroySurfaceKHR(surface.get(), nullptr);
+        instance->destroySurfaceKHR(surface.get(), nullptr);
         create_surface();
         resize();
     }
@@ -552,31 +551,31 @@ void App::init_vk() {
         .setEnabledExtensionCount(enabled_extension_count)
         .setPpEnabledExtensionNames(extension_names);
 
-    auto inst_handle = vk::createInstanceUnique(inst_info);
-    if (inst_handle.result == vk::Result::eErrorIncompatibleDriver) {
+    auto instance_handle = vk::createInstanceUnique(inst_info);
+    if (instance_handle.result == vk::Result::eErrorIncompatibleDriver) {
         ERR_EXIT(
             "Cannot find a compatible Vulkan installable client driver (ICD).\n\n"
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-    else if (inst_handle.result == vk::Result::eErrorExtensionNotPresent) {
+    else if (instance_handle.result == vk::Result::eErrorExtensionNotPresent) {
         ERR_EXIT(
             "Cannot find a specified extension library.\n"
             "Make sure your layers path is set appropriately.\n",
             "vkCreateInstance Failure");
     }
-    else if (inst_handle.result != vk::Result::eSuccess) {
+    else if (instance_handle.result != vk::Result::eSuccess) {
         ERR_EXIT(
             "vkCreateInstance failed.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-    inst = std::move(inst_handle.value);
+    instance = std::move(instance_handle.value);
 
     // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
-    result = inst->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
+    result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (gpu_count <= 0) {
@@ -588,7 +587,7 @@ void App::init_vk() {
     }
 
     std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
-    result = inst->enumeratePhysicalDevices(&gpu_count, physical_devices.get());
+    result = instance->enumeratePhysicalDevices(&gpu_count, physical_devices.get());
     VERIFY(result == vk::Result::eSuccess);
 
     // Try to auto select most suitable device
@@ -670,7 +669,7 @@ void App::init_vk() {
 void App::create_surface() {
     auto const surf_info = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
 
-    auto surface_handle = inst->createWin32SurfaceKHRUnique(surf_info);
+    auto surface_handle = instance->createWin32SurfaceKHRUnique(surf_info);
     VERIFY(surface_handle.result == vk::Result::eSuccess);
     surface = std::move(surface_handle.value);
 }
@@ -753,27 +752,25 @@ void App::init_vk_swapchain() {
     present_queue = graphics_queue;
 
     // Get the list of VkFormat's that are supported:
-    uint32_t formatCount;
-    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &formatCount, static_cast<vk::SurfaceFormatKHR*>(nullptr));
+    uint32_t format_count;
+    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
-    std::unique_ptr<vk::SurfaceFormatKHR[]> surfFormats(new vk::SurfaceFormatKHR[formatCount]);
-    result = gpu.getSurfaceFormatsKHR(surface.get(), &formatCount, surfFormats.get());
+    std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
+    result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, surface_formats.get());
     VERIFY(result == vk::Result::eSuccess);
 
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    if (formatCount == 1 && surfFormats[0].format == vk::Format::eUndefined) {
+    if (format_count == 1 && surface_formats[0].format == vk::Format::eUndefined) {
         format = vk::Format::eB8G8R8A8Unorm;
     }
     else {
-        VERIFY(formatCount >= 1);
-        format = surfFormats[0].format;
+        VERIFY(format_count >= 1);
+        format = surface_formats[0].format;
     }
-    color_space = surfFormats[0].colorSpace;
-
-    current_frame = 0;
+    color_space = surface_formats[0].colorSpace;
 
     auto const cmd_pool_info = vk::CommandPoolCreateInfo()
         .setQueueFamilyIndex(graphics_queue_family_index);
@@ -799,7 +796,7 @@ void App::prepare() {
     prepare_render_pass();
     prepare_pipeline();
 
-    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
+    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
         auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
         VERIFY(cmd_handles.result == vk::Result::eSuccess);
         chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
@@ -810,7 +807,7 @@ void App::prepare() {
 
     prepare_framebuffers();
 
-    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
+    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
         current_buffer = i;
         draw_build_cmd(chain->swapchain_image_resources[i].cmd.get());
     }
@@ -953,16 +950,16 @@ void App::prepare_buffers() {
     VERIFY(swapchain_handle.result == vk::Result::eSuccess);
     chain->swapchain = std::move(swapchain_handle.value);
 
-    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchainImageCount, static_cast<vk::Image*>(nullptr));
+    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain->swapchainImageCount]);
-    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchainImageCount, swapchainImages.get());
+    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain->swapchain_image_count]);
+    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, swapchainImages.get());
     VERIFY(result == vk::Result::eSuccess);
 
-    chain->swapchain_image_resources.reset(new SwapchainImageResources[chain->swapchainImageCount]);
+    chain->swapchain_image_resources.reset(new SwapchainImageResources[chain->swapchain_image_count]);
 
-    for (uint32_t i = 0; i < chain->swapchainImageCount; ++i) {
+    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
         chain->swapchain_image_resources[i].image = swapchainImages[i];
 
         auto view_info = vk::ImageViewCreateInfo()
@@ -998,7 +995,7 @@ void App::prepare_uniforms() {
         .setSize(sizeof(data))
         .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
-    for (unsigned int i = 0; i < chain->swapchainImageCount; i++) {
+    for (unsigned int i = 0; i < chain->swapchain_image_count; i++) {
         auto buffer_handle = device->createBufferUnique(buf_info);
         VERIFY(buffer_handle.result == vk::Result::eSuccess);
         chain->swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
@@ -1057,11 +1054,11 @@ void App::prepare_descriptor_pool() {
     vk::DescriptorPoolSize const pool_sizes[1] = { 
         vk::DescriptorPoolSize()
             .setType(vk::DescriptorType::eUniformBuffer)
-            .setDescriptorCount(chain->swapchainImageCount)
+            .setDescriptorCount(chain->swapchain_image_count)
     };
 
     auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
-        .setMaxSets(chain->swapchainImageCount)
+        .setMaxSets(chain->swapchain_image_count)
         .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setPoolSizeCount(1)
         .setPPoolSizes(pool_sizes);
@@ -1087,7 +1084,7 @@ void App::prepare_descriptor_set() {
     writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
     writes[0].setPBufferInfo(&buffer_info);
 
-    for (unsigned int i = 0; i < chain->swapchainImageCount; i++) {
+    for (unsigned int i = 0; i < chain->swapchain_image_count; i++) {
         auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
         VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
         chain->swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
@@ -1109,7 +1106,7 @@ void App::prepare_framebuffers() {
         .setHeight((uint32_t)window.height)
         .setLayers(1);
 
-    for (uint32_t i = 0; i < chain->swapchainImageCount; i++) {
+    for (uint32_t i = 0; i < chain->swapchain_image_count; i++) {
         attachments[0] = chain->swapchain_image_resources[i].view.get();
         auto framebuffer_handle = device->createFramebufferUnique(fb_info);
         VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
@@ -1288,7 +1285,7 @@ void App::resize() {
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
-    for (i = 0; i < chain->swapchainImageCount; i++) {
+    for (i = 0; i < chain->swapchain_image_count; i++) {
         chain->swapchain_image_resources[i].framebuffer.reset();
         chain->swapchain_image_resources[i].descriptor_set.reset();
     }
