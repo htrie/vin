@@ -208,6 +208,8 @@ class App {
 
     void draw_build_cmd(vk::CommandBuffer);
 
+    void wait();
+    void acquire();
     void update_data_buffer();
     void submit() const;
     void present();
@@ -298,12 +300,6 @@ App::App(HINSTANCE hInstance, int nCmdShow)
 App::~App() {
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
-
-    // Wait for fences from present operations
-    for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device->waitForFences(1, &fences[i].get(), VK_TRUE, UINT64_MAX);
-        VERIFY(result == vk::Result::eSuccess);
-    }
 }
 
 void App::run() {
@@ -315,11 +311,22 @@ void App::run() {
 }
 
 void App::draw() {
+    wait();
+    acquire();
+    update_data_buffer(); // [TODO] Rename to record.
+    submit();
+    present();
+}
+
+void App::wait() {
     // Ensure no more than FRAME_LAG renderings are outstanding
     auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
     device->resetFences({ fences[frame_index].get() });
+}
 
+void App::acquire() {
+    vk::Result result;
     do {
         result = device->acquireNextImageKHR(swapchain.get(), UINT64_MAX, image_acquired_semaphores[frame_index].get(), vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
@@ -340,11 +347,6 @@ void App::draw() {
             VERIFY(result == vk::Result::eSuccess);
         }
     } while (result != vk::Result::eSuccess);
-
-    update_data_buffer();
-
-    submit();
-    present();
 }
 
 void App::submit() const {
