@@ -311,3 +311,12 @@ vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
     return queue;
 }
 
+vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
+    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setQueueFamilyIndex(family_index);
+
+    auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);
+    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    return std::move(cmd_pool_handle.value);
+}
+

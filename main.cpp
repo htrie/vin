@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
     vk::UniqueCommandBuffer create_command_buffer() const;
     vk::UniqueSwapchainKHR create_swapchain() const;
     vk::UniqueFence create_fence() const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     auto family_index = find_queue_family(gpu, surface.get());
     device = create_device(gpu, family_index);
     queue = fetch_queue(device.get(), family_index);
-    cmd_pool = create_command_pool(family_index);
+    cmd_pool = create_command_pool(device.get(), family_index);
     desc_layout = create_descriptor_layout();
     pipeline_layout = create_pipeline_layout();
     render_pass = create_render_pass();
@@ -451,15 +450,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {
-    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
-        .setQueueFamilyIndex(family_index);
-
-    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
-    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
-    return std::move(cmd_pool_handle.value);
 }
 
 vk::UniqueFence App::create_fence() const {
