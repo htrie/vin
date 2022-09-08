@@ -213,6 +213,7 @@ class App {
     vk::UniqueSurfaceKHR create_surface() const;
     uint32_t find_queue_family() const;
     void create_device(uint32_t family_index); // [TODO] Return value.
+    vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
 
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
@@ -295,6 +296,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     surface = create_surface();
     auto family_index = find_queue_family();
     create_device(family_index);
+    cmd_pool = create_command_pool(family_index);
     prepare();
 }
 
@@ -735,13 +737,6 @@ void App::create_device(uint32_t family_index) {
 
     device->getQueue(family_index, 0, &queue);
 
-    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
-        .setQueueFamilyIndex(family_index);
-
-    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
-    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
-    cmd_pool = std::move(cmd_pool_handle.value);
-
     // Get the list of VkFormat's that are supported:
     uint32_t format_count;
     result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
@@ -762,6 +757,15 @@ void App::create_device(uint32_t family_index) {
         format = surface_formats[0].format;
     }
     color_space = surface_formats[0].colorSpace;
+}
+
+vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {
+    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setQueueFamilyIndex(family_index);
+
+    auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
+    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    return std::move(cmd_pool_handle.value);
 }
 
 void App::prepare() {
