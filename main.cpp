@@ -191,7 +191,7 @@ class App {
     vk::UniqueSwapchainKHR create_swapchain() const;
     vk::UniqueFence create_fence() const;
     vk::UniqueSemaphore create_semaphore() const;
-
+    vk::UniqueImageView create_image_view(const vk::Image& image) const;
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
@@ -201,7 +201,7 @@ class App {
     void prepare_framebuffers(); // [TODO] Return value.
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
     vk::UniquePipeline create_pipeline() const;
-    vk::UniqueRenderPass prepare_render_pass() const;
+    vk::UniqueRenderPass create_render_pass() const;
 
     void draw_build_cmd(vk::CommandBuffer);
 
@@ -790,7 +790,7 @@ void App::prepare() {
     prepare_uniforms();
     desc_layout = create_descriptor_layout();
     pipeline_layout = create_pipeline_layout();
-    render_pass = prepare_render_pass();
+    render_pass = create_render_pass();
     pipeline = create_pipeline();
 
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
@@ -880,6 +880,18 @@ vk::UniqueSwapchainKHR App::create_swapchain() const {
     return std::move(swapchain_handle.value);
 }
 
+vk::UniqueImageView App::create_image_view(const vk::Image& image) const {
+    auto view_info = vk::ImageViewCreateInfo()
+        .setViewType(vk::ImageViewType::e2D)
+        .setFormat(surface_format.format)
+        .setImage(image)
+        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+    auto view_handle = device->createImageViewUnique(view_info);
+    VERIFY(view_handle.result == vk::Result::eSuccess);
+    return std::move(view_handle.value);
+}
+
 void App::prepare_buffers() {
     auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
@@ -892,16 +904,7 @@ void App::prepare_buffers() {
 
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         swapchain_image_resources[i].image = swapchainImages[i];
-
-        auto view_info = vk::ImageViewCreateInfo()
-            .setViewType(vk::ImageViewType::e2D)
-            .setFormat(surface_format.format)
-            .setImage(swapchain_image_resources[i].image)
-            .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        auto view_handle = device->createImageViewUnique(view_info);
-        VERIFY(view_handle.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].view = std::move(view_handle.value);
+        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
     }
 }
 
@@ -1120,7 +1123,7 @@ vk::UniquePipeline App::create_pipeline() const {
     return std::move(pipeline_handles.value[0]);
 }
 
-vk::UniqueRenderPass App::prepare_render_pass() const {
+vk::UniqueRenderPass App::create_render_pass() const {
     // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
     // because at the start of the renderpass, we don't care about their contents.
     // At the start of the subpass, the color attachment's layout will be transitioned
