@@ -812,14 +812,6 @@ void App::prepare_buffers() {
     auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
     VERIFY(result == vk::Result::eSuccess);
 
-    uint32_t presentModeCount;
-    result = gpu.getSurfacePresentModesKHR(surface.get(), &presentModeCount, static_cast<vk::PresentModeKHR*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-
-    std::unique_ptr<vk::PresentModeKHR[]> presentModes(new vk::PresentModeKHR[presentModeCount]);
-    result = gpu.getSurfacePresentModesKHR(surface.get(), &presentModeCount, presentModes.get());
-    VERIFY(result == vk::Result::eSuccess);
-
     vk::Extent2D swapchainExtent;
     // width and height are either both -1, or both not -1.
     if (surfCapabilities.currentExtent.width == (uint32_t)-1) {
@@ -833,55 +825,6 @@ void App::prepare_buffers() {
         swapchainExtent = surfCapabilities.currentExtent;
         window.width = surfCapabilities.currentExtent.width;
         window.height = surfCapabilities.currentExtent.height;
-    }
-
-    // The FIFO present mode is guaranteed by the spec to be supported
-    // and to have no tearing.  It's a great default present mode to use.
-    vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
-
-    //  There are times when you may wish to use another present mode.  The
-    //  following code shows how to select them, and the comments provide some
-    //  reasons you may wish to use them.
-    //
-    // It should be noted that Vulkan 1.0 doesn't provide a method for
-    // synchronizing rendering with the presentation engine's display.  There
-    // is a method provided for throttling rendering with the display, but
-    // there are some presentation engines for which this method will not work.
-    // If an application doesn't throttle its rendering, and if it renders much
-    // faster than the refresh rate of the display, this can waste power on
-    // mobile devices.  That is because power is being spent rendering images
-    // that may never be seen.
-
-    // VK_PRESENT_MODE_IMMEDIATE_KHR is for applications that don't care
-    // about
-    // tearing, or have some way of synchronizing their rendering with the
-    // display.
-    // VK_PRESENT_MODE_MAILBOX_KHR may be useful for applications that
-    // generally render a new presentable image every refresh cycle, but are
-    // occasionally early.  In this case, the application wants the new
-    // image
-    // to be displayed instead of the previously-queued-for-presentation
-    // image
-    // that has not yet been displayed.
-    // VK_PRESENT_MODE_FIFO_RELAXED_KHR is for applications that generally
-    // render a new presentable image every refresh cycle, but are
-    // occasionally
-    // late.  In this case (perhaps because of stuttering/latency concerns),
-    // the application wants the late image to be immediately displayed,
-    // even
-    // though that may mean some tearing.
-
-    if (chain->presentMode != swapchainPresentMode) {
-        for (size_t i = 0; i < presentModeCount; ++i) {
-            if (presentModes[i] == chain->presentMode) {
-                swapchainPresentMode = chain->presentMode;
-                break;
-            }
-        }
-    }
-
-    if (swapchainPresentMode != chain->presentMode) {
-        ERR_EXIT("Present mode specified is not supported\n", "Present mode unsupported");
     }
 
     // Determine the number of VkImages to use in the swap chain.
@@ -934,7 +877,7 @@ void App::prepare_buffers() {
         .setPQueueFamilyIndices(nullptr)
         .setPreTransform(preTransform)
         .setCompositeAlpha(compositeAlpha)
-        .setPresentMode(swapchainPresentMode)
+        .setPresentMode(vk::PresentModeKHR::eFifo)
         .setClipped(true)
         .setOldSwapchain(chain->swapchain.get());
 
