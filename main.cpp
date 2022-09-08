@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    vk::PhysicalDevice pick_gpu() const;
     vk::UniqueSurfaceKHR create_surface() const;
     uint32_t find_queue_family() const;
     vk::SurfaceFormatKHR select_format() const;
@@ -275,7 +274,7 @@ bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
     instance = create_instance();
-    gpu = pick_gpu();
+    gpu = pick_gpu(instance.get());
     surface = create_surface();
     auto family_index = find_queue_family();
     device = create_device(family_index);
@@ -457,65 +456,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::PhysicalDevice App::pick_gpu() const {
-    // Make initial call to query gpu_count, then second call for gpu info
-    uint32_t gpu_count = 0;
-    auto result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-
-    if (gpu_count <= 0) {
-        ERR_EXIT(
-            "vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
-            "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-            "Please look at the Getting Started guide for additional information.\n",
-            "vkEnumeratePhysicalDevices Failure");
-    }
-
-    std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
-    result = instance->enumeratePhysicalDevices(&gpu_count, physical_devices.get());
-    VERIFY(result == vk::Result::eSuccess);
-
-    // Try to auto select most suitable device
-    int32_t gpu_number = -1;
-    {
-        uint32_t count_device_type[VK_PHYSICAL_DEVICE_TYPE_CPU + 1];
-        memset(count_device_type, 0, sizeof(count_device_type));
-
-        for (uint32_t i = 0; i < gpu_count; i++) {
-            const auto physicalDeviceProperties = physical_devices[i].getProperties();
-            VERIFY(static_cast<int>(physicalDeviceProperties.deviceType) <= VK_PHYSICAL_DEVICE_TYPE_CPU);
-            count_device_type[static_cast<int>(physicalDeviceProperties.deviceType)]++;
-        }
-
-        const vk::PhysicalDeviceType device_type_preference[] = {
-            vk::PhysicalDeviceType::eDiscreteGpu,
-            vk::PhysicalDeviceType::eIntegratedGpu,
-            vk::PhysicalDeviceType::eVirtualGpu,
-            vk::PhysicalDeviceType::eCpu,
-            vk::PhysicalDeviceType::eOther
-        };
-        auto search_for_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
-        for (uint32_t i = 0; i < sizeof(device_type_preference) / sizeof(vk::PhysicalDeviceType); i++) {
-            if (count_device_type[static_cast<int>(device_type_preference[i])]) {
-                search_for_device_type = device_type_preference[i];
-                break;
-            }
-        }
-
-        for (uint32_t i = 0; i < gpu_count; i++) {
-            const auto physicalDeviceProperties = physical_devices[i].getProperties();
-            if (physicalDeviceProperties.deviceType == search_for_device_type) {
-                gpu_number = i;
-                break;
-            }
-        }
-    }
-    if (gpu_number == (uint32_t)-1) {
-        ERR_EXIT("physical device auto-select failed.\n", "Device Selection Failure");
-    }
-    return physical_devices[gpu_number];
 }
 
 vk::UniqueSurfaceKHR App::create_surface() const {
