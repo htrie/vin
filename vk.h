@@ -626,3 +626,19 @@ vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image&
     return std::move(view_handle.value);
 }
 
+vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
+    const vk::ImageView attachments[1] = { image_view };
+
+    auto const fb_info = vk::FramebufferCreateInfo()
+        .setRenderPass(render_pass)
+        .setAttachmentCount(1)
+        .setPAttachments(attachments)
+        .setWidth((uint32_t)window_width)
+        .setHeight((uint32_t)window_height)
+        .setLayers(1);
+
+    auto framebuffer_handle = device.createFramebufferUnique(fb_info);
+    VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
+    return std::move(framebuffer_handle.value);
+}
+

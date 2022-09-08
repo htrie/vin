@@ -171,7 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     vk::UniqueBuffer create_uniform_buffer() const;
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
@@ -500,22 +499,6 @@ void App::update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& b
     device->updateDescriptorSets(1, writes, 0, nullptr);
 }
 
-vk::UniqueFramebuffer App::create_framebuffer(const vk::ImageView& image_view) const {
-    const vk::ImageView attachments[1] = { image_view };
-
-    auto const fb_info = vk::FramebufferCreateInfo()
-        .setRenderPass(render_pass.get())
-        .setAttachmentCount(1)
-        .setPAttachments(attachments)
-        .setWidth((uint32_t)window.width)
-        .setHeight((uint32_t)window.height)
-        .setLayers(1);
-
-    auto framebuffer_handle = device->createFramebufferUnique(fb_info);
-    VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
-    return std::move(framebuffer_handle.value);
-}
-
 void App::resize() {
     if (!device) // [TODO] Remove.
         return;
@@ -546,7 +529,7 @@ void App::resize() {
         swapchain_image_resources[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
         swapchain_image_resources[i].descriptor_set = create_descriptor_set();
         update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
-        swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
+        swapchain_image_resources[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), swapchain_image_resources[i].view.get(), window.width, window.height);
 
         current_buffer = i;
         draw_build_cmd(swapchain_image_resources[i].cmd.get()); // [TODO] Do every frame.
