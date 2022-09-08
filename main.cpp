@@ -214,6 +214,7 @@ class App {
     vk::UniqueDevice create_device(uint32_t family_index) const;
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
+    vk::UniqueSwapchainKHR create_swapchain() const;
 
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
@@ -776,6 +777,7 @@ vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {
 void App::prepare() {
     chain = std::make_unique<Chain>(device.get());
 
+    chain->swapchain = create_swapchain();
     prepare_buffers();
     prepare_uniforms();
     desc_layout = create_descriptor_layout();
@@ -806,7 +808,7 @@ void App::prepare() {
     current_buffer = 0;
 }
 
-void App::prepare_buffers() {
+vk::UniqueSwapchainKHR App::create_swapchain() const {
     vk::SurfaceCapabilitiesKHR surf_caps;
     auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
     VERIFY(result == vk::Result::eSuccess);
@@ -814,16 +816,13 @@ void App::prepare_buffers() {
     vk::Extent2D extent;
     // width and height are either both -1, or both not -1.
     if (surf_caps.currentExtent.width == (uint32_t)-1) {
-        // If the surface size is undefined, the size is set to
-        // the size of the images requested.
+        // If the surface size is undefined, the size is set to the size of the images requested.
         extent.width = window.width;
         extent.height = window.height;
     }
     else {
         // If the surface size is defined, the swap chain size must match
         extent = surf_caps.currentExtent;
-        window.width = surf_caps.currentExtent.width;
-        window.height = surf_caps.currentExtent.height;
     }
 
     // Determine the number of VkImages to use in the swap chain.
@@ -877,9 +876,11 @@ void App::prepare_buffers() {
 
     auto swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
     VERIFY(swapchain_handle.result == vk::Result::eSuccess);
-    chain->swapchain = std::move(swapchain_handle.value);
+    return std::move(swapchain_handle.value);
+}
 
-    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, static_cast<vk::Image*>(nullptr));
+void App::prepare_buffers() {
+    auto result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain->swapchain_image_count]);
@@ -1206,15 +1207,6 @@ void App::resize() {
         chain->swapchain_image_resources[i].framebuffer.reset();
         chain->swapchain_image_resources[i].descriptor_set.reset();
     }
-
-    desc_pool.reset();
-
-    pipeline.reset();
-    render_pass.reset();
-    pipeline_layout.reset();
-    desc_layout.reset();
-
-    chain.reset();
 
     // Second, re-perform the prepare() function, which will re-create the
     // swapchain.
