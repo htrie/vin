@@ -232,7 +232,6 @@ class App {
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
 
-    void init_vk_swapchain(); // [TODO] Remove and make part of SwapChain constructor.
     void prepare();
     void resize();
     void draw();
@@ -294,7 +293,8 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
     create_instance();
     pick_gpu();
-    init_vk_swapchain();
+    create_surface();
+    create_device();
     prepare();
 }
 
@@ -752,15 +752,10 @@ void App::create_device() {
     auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
     VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
     cmd_pool = std::move(cmd_pool_handle.value);
-}
-
-void App::init_vk_swapchain() {
-    create_surface();
-    create_device();
 
     // Get the list of VkFormat's that are supported:
     uint32_t format_count;
-    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
+    result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
@@ -781,21 +776,20 @@ void App::init_vk_swapchain() {
 }
 
 void App::prepare() {
-    auto const cmd_info = vk::CommandBufferAllocateInfo()
-        .setCommandPool(cmd_pool.get())
-        .setLevel(vk::CommandBufferLevel::ePrimary)
-        .setCommandBufferCount(1);
-
     chain = std::make_unique<Chain>(device.get());
 
     prepare_buffers();
     prepare_uniforms();
-
     prepare_descriptor_layout();
     prepare_render_pass();
     prepare_pipeline();
 
     for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
+        auto const cmd_info = vk::CommandBufferAllocateInfo()
+            .setCommandPool(cmd_pool.get())
+            .setLevel(vk::CommandBufferLevel::ePrimary)
+            .setCommandBufferCount(1);
+
         auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
         VERIFY(cmd_handles.result == vk::Result::eSuccess);
         chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
@@ -803,7 +797,6 @@ void App::prepare() {
 
     prepare_descriptor_pool();
     prepare_descriptor_set();
-
     prepare_framebuffers();
 
     for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
