@@ -192,13 +192,13 @@ class App {
     vk::UniqueFence create_fence() const;
     vk::UniqueSemaphore create_semaphore() const;
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
+    vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
     void prepare_descriptor_set(); // [TODO] Return value.
-    void prepare_framebuffers(); // [TODO] Return value.
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
     vk::UniquePipeline create_pipeline() const;
     vk::UniqueRenderPass create_render_pass() const;
@@ -799,7 +799,10 @@ void App::prepare() {
 
     desc_pool = create_descriptor_pool();
     prepare_descriptor_set();
-    prepare_framebuffers();
+
+    for (uint32_t i = 0; i < swapchain_image_count; i++) {
+        swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
+    }
 
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         current_buffer = i;
@@ -1031,8 +1034,8 @@ void App::prepare_descriptor_set() {
     }
 }
 
-void App::prepare_framebuffers() {
-    vk::ImageView attachments[1];
+vk::UniqueFramebuffer App::create_framebuffer(const vk::ImageView& image_view) const {
+    const vk::ImageView attachments[1] = { image_view };
 
     auto const fb_info = vk::FramebufferCreateInfo()
         .setRenderPass(render_pass.get())
@@ -1042,12 +1045,9 @@ void App::prepare_framebuffers() {
         .setHeight((uint32_t)window.height)
         .setLayers(1);
 
-    for (uint32_t i = 0; i < swapchain_image_count; i++) {
-        attachments[0] = swapchain_image_resources[i].view.get();
-        auto framebuffer_handle = device->createFramebufferUnique(fb_info);
-        VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
-    }
+    auto framebuffer_handle = device->createFramebufferUnique(fb_info);
+    VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
+    return std::move(framebuffer_handle.value);
 }
 
 vk::UniquePipeline App::create_pipeline() const {
