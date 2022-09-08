@@ -348,3 +348,62 @@ vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const 
     return std::move(pipeline_layout_handle.value);
 }
 
+vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
+    // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
+    // because at the start of the renderpass, we don't care about their contents.
+    // At the start of the subpass, the color attachment's layout will be transitioned
+    // to LAYOUT_COLOR_ATTACHMENT_OPTIMAL and the depth stencil attachment's layout
+    // will be transitioned to LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL.  At the end of
+    // the renderpass, the color attachment's layout will be transitioned to
+    // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
+    // the renderpass, no barriers are necessary.
+    const vk::AttachmentDescription attachments[1] = {
+        vk::AttachmentDescription()
+          .setFormat(surface_format.format)
+          .setSamples(vk::SampleCountFlagBits::e1)
+          .setLoadOp(vk::AttachmentLoadOp::eClear)
+          .setStoreOp(vk::AttachmentStoreOp::eStore)
+          .setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+          .setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+          .setInitialLayout(vk::ImageLayout::eUndefined)
+          .setFinalLayout(vk::ImageLayout::ePresentSrcKHR)
+    };
+
+    auto const color_reference = vk::AttachmentReference()
+        .setAttachment(0)
+        .setLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
+    auto const subpass = vk::SubpassDescription()
+        .setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+        .setInputAttachmentCount(0)
+        .setPInputAttachments(nullptr)
+        .setColorAttachmentCount(1)
+        .setPColorAttachments(&color_reference)
+        .setPResolveAttachments(nullptr)
+        .setPreserveAttachmentCount(0)
+        .setPPreserveAttachments(nullptr);
+
+    vk::SubpassDependency const dependencies[1] = {
+        vk::SubpassDependency()  // Image layout transition
+            .setSrcSubpass(VK_SUBPASS_EXTERNAL)
+            .setDstSubpass(0)
+            .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+            .setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+            .setSrcAccessMask(vk::AccessFlagBits())
+            .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead)
+            .setDependencyFlags(vk::DependencyFlags()),
+    };
+
+    auto const rp_info = vk::RenderPassCreateInfo()
+        .setAttachmentCount(1)
+        .setPAttachments(attachments)
+        .setSubpassCount(1)
+        .setPSubpasses(&subpass)
+        .setDependencyCount(1)
+        .setPDependencies(dependencies);
+
+    auto render_pass_handle = device.createRenderPassUnique(rp_info);
+    VERIFY(render_pass_handle.result == vk::Result::eSuccess);
+    return std::move(render_pass_handle.value);
+}
+
