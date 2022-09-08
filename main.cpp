@@ -211,7 +211,7 @@ class App {
 
     uint32_t current_buffer = 0;
 
-    void create_instance();
+    vk::UniqueInstance create_instance() const;
     void pick_gpu();
     void create_surface();
     void create_device();
@@ -291,7 +291,7 @@ bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
-    create_instance();
+    instance = create_instance();
     pick_gpu();
     create_surface();
     create_device();
@@ -467,7 +467,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void App::create_instance() {
+vk::UniqueInstance App::create_instance() const {
     // Look for validation layers
     uint32_t enabled_layer_count = 0;
     char const* enabled_layers[64];
@@ -564,7 +564,7 @@ void App::create_instance() {
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
-    instance = std::move(instance_handle.value);
+    return std::move(instance_handle.value);
 }
 
 void App::pick_gpu() {
