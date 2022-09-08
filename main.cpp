@@ -171,9 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
-    void* map_memory(const vk::DeviceMemory& memory) const;
-    void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
     vk::UniqueDescriptorSet create_descriptor_set() const;
     void update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const;
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
@@ -187,8 +184,6 @@ class App {
     void update_data_buffer();
     void submit() const;
     void present();
-
-    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*) const;
 
     void resize();
     void draw();
@@ -433,34 +428,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueDeviceMemory App::create_uniform_memory(const vk::Buffer& buffer) const {
-    vk::MemoryRequirements mem_reqs;
-    device->getBufferMemoryRequirements(buffer, &mem_reqs);
-
-    auto mem_info = vk::MemoryAllocateInfo()
-        .setAllocationSize(mem_reqs.size)
-        .setMemoryTypeIndex(0);
-
-    bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
-    VERIFY(pass);
-
-    auto memory_handle = device->allocateMemoryUnique(mem_info);
-    VERIFY(memory_handle.result == vk::Result::eSuccess);
-    return std::move(memory_handle.value);
-}
-
-void* App::map_memory(const vk::DeviceMemory& memory) const {
-    void* mem = nullptr;
-    const auto result = device->mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
-    VERIFY(result == vk::Result::eSuccess);
-    return mem;
-}
-
-void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
-    const auto result = device->bindBufferMemory(buffer, memory, 0);
-    VERIFY(result == vk::Result::eSuccess);
-}
-
 vk::UniqueDescriptorSet App::create_descriptor_set() const {
     auto const alloc_info = vk::DescriptorSetAllocateInfo()
         .setDescriptorPool(desc_pool.get())
@@ -511,9 +478,9 @@ void App::resize() {
         swapchain_image_resources[i].view = create_image_view(device.get(), swapchainImages[i], surface_format);
 
         swapchain_image_resources[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
-        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
-        bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
-        swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
+        swapchain_image_resources[i].uniform_memory = create_uniform_memory(gpu, device.get(), swapchain_image_resources[i].uniform_buffer.get());
+        bind_memory(device.get(), swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
+        swapchain_image_resources[i].uniform_memory_ptr = map_memory(device.get(), swapchain_image_resources[i].uniform_memory.get());
 
         swapchain_image_resources[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
         swapchain_image_resources[i].descriptor_set = create_descriptor_set();
@@ -551,24 +518,6 @@ void App::update_data_buffer() {
     }
 
     memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, &uniforms, sizeof uniforms);
-}
-
-bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) const {
-    vk::PhysicalDeviceMemoryProperties memory_properties;
-    gpu.getMemoryProperties(&memory_properties);
-
-    // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
-        if ((typeBits & 1) == 1) {
-            // Type is available, does it match user properties?
-            if ((memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
-                *typeIndex = i;
-                return true;
-            }
-        }
-        typeBits >>= 1;
-    }
-    return false;
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {

@@ -652,3 +652,49 @@ vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
     return std::move(buffer_handle.value);
 }
 
+bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
+    vk::PhysicalDeviceMemoryProperties memory_properties;
+    gpu.getMemoryProperties(&memory_properties);
+
+    // Search memtypes to find first index with those properties
+    for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
+        if ((typeBits & 1) == 1) {
+            // Type is available, does it match user properties?
+            if ((memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
+                *typeIndex = i;
+                return true;
+            }
+        }
+        typeBits >>= 1;
+    }
+    return false;
+}
+
+vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
+    vk::MemoryRequirements mem_reqs;
+    device.getBufferMemoryRequirements(buffer, &mem_reqs);
+
+    auto mem_info = vk::MemoryAllocateInfo()
+        .setAllocationSize(mem_reqs.size)
+        .setMemoryTypeIndex(0);
+
+    bool const pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
+    VERIFY(pass);
+
+    auto memory_handle = device.allocateMemoryUnique(mem_info);
+    VERIFY(memory_handle.result == vk::Result::eSuccess);
+    return std::move(memory_handle.value);
+}
+
+void* map_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
+    void* mem = nullptr;
+    const auto result = device.mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
+    VERIFY(result == vk::Result::eSuccess);
+    return mem;
+}
+
+void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::DeviceMemory& memory) {
+    const auto result = device.bindBufferMemory(buffer, memory, 0);
+    VERIFY(result == vk::Result::eSuccess);
+}
+
