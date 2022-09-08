@@ -173,8 +173,6 @@ class App {
 
     vk::UniqueCommandBuffer create_command_buffer() const;
     vk::UniqueSwapchainKHR create_swapchain() const;
-    vk::UniqueFence create_fence() const;
-    vk::UniqueSemaphore create_semaphore() const;
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     vk::UniqueBuffer create_uniform_buffer() const;
@@ -270,9 +268,9 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     desc_pool = create_descriptor_pool(device.get());
 
     for (uint32_t i = 0; i < frame_lag; i++) {
-        fences[i] = create_fence();
-        image_acquired_semaphores[i] = create_semaphore();
-        draw_complete_semaphores[i] = create_semaphore();
+        fences[i] = create_fence(device.get());
+        image_acquired_semaphores[i] = create_semaphore(device.get());
+        draw_complete_semaphores[i] = create_semaphore(device.get());
     }
 
     resize();
@@ -438,23 +436,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniqueFence App::create_fence() const {
-    auto const fence_info = vk::FenceCreateInfo()
-        .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-    auto fence_handle = device->createFenceUnique(fence_info);
-    VERIFY(fence_handle.result == vk::Result::eSuccess);
-    return std::move(fence_handle.value);
-}
-
-vk::UniqueSemaphore App::create_semaphore() const {
-    auto const semaphore_info = vk::SemaphoreCreateInfo();
-
-    auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-    VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-    return std::move(semaphore_handle.value);
 }
 
 vk::UniqueCommandBuffer App::create_command_buffer() const {

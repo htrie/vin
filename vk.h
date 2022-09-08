@@ -515,3 +515,20 @@ vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
     return std::move(desc_pool_handle.value);
 }
 
+vk::UniqueFence create_fence(const vk::Device& device) {
+    auto const fence_info = vk::FenceCreateInfo()
+        .setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+    auto fence_handle = device.createFenceUnique(fence_info);
+    VERIFY(fence_handle.result == vk::Result::eSuccess);
+    return std::move(fence_handle.value);
+}
+
+vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
+    auto const semaphore_info = vk::SemaphoreCreateInfo();
+
+    auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
+    VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+    return std::move(semaphore_handle.value);
+}
+
