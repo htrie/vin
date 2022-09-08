@@ -201,8 +201,7 @@ class App {
 
     vk::PhysicalDevice gpu; // [TODO] Move to Device.
     vk::Queue queue;
-    vk::Format format;
-    vk::ColorSpaceKHR color_space;
+    vk::SurfaceFormatKHR surface_format;
 
     Matrices matrices;
 
@@ -212,6 +211,7 @@ class App {
     vk::PhysicalDevice pick_gpu() const;
     vk::UniqueSurfaceKHR create_surface() const;
     uint32_t find_queue_family() const;
+    vk::SurfaceFormatKHR select_format() const;
     void create_device(uint32_t family_index); // [TODO] Return value.
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
@@ -297,6 +297,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     surface = create_surface();
     auto family_index = find_queue_family();
     create_device(family_index);
+    surface_format = select_format();
     queue = fetch_queue(family_index);
     cmd_pool = create_command_pool(family_index);
     prepare();
@@ -736,11 +737,14 @@ void App::create_device(uint32_t family_index) {
     auto device_handle = gpu.createDeviceUnique(device_info);
     VERIFY(device_handle.result == vk::Result::eSuccess);
     device = std::move(device_handle.value);
+}
 
+vk::SurfaceFormatKHR App::select_format() const {
     // Get the list of VkFormat's that are supported:
-    uint32_t format_count;
-    result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
+    uint32_t format_count = 0;
+    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
+    VERIFY(format_count > 0);
 
     std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
     result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, surface_formats.get());
@@ -749,14 +753,10 @@ void App::create_device(uint32_t family_index) {
     // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
     // the surface has no preferred format.  Otherwise, at least one
     // supported format will be returned.
-    if (format_count == 1 && surface_formats[0].format == vk::Format::eUndefined) {
-        format = vk::Format::eB8G8R8A8Unorm;
-    }
-    else {
-        VERIFY(format_count >= 1);
-        format = surface_formats[0].format;
-    }
-    color_space = surface_formats[0].colorSpace;
+    vk::SurfaceFormatKHR res = surface_formats[0];
+    if (surface_formats[0].format == vk::Format::eUndefined)
+        res.format = vk::Format::eB8G8R8A8Unorm;
+    return res;
 }
 
 vk::Queue App::fetch_queue(uint32_t family_index) const {
@@ -924,8 +924,8 @@ void App::prepare_buffers() {
     auto const swapchain_info = vk::SwapchainCreateInfoKHR()
         .setSurface(surface.get())
         .setMinImageCount(desiredNumOfSwapchainImages)
-        .setImageFormat(format)
-        .setImageColorSpace(color_space)
+        .setImageFormat(surface_format.format)
+        .setImageColorSpace(surface_format.colorSpace)
         .setImageExtent({ swapchainExtent.width, swapchainExtent.height })
         .setImageArrayLayers(1)
         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
@@ -956,7 +956,7 @@ void App::prepare_buffers() {
 
         auto view_info = vk::ImageViewCreateInfo()
             .setViewType(vk::ImageViewType::e2D)
-            .setFormat(format)
+            .setFormat(surface_format.format)
             .setImage(chain->swapchain_image_resources[i].image)
             .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
@@ -1192,7 +1192,7 @@ vk::UniqueRenderPass App::prepare_render_pass() const {
     // the renderpass, no barriers are necessary.
     const vk::AttachmentDescription attachments[1] = {
         vk::AttachmentDescription()
-          .setFormat(format)
+          .setFormat(surface_format.format)
           .setSamples(vk::SampleCountFlagBits::e1)
           .setLoadOp(vk::AttachmentLoadOp::eClear)
           .setStoreOp(vk::AttachmentStoreOp::eStore)
