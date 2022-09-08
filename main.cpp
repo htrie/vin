@@ -208,6 +208,8 @@ class App {
 
     void draw_build_cmd(vk::CommandBuffer);
 
+    void wait_idle() const;
+
     void wait();
     void acquire();
     void update_data_buffer();
@@ -298,8 +300,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
 }
 
 App::~App() {
-    auto result = device->waitIdle();
-    VERIFY(result == vk::Result::eSuccess);
+    wait_idle();
 }
 
 void App::run() {
@@ -316,6 +317,11 @@ void App::draw() {
     update_data_buffer(); // [TODO] Rename to record.
     submit();
     present();
+}
+
+void App::wait_idle() const {
+    auto result = device->waitIdle();
+    VERIFY(result == vk::Result::eSuccess);
 }
 
 void App::wait() {
@@ -1154,13 +1160,12 @@ void App::resize() {
     if (!device) // [TODO] Remove.
         return;
 
-    auto result = device->waitIdle();
-    VERIFY(result == vk::Result::eSuccess);
+    wait_idle();
 
     swapchain = create_swapchain();
 
     uint32_t swapchain_image_count = 0;
-    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
+    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
