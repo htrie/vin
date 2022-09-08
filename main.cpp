@@ -166,6 +166,7 @@ class App {
     uint32_t swapchain_image_count = 0;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::UniqueSwapchainKHR swapchain;
+
     vk::UniqueFence fences[FRAME_LAG];
     vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
@@ -280,6 +281,18 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     surface_format = select_format();
     queue = fetch_queue(family_index);
     cmd_pool = create_command_pool(family_index);
+    desc_layout = create_descriptor_layout();
+    pipeline_layout = create_pipeline_layout();
+    render_pass = create_render_pass();
+    pipeline = create_pipeline();
+    desc_pool = create_descriptor_pool();
+
+    for (uint32_t i = 0; i < FRAME_LAG; i++) {
+        fences[i] = create_fence();
+        image_acquired_semaphores[i] = create_semaphore();
+        draw_complete_semaphores[i] = create_semaphore();
+    }
+
     prepare();
 }
 
@@ -783,18 +796,7 @@ vk::UniqueCommandBuffer App::create_command_buffer() const {
 }
 
 void App::prepare() {
-    for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        fences[i] = create_fence();
-        image_acquired_semaphores[i] = create_semaphore();
-        draw_complete_semaphores[i] = create_semaphore();
-    }
-
     swapchain = create_swapchain();
-    desc_layout = create_descriptor_layout();
-    pipeline_layout = create_pipeline_layout();
-    render_pass = create_render_pass(); // [TODO] Needed only once.
-    pipeline = create_pipeline(); // [TODO] Needed only once.
-    desc_pool = create_descriptor_pool(); // [TODO] Needed only once.
 
     prepare_buffers();
 
