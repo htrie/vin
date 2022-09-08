@@ -151,39 +151,6 @@ struct SwapchainImageResources {
     vk::UniqueDescriptorSet descriptor_set;
 };
 
-struct Chain {
-    uint32_t swapchain_image_count = 0;
-    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
-    vk::UniqueSwapchainKHR swapchain;
-    vk::UniqueFence fences[FRAME_LAG];
-    vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
-    vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
-    uint32_t frame_index = 0;
-
-    Chain(vk::Device& device) {
-        for (uint32_t i = 0; i < FRAME_LAG; i++) {
-            auto const fence_info = vk::FenceCreateInfo()
-                .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-            auto fence_handle = device.createFenceUnique(fence_info);
-            VERIFY(fence_handle.result == vk::Result::eSuccess);
-            fences[i] = std::move(fence_handle.value);
-
-            auto const semaphore_info = vk::SemaphoreCreateInfo();
-
-            auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
-            VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-            image_acquired_semaphores[i] = std::move(semaphore_handle.value);
-
-            semaphore_handle = device.createSemaphoreUnique(semaphore_info);
-            VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-            draw_complete_semaphores[i] = std::move(semaphore_handle.value);
-        }
-
-        frame_index = 0;
-    }
-};
-
 class App {
     vk::UniqueInstance instance;
     vk::UniqueSurfaceKHR surface;
@@ -196,7 +163,13 @@ class App {
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    std::unique_ptr<Chain> chain; // [TODO] Remove.
+    uint32_t swapchain_image_count = 0;
+    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
+    vk::UniqueSwapchainKHR swapchain;
+    vk::UniqueFence fences[FRAME_LAG];
+    vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
+    vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
+    uint32_t frame_index = 0;
 
     vk::PhysicalDevice gpu;
     vk::Queue queue;
@@ -309,12 +282,12 @@ App::~App() {
 
     // Wait for fences from present operations
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        result = device->waitForFences(1, &chain->fences[i].get(), VK_TRUE, UINT64_MAX);
+        result = device->waitForFences(1, &fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
     }
 
-    for (uint32_t i = 0; i < chain->swapchain_image_count; i++) {
-        device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
+    for (uint32_t i = 0; i < swapchain_image_count; i++) {
+        device->unmapMemory(swapchain_image_resources[i].uniform_memory.get());
     }
 }
 
@@ -328,13 +301,13 @@ void App::run() {
 
 void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    auto result = device->waitForFences(1, &chain->fences[chain->frame_index].get(), VK_TRUE, UINT64_MAX);
+    auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
 
-    device->resetFences({ chain->fences[chain->frame_index].get() });
+    device->resetFences({ fences[frame_index].get() });
 
     do {
-        result = device->acquireNextImageKHR(chain->swapchain.get(), UINT64_MAX, chain->image_acquired_semaphores[chain->frame_index].get(), vk::Fence(), &current_buffer);
+        result = device->acquireNextImageKHR(swapchain.get(), UINT64_MAX, image_acquired_semaphores[frame_index].get(), vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
             // swapchain is out of date (e.g. the window was resized) and must be recreated:
             resize();
@@ -364,27 +337,27 @@ void App::draw() {
     auto const submit_info = vk::SubmitInfo()
         .setPWaitDstStageMask(&pipe_stage_flags)
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&chain->image_acquired_semaphores[chain->frame_index].get())
+        .setPWaitSemaphores(&image_acquired_semaphores[frame_index].get())
         .setCommandBufferCount(1)
-        .setPCommandBuffers(&chain->swapchain_image_resources[current_buffer].cmd.get())
+        .setPCommandBuffers(&swapchain_image_resources[current_buffer].cmd.get())
         .setSignalSemaphoreCount(1)
-        .setPSignalSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get());
+        .setPSignalSemaphores(&draw_complete_semaphores[frame_index].get());
 
-    result = queue.submit(1, &submit_info, chain->fences[chain->frame_index].get());
+    result = queue.submit(1, &submit_info, fences[frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 
     // If we are using separate queues we have to wait for image ownership,
     // otherwise wait for draw complete
     auto const present_info = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&chain->draw_complete_semaphores[chain->frame_index].get())
+        .setPWaitSemaphores(&draw_complete_semaphores[frame_index].get())
         .setSwapchainCount(1)
-        .setPSwapchains(&chain->swapchain.get())
+        .setPSwapchains(&swapchain.get())
         .setPImageIndices(&current_buffer);
 
     result = queue.presentKHR(&present_info);
-    chain->frame_index += 1;
-    chain->frame_index %= FRAME_LAG;
+    frame_index += 1;
+    frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
         // swapchain is out of date (e.g. the window was resized) and must be recreated:
         resize();
@@ -416,7 +389,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     auto const pass_info = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass.get())
-        .setFramebuffer(chain->swapchain_image_resources[current_buffer].framebuffer.get())
+        .setFramebuffer(swapchain_image_resources[current_buffer].framebuffer.get())
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
         .setClearValueCount(2)
         .setPClearValues(clearValues);
@@ -426,7 +399,7 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     commandBuffer.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &chain->swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
+    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &swapchain_image_resources[current_buffer].descriptor_set.get(), 0, nullptr);
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -775,9 +748,26 @@ vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {
 }
 
 void App::prepare() {
-    chain = std::make_unique<Chain>(device.get());
+    for (uint32_t i = 0; i < FRAME_LAG; i++) {
+        auto const fence_info = vk::FenceCreateInfo()
+            .setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-    chain->swapchain = create_swapchain();
+        auto fence_handle = device->createFenceUnique(fence_info);
+        VERIFY(fence_handle.result == vk::Result::eSuccess);
+        fences[i] = std::move(fence_handle.value);
+
+        auto const semaphore_info = vk::SemaphoreCreateInfo();
+
+        auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
+        VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+        image_acquired_semaphores[i] = std::move(semaphore_handle.value);
+
+        semaphore_handle = device->createSemaphoreUnique(semaphore_info);
+        VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+        draw_complete_semaphores[i] = std::move(semaphore_handle.value);
+    }
+
+    swapchain = create_swapchain();
     prepare_buffers();
     prepare_uniforms();
     desc_layout = create_descriptor_layout();
@@ -785,7 +775,7 @@ void App::prepare() {
     render_pass = prepare_render_pass();
     pipeline = create_pipeline();
 
-    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
+    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         auto const cmd_info = vk::CommandBufferAllocateInfo()
             .setCommandPool(cmd_pool.get())
             .setLevel(vk::CommandBufferLevel::ePrimary)
@@ -793,16 +783,16 @@ void App::prepare() {
 
         auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
         VERIFY(cmd_handles.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
+        swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
     }
 
     desc_pool = create_descriptor_pool();
     prepare_descriptor_set();
     prepare_framebuffers();
 
-    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
+    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         current_buffer = i;
-        draw_build_cmd(chain->swapchain_image_resources[i].cmd.get());
+        draw_build_cmd(swapchain_image_resources[i].cmd.get());
     }
 
     current_buffer = 0;
@@ -872,7 +862,7 @@ vk::UniqueSwapchainKHR App::create_swapchain() const {
         .setCompositeAlpha(compositeAlpha)
         .setPresentMode(vk::PresentModeKHR::eFifo)
         .setClipped(true)
-        .setOldSwapchain(chain->swapchain.get());
+        .setOldSwapchain(swapchain.get());
 
     auto swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
     VERIFY(swapchain_handle.result == vk::Result::eSuccess);
@@ -880,27 +870,27 @@ vk::UniqueSwapchainKHR App::create_swapchain() const {
 }
 
 void App::prepare_buffers() {
-    auto result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, static_cast<vk::Image*>(nullptr));
+    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[chain->swapchain_image_count]);
-    result = device->getSwapchainImagesKHR(chain->swapchain.get(), &chain->swapchain_image_count, swapchainImages.get());
+    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
+    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
     VERIFY(result == vk::Result::eSuccess);
 
-    chain->swapchain_image_resources.reset(new SwapchainImageResources[chain->swapchain_image_count]);
+    swapchain_image_resources.reset(new SwapchainImageResources[swapchain_image_count]);
 
-    for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
-        chain->swapchain_image_resources[i].image = swapchainImages[i];
+    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
+        swapchain_image_resources[i].image = swapchainImages[i];
 
         auto view_info = vk::ImageViewCreateInfo()
             .setViewType(vk::ImageViewType::e2D)
             .setFormat(surface_format.format)
-            .setImage(chain->swapchain_image_resources[i].image)
+            .setImage(swapchain_image_resources[i].image)
             .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         auto view_handle = device->createImageViewUnique(view_info);
         VERIFY(view_handle.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].view = std::move(view_handle.value);
+        swapchain_image_resources[i].view = std::move(view_handle.value);
     }
 }
 
@@ -925,13 +915,13 @@ void App::prepare_uniforms() {
         .setSize(sizeof(uniforms))
         .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
-    for (unsigned int i = 0; i < chain->swapchain_image_count; i++) {
+    for (unsigned int i = 0; i < swapchain_image_count; i++) {
         auto buffer_handle = device->createBufferUnique(buf_info);
         VERIFY(buffer_handle.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
+        swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
 
         vk::MemoryRequirements mem_reqs;
-        device->getBufferMemoryRequirements(chain->swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
+        device->getBufferMemoryRequirements(swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
 
         auto mem_info = vk::MemoryAllocateInfo()
             .setAllocationSize(mem_reqs.size)
@@ -942,14 +932,14 @@ void App::prepare_uniforms() {
 
         auto memory_handle = device->allocateMemoryUnique(mem_info);
         VERIFY(memory_handle.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
+        swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
 
-        auto result = device->mapMemory(chain->swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &chain->swapchain_image_resources[i].uniform_memory_ptr);
+        auto result = device->mapMemory(swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
 
-        memcpy(chain->swapchain_image_resources[i].uniform_memory_ptr, &uniforms, sizeof uniforms);
+        memcpy(swapchain_image_resources[i].uniform_memory_ptr, &uniforms, sizeof uniforms);
 
-        result = device->bindBufferMemory(chain->swapchain_image_resources[i].uniform_buffer.get(), chain->swapchain_image_resources[i].uniform_memory.get(), 0);
+        result = device->bindBufferMemory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get(), 0);
         VERIFY(result == vk::Result::eSuccess);
     }
 }
@@ -986,11 +976,11 @@ vk::UniqueDescriptorPool App::create_descriptor_pool() const {
     vk::DescriptorPoolSize const pool_sizes[1] = { 
         vk::DescriptorPoolSize()
             .setType(vk::DescriptorType::eUniformBuffer)
-            .setDescriptorCount(chain->swapchain_image_count)
+            .setDescriptorCount(swapchain_image_count)
     };
 
     auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
-        .setMaxSets(chain->swapchain_image_count)
+        .setMaxSets(swapchain_image_count)
         .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setPoolSizeCount(1)
         .setPPoolSizes(pool_sizes);
@@ -1016,13 +1006,13 @@ void App::prepare_descriptor_set() {
     writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
     writes[0].setPBufferInfo(&buffer_info);
 
-    for (unsigned int i = 0; i < chain->swapchain_image_count; i++) {
+    for (unsigned int i = 0; i < swapchain_image_count; i++) {
         auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
         VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
+        swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
 
-        buffer_info.setBuffer(chain->swapchain_image_resources[i].uniform_buffer.get());
-        writes[0].setDstSet(chain->swapchain_image_resources[i].descriptor_set.get());
+        buffer_info.setBuffer(swapchain_image_resources[i].uniform_buffer.get());
+        writes[0].setDstSet(swapchain_image_resources[i].descriptor_set.get());
         device->updateDescriptorSets(1, writes, 0, nullptr);
     }
 }
@@ -1038,11 +1028,11 @@ void App::prepare_framebuffers() {
         .setHeight((uint32_t)window.height)
         .setLayers(1);
 
-    for (uint32_t i = 0; i < chain->swapchain_image_count; i++) {
-        attachments[0] = chain->swapchain_image_resources[i].view.get();
+    for (uint32_t i = 0; i < swapchain_image_count; i++) {
+        attachments[0] = swapchain_image_resources[i].view.get();
         auto framebuffer_handle = device->createFramebufferUnique(fb_info);
         VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
-        chain->swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
+        swapchain_image_resources[i].framebuffer = std::move(framebuffer_handle.value);
     }
 }
 
@@ -1203,9 +1193,9 @@ void App::resize() {
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
-    for (i = 0; i < chain->swapchain_image_count; i++) {
-        chain->swapchain_image_resources[i].framebuffer.reset();
-        chain->swapchain_image_resources[i].descriptor_set.reset();
+    for (i = 0; i < swapchain_image_count; i++) {
+        swapchain_image_resources[i].framebuffer.reset();
+        swapchain_image_resources[i].descriptor_set.reset();
     }
 
     // Second, re-perform the prepare() function, which will re-create the
@@ -1226,7 +1216,7 @@ void App::update_data_buffer() {
     mat4x4 MVP;
     mat4x4_mul(MVP, VP, matrices.model_matrix);
 
-    memcpy(chain->swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
+    memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
 }
 
 bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
