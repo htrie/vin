@@ -226,3 +226,62 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
     return graphics_queue_family_index;
 }
 
+vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_index) {
+    float const priorities[1] = { 0.0 };
+
+    vk::DeviceQueueCreateInfo queues[2];
+    queues[0].setQueueFamilyIndex(family_index);
+    queues[0].setQueueCount(1);
+    queues[0].setPQueuePriorities(priorities);
+
+    // Look for device extensions
+    uint32_t enabled_extension_count = 0;
+    char const* extension_names[64];
+
+    uint32_t device_extension_count = 0;
+    vk::Bool32 swapchainExtFound = VK_FALSE;
+    enabled_extension_count = 0;
+    memset(extension_names, 0, sizeof(extension_names));
+
+    const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+
+    if (device_extension_count > 0) {
+        std::unique_ptr<vk::ExtensionProperties[]> device_extensions(new vk::ExtensionProperties[device_extension_count]);
+        const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, device_extensions.get());
+        VERIFY(result == vk::Result::eSuccess);
+
+        for (uint32_t i = 0; i < device_extension_count; i++) {
+            if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
+                swapchainExtFound = 1;
+                extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+            }
+            if (!strcmp("VK_KHR_portability_subset", device_extensions[i].extensionName)) {
+                extension_names[enabled_extension_count++] = "VK_KHR_portability_subset";
+            }
+            VERIFY(enabled_extension_count < 64);
+        }
+    }
+
+    if (!swapchainExtFound) {
+        ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            " extension.\n\n"
+            "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
+            "Please look at the Getting Started guide for additional information.\n",
+            "vkCreateInstance Failure");
+    }
+
+    auto device_info = vk::DeviceCreateInfo()
+        .setQueueCreateInfoCount(1)
+        .setPQueueCreateInfos(queues)
+        .setEnabledLayerCount(0)
+        .setPpEnabledLayerNames(nullptr)
+        .setEnabledExtensionCount(enabled_extension_count)
+        .setPpEnabledExtensionNames((const char* const*)extension_names)
+        .setPEnabledFeatures(nullptr);
+
+    auto device_handle = gpu.createDeviceUnique(device_info);
+    VERIFY(device_handle.result == vk::Result::eSuccess);
+    return std::move(device_handle.value);
+}
+
