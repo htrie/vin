@@ -195,6 +195,7 @@ class App {
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     void prepare_buffers(); // [TODO] Return value.
     vk::UniqueBuffer create_uniform_buffer() const;
+    vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void prepare_uniforms(); // [TODO] Return value.
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
@@ -209,7 +210,7 @@ class App {
 
     void update_data_buffer();
 
-    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*);
+    bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*) const;
 
     void prepare();
     void resize();
@@ -921,6 +922,22 @@ vk::UniqueBuffer App::create_uniform_buffer() const {
     return std::move(buffer_handle.value);
 }
 
+vk::UniqueDeviceMemory App::create_uniform_memory(const vk::Buffer& buffer) const {
+    vk::MemoryRequirements mem_reqs;
+    device->getBufferMemoryRequirements(buffer, &mem_reqs);
+
+    auto mem_info = vk::MemoryAllocateInfo()
+        .setAllocationSize(mem_reqs.size)
+        .setMemoryTypeIndex(0);
+
+    bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
+    VERIFY(pass);
+
+    auto memory_handle = device->allocateMemoryUnique(mem_info);
+    VERIFY(memory_handle.result == vk::Result::eSuccess);
+    return std::move(memory_handle.value);
+}
+
 void App::prepare_uniforms() {
     mat4x4 VP;
     mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
@@ -940,20 +957,7 @@ void App::prepare_uniforms() {
 
     for (unsigned int i = 0; i < swapchain_image_count; i++) {
         swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
-
-        vk::MemoryRequirements mem_reqs;
-        device->getBufferMemoryRequirements(swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
-
-        auto mem_info = vk::MemoryAllocateInfo()
-            .setAllocationSize(mem_reqs.size)
-            .setMemoryTypeIndex(0);
-
-        bool const pass = memory_type_from_properties(mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
-        VERIFY(pass);
-
-        auto memory_handle = device->allocateMemoryUnique(mem_info);
-        VERIFY(memory_handle.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].uniform_memory = std::move(memory_handle.value);
+        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
 
         auto result = device->mapMemory(swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &swapchain_image_resources[i].uniform_memory_ptr);
         VERIFY(result == vk::Result::eSuccess);
@@ -1237,7 +1241,7 @@ void App::update_data_buffer() {
     memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
 }
 
-bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
+bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) const {
     vk::PhysicalDeviceMemoryProperties memory_properties;
     gpu.getMemoryProperties(&memory_properties);
 
