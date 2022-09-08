@@ -790,6 +790,11 @@ void App::prepare() {
     }
 
     swapchain = create_swapchain();
+    desc_layout = create_descriptor_layout();
+    pipeline_layout = create_pipeline_layout();
+    render_pass = create_render_pass(); // [TODO] Needed only once.
+    pipeline = create_pipeline(); // [TODO] Needed only once.
+    desc_pool = create_descriptor_pool(); // [TODO] Needed only once.
 
     prepare_buffers();
 
@@ -798,20 +803,8 @@ void App::prepare() {
         swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
         bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
         swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
-    }
 
-    desc_layout = create_descriptor_layout();
-    pipeline_layout = create_pipeline_layout();
-    render_pass = create_render_pass();
-    pipeline = create_pipeline();
-
-    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         swapchain_image_resources[i].cmd = create_command_buffer();
-    }
-
-    desc_pool = create_descriptor_pool();
-
-    for (unsigned int i = 0; i < swapchain_image_count; i++) {
         swapchain_image_resources[i].descriptor_set = create_descriptor_set();
         update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
         swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
@@ -991,11 +984,11 @@ vk::UniqueDescriptorPool App::create_descriptor_pool() const {
     vk::DescriptorPoolSize const pool_sizes[1] = { 
         vk::DescriptorPoolSize()
             .setType(vk::DescriptorType::eUniformBuffer)
-            .setDescriptorCount(swapchain_image_count)
+            .setDescriptorCount(16)
     };
 
     auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
-        .setMaxSets(swapchain_image_count)
+        .setMaxSets(16)
         .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
         .setPoolSizeCount(1)
         .setPPoolSizes(pool_sizes);
