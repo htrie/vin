@@ -212,7 +212,6 @@ class App {
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*) const;
 
-    void prepare(); // [TODO] Remove, use resize instead.
     void resize();
     void draw();
 
@@ -291,7 +290,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
         draw_complete_semaphores[i] = create_semaphore();
     }
 
-    prepare();
+    resize();
 }
 
 App::~App() {
@@ -789,40 +788,6 @@ vk::UniqueCommandBuffer App::create_command_buffer() const {
     return std::move(cmd_handles.value[0]);
 }
 
-void App::prepare() {
-    swapchain = create_swapchain();
-
-    uint32_t swapchain_image_count = 0;
-    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
-    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
-    VERIFY(result == vk::Result::eSuccess);
-
-    swapchain_image_resources.reset(new SwapchainImageResources[swapchain_image_count]);
-
-    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
-        swapchain_image_resources[i].image = swapchainImages[i];
-        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
-
-        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
-        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
-        bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
-        swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
-
-        swapchain_image_resources[i].cmd = create_command_buffer();
-        swapchain_image_resources[i].descriptor_set = create_descriptor_set();
-        update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
-        swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
-
-        current_buffer = i;
-        draw_build_cmd(swapchain_image_resources[i].cmd.get());
-    }
-
-    current_buffer = 0;
-}
-
 vk::UniqueSwapchainKHR App::create_swapchain() const {
     vk::SurfaceCapabilitiesKHR surf_caps;
     auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
@@ -1176,13 +1141,43 @@ vk::UniqueShaderModule App::create_module(const uint32_t* code, size_t size) con
 }
 
 void App::resize() {
-    if (!device)
+    if (!device) // [TODO] Remove.
         return;
 
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
-    prepare();
+    swapchain = create_swapchain();
+
+    uint32_t swapchain_image_count = 0;
+    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+
+    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
+    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
+    VERIFY(result == vk::Result::eSuccess);
+
+    swapchain_image_resources.reset(new SwapchainImageResources[swapchain_image_count]);
+
+    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
+        swapchain_image_resources[i].image = swapchainImages[i];
+        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
+
+        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
+        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
+        bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
+        swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
+
+        swapchain_image_resources[i].cmd = create_command_buffer();
+        swapchain_image_resources[i].descriptor_set = create_descriptor_set();
+        update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
+        swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
+
+        current_buffer = i;
+        draw_build_cmd(swapchain_image_resources[i].cmd.get()); // [TODO] Do every frame.
+    }
+
+    current_buffer = 0;
 }
 
 void App::update_data_buffer() {
