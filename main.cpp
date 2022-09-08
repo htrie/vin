@@ -391,10 +391,10 @@ void App::draw() {
     }
     else if (result == vk::Result::eSuboptimalKHR) {
         // SUBOPTIMAL could be due to resize
-        vk::SurfaceCapabilitiesKHR surfCapabilities;
-        result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
+        vk::SurfaceCapabilitiesKHR surf_caps;
+        result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
         VERIFY(result == vk::Result::eSuccess);
-        if (surfCapabilities.currentExtent.width != static_cast<uint32_t>(window.width) || surfCapabilities.currentExtent.height != static_cast<uint32_t>(window.height)) {
+        if (surf_caps.currentExtent.width != static_cast<uint32_t>(window.width) || surf_caps.currentExtent.height != static_cast<uint32_t>(window.height)) {
             resize();
         }
     }
@@ -808,13 +808,13 @@ void App::prepare() {
 }
 
 void App::prepare_buffers() {
-    vk::SurfaceCapabilitiesKHR surfCapabilities;
-    auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surfCapabilities);
+    vk::SurfaceCapabilitiesKHR surf_caps;
+    auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::Extent2D swapchainExtent;
     // width and height are either both -1, or both not -1.
-    if (surfCapabilities.currentExtent.width == (uint32_t)-1) {
+    if (surf_caps.currentExtent.width == (uint32_t)-1) {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
         swapchainExtent.width = window.width;
@@ -822,31 +822,31 @@ void App::prepare_buffers() {
     }
     else {
         // If the surface size is defined, the swap chain size must match
-        swapchainExtent = surfCapabilities.currentExtent;
-        window.width = surfCapabilities.currentExtent.width;
-        window.height = surfCapabilities.currentExtent.height;
+        swapchainExtent = surf_caps.currentExtent;
+        window.width = surf_caps.currentExtent.width;
+        window.height = surf_caps.currentExtent.height;
     }
 
     // Determine the number of VkImages to use in the swap chain.
     // Application desires to acquire 3 images at a time for triple
     // buffering
     uint32_t desiredNumOfSwapchainImages = 3;
-    if (desiredNumOfSwapchainImages < surfCapabilities.minImageCount) {
-        desiredNumOfSwapchainImages = surfCapabilities.minImageCount;
+    if (desiredNumOfSwapchainImages < surf_caps.minImageCount) {
+        desiredNumOfSwapchainImages = surf_caps.minImageCount;
     }
 
     // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
-    if ((surfCapabilities.maxImageCount > 0) && (desiredNumOfSwapchainImages > surfCapabilities.maxImageCount)) {
+    if ((surf_caps.maxImageCount > 0) && (desiredNumOfSwapchainImages > surf_caps.maxImageCount)) {
         // Application must settle for fewer images than desired:
-        desiredNumOfSwapchainImages = surfCapabilities.maxImageCount;
+        desiredNumOfSwapchainImages = surf_caps.maxImageCount;
     }
 
     vk::SurfaceTransformFlagBitsKHR preTransform;
-    if (surfCapabilities.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
+    if (surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
         preTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
     }
     else {
-        preTransform = surfCapabilities.currentTransform;
+        preTransform = surf_caps.currentTransform;
     }
 
     // Find a supported composite alpha mode - one of these is guaranteed to be set
@@ -858,7 +858,7 @@ void App::prepare_buffers() {
         vk::CompositeAlphaFlagBitsKHR::eInherit,
     };
     for (uint32_t i = 0; i < 4; i++) {
-        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+        if (surf_caps.supportedCompositeAlpha & compositeAlphaFlags[i]) {
             compositeAlpha = compositeAlphaFlags[i];
             break;
         }
