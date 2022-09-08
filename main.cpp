@@ -153,9 +153,8 @@ struct SwapchainImageResources {
 
 struct Chain {
     uint32_t swapchain_image_count = 0;
-    vk::UniqueSwapchainKHR swapchain;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
-    vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
+    vk::UniqueSwapchainKHR swapchain;
     vk::UniqueFence fences[FRAME_LAG];
     vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
     vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
@@ -812,17 +811,17 @@ void App::prepare_buffers() {
     auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
     VERIFY(result == vk::Result::eSuccess);
 
-    vk::Extent2D swapchainExtent;
+    vk::Extent2D extent;
     // width and height are either both -1, or both not -1.
     if (surf_caps.currentExtent.width == (uint32_t)-1) {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapchainExtent.width = window.width;
-        swapchainExtent.height = window.height;
+        extent.width = window.width;
+        extent.height = window.height;
     }
     else {
         // If the surface size is defined, the swap chain size must match
-        swapchainExtent = surf_caps.currentExtent;
+        extent = surf_caps.currentExtent;
         window.width = surf_caps.currentExtent.width;
         window.height = surf_caps.currentExtent.height;
     }
@@ -830,24 +829,19 @@ void App::prepare_buffers() {
     // Determine the number of VkImages to use in the swap chain.
     // Application desires to acquire 3 images at a time for triple
     // buffering
-    uint32_t desiredNumOfSwapchainImages = 3;
-    if (desiredNumOfSwapchainImages < surf_caps.minImageCount) {
-        desiredNumOfSwapchainImages = surf_caps.minImageCount;
+    uint32_t min_image_count = 3;
+    if (min_image_count < surf_caps.minImageCount) {
+        min_image_count = surf_caps.minImageCount;
     }
 
     // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
-    if ((surf_caps.maxImageCount > 0) && (desiredNumOfSwapchainImages > surf_caps.maxImageCount)) {
+    if ((surf_caps.maxImageCount > 0) && (min_image_count > surf_caps.maxImageCount)) {
         // Application must settle for fewer images than desired:
-        desiredNumOfSwapchainImages = surf_caps.maxImageCount;
+        min_image_count = surf_caps.maxImageCount;
     }
 
-    vk::SurfaceTransformFlagBitsKHR preTransform;
-    if (surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
-        preTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
-    }
-    else {
-        preTransform = surf_caps.currentTransform;
-    }
+    const auto preTransform = surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity ?
+        vk::SurfaceTransformFlagBitsKHR::eIdentity : surf_caps.currentTransform;
 
     // Find a supported composite alpha mode - one of these is guaranteed to be set
     vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
@@ -866,10 +860,10 @@ void App::prepare_buffers() {
 
     auto const swapchain_info = vk::SwapchainCreateInfoKHR()
         .setSurface(surface.get())
-        .setMinImageCount(desiredNumOfSwapchainImages)
+        .setMinImageCount(min_image_count)
         .setImageFormat(surface_format.format)
         .setImageColorSpace(surface_format.colorSpace)
-        .setImageExtent({ swapchainExtent.width, swapchainExtent.height })
+        .setImageExtent({ extent.width, extent.height })
         .setImageArrayLayers(1)
         .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
         .setImageSharingMode(vk::SharingMode::eExclusive)
