@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    uint32_t find_queue_family() const;
     vk::SurfaceFormatKHR select_format() const;
     vk::UniqueDevice create_device(uint32_t family_index) const;
     vk::Queue fetch_queue(uint32_t family_index) const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     instance = create_instance();
     gpu = pick_gpu(instance.get());
     surface = create_surface(instance.get(), window.hinstance, window.hwnd);
-    auto family_index = find_queue_family();
+    auto family_index = find_queue_family(gpu, surface.get());
     device = create_device(family_index);
     surface_format = select_format();
     queue = fetch_queue(family_index);
@@ -455,60 +454,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-uint32_t App::find_queue_family() const {
-    // Call with nullptr data to get count
-    uint32_t queue_family_count = 0;
-    gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
-    VERIFY(queue_family_count >= 1);
-
-    std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
-    queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
-    gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
-
-    // Iterate over each queue to learn whether it supports presenting:
-    std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
-    for (uint32_t i = 0; i < queue_family_count; i++) {
-        const auto result = gpu.getSurfaceSupportKHR(i, surface.get(), &supportsPresent[i]);
-        VERIFY(result == vk::Result::eSuccess);
-    }
-
-    uint32_t graphics_queue_family_index = UINT32_MAX;
-    uint32_t present_queue_family_index = UINT32_MAX;
-    for (uint32_t i = 0; i < queue_family_count; i++) {
-        if (queue_props[i].queueFlags & vk::QueueFlagBits::eGraphics) {
-            if (graphics_queue_family_index == UINT32_MAX) {
-                graphics_queue_family_index = i;
-            }
-
-            if (supportsPresent[i] == VK_TRUE) {
-                graphics_queue_family_index = i;
-                present_queue_family_index = i;
-                break;
-            }
-        }
-    }
-
-    if (present_queue_family_index == UINT32_MAX) {
-        // If didn't find a queue that supports both graphics and present, then
-        // find a separate present queue.
-        for (uint32_t i = 0; i < queue_family_count; ++i) {
-            if (supportsPresent[i] == VK_TRUE) {
-                present_queue_family_index = i;
-                break;
-            }
-        }
-    }
-
-    // Generate error if could not find both a graphics and a present queue
-    if (graphics_queue_family_index == UINT32_MAX || present_queue_family_index == UINT32_MAX) {
-        ERR_EXIT("Could not find both graphics and present queues\n", "Swapchain Initialization Failure");
-    }
-    if (graphics_queue_family_index != present_queue_family_index) {
-        ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
-    }
-    return graphics_queue_family_index;
 }
 
 vk::UniqueDevice App::create_device(uint32_t family_index) const {
