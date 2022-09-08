@@ -171,7 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     vk::UniqueBuffer create_uniform_buffer() const;
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
@@ -436,18 +435,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueImageView App::create_image_view(const vk::Image& image) const {
-    auto view_info = vk::ImageViewCreateInfo()
-        .setViewType(vk::ImageViewType::e2D)
-        .setFormat(surface_format.format)
-        .setImage(image)
-        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-    auto view_handle = device->createImageViewUnique(view_info);
-    VERIFY(view_handle.result == vk::Result::eSuccess);
-    return std::move(view_handle.value);
-}
-
 vk::UniqueBuffer App::create_uniform_buffer() const {
     auto const buf_info = vk::BufferCreateInfo()
         .setSize(sizeof(Uniforms))
@@ -549,7 +536,7 @@ void App::resize() {
 
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         swapchain_image_resources[i].image = swapchainImages[i];
-        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
+        swapchain_image_resources[i].view = create_image_view(device.get(), swapchainImages[i], surface_format);
 
         swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
         swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());

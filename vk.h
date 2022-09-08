@@ -614,3 +614,15 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
     return std::move(swapchain_handle.value);
 }
 
+vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::SurfaceFormatKHR& surface_format) {
+    auto view_info = vk::ImageViewCreateInfo()
+        .setViewType(vk::ImageViewType::e2D)
+        .setFormat(surface_format.format)
+        .setImage(image)
+        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+    auto view_handle = device.createImageViewUnique(view_info);
+    VERIFY(view_handle.result == vk::Result::eSuccess);
+    return std::move(view_handle.value);
+}
+
