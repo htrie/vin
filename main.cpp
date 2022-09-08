@@ -209,6 +209,8 @@ class App {
     void draw_build_cmd(vk::CommandBuffer);
 
     void update_data_buffer();
+    void submit() const;
+    void present();
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*) const;
 
@@ -316,7 +318,6 @@ void App::draw() {
     // Ensure no more than FRAME_LAG renderings are outstanding
     auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
-
     device->resetFences({ fences[frame_index].get() });
 
     do {
@@ -342,6 +343,11 @@ void App::draw() {
 
     update_data_buffer();
 
+    submit();
+    present();
+}
+
+void App::submit() const {
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
     // engine has fully released ownership to the application, and it is
@@ -356,11 +362,12 @@ void App::draw() {
         .setSignalSemaphoreCount(1)
         .setPSignalSemaphores(&draw_complete_semaphores[frame_index].get());
 
-    result = queue.submit(1, &submit_info, fences[frame_index].get());
+    auto result = queue.submit(1, &submit_info, fences[frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
+}
 
-    // If we are using separate queues we have to wait for image ownership,
-    // otherwise wait for draw complete
+void App::present() {
+    // wait for draw complete
     auto const present_info = vk::PresentInfoKHR()
         .setWaitSemaphoreCount(1)
         .setPWaitSemaphores(&draw_complete_semaphores[frame_index].get())
@@ -368,7 +375,7 @@ void App::draw() {
         .setPSwapchains(&swapchain.get())
         .setPImageIndices(&current_buffer);
 
-    result = queue.presentKHR(&present_info);
+    auto result = queue.presentKHR(&present_info);
     frame_index += 1;
     frame_index %= FRAME_LAG;
     if (result == vk::Result::eErrorOutOfDateKHR) {
@@ -380,7 +387,8 @@ void App::draw() {
         vk::SurfaceCapabilitiesKHR surf_caps;
         result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
         VERIFY(result == vk::Result::eSuccess);
-        if (surf_caps.currentExtent.width != static_cast<uint32_t>(window.width) || surf_caps.currentExtent.height != static_cast<uint32_t>(window.height)) {
+        if (surf_caps.currentExtent.width != static_cast<uint32_t>(window.width) ||
+            surf_caps.currentExtent.height != static_cast<uint32_t>(window.height)) {
             resize();
         }
     }
