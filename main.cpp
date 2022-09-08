@@ -210,7 +210,7 @@ class App {
 
     void wait_idle() const;
 
-    void wait();
+    void wait() const;
     void acquire();
     void update_data_buffer();
     void submit() const;
@@ -317,16 +317,19 @@ void App::draw() {
     update_data_buffer(); // [TODO] Rename to record.
     submit();
     present();
+
+    frame_index += 1;
+    frame_index %= FRAME_LAG;
 }
 
 void App::wait_idle() const {
-    auto result = device->waitIdle();
+    const auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void App::wait() {
+void App::wait() const {
     // Ensure no more than FRAME_LAG renderings are outstanding
-    auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
+    const auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
     device->resetFences({ fences[frame_index].get() });
 }
@@ -370,7 +373,7 @@ void App::submit() const {
         .setSignalSemaphoreCount(1)
         .setPSignalSemaphores(&draw_complete_semaphores[frame_index].get());
 
-    auto result = queue.submit(1, &submit_info, fences[frame_index].get());
+    const auto result = queue.submit(1, &submit_info, fences[frame_index].get());
     VERIFY(result == vk::Result::eSuccess);
 }
 
@@ -383,9 +386,7 @@ void App::present() {
         .setPSwapchains(&swapchain.get())
         .setPImageIndices(&current_buffer);
 
-    auto result = queue.presentKHR(&present_info);
-    frame_index += 1;
-    frame_index %= FRAME_LAG;
+    const auto result = queue.presentKHR(&present_info);
     if (result == vk::Result::eErrorOutOfDateKHR) {
         // swapchain is out of date (e.g. the window was resized) and must be recreated:
         resize();
@@ -393,8 +394,9 @@ void App::present() {
     else if (result == vk::Result::eSuboptimalKHR) {
         // SUBOPTIMAL could be due to resize
         vk::SurfaceCapabilitiesKHR surf_caps;
-        result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
+        const auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
         VERIFY(result == vk::Result::eSuccess);
+
         if (surf_caps.currentExtent.width != static_cast<uint32_t>(window.width) ||
             surf_caps.currentExtent.height != static_cast<uint32_t>(window.height)) {
             resize();
@@ -467,7 +469,7 @@ vk::UniqueInstance App::create_instance() const {
 #if !defined(NDEBUG)
     {
         uint32_t instance_layer_count = 0;
-        auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
+        const auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
         VERIFY(result == vk::Result::eSuccess);
 
         if (instance_layer_count > 0) {
@@ -479,7 +481,7 @@ vk::UniqueInstance App::create_instance() const {
 
     // Look for instance extensions
     uint32_t instance_extension_count = 0;
-    auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     uint32_t enabled_extension_count = 0;
@@ -491,7 +493,7 @@ vk::UniqueInstance App::create_instance() const {
 
     if (instance_extension_count > 0) {
         std::unique_ptr<vk::ExtensionProperties[]> instance_extensions(new vk::ExtensionProperties[instance_extension_count]);
-        result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.get());
+        const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.get());
         VERIFY(result == vk::Result::eSuccess);
 
         for (uint32_t i = 0; i < instance_extension_count; i++) {
@@ -641,7 +643,7 @@ uint32_t App::find_queue_family() const {
     // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
-        auto result = gpu.getSurfaceSupportKHR(i, surface.get(), &supportsPresent[i]);
+        const auto result = gpu.getSurfaceSupportKHR(i, surface.get(), &supportsPresent[i]);
         VERIFY(result == vk::Result::eSuccess);
     }
 
@@ -699,12 +701,12 @@ vk::UniqueDevice App::create_device(uint32_t family_index) const {
     enabled_extension_count = 0;
     memset(extension_names, 0, sizeof(extension_names));
 
-    auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
+    const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
     if (device_extension_count > 0) {
         std::unique_ptr<vk::ExtensionProperties[]> device_extensions(new vk::ExtensionProperties[device_extension_count]);
-        result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, device_extensions.get());
+        const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, device_extensions.get());
         VERIFY(result == vk::Result::eSuccess);
 
         for (uint32_t i = 0; i < device_extension_count; i++) {
@@ -806,7 +808,7 @@ vk::UniqueCommandBuffer App::create_command_buffer() const {
 
 vk::UniqueSwapchainKHR App::create_swapchain() const {
     vk::SurfaceCapabilitiesKHR surf_caps;
-    auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
+    const auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::Extent2D extent;
@@ -915,13 +917,13 @@ vk::UniqueDeviceMemory App::create_uniform_memory(const vk::Buffer& buffer) cons
 
 void* App::map_memory(const vk::DeviceMemory& memory) const {
     void* mem = nullptr;
-    auto result = device->mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
+    const auto result = device->mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
     VERIFY(result == vk::Result::eSuccess);
     return mem;
 }
 
 void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
-    auto result = device->bindBufferMemory(buffer, memory, 0);
+    const auto result = device->bindBufferMemory(buffer, memory, 0);
     VERIFY(result == vk::Result::eSuccess);
 }
 
