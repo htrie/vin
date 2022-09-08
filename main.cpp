@@ -187,6 +187,7 @@ class App {
     vk::UniqueDevice create_device(uint32_t family_index) const;
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
+    vk::UniqueCommandBuffer create_command_buffer() const;
     vk::UniqueSwapchainKHR create_swapchain() const;
     vk::UniqueFence create_fence() const;
     vk::UniqueSemaphore create_semaphore() const;
@@ -766,6 +767,17 @@ vk::UniqueSemaphore App::create_semaphore() const {
     return std::move(semaphore_handle.value);
 }
 
+vk::UniqueCommandBuffer App::create_command_buffer() const {
+    auto const cmd_info = vk::CommandBufferAllocateInfo()
+        .setCommandPool(cmd_pool.get())
+        .setLevel(vk::CommandBufferLevel::ePrimary)
+        .setCommandBufferCount(1);
+
+    auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
+    VERIFY(cmd_handles.result == vk::Result::eSuccess);
+    return std::move(cmd_handles.value[0]);
+}
+
 void App::prepare() {
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         fences[i] = create_fence();
@@ -782,14 +794,7 @@ void App::prepare() {
     pipeline = create_pipeline();
 
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
-        auto const cmd_info = vk::CommandBufferAllocateInfo()
-            .setCommandPool(cmd_pool.get())
-            .setLevel(vk::CommandBufferLevel::ePrimary)
-            .setCommandBufferCount(1);
-
-        auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
-        VERIFY(cmd_handles.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
+        swapchain_image_resources[i].cmd = create_command_buffer();
     }
 
     desc_pool = create_descriptor_pool();
