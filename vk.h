@@ -407,3 +407,93 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
     return std::move(render_pass_handle.value);
 }
 
+const uint32_t vert_bytecode[] =
+#include "shader.vert.inc"
+;
+const uint32_t frag_bytecode[] =
+#include "shader.frag.inc"
+;
+
+vk::UniqueShaderModule create_module(const vk::Device& device, const uint32_t* code, size_t size) {
+    const auto module_info = vk::ShaderModuleCreateInfo()
+        .setCodeSize(size)
+        .setPCode(code);
+
+    auto module_handle = device.createShaderModuleUnique(module_info);
+    VERIFY(module_handle.result == vk::Result::eSuccess);
+    return std::move(module_handle.value);
+}
+
+vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout& pipeline_layout, const vk::RenderPass& render_pass) {
+    const auto vert_shader_module = create_module(device, vert_bytecode, sizeof(vert_bytecode));
+    const auto frag_shader_module = create_module(device, frag_bytecode, sizeof(frag_bytecode));
+
+    vk::PipelineShaderStageCreateInfo const shader_stage_info[2] = {
+        vk::PipelineShaderStageCreateInfo()
+            .setStage(vk::ShaderStageFlagBits::eVertex)
+            .setModule(vert_shader_module.get())
+            .setPName("main"),
+        vk::PipelineShaderStageCreateInfo()
+            .setStage(vk::ShaderStageFlagBits::eFragment)
+            .setModule(frag_shader_module.get())
+            .setPName("main") };
+
+    vk::PipelineVertexInputStateCreateInfo const vertex_input_info;
+
+    auto const input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+        .setTopology(vk::PrimitiveTopology::eTriangleList);
+
+    auto const viewport_info = vk::PipelineViewportStateCreateInfo()
+        .setViewportCount(1)
+        .setScissorCount(1);
+
+    auto const rasterization_info = vk::PipelineRasterizationStateCreateInfo()
+        .setDepthClampEnable(VK_FALSE)
+        .setRasterizerDiscardEnable(VK_FALSE)
+        .setPolygonMode(vk::PolygonMode::eFill)
+        .setCullMode(vk::CullModeFlagBits::eBack)
+        .setFrontFace(vk::FrontFace::eCounterClockwise)
+        .setDepthBiasEnable(VK_FALSE)
+        .setLineWidth(1.0f);
+
+    auto const multisample_info = vk::PipelineMultisampleStateCreateInfo();
+
+    auto const depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo()
+        .setDepthTestEnable(VK_FALSE)
+        .setDepthWriteEnable(VK_FALSE)
+        .setDepthBoundsTestEnable(VK_FALSE)
+        .setStencilTestEnable(VK_FALSE);
+
+    vk::PipelineColorBlendAttachmentState const color_blend_attachments[1] = {
+        vk::PipelineColorBlendAttachmentState()
+            .setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
+
+    auto const color_blend_info = vk::PipelineColorBlendStateCreateInfo()
+        .setAttachmentCount(1)
+        .setPAttachments(color_blend_attachments);
+
+    vk::DynamicState const dynamic_states[2] = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+    auto const dynamic_state_info = vk::PipelineDynamicStateCreateInfo()
+        .setPDynamicStates(dynamic_states)
+        .setDynamicStateCount(2);
+
+    auto const pipeline_info = vk::GraphicsPipelineCreateInfo()
+        .setStageCount(2)
+        .setPStages(shader_stage_info)
+        .setPVertexInputState(&vertex_input_info)
+        .setPInputAssemblyState(&input_assembly_info)
+        .setPViewportState(&viewport_info)
+        .setPRasterizationState(&rasterization_info)
+        .setPMultisampleState(&multisample_info)
+        .setPDepthStencilState(&depth_stencil_info)
+        .setPColorBlendState(&color_blend_info)
+        .setPDynamicState(&dynamic_state_info)
+        .setLayout(pipeline_layout)
+        .setRenderPass(render_pass);
+
+    auto pipeline_handles = device.createGraphicsPipelinesUnique(nullptr, pipeline_info);
+    VERIFY(pipeline_handles.result == vk::Result::eSuccess);
+    return std::move(pipeline_handles.value[0]);
+}
+
