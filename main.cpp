@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueSurfaceKHR create_surface() const;
     uint32_t find_queue_family() const;
     vk::SurfaceFormatKHR select_format() const;
     vk::UniqueDevice create_device(uint32_t family_index) const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
     instance = create_instance();
     gpu = pick_gpu(instance.get());
-    surface = create_surface();
+    surface = create_surface(instance.get(), window.hinstance, window.hwnd);
     auto family_index = find_queue_family();
     device = create_device(family_index);
     surface_format = select_format();
@@ -346,7 +345,7 @@ void App::acquire() {
         }
         else if (result == vk::Result::eErrorSurfaceLostKHR) {
             surface.reset();
-            surface = create_surface();
+            surface = create_surface(instance.get(), window.hinstance, window.hwnd);
             resize();
         }
         else {
@@ -401,7 +400,7 @@ void App::present() {
     }
     else if (result == vk::Result::eErrorSurfaceLostKHR) {
         surface.reset();
-        surface = create_surface();
+        surface = create_surface(instance.get(), window.hinstance, window.hwnd);
         resize();
     }
     else {
@@ -456,16 +455,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniqueSurfaceKHR App::create_surface() const {
-    auto const surf_info = vk::Win32SurfaceCreateInfoKHR()
-        .setHinstance(window.hinstance)
-        .setHwnd(window.hwnd);
-
-    auto surface_handle = instance->createWin32SurfaceKHRUnique(surf_info);
-    VERIFY(surface_handle.result == vk::Result::eSuccess);
-    return std::move(surface_handle.value);
 }
 
 uint32_t App::find_queue_family() const {

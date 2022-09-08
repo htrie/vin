@@ -162,3 +162,13 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
     return physical_devices[gpu_number];
 }
 
+vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hInstance, HWND hWnd) {
+    auto const surf_info = vk::Win32SurfaceCreateInfoKHR()
+        .setHinstance(hInstance)
+        .setHwnd(hWnd);
+
+    auto surface_handle = instance.createWin32SurfaceKHRUnique(surf_info);
+    VERIFY(surface_handle.result == vk::Result::eSuccess);
+    return std::move(surface_handle.value);
+}
+
