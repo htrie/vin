@@ -285,3 +285,23 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
     return std::move(device_handle.value);
 }
 
+vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
+    // Get the list of VkFormat's that are supported:
+    uint32_t format_count = 0;
+    auto result = gpu.getSurfaceFormatsKHR(surface, &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+    VERIFY(format_count > 0);
+
+    std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
+    result = gpu.getSurfaceFormatsKHR(surface, &format_count, surface_formats.get());
+    VERIFY(result == vk::Result::eSuccess);
+
+    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+    // the surface has no preferred format.  Otherwise, at least one
+    // supported format will be returned.
+    vk::SurfaceFormatKHR res = surface_formats[0];
+    if (surface_formats[0].format == vk::Format::eUndefined)
+        res.format = vk::Format::eB8G8R8A8Unorm;
+    return res;
+}
+

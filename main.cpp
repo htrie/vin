@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    vk::SurfaceFormatKHR select_format() const;
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
     vk::UniqueCommandBuffer create_command_buffer() const;
@@ -273,9 +272,9 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     instance = create_instance();
     gpu = pick_gpu(instance.get());
     surface = create_surface(instance.get(), window.hinstance, window.hwnd);
+    surface_format = select_format(gpu, surface.get());
     auto family_index = find_queue_family(gpu, surface.get());
     device = create_device(gpu, family_index);
-    surface_format = select_format();
     queue = fetch_queue(family_index);
     cmd_pool = create_command_pool(family_index);
     desc_layout = create_descriptor_layout();
@@ -453,26 +452,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::SurfaceFormatKHR App::select_format() const {
-    // Get the list of VkFormat's that are supported:
-    uint32_t format_count = 0;
-    auto result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-    VERIFY(format_count > 0);
-
-    std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
-    result = gpu.getSurfaceFormatsKHR(surface.get(), &format_count, surface_formats.get());
-    VERIFY(result == vk::Result::eSuccess);
-
-    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-    // the surface has no preferred format.  Otherwise, at least one
-    // supported format will be returned.
-    vk::SurfaceFormatKHR res = surface_formats[0];
-    if (surface_formats[0].format == vk::Format::eUndefined)
-        res.format = vk::Format::eB8G8R8A8Unorm;
-    return res;
 }
 
 vk::Queue App::fetch_queue(uint32_t family_index) const {
