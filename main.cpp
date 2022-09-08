@@ -188,7 +188,6 @@ class App {
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
     void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
-    vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
     vk::UniqueDescriptorSet create_descriptor_set() const;
     void update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     queue = fetch_queue(device.get(), family_index);
     cmd_pool = create_command_pool(device.get(), family_index);
     desc_layout = create_descriptor_layout(device.get());
-    pipeline_layout = create_pipeline_layout();
+    pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
     render_pass = create_render_pass();
     pipeline = create_pipeline();
     desc_pool = create_descriptor_pool();
@@ -598,16 +597,6 @@ void* App::map_memory(const vk::DeviceMemory& memory) const {
 void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
     const auto result = device->bindBufferMemory(buffer, memory, 0);
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniquePipelineLayout App::create_pipeline_layout() const {
-    auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
-        .setSetLayoutCount(1)
-        .setPSetLayouts(&desc_layout.get());
-
-    auto pipeline_layout_handle = device->createPipelineLayoutUnique(pipeline_layout_info);
-    VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
-    return std::move(pipeline_layout_handle.value);
 }
 
 vk::UniqueDescriptorPool App::create_descriptor_pool() const {

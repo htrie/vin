@@ -338,3 +338,13 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
     return std::move(desc_layout_handle.value);
 }
 
+vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout) {
+    auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+        .setSetLayoutCount(1)
+        .setPSetLayouts(&desc_layout);
+
+    auto pipeline_layout_handle = device.createPipelineLayoutUnique(pipeline_layout_info);
+    VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
+    return std::move(pipeline_layout_handle.value);
+}
+
