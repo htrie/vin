@@ -186,20 +186,20 @@ struct Chain {
 };
 
 class App {
-    vk::UniqueInstance instance; // [TODO] Move to Device.
+    vk::UniqueInstance instance;
     vk::UniqueSurfaceKHR surface;
     vk::UniqueDevice device;
     vk::UniqueCommandPool cmd_pool;
     vk::UniqueDescriptorPool desc_pool;
 
-    vk::UniqueRenderPass render_pass; // [TODO] Move to Pipeline.
+    vk::UniqueRenderPass render_pass;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    std::unique_ptr<Chain> chain; // [TODO] Rename to SwapChain.
+    std::unique_ptr<Chain> chain; // [TODO] Remove.
 
-    vk::PhysicalDevice gpu; // [TODO] Move to Device.
+    vk::PhysicalDevice gpu;
     vk::Queue queue;
     vk::SurfaceFormatKHR surface_format;
 
@@ -212,7 +212,7 @@ class App {
     vk::UniqueSurfaceKHR create_surface() const;
     uint32_t find_queue_family() const;
     vk::SurfaceFormatKHR select_format() const;
-    void create_device(uint32_t family_index); // [TODO] Return value.
+    vk::UniqueDevice create_device(uint32_t family_index) const;
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
 
@@ -296,7 +296,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     gpu = pick_gpu();
     surface = create_surface();
     auto family_index = find_queue_family();
-    create_device(family_index);
+    device = create_device(family_index);
     surface_format = select_format();
     queue = fetch_queue(family_index);
     cmd_pool = create_command_pool(family_index);
@@ -680,7 +680,7 @@ uint32_t App::find_queue_family() const {
     return graphics_queue_family_index;
 }
 
-void App::create_device(uint32_t family_index) {
+vk::UniqueDevice App::create_device(uint32_t family_index) const {
     float const priorities[1] = { 0.0 };
 
     vk::DeviceQueueCreateInfo queues[2];
@@ -736,7 +736,7 @@ void App::create_device(uint32_t family_index) {
 
     auto device_handle = gpu.createDeviceUnique(device_info);
     VERIFY(device_handle.result == vk::Result::eSuccess);
-    device = std::move(device_handle.value);
+    return std::move(device_handle.value);
 }
 
 vk::SurfaceFormatKHR App::select_format() const {
