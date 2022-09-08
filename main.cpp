@@ -1,3 +1,6 @@
+#define NOMINMAX
+#define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
 #define _HAS_EXCEPTIONS 0
 
 #define VULKAN_HPP_NO_EXCEPTIONS
@@ -10,8 +13,6 @@
 #else
 #define VERIFY(x) ((void)(x))
 #endif
-
-#define FRAME_LAG 2
 
 #define ERR_EXIT(err_msg, err_class) \
     do { \
@@ -163,12 +164,14 @@ class App {
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::UniqueSwapchainKHR swapchain;
+    std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
+    uint32_t current_buffer = 0;
 
-    vk::UniqueFence fences[FRAME_LAG];
-    vk::UniqueSemaphore image_acquired_semaphores[FRAME_LAG];
-    vk::UniqueSemaphore draw_complete_semaphores[FRAME_LAG];
+    static const unsigned frame_lag = 2;
+    vk::UniqueFence fences[frame_lag];
+    vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
+    vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
 
     vk::PhysicalDevice gpu;
@@ -176,8 +179,6 @@ class App {
     vk::SurfaceFormatKHR surface_format;
 
     Matrices matrices;
-
-    uint32_t current_buffer = 0;
 
     vk::UniqueInstance create_instance() const;
     vk::PhysicalDevice pick_gpu() const;
@@ -290,7 +291,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     pipeline = create_pipeline();
     desc_pool = create_descriptor_pool();
 
-    for (uint32_t i = 0; i < FRAME_LAG; i++) {
+    for (uint32_t i = 0; i < frame_lag; i++) {
         fences[i] = create_fence();
         image_acquired_semaphores[i] = create_semaphore();
         draw_complete_semaphores[i] = create_semaphore();
@@ -319,7 +320,7 @@ void App::draw() {
     present();
 
     frame_index += 1;
-    frame_index %= FRAME_LAG;
+    frame_index %= frame_lag;
 }
 
 void App::wait_idle() const {
@@ -328,7 +329,7 @@ void App::wait_idle() const {
 }
 
 void App::wait() const {
-    // Ensure no more than FRAME_LAG renderings are outstanding
+    // Ensure no more than frame lag renderings are outstanding
     const auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
     device->resetFences({ fences[frame_index].get() });
