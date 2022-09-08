@@ -163,7 +163,6 @@ class App {
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    uint32_t swapchain_image_count = 0;
     std::unique_ptr<SwapchainImageResources[]> swapchain_image_resources;
     vk::UniqueSwapchainKHR swapchain;
 
@@ -303,10 +302,6 @@ App::~App() {
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
         result = device->waitForFences(1, &fences[i].get(), VK_TRUE, UINT64_MAX);
         VERIFY(result == vk::Result::eSuccess);
-    }
-
-    for (uint32_t i = 0; i < swapchain_image_count; i++) {
-        device->unmapMemory(swapchain_image_resources[i].uniform_memory.get());
     }
 }
 
@@ -797,6 +792,7 @@ vk::UniqueCommandBuffer App::create_command_buffer() const {
 void App::prepare() {
     swapchain = create_swapchain();
 
+    uint32_t swapchain_image_count = 0;
     auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
 
@@ -809,9 +805,7 @@ void App::prepare() {
     for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         swapchain_image_resources[i].image = swapchainImages[i];
         swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
-    }
 
-    for (unsigned int i = 0; i < swapchain_image_count; i++) {
         swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
         swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
         bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
@@ -821,6 +815,7 @@ void App::prepare() {
         swapchain_image_resources[i].descriptor_set = create_descriptor_set();
         update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
         swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
+
         current_buffer = i;
         draw_build_cmd(swapchain_image_resources[i].cmd.get());
     }
@@ -1181,27 +1176,12 @@ vk::UniqueShaderModule App::create_module(const uint32_t* code, size_t size) con
 }
 
 void App::resize() {
-    uint32_t i;
-
-    // Don't react to resize until after first initialization.
-    if (!device) {
+    if (!device)
         return;
-    }
 
-    // In order to properly resize the window, we must re-create the swapchain
-    // AND redo the command buffers, etc.
-    //
-    // First, perform part of the cleanup() function:
     auto result = device->waitIdle();
     VERIFY(result == vk::Result::eSuccess);
 
-    for (i = 0; i < swapchain_image_count; i++) {
-        swapchain_image_resources[i].framebuffer.reset();
-        swapchain_image_resources[i].descriptor_set.reset();
-    }
-
-    // Second, re-perform the prepare() function, which will re-create the
-    // swapchain.
     prepare();
 }
 
