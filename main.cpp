@@ -222,9 +222,9 @@ class App {
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
     void prepare_framebuffers();
-    vk::UniqueShaderModule prepare_shader_module(const uint32_t*, size_t) const;
+    vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
     vk::UniquePipeline create_pipeline() const;
-    void prepare_render_pass();
+    vk::UniqueRenderPass prepare_render_pass() const;
 
     void draw_build_cmd(vk::CommandBuffer);
 
@@ -782,7 +782,7 @@ void App::prepare() {
     prepare_buffers();
     prepare_uniforms();
     prepare_descriptor_layout();
-    prepare_render_pass();
+    render_pass = prepare_render_pass();
     pipeline = create_pipeline();
 
     for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
@@ -1108,8 +1108,8 @@ void App::prepare_framebuffers() {
 }
 
 vk::UniquePipeline App::create_pipeline() const {
-    const auto vert_shader_module = prepare_shader_module(vert_bytecode, sizeof(vert_bytecode));
-    const auto frag_shader_module = prepare_shader_module(frag_bytecode, sizeof(frag_bytecode));
+    const auto vert_shader_module = create_module(vert_bytecode, sizeof(vert_bytecode));
+    const auto frag_shader_module = create_module(frag_bytecode, sizeof(frag_bytecode));
 
     vk::PipelineShaderStageCreateInfo const shader_stage_info[2] = {
         vk::PipelineShaderStageCreateInfo()
@@ -1180,7 +1180,7 @@ vk::UniquePipeline App::create_pipeline() const {
     return std::move(pipeline_handles.value[0]);
 }
 
-void App::prepare_render_pass() {
+vk::UniqueRenderPass App::prepare_render_pass() const {
     // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
     // because at the start of the renderpass, we don't care about their contents.
     // At the start of the subpass, the color attachment's layout will be transitioned
@@ -1236,10 +1236,10 @@ void App::prepare_render_pass() {
 
     auto render_pass_handle = device->createRenderPassUnique(rp_info);
     VERIFY(render_pass_handle.result == vk::Result::eSuccess);
-    render_pass = std::move(render_pass_handle.value);
+    return std::move(render_pass_handle.value);
 }
 
-vk::UniqueShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) const {
+vk::UniqueShaderModule App::create_module(const uint32_t* code, size_t size) const {
     const auto module_info = vk::ShaderModuleCreateInfo()
         .setCodeSize(size)
         .setPCode(code);
