@@ -196,7 +196,8 @@ class App {
     void prepare_buffers(); // [TODO] Return value.
     vk::UniqueBuffer create_uniform_buffer() const;
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
-    void prepare_uniforms(); // [TODO] Return value.
+    void* map_memory(const vk::DeviceMemory& memory) const;
+    void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
@@ -212,7 +213,7 @@ class App {
 
     bool memory_type_from_properties(uint32_t, vk::MemoryPropertyFlags, uint32_t*) const;
 
-    void prepare();
+    void prepare(); // [TODO] Remove, use resize instead.
     void resize();
     void draw();
 
@@ -789,8 +790,16 @@ void App::prepare() {
     }
 
     swapchain = create_swapchain();
+
     prepare_buffers();
-    prepare_uniforms();
+
+    for (unsigned int i = 0; i < swapchain_image_count; i++) {
+        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
+        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
+        bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
+        swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
+    }
+
     desc_layout = create_descriptor_layout();
     pipeline_layout = create_pipeline_layout();
     render_pass = create_render_pass();
@@ -938,35 +947,16 @@ vk::UniqueDeviceMemory App::create_uniform_memory(const vk::Buffer& buffer) cons
     return std::move(memory_handle.value);
 }
 
-void App::prepare_uniforms() {
-    mat4x4 VP;
-    mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
+void* App::map_memory(const vk::DeviceMemory& memory) const {
+    void* mem = nullptr;
+    auto result = device->mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
+    VERIFY(result == vk::Result::eSuccess);
+    return mem;
+}
 
-    mat4x4 MVP;
-    mat4x4_mul(MVP, VP, matrices.model_matrix);
-
-    Uniforms uniforms;
-    memcpy(uniforms.mvp, MVP, sizeof(MVP));
-
-    for (int32_t i = 0; i < 12 * 3; i++) {
-        uniforms.position[i][0] = uniforms.vertex_data[i * 3];
-        uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
-        uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
-        uniforms.position[i][3] = 1.0f;
-    }
-
-    for (unsigned int i = 0; i < swapchain_image_count; i++) {
-        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
-        swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
-
-        auto result = device->mapMemory(swapchain_image_resources[i].uniform_memory.get(), 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &swapchain_image_resources[i].uniform_memory_ptr);
-        VERIFY(result == vk::Result::eSuccess);
-
-        memcpy(swapchain_image_resources[i].uniform_memory_ptr, &uniforms, sizeof uniforms);
-
-        result = device->bindBufferMemory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get(), 0);
-        VERIFY(result == vk::Result::eSuccess);
-    }
+void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
+    auto result = device->bindBufferMemory(buffer, memory, 0);
+    VERIFY(result == vk::Result::eSuccess);
 }
 
 vk::UniqueDescriptorSetLayout App::create_descriptor_layout() const {
@@ -1238,7 +1228,17 @@ void App::update_data_buffer() {
     mat4x4 MVP;
     mat4x4_mul(MVP, VP, matrices.model_matrix);
 
-    memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, (const void*)&MVP[0][0], sizeof(MVP));
+    Uniforms uniforms;
+    memcpy(uniforms.mvp, MVP, sizeof(MVP));
+
+    for (int32_t i = 0; i < 12 * 3; i++) {
+        uniforms.position[i][0] = uniforms.vertex_data[i * 3];
+        uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
+        uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
+        uniforms.position[i][3] = 1.0f;
+    }
+
+    memcpy(swapchain_image_resources[current_buffer].uniform_memory_ptr, &uniforms, sizeof uniforms);
 }
 
 bool App::memory_type_from_properties(uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) const {
