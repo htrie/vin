@@ -194,6 +194,7 @@ class App {
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     void prepare_buffers(); // [TODO] Return value.
+    vk::UniqueBuffer create_uniform_buffer() const;
     void prepare_uniforms(); // [TODO] Return value.
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
@@ -910,6 +911,16 @@ void App::prepare_buffers() {
     }
 }
 
+vk::UniqueBuffer App::create_uniform_buffer() const {
+    auto const buf_info = vk::BufferCreateInfo()
+        .setSize(sizeof(Uniforms))
+        .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
+
+    auto buffer_handle = device->createBufferUnique(buf_info);
+    VERIFY(buffer_handle.result == vk::Result::eSuccess);
+    return std::move(buffer_handle.value);
+}
+
 void App::prepare_uniforms() {
     mat4x4 VP;
     mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
@@ -927,14 +938,8 @@ void App::prepare_uniforms() {
         uniforms.position[i][3] = 1.0f;
     }
 
-    auto const buf_info = vk::BufferCreateInfo()
-        .setSize(sizeof(uniforms))
-        .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
-
     for (unsigned int i = 0; i < swapchain_image_count; i++) {
-        auto buffer_handle = device->createBufferUnique(buf_info);
-        VERIFY(buffer_handle.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].uniform_buffer = std::move(buffer_handle.value);
+        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
 
         vk::MemoryRequirements mem_reqs;
         device->getBufferMemoryRequirements(swapchain_image_resources[i].uniform_buffer.get(), &mem_reqs);
