@@ -543,3 +543,74 @@ vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk
     return std::move(cmd_handles.value[0]);
 }
 
+vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height) {
+    vk::SurfaceCapabilitiesKHR surf_caps;
+    const auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surf_caps);
+    VERIFY(result == vk::Result::eSuccess);
+
+    vk::Extent2D extent;
+    // width and height are either both -1, or both not -1.
+    if (surf_caps.currentExtent.width == (uint32_t)-1) {
+        // If the surface size is undefined, the size is set to the size of the images requested.
+        extent.width = window_width;
+        extent.height = window_height;
+    }
+    else {
+        // If the surface size is defined, the swap chain size must match
+        extent = surf_caps.currentExtent;
+    }
+
+    // Determine the number of VkImages to use in the swap chain.
+    // Application desires to acquire 3 images at a time for triple
+    // buffering
+    uint32_t min_image_count = 3;
+    if (min_image_count < surf_caps.minImageCount) {
+        min_image_count = surf_caps.minImageCount;
+    }
+
+    // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
+    if ((surf_caps.maxImageCount > 0) && (min_image_count > surf_caps.maxImageCount)) {
+        // Application must settle for fewer images than desired:
+        min_image_count = surf_caps.maxImageCount;
+    }
+
+    const auto preTransform = surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity ?
+        vk::SurfaceTransformFlagBitsKHR::eIdentity : surf_caps.currentTransform;
+
+    // Find a supported composite alpha mode - one of these is guaranteed to be set
+    vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+    vk::CompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+        vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        vk::CompositeAlphaFlagBitsKHR::ePreMultiplied,
+        vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
+        vk::CompositeAlphaFlagBitsKHR::eInherit,
+    };
+    for (uint32_t i = 0; i < 4; i++) {
+        if (surf_caps.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+            compositeAlpha = compositeAlphaFlags[i];
+            break;
+        }
+    }
+
+    auto const swapchain_info = vk::SwapchainCreateInfoKHR()
+        .setSurface(surface)
+        .setMinImageCount(min_image_count)
+        .setImageFormat(surface_format.format)
+        .setImageColorSpace(surface_format.colorSpace)
+        .setImageExtent({ extent.width, extent.height })
+        .setImageArrayLayers(1)
+        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+        .setImageSharingMode(vk::SharingMode::eExclusive)
+        .setQueueFamilyIndexCount(0)
+        .setPQueueFamilyIndices(nullptr)
+        .setPreTransform(preTransform)
+        .setCompositeAlpha(compositeAlpha)
+        .setPresentMode(vk::PresentModeKHR::eFifo)
+        .setClipped(true)
+        .setOldSwapchain(old_swapchain);
+
+    auto swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
+    VERIFY(swapchain_handle.result == vk::Result::eSuccess);
+    return std::move(swapchain_handle.value);
+}
+

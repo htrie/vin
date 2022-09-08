@@ -171,7 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueSwapchainKHR create_swapchain() const;
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
     vk::UniqueBuffer create_uniform_buffer() const;
@@ -437,77 +436,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueSwapchainKHR App::create_swapchain() const {
-    vk::SurfaceCapabilitiesKHR surf_caps;
-    const auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::Extent2D extent;
-    // width and height are either both -1, or both not -1.
-    if (surf_caps.currentExtent.width == (uint32_t)-1) {
-        // If the surface size is undefined, the size is set to the size of the images requested.
-        extent.width = window.width;
-        extent.height = window.height;
-    }
-    else {
-        // If the surface size is defined, the swap chain size must match
-        extent = surf_caps.currentExtent;
-    }
-
-    // Determine the number of VkImages to use in the swap chain.
-    // Application desires to acquire 3 images at a time for triple
-    // buffering
-    uint32_t min_image_count = 3;
-    if (min_image_count < surf_caps.minImageCount) {
-        min_image_count = surf_caps.minImageCount;
-    }
-
-    // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
-    if ((surf_caps.maxImageCount > 0) && (min_image_count > surf_caps.maxImageCount)) {
-        // Application must settle for fewer images than desired:
-        min_image_count = surf_caps.maxImageCount;
-    }
-
-    const auto preTransform = surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity ?
-        vk::SurfaceTransformFlagBitsKHR::eIdentity : surf_caps.currentTransform;
-
-    // Find a supported composite alpha mode - one of these is guaranteed to be set
-    vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    vk::CompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
-        vk::CompositeAlphaFlagBitsKHR::eOpaque,
-        vk::CompositeAlphaFlagBitsKHR::ePreMultiplied,
-        vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
-        vk::CompositeAlphaFlagBitsKHR::eInherit,
-    };
-    for (uint32_t i = 0; i < 4; i++) {
-        if (surf_caps.supportedCompositeAlpha & compositeAlphaFlags[i]) {
-            compositeAlpha = compositeAlphaFlags[i];
-            break;
-        }
-    }
-
-    auto const swapchain_info = vk::SwapchainCreateInfoKHR()
-        .setSurface(surface.get())
-        .setMinImageCount(min_image_count)
-        .setImageFormat(surface_format.format)
-        .setImageColorSpace(surface_format.colorSpace)
-        .setImageExtent({ extent.width, extent.height })
-        .setImageArrayLayers(1)
-        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
-        .setImageSharingMode(vk::SharingMode::eExclusive)
-        .setQueueFamilyIndexCount(0)
-        .setPQueueFamilyIndices(nullptr)
-        .setPreTransform(preTransform)
-        .setCompositeAlpha(compositeAlpha)
-        .setPresentMode(vk::PresentModeKHR::eFifo)
-        .setClipped(true)
-        .setOldSwapchain(swapchain.get());
-
-    auto swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
-    VERIFY(swapchain_handle.result == vk::Result::eSuccess);
-    return std::move(swapchain_handle.value);
-}
-
 vk::UniqueImageView App::create_image_view(const vk::Image& image) const {
     auto view_info = vk::ImageViewCreateInfo()
         .setViewType(vk::ImageViewType::e2D)
@@ -607,7 +535,7 @@ void App::resize() {
 
     wait_idle();
 
-    swapchain = create_swapchain();
+    swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
 
     uint32_t swapchain_image_count = 0;
     auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
