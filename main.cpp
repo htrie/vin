@@ -211,7 +211,8 @@ class App {
     vk::UniqueInstance create_instance() const;
     vk::PhysicalDevice pick_gpu() const;
     vk::UniqueSurfaceKHR create_surface() const;
-    void create_device(); // [TODO] Return value.
+    uint32_t find_queue_family() const;
+    void create_device(uint32_t family_index); // [TODO] Return value.
 
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
@@ -292,7 +293,8 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     instance = create_instance();
     gpu = pick_gpu();
     surface = create_surface();
-    create_device();
+    auto family_index = find_queue_family();
+    create_device(family_index);
     prepare();
 }
 
@@ -619,7 +621,7 @@ vk::UniqueSurfaceKHR App::create_surface() const {
     return std::move(surface_handle.value);
 }
 
-void App::create_device() {
+uint32_t App::find_queue_family() const {
     // Call with nullptr data to get count
     uint32_t queue_family_count = 0;
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
@@ -670,11 +672,14 @@ void App::create_device() {
     if (graphics_queue_family_index != present_queue_family_index) {
         ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
     }
+    return graphics_queue_family_index;
+}
 
+void App::create_device(uint32_t family_index) {
     float const priorities[1] = { 0.0 };
 
     vk::DeviceQueueCreateInfo queues[2];
-    queues[0].setQueueFamilyIndex(graphics_queue_family_index);
+    queues[0].setQueueFamilyIndex(family_index);
     queues[0].setQueueCount(1);
     queues[0].setPQueuePriorities(priorities);
 
@@ -728,10 +733,10 @@ void App::create_device() {
     VERIFY(device_handle.result == vk::Result::eSuccess);
     device = std::move(device_handle.value);
 
-    device->getQueue(graphics_queue_family_index, 0, &queue);
+    device->getQueue(family_index, 0, &queue);
 
     auto const cmd_pool_info = vk::CommandPoolCreateInfo()
-        .setQueueFamilyIndex(graphics_queue_family_index);
+        .setQueueFamilyIndex(family_index);
 
     auto cmd_pool_handle = device->createCommandPoolUnique(cmd_pool_info);
     VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
