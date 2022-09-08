@@ -188,7 +188,6 @@ class App {
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
     void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
-    vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
     vk::UniqueDescriptorSet create_descriptor_set() const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     device = create_device(gpu, family_index);
     queue = fetch_queue(device.get(), family_index);
     cmd_pool = create_command_pool(device.get(), family_index);
-    desc_layout = create_descriptor_layout();
+    desc_layout = create_descriptor_layout(device.get());
     pipeline_layout = create_pipeline_layout();
     render_pass = create_render_pass();
     pipeline = create_pipeline();
@@ -599,24 +598,6 @@ void* App::map_memory(const vk::DeviceMemory& memory) const {
 void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
     const auto result = device->bindBufferMemory(buffer, memory, 0);
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniqueDescriptorSetLayout App::create_descriptor_layout() const {
-    vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
-        vk::DescriptorSetLayoutBinding()
-           .setBinding(0)
-           .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-           .setDescriptorCount(1)
-           .setStageFlags(vk::ShaderStageFlagBits::eVertex)
-           .setPImmutableSamplers(nullptr) };
-
-    auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
-        .setBindingCount(1)
-        .setPBindings(layout_bindings);
-
-    auto desc_layout_handle = device->createDescriptorSetLayoutUnique(desc_layout_info);
-    VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
-    return std::move(desc_layout_handle.value);
 }
 
 vk::UniquePipelineLayout App::create_pipeline_layout() const {

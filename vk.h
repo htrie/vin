@@ -320,3 +320,21 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
     return std::move(cmd_pool_handle.value);
 }
 
+vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
+    vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
+        vk::DescriptorSetLayoutBinding()
+           .setBinding(0)
+           .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+           .setDescriptorCount(1)
+           .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+           .setPImmutableSamplers(nullptr) };
+
+    auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
+        .setBindingCount(1)
+        .setPBindings(layout_bindings);
+
+    auto desc_layout_handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
+    VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
+    return std::move(desc_layout_handle.value);
+}
+
