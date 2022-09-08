@@ -198,7 +198,8 @@ class App {
     vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
     vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
-    void prepare_descriptor_set(); // [TODO] Return value.
+    vk::UniqueDescriptorSet create_descriptor_set() const;
+    void update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const;
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
     vk::UniquePipeline create_pipeline() const;
     vk::UniqueRenderPass create_render_pass() const;
@@ -798,13 +799,11 @@ void App::prepare() {
     }
 
     desc_pool = create_descriptor_pool();
-    prepare_descriptor_set();
 
-    for (uint32_t i = 0; i < swapchain_image_count; i++) {
+    for (unsigned int i = 0; i < swapchain_image_count; i++) {
+        swapchain_image_resources[i].descriptor_set = create_descriptor_set();
+        update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
         swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
-    }
-
-    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
         current_buffer = i;
         draw_build_cmd(swapchain_image_resources[i].cmd.get());
     }
@@ -1007,31 +1006,31 @@ vk::UniqueDescriptorPool App::create_descriptor_pool() const {
     return std::move(desc_pool_handle.value);
 }
 
-void App::prepare_descriptor_set() {
+vk::UniqueDescriptorSet App::create_descriptor_set() const {
     auto const alloc_info = vk::DescriptorSetAllocateInfo()
         .setDescriptorPool(desc_pool.get())
         .setDescriptorSetCount(1)
         .setPSetLayouts(&desc_layout.get());
 
-    auto buffer_info = vk::DescriptorBufferInfo()
+    auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
+    VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
+    return std::move(descriptor_set_handles.value[0]);
+}
+
+void App::update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const {
+    const auto buffer_info = vk::DescriptorBufferInfo()
         .setOffset(0)
-        .setRange(sizeof(struct Uniforms));
+        .setRange(sizeof(struct Uniforms))
+        .setBuffer(buffer);
 
-    vk::WriteDescriptorSet writes[1];
+    const vk::WriteDescriptorSet writes[1] = { vk::WriteDescriptorSet()
+        .setDescriptorCount(1)
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+        .setPBufferInfo(&buffer_info)
+        .setDstSet(desc_set)
+    };
 
-    writes[0].setDescriptorCount(1);
-    writes[0].setDescriptorType(vk::DescriptorType::eUniformBuffer);
-    writes[0].setPBufferInfo(&buffer_info);
-
-    for (unsigned int i = 0; i < swapchain_image_count; i++) {
-        auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
-        VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
-        swapchain_image_resources[i].descriptor_set = std::move(descriptor_set_handles.value[0]);
-
-        buffer_info.setBuffer(swapchain_image_resources[i].uniform_buffer.get());
-        writes[0].setDstSet(swapchain_image_resources[i].descriptor_set.get());
-        device->updateDescriptorSets(1, writes, 0, nullptr);
-    }
+    device->updateDescriptorSets(1, writes, 0, nullptr);
 }
 
 vk::UniqueFramebuffer App::create_framebuffer(const vk::ImageView& image_view) const {
