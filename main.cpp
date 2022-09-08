@@ -171,10 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueDescriptorSet create_descriptor_set() const;
-    void update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const;
-    vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
-
     void draw_build_cmd(vk::CommandBuffer);
 
     void wait_idle() const;
@@ -428,33 +424,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueDescriptorSet App::create_descriptor_set() const {
-    auto const alloc_info = vk::DescriptorSetAllocateInfo()
-        .setDescriptorPool(desc_pool.get())
-        .setDescriptorSetCount(1)
-        .setPSetLayouts(&desc_layout.get());
-
-    auto descriptor_set_handles = device->allocateDescriptorSetsUnique(alloc_info);
-    VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
-    return std::move(descriptor_set_handles.value[0]);
-}
-
-void App::update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const {
-    const auto buffer_info = vk::DescriptorBufferInfo()
-        .setOffset(0)
-        .setRange(sizeof(struct Uniforms))
-        .setBuffer(buffer);
-
-    const vk::WriteDescriptorSet writes[1] = { vk::WriteDescriptorSet()
-        .setDescriptorCount(1)
-        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-        .setPBufferInfo(&buffer_info)
-        .setDstSet(desc_set)
-    };
-
-    device->updateDescriptorSets(1, writes, 0, nullptr);
-}
-
 void App::resize() {
     if (!device) // [TODO] Remove.
         return;
@@ -483,8 +452,8 @@ void App::resize() {
         swapchain_image_resources[i].uniform_memory_ptr = map_memory(device.get(), swapchain_image_resources[i].uniform_memory.get());
 
         swapchain_image_resources[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
-        swapchain_image_resources[i].descriptor_set = create_descriptor_set();
-        update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
+        swapchain_image_resources[i].descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+        update_descriptor_set(device.get(), swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get(), sizeof(Uniforms));
         swapchain_image_resources[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), swapchain_image_resources[i].view.get(), window.width, window.height);
 
         current_buffer = i;

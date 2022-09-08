@@ -698,3 +698,30 @@ void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::D
     VERIFY(result == vk::Result::eSuccess);
 }
 
+vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
+    auto const alloc_info = vk::DescriptorSetAllocateInfo()
+        .setDescriptorPool(desc_pool)
+        .setDescriptorSetCount(1)
+        .setPSetLayouts(&desc_layout);
+
+    auto descriptor_set_handles = device.allocateDescriptorSetsUnique(alloc_info);
+    VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
+    return std::move(descriptor_set_handles.value[0]);
+}
+
+void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range) {
+    const auto buffer_info = vk::DescriptorBufferInfo()
+        .setOffset(0)
+        .setRange(range)
+        .setBuffer(buffer);
+
+    const vk::WriteDescriptorSet writes[1] = { vk::WriteDescriptorSet()
+        .setDescriptorCount(1)
+        .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+        .setPBufferInfo(&buffer_info)
+        .setDstSet(desc_set)
+    };
+
+    device.updateDescriptorSets(1, writes, 0, nullptr);
+}
+
