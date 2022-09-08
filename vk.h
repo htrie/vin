@@ -725,3 +725,8 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
     device.updateDescriptorSets(1, writes, 0, nullptr);
 }
 
+void wait_idle(const vk::Device& device) {
+    const auto result = device.waitIdle();
+    VERIFY(result == vk::Result::eSuccess);
+}
+
