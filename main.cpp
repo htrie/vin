@@ -213,8 +213,8 @@ class App {
 
     vk::UniqueInstance create_instance() const;
     vk::PhysicalDevice pick_gpu() const;
-    void create_surface();
-    void create_device();
+    vk::UniqueSurfaceKHR create_surface() const;
+    void create_device(); // [TODO] Return value.
 
     void prepare_buffers();
     void prepare_uniforms();
@@ -293,7 +293,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
     instance = create_instance();
     gpu = pick_gpu();
-    create_surface();
+    surface = create_surface();
     create_device();
     prepare();
 }
@@ -355,8 +355,8 @@ void App::draw() {
             break;
         }
         else if (result == vk::Result::eErrorSurfaceLostKHR) {
-            instance->destroySurfaceKHR(surface.get(), nullptr);
-            create_surface();
+            surface.reset();
+            surface = create_surface();
             resize();
         }
         else {
@@ -409,8 +409,8 @@ void App::draw() {
         }
     }
     else if (result == vk::Result::eErrorSurfaceLostKHR) {
-        instance->destroySurfaceKHR(surface.get(), nullptr);
-        create_surface();
+        surface.reset();
+        surface = create_surface();
         resize();
     }
     else {
@@ -626,12 +626,14 @@ vk::PhysicalDevice App::pick_gpu() const {
     return physical_devices[gpu_number];
 }
 
-void App::create_surface() {
-    auto const surf_info = vk::Win32SurfaceCreateInfoKHR().setHinstance(window.hinstance).setHwnd(window.hwnd);
+vk::UniqueSurfaceKHR App::create_surface() const {
+    auto const surf_info = vk::Win32SurfaceCreateInfoKHR()
+        .setHinstance(window.hinstance)
+        .setHwnd(window.hwnd);
 
     auto surface_handle = instance->createWin32SurfaceKHRUnique(surf_info);
     VERIFY(surface_handle.result == vk::Result::eSuccess);
-    surface = std::move(surface_handle.value);
+    return std::move(surface_handle.value);
 }
 
 void App::create_device() {
