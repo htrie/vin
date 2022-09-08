@@ -188,6 +188,8 @@ class App {
     vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
     vk::UniqueSwapchainKHR create_swapchain() const;
+    vk::UniqueFence create_fence() const;
+    vk::UniqueSemaphore create_semaphore() const;
 
     void prepare_buffers(); // [TODO] Return value.
     void prepare_uniforms(); // [TODO] Return value.
@@ -747,24 +749,28 @@ vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {
     return std::move(cmd_pool_handle.value);
 }
 
+vk::UniqueFence App::create_fence() const {
+    auto const fence_info = vk::FenceCreateInfo()
+        .setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+    auto fence_handle = device->createFenceUnique(fence_info);
+    VERIFY(fence_handle.result == vk::Result::eSuccess);
+    return std::move(fence_handle.value);
+}
+
+vk::UniqueSemaphore App::create_semaphore() const {
+    auto const semaphore_info = vk::SemaphoreCreateInfo();
+
+    auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
+    VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+    return std::move(semaphore_handle.value);
+}
+
 void App::prepare() {
     for (uint32_t i = 0; i < FRAME_LAG; i++) {
-        auto const fence_info = vk::FenceCreateInfo()
-            .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-        auto fence_handle = device->createFenceUnique(fence_info);
-        VERIFY(fence_handle.result == vk::Result::eSuccess);
-        fences[i] = std::move(fence_handle.value);
-
-        auto const semaphore_info = vk::SemaphoreCreateInfo();
-
-        auto semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-        VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-        image_acquired_semaphores[i] = std::move(semaphore_handle.value);
-
-        semaphore_handle = device->createSemaphoreUnique(semaphore_info);
-        VERIFY(semaphore_handle.result == vk::Result::eSuccess);
-        draw_complete_semaphores[i] = std::move(semaphore_handle.value);
+        fences[i] = create_fence();
+        image_acquired_semaphores[i] = create_semaphore();
+        draw_complete_semaphores[i] = create_semaphore();
     }
 
     swapchain = create_swapchain();
