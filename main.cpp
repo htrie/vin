@@ -178,7 +178,6 @@ class App {
 
     Matrices matrices;
 
-    vk::Queue fetch_queue(uint32_t family_index) const;
     vk::UniqueCommandPool create_command_pool(uint32_t family_index) const;
     vk::UniqueCommandBuffer create_command_buffer() const;
     vk::UniqueSwapchainKHR create_swapchain() const;
@@ -275,7 +274,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     surface_format = select_format(gpu, surface.get());
     auto family_index = find_queue_family(gpu, surface.get());
     device = create_device(gpu, family_index);
-    queue = fetch_queue(family_index);
+    queue = fetch_queue(device.get(), family_index);
     cmd_pool = create_command_pool(family_index);
     desc_layout = create_descriptor_layout();
     pipeline_layout = create_pipeline_layout();
@@ -452,12 +451,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::Queue App::fetch_queue(uint32_t family_index) const {
-    vk::Queue queue;
-    device->getQueue(family_index, 0, &queue);
-    return queue;
 }
 
 vk::UniqueCommandPool App::create_command_pool(uint32_t family_index) const {

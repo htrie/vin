@@ -305,3 +305,9 @@ vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::Surf
     return res;
 }
 
+vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
+    vk::Queue queue;
+    device.getQueue(family_index, 0, &queue);
+    return queue;
+}
+
