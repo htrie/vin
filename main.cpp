@@ -216,12 +216,13 @@ class App {
     vk::UniqueSurfaceKHR create_surface() const;
     void create_device(); // [TODO] Return value.
 
-    void prepare_buffers();
-    void prepare_uniforms();
-    void prepare_descriptor_layout();
+    void prepare_buffers(); // [TODO] Return value.
+    void prepare_uniforms(); // [TODO] Return value.
+    vk::UniqueDescriptorSetLayout create_descriptor_layout() const;
+    vk::UniquePipelineLayout create_pipeline_layout() const;
     vk::UniqueDescriptorPool create_descriptor_pool() const;
-    void prepare_descriptor_set();
-    void prepare_framebuffers();
+    void prepare_descriptor_set(); // [TODO] Return value.
+    void prepare_framebuffers(); // [TODO] Return value.
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
     vk::UniquePipeline create_pipeline() const;
     vk::UniqueRenderPass prepare_render_pass() const;
@@ -781,7 +782,8 @@ void App::prepare() {
 
     prepare_buffers();
     prepare_uniforms();
-    prepare_descriptor_layout();
+    desc_layout = create_descriptor_layout();
+    pipeline_layout = create_pipeline_layout();
     render_pass = prepare_render_pass();
     pipeline = create_pipeline();
 
@@ -1017,7 +1019,7 @@ void App::prepare_uniforms() {
     }
 }
 
-void App::prepare_descriptor_layout() {
+vk::UniqueDescriptorSetLayout App::create_descriptor_layout() const {
     vk::DescriptorSetLayoutBinding const layout_bindings[1] = { 
         vk::DescriptorSetLayoutBinding()
            .setBinding(0)
@@ -1032,15 +1034,17 @@ void App::prepare_descriptor_layout() {
 
     auto desc_layout_handle = device->createDescriptorSetLayoutUnique(desc_layout_info);
     VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
-    desc_layout = std::move(desc_layout_handle.value);
+    return std::move(desc_layout_handle.value);
+}
 
+vk::UniquePipelineLayout App::create_pipeline_layout() const {
     auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
         .setSetLayoutCount(1)
         .setPSetLayouts(&desc_layout.get());
 
     auto pipeline_layout_handle = device->createPipelineLayoutUnique(pipeline_layout_info);
     VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
-    pipeline_layout = std::move(pipeline_layout_handle.value);
+    return std::move(pipeline_layout_handle.value);
 }
 
 vk::UniqueDescriptorPool App::create_descriptor_pool() const {
