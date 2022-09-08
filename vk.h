@@ -532,3 +532,14 @@ vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
     return std::move(semaphore_handle.value);
 }
 
+vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
+    auto const cmd_info = vk::CommandBufferAllocateInfo()
+        .setCommandPool(cmd_pool)
+        .setLevel(vk::CommandBufferLevel::ePrimary)
+        .setCommandBufferCount(1);
+
+    auto cmd_handles = device.allocateCommandBuffersUnique(cmd_info);
+    VERIFY(cmd_handles.result == vk::Result::eSuccess);
+    return std::move(cmd_handles.value[0]);
+}
+

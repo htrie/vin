@@ -171,7 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueCommandBuffer create_command_buffer() const;
     vk::UniqueSwapchainKHR create_swapchain() const;
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
@@ -438,17 +437,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueCommandBuffer App::create_command_buffer() const {
-    auto const cmd_info = vk::CommandBufferAllocateInfo()
-        .setCommandPool(cmd_pool.get())
-        .setLevel(vk::CommandBufferLevel::ePrimary)
-        .setCommandBufferCount(1);
-
-    auto cmd_handles = device->allocateCommandBuffersUnique(cmd_info);
-    VERIFY(cmd_handles.result == vk::Result::eSuccess);
-    return std::move(cmd_handles.value[0]);
-}
-
 vk::UniqueSwapchainKHR App::create_swapchain() const {
     vk::SurfaceCapabilitiesKHR surf_caps;
     const auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
@@ -640,7 +628,7 @@ void App::resize() {
         bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
         swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());
 
-        swapchain_image_resources[i].cmd = create_command_buffer();
+        swapchain_image_resources[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
         swapchain_image_resources[i].descriptor_set = create_descriptor_set();
         update_descriptor_set(swapchain_image_resources[i].descriptor_set.get(), swapchain_image_resources[i].uniform_buffer.get());
         swapchain_image_resources[i].framebuffer = create_framebuffer(swapchain_image_resources[i].view.get());
