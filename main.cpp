@@ -186,28 +186,25 @@ struct Chain {
 };
 
 class App {
-    std::unique_ptr<Chain> chain; // [TODO] Rename to SwapChain.
-
-    Matrices matrices;
-
-    vk::UniqueSurfaceKHR surface; // [TODO] Move to Surface.
-
     vk::UniqueInstance instance; // [TODO] Move to Device.
-    vk::PhysicalDevice gpu;
+    vk::UniqueSurfaceKHR surface;
     vk::UniqueDevice device;
-    vk::Queue queue;
-
-    vk::Format format; // [TODO] Move to Surface.
-    vk::ColorSpaceKHR color_space;
-
     vk::UniqueCommandPool cmd_pool;
+    vk::UniqueDescriptorPool desc_pool;
 
-    vk::UniquePipelineLayout pipeline_layout; // [TODO] Move to Pipeline.
+    vk::UniqueRenderPass render_pass; // [TODO] Move to Pipeline.
     vk::UniqueDescriptorSetLayout desc_layout;
-    vk::UniqueRenderPass render_pass;
+    vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    vk::UniqueDescriptorPool desc_pool;
+    std::unique_ptr<Chain> chain; // [TODO] Rename to SwapChain.
+
+    vk::PhysicalDevice gpu; // [TODO] Move to Device.
+    vk::Queue queue;
+    vk::Format format;
+    vk::ColorSpaceKHR color_space;
+
+    Matrices matrices;
 
     uint32_t current_buffer = 0;
 
@@ -312,21 +309,6 @@ App::~App() {
     for (uint32_t i = 0; i < chain->swapchain_image_count; i++) {
         device->unmapMemory(chain->swapchain_image_resources[i].uniform_memory.get());
     }
-
-    chain.reset();
-
-    desc_pool.reset();
-
-    pipeline.reset();
-    render_pass.reset();
-    pipeline_layout.reset();
-    desc_layout.reset();
-
-    cmd_pool.reset();
-
-    device.reset();
-    surface.reset();
-    instance.reset();
 }
 
 void App::run() {
