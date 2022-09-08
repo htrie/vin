@@ -219,7 +219,7 @@ class App {
     void prepare_buffers();
     void prepare_uniforms();
     void prepare_descriptor_layout();
-    void prepare_descriptor_pool();
+    vk::UniqueDescriptorPool create_descriptor_pool() const;
     void prepare_descriptor_set();
     void prepare_framebuffers();
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
@@ -796,7 +796,7 @@ void App::prepare() {
         chain->swapchain_image_resources[i].cmd = std::move(cmd_handles.value[0]);
     }
 
-    prepare_descriptor_pool();
+    desc_pool = create_descriptor_pool();
     prepare_descriptor_set();
     prepare_framebuffers();
 
@@ -1043,7 +1043,7 @@ void App::prepare_descriptor_layout() {
     pipeline_layout = std::move(pipeline_layout_handle.value);
 }
 
-void App::prepare_descriptor_pool() {
+vk::UniqueDescriptorPool App::create_descriptor_pool() const {
     vk::DescriptorPoolSize const pool_sizes[1] = { 
         vk::DescriptorPoolSize()
             .setType(vk::DescriptorType::eUniformBuffer)
@@ -1058,7 +1058,7 @@ void App::prepare_descriptor_pool() {
 
     auto desc_pool_handle = device->createDescriptorPoolUnique(desc_pool_info);
     VERIFY(desc_pool_handle.result == vk::Result::eSuccess);
-    desc_pool = std::move(desc_pool_handle.value);
+    return std::move(desc_pool_handle.value);
 }
 
 void App::prepare_descriptor_set() {
