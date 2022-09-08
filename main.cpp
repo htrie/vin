@@ -181,7 +181,6 @@ class App {
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
     void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
-    vk::UniqueDescriptorPool create_descriptor_pool() const;
     vk::UniqueDescriptorSet create_descriptor_set() const;
     void update_descriptor_set(vk::DescriptorSet& desc_set, const vk::Buffer& buffer) const;
     vk::UniqueShaderModule create_module(const uint32_t*, size_t) const;
@@ -268,7 +267,7 @@ App::App(HINSTANCE hInstance, int nCmdShow)
     pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
     render_pass = create_render_pass(device.get(), surface_format);
     pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
-    desc_pool = create_descriptor_pool();
+    desc_pool = create_descriptor_pool(device.get());
 
     for (uint32_t i = 0; i < frame_lag; i++) {
         fences[i] = create_fence();
@@ -588,24 +587,6 @@ void* App::map_memory(const vk::DeviceMemory& memory) const {
 void App::bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const {
     const auto result = device->bindBufferMemory(buffer, memory, 0);
     VERIFY(result == vk::Result::eSuccess);
-}
-
-vk::UniqueDescriptorPool App::create_descriptor_pool() const {
-    vk::DescriptorPoolSize const pool_sizes[1] = { 
-        vk::DescriptorPoolSize()
-            .setType(vk::DescriptorType::eUniformBuffer)
-            .setDescriptorCount(16)
-    };
-
-    auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
-        .setMaxSets(16)
-        .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
-        .setPoolSizeCount(1)
-        .setPPoolSizes(pool_sizes);
-
-    auto desc_pool_handle = device->createDescriptorPoolUnique(desc_pool_info);
-    VERIFY(desc_pool_handle.result == vk::Result::eSuccess);
-    return std::move(desc_pool_handle.value);
 }
 
 vk::UniqueDescriptorSet App::create_descriptor_set() const {

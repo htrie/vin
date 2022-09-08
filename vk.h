@@ -497,3 +497,21 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
     return std::move(pipeline_handles.value[0]);
 }
 
+vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
+    vk::DescriptorPoolSize const pool_sizes[1] = { 
+        vk::DescriptorPoolSize()
+            .setType(vk::DescriptorType::eUniformBuffer)
+            .setDescriptorCount(16)
+    };
+
+    auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
+        .setMaxSets(16)
+        .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
+        .setPoolSizeCount(1)
+        .setPPoolSizes(pool_sizes);
+
+    auto desc_pool_handle = device.createDescriptorPoolUnique(desc_pool_info);
+    VERIFY(desc_pool_handle.result == vk::Result::eSuccess);
+    return std::move(desc_pool_handle.value);
+}
+
