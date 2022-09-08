@@ -171,7 +171,6 @@ class App {
 
     Matrices matrices;
 
-    vk::UniqueBuffer create_uniform_buffer() const;
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
     void bind_memory(const vk::Buffer& buffer, const vk::DeviceMemory& memory) const;
@@ -434,16 +433,6 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-vk::UniqueBuffer App::create_uniform_buffer() const {
-    auto const buf_info = vk::BufferCreateInfo()
-        .setSize(sizeof(Uniforms))
-        .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
-
-    auto buffer_handle = device->createBufferUnique(buf_info);
-    VERIFY(buffer_handle.result == vk::Result::eSuccess);
-    return std::move(buffer_handle.value);
-}
-
 vk::UniqueDeviceMemory App::create_uniform_memory(const vk::Buffer& buffer) const {
     vk::MemoryRequirements mem_reqs;
     device->getBufferMemoryRequirements(buffer, &mem_reqs);
@@ -521,7 +510,7 @@ void App::resize() {
         swapchain_image_resources[i].image = swapchainImages[i];
         swapchain_image_resources[i].view = create_image_view(device.get(), swapchainImages[i], surface_format);
 
-        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
+        swapchain_image_resources[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
         swapchain_image_resources[i].uniform_memory = create_uniform_memory(swapchain_image_resources[i].uniform_buffer.get());
         bind_memory(swapchain_image_resources[i].uniform_buffer.get(), swapchain_image_resources[i].uniform_memory.get());
         swapchain_image_resources[i].uniform_memory_ptr = map_memory(swapchain_image_resources[i].uniform_memory.get());

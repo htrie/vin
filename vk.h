@@ -642,3 +642,13 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
     return std::move(framebuffer_handle.value);
 }
 
+vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
+    auto const buf_info = vk::BufferCreateInfo()
+        .setSize(size)
+        .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
+
+    auto buffer_handle = device.createBufferUnique(buf_info);
+    VERIFY(buffer_handle.result == vk::Result::eSuccess);
+    return std::move(buffer_handle.value);
+}
+
