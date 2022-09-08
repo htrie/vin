@@ -222,8 +222,8 @@ class App {
     void prepare_descriptor_pool();
     void prepare_descriptor_set();
     void prepare_framebuffers();
-    vk::UniqueShaderModule prepare_shader_module(const uint32_t*, size_t);
-    void prepare_pipeline();
+    vk::UniqueShaderModule prepare_shader_module(const uint32_t*, size_t) const;
+    vk::UniquePipeline create_pipeline() const;
     void prepare_render_pass();
 
     void draw_build_cmd(vk::CommandBuffer);
@@ -783,7 +783,7 @@ void App::prepare() {
     prepare_uniforms();
     prepare_descriptor_layout();
     prepare_render_pass();
-    prepare_pipeline();
+    pipeline = create_pipeline();
 
     for (uint32_t i = 0; i < chain->swapchain_image_count; ++i) {
         auto const cmd_info = vk::CommandBufferAllocateInfo()
@@ -1107,7 +1107,7 @@ void App::prepare_framebuffers() {
     }
 }
 
-void App::prepare_pipeline() {
+vk::UniquePipeline App::create_pipeline() const {
     const auto vert_shader_module = prepare_shader_module(vert_bytecode, sizeof(vert_bytecode));
     const auto frag_shader_module = prepare_shader_module(frag_bytecode, sizeof(frag_bytecode));
 
@@ -1177,7 +1177,7 @@ void App::prepare_pipeline() {
 
     auto pipeline_handles = device->createGraphicsPipelinesUnique(nullptr, pipeline_info);
     VERIFY(pipeline_handles.result == vk::Result::eSuccess);
-    pipeline = std::move(pipeline_handles.value[0]);
+    return std::move(pipeline_handles.value[0]);
 }
 
 void App::prepare_render_pass() {
@@ -1239,7 +1239,7 @@ void App::prepare_render_pass() {
     render_pass = std::move(render_pass_handle.value);
 }
 
-vk::UniqueShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) {
+vk::UniqueShaderModule App::prepare_shader_module(const uint32_t* code, size_t size) const {
     const auto module_info = vk::ShaderModuleCreateInfo()
         .setCodeSize(size)
         .setPCode(code);
