@@ -194,7 +194,6 @@ class App {
     vk::UniqueSemaphore create_semaphore() const;
     vk::UniqueImageView create_image_view(const vk::Image& image) const;
     vk::UniqueFramebuffer create_framebuffer(const vk::ImageView& image_view) const;
-    void prepare_buffers(); // [TODO] Return value.
     vk::UniqueBuffer create_uniform_buffer() const;
     vk::UniqueDeviceMemory create_uniform_memory(const vk::Buffer& buffer) const;
     void* map_memory(const vk::DeviceMemory& memory) const;
@@ -798,7 +797,19 @@ vk::UniqueCommandBuffer App::create_command_buffer() const {
 void App::prepare() {
     swapchain = create_swapchain();
 
-    prepare_buffers();
+    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+
+    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
+    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
+    VERIFY(result == vk::Result::eSuccess);
+
+    swapchain_image_resources.reset(new SwapchainImageResources[swapchain_image_count]);
+
+    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
+        swapchain_image_resources[i].image = swapchainImages[i];
+        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
+    }
 
     for (unsigned int i = 0; i < swapchain_image_count; i++) {
         swapchain_image_resources[i].uniform_buffer = create_uniform_buffer();
@@ -898,22 +909,6 @@ vk::UniqueImageView App::create_image_view(const vk::Image& image) const {
     auto view_handle = device->createImageViewUnique(view_info);
     VERIFY(view_handle.result == vk::Result::eSuccess);
     return std::move(view_handle.value);
-}
-
-void App::prepare_buffers() {
-    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
-    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
-    VERIFY(result == vk::Result::eSuccess);
-
-    swapchain_image_resources.reset(new SwapchainImageResources[swapchain_image_count]);
-
-    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
-        swapchain_image_resources[i].image = swapchainImages[i];
-        swapchain_image_resources[i].view = create_image_view(swapchainImages[i]);
-    }
 }
 
 vk::UniqueBuffer App::create_uniform_buffer() const {
