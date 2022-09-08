@@ -212,7 +212,7 @@ class App {
     uint32_t current_buffer = 0;
 
     vk::UniqueInstance create_instance() const;
-    void pick_gpu();
+    vk::PhysicalDevice pick_gpu() const;
     void create_surface();
     void create_device();
 
@@ -292,7 +292,7 @@ bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 App::App(HINSTANCE hInstance, int nCmdShow)
     : window(WndProc, hInstance, nCmdShow, this) {
     instance = create_instance();
-    pick_gpu();
+    gpu = pick_gpu();
     create_surface();
     create_device();
     prepare();
@@ -567,7 +567,7 @@ vk::UniqueInstance App::create_instance() const {
     return std::move(instance_handle.value);
 }
 
-void App::pick_gpu() {
+vk::PhysicalDevice App::pick_gpu() const {
     // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
     auto result = instance->enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
@@ -623,8 +623,7 @@ void App::pick_gpu() {
     if (gpu_number == (uint32_t)-1) {
         ERR_EXIT("physical device auto-select failed.\n", "Device Selection Failure");
     }
-    gpu = physical_devices[gpu_number];
-    physical_devices.reset();
+    return physical_devices[gpu_number];
 }
 
 void App::create_surface() {
