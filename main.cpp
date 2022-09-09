@@ -286,13 +286,10 @@ void App::acquire() {
     do {
         result = device->acquireNextImageKHR(swapchain.get(), UINT64_MAX, image_acquired_semaphores[frame_index].get(), vk::Fence(), &current_buffer);
         if (result == vk::Result::eErrorOutOfDateKHR) {
-            // swapchain is out of date (e.g. the window was resized) and must be recreated:
-            resize();
+            resize(); // swapchain is out of date (e.g. the window was resized) and must be recreated:
         }
         else if (result == vk::Result::eSuboptimalKHR) {
-            // swapchain is not as optimal as it could be, but the platform's
-            // presentation engine will still present the image correctly.
-            break;
+            break; // swapchain is not as optimal as it could be, but the platform's presentation engine will still present the image correctly.
         }
         else if (result == vk::Result::eErrorSurfaceLostKHR) {
             surface.reset();
@@ -316,8 +313,7 @@ void App::present() {
 
     const auto result = queue.presentKHR(&present_info);
     if (result == vk::Result::eErrorOutOfDateKHR) {
-        // swapchain is out of date (e.g. the window was resized) and must be recreated:
-        resize();
+        resize(); // swapchain is out of date (e.g. the window was resized) and must be recreated:
     }
     else if (result == vk::Result::eSuboptimalKHR) {
         // SUBOPTIMAL could be due to resize
