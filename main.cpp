@@ -171,183 +171,169 @@ class App {
 
     Matrices matrices;
 
-    void patch(void* mem);
+    void patch(void* mem) {
+        mat4x4 VP;
+        mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
-    void resize();
-    void redraw();
+        // Rotate around the Y axis
+        mat4x4 Model;
+        mat4x4_dup(Model, matrices.model_matrix);
+        mat4x4_rotate_Y(matrices.model_matrix, Model, (float)degreesToRadians(1.5f));
+        mat4x4_orthonormalize(matrices.model_matrix, matrices.model_matrix);
 
-    bool proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+        mat4x4 MVP;
+        mat4x4_mul(MVP, VP, matrices.model_matrix);
 
-    static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+        Uniforms uniforms;
+        memcpy(uniforms.mvp, MVP, sizeof(MVP));
+
+        for (int32_t i = 0; i < 12 * 3; i++) {
+            uniforms.position[i][0] = uniforms.vertex_data[i * 3];
+            uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
+            uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
+            uniforms.position[i][3] = 1.0f;
+        }
+
+        memcpy(mem, &uniforms, sizeof uniforms);
+    }
+
+    void resize() {
+        if (!device) // [TODO] Remove.
+            return;
+
+        wait_idle(device.get());
+
+        swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
+
+        const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
+
+        frames.clear();
+        frames.resize(swapchain_images.size());
+
+        for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
+            frames[i].image = swapchain_images[i];
+            frames[i].view = create_image_view(device.get(), swapchain_images[i], surface_format);
+
+            frames[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
+            frames[i].uniform_memory = create_uniform_memory(gpu, device.get(), frames[i].uniform_buffer.get());
+            bind_memory(device.get(), frames[i].uniform_buffer.get(), frames[i].uniform_memory.get());
+            frames[i].uniform_memory_ptr = map_memory(device.get(), frames[i].uniform_memory.get());
+
+            frames[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
+            frames[i].descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+            update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
+            frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
+        }
+    }
+
+    void redraw() {
+        wait(device.get(), fences[frame_index].get());
+        const auto index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
+
+        patch(frames[index].uniform_memory_ptr);
+
+        begin(frames[index].cmd.get());
+        const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
+        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, window.width, window.height);
+
+        bind_pipeline(frames[index].cmd.get(), pipeline.get());
+        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
+
+        set_viewport(frames[index].cmd.get(), (float)window.width, (float)window.height);
+        set_scissor(frames[index].cmd.get(), window.width, window.height);
+
+        draw(frames[index].cmd.get(), 12 * 3);
+
+        end_pass(frames[index].cmd.get());
+        end(frames[index].cmd.get());
+
+        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
+        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
+
+        frame_index += 1;
+        frame_index %= frame_lag;
+    }
+
+    bool proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+        switch (uMsg) {
+        case WM_PAINT: redraw(); return true;
+        case WM_SIZE: {
+                // Resize the application to the new window size, except when
+                // it was minimized. Vulkan doesn't support images or swapchains
+                // with width=0 and height=0.
+                if (wParam != SIZE_MINIMIZED) {
+                    window.width = lParam & 0xffff;
+                    window.height = (lParam & 0xffff0000) >> 16;
+                    resize();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+        switch (uMsg) {
+        case WM_CREATE: {
+            LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+            SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+            return 0;
+        }
+        case WM_CLOSE: PostQuitMessage(0); break;
+        case WM_GETMINMAXINFO: {
+            // Window client area size must be at least 1 pixel high, to prevent crash.
+            const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
+            ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
+            return 0;
+        }
+        }
+
+        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+            if (app->proc(hWnd, uMsg, wParam, lParam))
+                return 0;
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
 
 public:
     Window window;
 
-    App(HINSTANCE hInstance, int nCmdShow);
-    ~App();
+    App(HINSTANCE hInstance, int nCmdShow) {
+        instance = create_instance();
+        gpu = pick_gpu(instance.get());
+        window = Window(WndProc, hInstance, nCmdShow, this); // Create as late as possible to avoid seeing empty window.
+        surface = create_surface(instance.get(), window.hinstance, window.hwnd);
+        surface_format = select_format(gpu, surface.get());
+        auto family_index = find_queue_family(gpu, surface.get());
+        device = create_device(gpu, family_index);
+        queue = fetch_queue(device.get(), family_index);
+        cmd_pool = create_command_pool(device.get(), family_index);
+        desc_layout = create_descriptor_layout(device.get());
+        pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
+        render_pass = create_render_pass(device.get(), surface_format);
+        pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
+        desc_pool = create_descriptor_pool(device.get());
 
-    void run();
-};
+        for (uint32_t i = 0; i < frame_lag; i++) {
+            fences[i] = create_fence(device.get());
+            image_acquired_semaphores[i] = create_semaphore(device.get());
+            draw_complete_semaphores[i] = create_semaphore(device.get());
+        }
 
-LRESULT CALLBACK App::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_CREATE: {
-        LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
-        return 0;
+        resize();
     }
-    case WM_CLOSE: PostQuitMessage(0); break;
-    case WM_GETMINMAXINFO: {
-        // Window client area size must be at least 1 pixel high, to prevent crash.
-        const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
-        ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
-        return 0;
-    }
+
+    ~App() {
+        wait_idle(device.get());
     }
 
-    if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-        if (app->proc(hWnd, uMsg, wParam, lParam))
-            return 0;
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
-}
-
-bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_PAINT: redraw(); return true;
-    case WM_SIZE: {
-            // Resize the application to the new window size, except when
-            // it was minimized. Vulkan doesn't support images or swapchains
-            // with width=0 and height=0.
-            if (wParam != SIZE_MINIMIZED) {
-                window.width = lParam & 0xffff;
-                window.height = (lParam & 0xffff0000) >> 16;
-                resize();
-            }
-            return true;
+    void run() {
+        MSG msg = {};
+        while (GetMessage(&msg, nullptr, 0, 0)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
     }
-    return false;
-}
-
-App::App(HINSTANCE hInstance, int nCmdShow) {
-    instance = create_instance();
-    gpu = pick_gpu(instance.get());
-    window = Window(WndProc, hInstance, nCmdShow, this); // Create as late as possible to avoid seeing empty window.
-    surface = create_surface(instance.get(), window.hinstance, window.hwnd);
-    surface_format = select_format(gpu, surface.get());
-    auto family_index = find_queue_family(gpu, surface.get());
-    device = create_device(gpu, family_index);
-    queue = fetch_queue(device.get(), family_index);
-    cmd_pool = create_command_pool(device.get(), family_index);
-    desc_layout = create_descriptor_layout(device.get());
-    pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
-    render_pass = create_render_pass(device.get(), surface_format);
-    pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
-    desc_pool = create_descriptor_pool(device.get());
-
-    for (uint32_t i = 0; i < frame_lag; i++) {
-        fences[i] = create_fence(device.get());
-        image_acquired_semaphores[i] = create_semaphore(device.get());
-        draw_complete_semaphores[i] = create_semaphore(device.get());
-    }
-
-    resize();
-}
-
-App::~App() {
-    wait_idle(device.get());
-}
-
-void App::run() {
-    MSG msg = {};
-    while (GetMessage(&msg, nullptr, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-}
-
-void App::redraw() {
-    wait(device.get(), fences[frame_index].get());
-    const auto index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
-
-    patch(frames[index].uniform_memory_ptr);
-
-    begin(frames[index].cmd.get());
-    const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-    begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, window.width, window.height);
-
-    bind_pipeline(frames[index].cmd.get(), pipeline.get());
-    bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
-
-    set_viewport(frames[index].cmd.get(), (float)window.width, (float)window.height);
-    set_scissor(frames[index].cmd.get(), window.width, window.height);
-
-    draw(frames[index].cmd.get(), 12 * 3);
-
-    end_pass(frames[index].cmd.get());
-    end(frames[index].cmd.get());
-
-    submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
-    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
-
-    frame_index += 1;
-    frame_index %= frame_lag;
-}
-
-void App::resize() {
-    if (!device) // [TODO] Remove.
-        return;
-
-    wait_idle(device.get());
-
-    swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
-
-    const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
-
-    frames.clear();
-    frames.resize(swapchain_images.size());
-
-    for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-        frames[i].image = swapchain_images[i];
-        frames[i].view = create_image_view(device.get(), swapchain_images[i], surface_format);
-
-        frames[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
-        frames[i].uniform_memory = create_uniform_memory(gpu, device.get(), frames[i].uniform_buffer.get());
-        bind_memory(device.get(), frames[i].uniform_buffer.get(), frames[i].uniform_memory.get());
-        frames[i].uniform_memory_ptr = map_memory(device.get(), frames[i].uniform_memory.get());
-
-        frames[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
-        frames[i].descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-        update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
-        frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
-    }
-}
-
-void App::patch(void* mem) {
-    mat4x4 VP;
-    mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
-
-    // Rotate around the Y axis
-    mat4x4 Model;
-    mat4x4_dup(Model, matrices.model_matrix);
-    mat4x4_rotate_Y(matrices.model_matrix, Model, (float)degreesToRadians(1.5f));
-    mat4x4_orthonormalize(matrices.model_matrix, matrices.model_matrix);
-
-    mat4x4 MVP;
-    mat4x4_mul(MVP, VP, matrices.model_matrix);
-
-    Uniforms uniforms;
-    memcpy(uniforms.mvp, MVP, sizeof(MVP));
-
-    for (int32_t i = 0; i < 12 * 3; i++) {
-        uniforms.position[i][0] = uniforms.vertex_data[i * 3];
-        uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
-        uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
-        uniforms.position[i][3] = 1.0f;
-    }
-
-    memcpy(mem, &uniforms, sizeof uniforms);
-}
+};
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
     App app(hInstance, nCmdShow);
