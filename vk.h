@@ -831,3 +831,10 @@ void set_scissor(const vk::CommandBuffer& cmd_buf, uint32_t width, uint32_t heig
     cmd_buf.setScissor(0, 1, &scissor);
 }
 
+void bind_pipeline(const vk::CommandBuffer& cmd_buf, const vk::Pipeline& pipeline) {
+    cmd_buf.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline);
+}
+
+void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& desc_set) {
+    cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
+}

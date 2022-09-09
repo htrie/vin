@@ -285,8 +285,8 @@ void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
     const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
     begin_pass(cmd_buf, render_pass.get(), frames[current_buffer].framebuffer.get(), clear_value, window.width, window.height);
 
-    cmd_buf.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
-    cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &frames[current_buffer].descriptor_set.get(), 0, nullptr);
+    bind_pipeline(cmd_buf, pipeline.get());
+    bind_descriptor_set(cmd_buf, pipeline_layout.get(), frames[current_buffer].descriptor_set.get());
 
     set_viewport(cmd_buf, (float)window.width, (float)window.height);
     set_scissor(cmd_buf, window.width, window.height);
