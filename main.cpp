@@ -94,15 +94,15 @@ struct Matrices {
     }
 };
 
-struct Frame { // [TODO] Use class.
+struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
     vk::UniqueImageView view;
-    vk::UniqueBuffer uniform_buffer;
+    vk::UniqueBuffer uniform_buffer; // [TODO] Move outside.
     vk::UniqueDeviceMemory uniform_memory;
     void* uniform_memory_ptr = nullptr;
     vk::UniqueFramebuffer framebuffer;
-    vk::UniqueDescriptorSet descriptor_set;
+    vk::UniqueDescriptorSet descriptor_set; // [TODO] Move outside.
 
     Frame(const vk::PhysicalDevice& gpu, const vk::Device& device,
         const vk::CommandPool& cmd_pool, 
@@ -153,6 +153,22 @@ struct Swapchain { // [TODO] Use class.
             frames.emplace_back(gpu, device, cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
         }
     }
+
+    void redraw(const vk::ClearColorValue& clear_value, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
+        begin(frames[index].cmd.get());
+        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
+
+        bind_pipeline(frames[index].cmd.get(), pipeline.get());
+        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
+
+        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
+        set_scissor(frames[index].cmd.get(), width, height);
+
+        draw(frames[index].cmd.get(), vertex_count);
+
+        end_pass(frames[index].cmd.get());
+        end(frames[index].cmd.get());
+    }
 };
 
 struct Device { // [TODO] Use class.
@@ -177,7 +193,6 @@ class App {
     uint32_t frame_index = 0;
 
     Swapchain swapchain2; // [TODO] Rename.
-
 
     Matrices matrices;
 
@@ -207,13 +222,13 @@ class App {
     }
 
     void resize(unsigned w, unsigned h) {
+        width = w;
+        height = h;
+
         if (!device) // [TODO] Remove.
             return;
 
         wait_idle(device.get());
-
-        width = w;
-        height = h;
 
         swapchain2.resize(gpu, device.get(), surface.get(), surface_format, width, height);
     }
@@ -224,20 +239,9 @@ class App {
 
         patch(swapchain2.frames[index].uniform_memory_ptr);
 
-        begin(swapchain2.frames[index].cmd.get()); // [TODO] Move to Frame::draw.
-        const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-        begin_pass(swapchain2.frames[index].cmd.get(), swapchain2.render_pass.get(), swapchain2.frames[index].framebuffer.get(), clear_value, width, height);
-
-        bind_pipeline(swapchain2.frames[index].cmd.get(), swapchain2.pipeline.get());
-        bind_descriptor_set(swapchain2.frames[index].cmd.get(), swapchain2.pipeline_layout.get(), swapchain2.frames[index].descriptor_set.get());
-
-        set_viewport(swapchain2.frames[index].cmd.get(), (float)width, (float)height);
-        set_scissor(swapchain2.frames[index].cmd.get(), width, height);
-
-        draw(swapchain2.frames[index].cmd.get(), 12 * 3);
-
-        end_pass(swapchain2.frames[index].cmd.get());
-        end(swapchain2.frames[index].cmd.get());
+        const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} })); // [TODO] Pass linmat float4 instead.
+        const auto vertex_count = 12 * 3;
+        swapchain2.redraw(clear_value, vertex_count, index, width, height);
 
         submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), swapchain2.frames[index].cmd.get(), fences[frame_index].get());
         present(swapchain2.swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
