@@ -93,47 +93,41 @@ struct Matrices {
     }
 };
 
-struct Window { // [TODO] Use class.
-    HINSTANCE hinstance = nullptr;
-    HWND hwnd = nullptr;
+HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height) {
+    const char* name = "vin";
 
-    Window() {}
-    Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height)
-        : hinstance(hInstance) {
+    WNDCLASSEX win_class;
+    win_class.cbSize = sizeof(WNDCLASSEX);
+    win_class.style = CS_HREDRAW | CS_VREDRAW;
+    win_class.lpfnWndProc = proc;
+    win_class.cbClsExtra = 0;
+    win_class.cbWndExtra = 0;
+    win_class.hInstance = hInstance;
+    win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    win_class.hbrBackground = CreateSolidBrush(0);
+    win_class.lpszMenuName = nullptr;
+    win_class.lpszClassName = name;
+    win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
 
-        const char* name = "vin";
-
-        WNDCLASSEX win_class;
-        win_class.cbSize = sizeof(WNDCLASSEX);
-        win_class.style = CS_HREDRAW | CS_VREDRAW;
-        win_class.lpfnWndProc = proc;
-        win_class.cbClsExtra = 0;
-        win_class.cbWndExtra = 0;
-        win_class.hInstance = hinstance;
-        win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
-        win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-        win_class.hbrBackground = CreateSolidBrush(0);
-        win_class.lpszMenuName = nullptr;
-        win_class.lpszClassName = name;
-        win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
-
-        if (!RegisterClassEx(&win_class)) {
-            ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
-        }
-
-        RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
-        AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-
-        hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
-            nullptr, nullptr, hinstance, data);
-        if (!hwnd) {
-            ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
-        }
-
-        ShowWindow(hwnd, nCmdShow);
+    if (!RegisterClassEx(&win_class)) {
+        ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
     }
-};
+
+    RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+
+    auto hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
+        nullptr, nullptr, hInstance, data);
+    if (!hWnd) {
+        ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
+    }
+
+    ShowWindow(hWnd, nCmdShow);
+
+    return hWnd;
+}
 
 struct Frame { // [TODO] Use class.
     vk::Image image;
@@ -169,8 +163,6 @@ struct Frame { // [TODO] Use class.
 class App {
     unsigned width = 800;
     unsigned height = 600;
-
-    Window window;
 
     vk::UniqueInstance instance; // [TODO] Move most to Device.
     vk::UniqueSurfaceKHR surface;
@@ -314,8 +306,8 @@ public:
     App(HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
-        window = Window(WndProc, hInstance, nCmdShow, this, width, height); // Create as late as possible to avoid seeing empty window.
-        surface = create_surface(instance.get(), window.hinstance, window.hwnd);
+        auto hWnd = create_window(WndProc, hInstance, nCmdShow, this, width, height);
+        surface = create_surface(instance.get(), hInstance, hWnd);
         surface_format = select_format(gpu, surface.get());
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
