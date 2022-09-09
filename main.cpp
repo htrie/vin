@@ -173,9 +173,7 @@ class App {
 
     void draw_build_cmd(vk::CommandBuffer);
 
-    void acquire();
     void update_data_buffer();
-    void present();
 
     void resize();
     void draw();
@@ -272,68 +270,13 @@ void App::run() {
 
 void App::draw() {
     wait(device.get(), fences[frame_index].get());
-    acquire(); // [TODO] Move to vk.
+    current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
     update_data_buffer(); // [TODO] Rename to record.
     submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
-    present(); // [TODO] Move to vk.
+    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer); // [TODO] Move to vk.
 
     frame_index += 1;
     frame_index %= frame_lag;
-}
-
-void App::acquire() {
-    vk::Result result;
-    do {
-        result = device->acquireNextImageKHR(swapchain.get(), UINT64_MAX, image_acquired_semaphores[frame_index].get(), vk::Fence(), &current_buffer);
-        if (result == vk::Result::eErrorOutOfDateKHR) {
-            resize(); // swapchain is out of date (e.g. the window was resized) and must be recreated:
-        }
-        else if (result == vk::Result::eSuboptimalKHR) {
-            break; // swapchain is not as optimal as it could be, but the platform's presentation engine will still present the image correctly.
-        }
-        else if (result == vk::Result::eErrorSurfaceLostKHR) {
-            surface.reset();
-            surface = create_surface(instance.get(), window.hinstance, window.hwnd);
-            resize();
-        }
-        else {
-            VERIFY(result == vk::Result::eSuccess);
-        }
-    } while (result != vk::Result::eSuccess);
-}
-
-void App::present() {
-    // wait for draw complete
-    auto const present_info = vk::PresentInfoKHR()
-        .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&draw_complete_semaphores[frame_index].get())
-        .setSwapchainCount(1)
-        .setPSwapchains(&swapchain.get())
-        .setPImageIndices(&current_buffer);
-
-    const auto result = queue.presentKHR(&present_info);
-    if (result == vk::Result::eErrorOutOfDateKHR) {
-        resize(); // swapchain is out of date (e.g. the window was resized) and must be recreated:
-    }
-    else if (result == vk::Result::eSuboptimalKHR) {
-        // SUBOPTIMAL could be due to resize
-        vk::SurfaceCapabilitiesKHR surf_caps;
-        const auto result = gpu.getSurfaceCapabilitiesKHR(surface.get(), &surf_caps);
-        VERIFY(result == vk::Result::eSuccess);
-
-        if (surf_caps.currentExtent.width != static_cast<uint32_t>(window.width) ||
-            surf_caps.currentExtent.height != static_cast<uint32_t>(window.height)) {
-            resize();
-        }
-    }
-    else if (result == vk::Result::eErrorSurfaceLostKHR) {
-        surface.reset();
-        surface = create_surface(instance.get(), window.hinstance, window.hwnd);
-        resize();
-    }
-    else {
-        VERIFY(result == vk::Result::eSuccess);
-    }
 }
 
 void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
