@@ -18,7 +18,7 @@
 #include "linmath.h"
 #include "vk.h"
 
-struct Uniforms{
+struct Uniforms {
     float mvp[4][4];
     float position[12 * 3][4];
 
@@ -89,7 +89,7 @@ struct Matrices {
     }
 };
 
-struct Window {
+struct Window { // [TODO] Use class.
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
     int32_t width = 800;
@@ -133,7 +133,7 @@ struct Window {
     }
 };
 
-struct Frame {
+struct Frame { // [TODO] Use class.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
     vk::UniqueImageView view;
@@ -142,6 +142,26 @@ struct Frame {
     void* uniform_memory_ptr = nullptr;
     vk::UniqueFramebuffer framebuffer;
     vk::UniqueDescriptorSet descriptor_set;
+
+    Frame(const vk::PhysicalDevice& gpu, const vk::Device& device,
+        const vk::CommandPool& cmd_pool, 
+        const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout,
+        const vk::RenderPass& render_pass,
+        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format,
+        uint32_t width, uint32_t height) {
+        image = swapchain_image;
+        view = create_image_view(device, swapchain_image, surface_format);
+
+        uniform_buffer = create_uniform_buffer(device, sizeof(Uniforms));
+        uniform_memory = create_uniform_memory(gpu, device, uniform_buffer.get());
+        bind_memory(device, uniform_buffer.get(), uniform_memory.get());
+        uniform_memory_ptr = map_memory(device, uniform_memory.get());
+
+        cmd = create_command_buffer(device, cmd_pool);
+        descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
+        update_descriptor_set(device, descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
+        framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
+    }
 };
 
 class App {
@@ -204,25 +224,11 @@ class App {
         wait_idle(device.get());
 
         swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
-
         const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
 
         frames.clear();
-        frames.resize(swapchain_images.size());
-
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames[i].image = swapchain_images[i];
-            frames[i].view = create_image_view(device.get(), swapchain_images[i], surface_format);
-
-            frames[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
-            frames[i].uniform_memory = create_uniform_memory(gpu, device.get(), frames[i].uniform_buffer.get());
-            bind_memory(device.get(), frames[i].uniform_buffer.get(), frames[i].uniform_memory.get());
-            frames[i].uniform_memory_ptr = map_memory(device.get(), frames[i].uniform_memory.get());
-
-            frames[i].cmd = create_command_buffer(device.get(), cmd_pool.get());
-            frames[i].descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-            update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
-            frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
+            frames.emplace_back(gpu, device.get(), cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, window.width, window.height);
         }
     }
 
@@ -232,7 +238,7 @@ class App {
 
         patch(frames[index].uniform_memory_ptr);
 
-        begin(frames[index].cmd.get());
+        begin(frames[index].cmd.get()); // [TODO] Move to Frame::draw.
         const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
         begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, window.width, window.height);
 
