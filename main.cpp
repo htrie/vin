@@ -94,10 +94,6 @@ struct Matrices {
     }
 };
 
-struct Device { // [TODO] Use class.
-
-};
-
 struct Frame { // [TODO] Use class.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
@@ -133,22 +129,20 @@ struct SwapChain { // [TODO] Use class.
 
 };
 
+struct Device { // [TODO] Use class.
+
+};
+
 class App {
     unsigned width = 800;
     unsigned height = 600;
 
     vk::UniqueInstance instance; // [TODO] Move most to Device.
+    vk::PhysicalDevice gpu;
     vk::UniqueSurfaceKHR surface;
+    vk::SurfaceFormatKHR surface_format;
     vk::UniqueDevice device;
-    vk::UniqueCommandPool cmd_pool;
-    vk::UniqueDescriptorPool desc_pool;
-
-    vk::UniqueSwapchainKHR swapchain; // [TODO] Move SwapChain.
-    std::vector<Frame> frames;
-    vk::UniqueRenderPass render_pass;
-    vk::UniqueDescriptorSetLayout desc_layout;
-    vk::UniquePipelineLayout pipeline_layout;
-    vk::UniquePipeline pipeline;
+    vk::Queue queue;
 
     static const unsigned frame_lag = 2; // [TODO] Move to ?.
     vk::UniqueFence fences[frame_lag];
@@ -156,9 +150,14 @@ class App {
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
 
-    vk::PhysicalDevice gpu; // [TODO] Move to ?.
-    vk::Queue queue;
-    vk::SurfaceFormatKHR surface_format;
+    vk::UniqueCommandPool cmd_pool; // [TODO] Move SwapChain.
+    vk::UniqueDescriptorPool desc_pool;
+    vk::UniqueSwapchainKHR swapchain;
+    std::vector<Frame> frames;
+    vk::UniqueRenderPass render_pass;
+    vk::UniqueDescriptorSetLayout desc_layout;
+    vk::UniquePipelineLayout pipeline_layout;
+    vk::UniquePipeline pipeline;
 
     Matrices matrices;
 
@@ -279,11 +278,11 @@ public:
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
         cmd_pool = create_command_pool(device.get(), family_index);
+        desc_pool = create_descriptor_pool(device.get());
         desc_layout = create_descriptor_layout(device.get());
         pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
         render_pass = create_render_pass(device.get(), surface_format);
         pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
-        desc_pool = create_descriptor_pool(device.get());
 
         for (uint32_t i = 0; i < frame_lag; i++) {
             fences[i] = create_fence(device.get());
