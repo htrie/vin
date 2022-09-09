@@ -171,7 +171,6 @@ class App {
     Matrices matrices;
 
     void update_data_buffer(unsigned current_buffer);
-    void draw_build_cmd(vk::CommandBuffer, unsigned current_buffer);
 
     void resize();
     void redraw();
@@ -271,30 +270,27 @@ void App::redraw() {
     const auto current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
 
     update_data_buffer(current_buffer); // [TODO] Rename to record.
-    draw_build_cmd(frames[current_buffer].cmd.get(), current_buffer);
+
+    begin(frames[current_buffer].cmd.get());
+    const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
+    begin_pass(frames[current_buffer].cmd.get(), render_pass.get(), frames[current_buffer].framebuffer.get(), clear_value, window.width, window.height);
+
+    bind_pipeline(frames[current_buffer].cmd.get(), pipeline.get());
+    bind_descriptor_set(frames[current_buffer].cmd.get(), pipeline_layout.get(), frames[current_buffer].descriptor_set.get());
+
+    set_viewport(frames[current_buffer].cmd.get(), (float)window.width, (float)window.height);
+    set_scissor(frames[current_buffer].cmd.get(), window.width, window.height);
+
+    draw(frames[current_buffer].cmd.get(), 12 * 3);
+
+    end_pass(frames[current_buffer].cmd.get());
+    end(frames[current_buffer].cmd.get());
 
     submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
     present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer);
 
     frame_index += 1;
     frame_index %= frame_lag;
-}
-
-void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
-    begin(cmd_buf);
-    const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-    begin_pass(cmd_buf, render_pass.get(), frames[current_buffer].framebuffer.get(), clear_value, window.width, window.height);
-
-    bind_pipeline(cmd_buf, pipeline.get());
-    bind_descriptor_set(cmd_buf, pipeline_layout.get(), frames[current_buffer].descriptor_set.get());
-
-    set_viewport(cmd_buf, (float)window.width, (float)window.height);
-    set_scissor(cmd_buf, window.width, window.height);
-
-    draw(cmd_buf, 12 * 3);
-
-    end_pass(cmd_buf);
-    end(cmd_buf);
 }
 
 void App::resize() {
@@ -328,7 +324,6 @@ void App::resize() {
         frames[i].descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
         update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
         frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
-
     }
 }
 
