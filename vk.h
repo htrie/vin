@@ -838,3 +838,7 @@ void bind_pipeline(const vk::CommandBuffer& cmd_buf, const vk::Pipeline& pipelin
 void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& desc_set) {
     cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
 }
+
+void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
+    cmd_buf.draw(vertex_count, 1, 0, 0);
+}

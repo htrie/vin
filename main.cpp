@@ -174,7 +174,7 @@ class App {
     void draw_build_cmd(vk::CommandBuffer, unsigned current_buffer);
 
     void resize();
-    void draw();
+    void redraw();
 
     bool proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -213,7 +213,7 @@ LRESULT CALLBACK App::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 
 bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_PAINT: draw(); return true;
+    case WM_PAINT: redraw(); return true;
     case WM_SIZE: {
             // Resize the application to the new window size, except when
             // it was minimized. Vulkan doesn't support images or swapchains
@@ -266,7 +266,7 @@ void App::run() {
     }
 }
 
-void App::draw() {
+void App::redraw() {
     wait(device.get(), fences[frame_index].get());
     const auto current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
 
@@ -291,7 +291,7 @@ void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
     set_viewport(cmd_buf, (float)window.width, (float)window.height);
     set_scissor(cmd_buf, window.width, window.height);
 
-    cmd_buf.draw(12 * 3, 1, 0, 0);
+    draw(cmd_buf, 12 * 3);
 
     end_pass(cmd_buf);
     end(cmd_buf);
