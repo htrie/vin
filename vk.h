@@ -776,4 +776,30 @@ void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk
     VERIFY(result == vk::Result::eSuccess);
 }
 
+void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
+    float viewport_dimension;
+    float viewport_x = 0.0f;
+    float viewport_y = 0.0f;
+    if (width < height) {
+        viewport_dimension = width;
+        viewport_y = (height - width) / 2.0f;
+    }
+    else {
+        viewport_dimension = height;
+        viewport_x = (width - height) / 2.0f;
+    }
+    auto const viewport = vk::Viewport()
+        .setX(viewport_x)
+        .setY(viewport_y)
+        .setWidth((float)viewport_dimension)
+        .setHeight((float)viewport_dimension)
+        .setMinDepth((float)0.0f)
+        .setMaxDepth((float)1.0f);
+    cmd_buf.setViewport(0, 1, &viewport);
+}
+
+void set_scissor(const vk::CommandBuffer& cmd_buf, uint32_t width, uint32_t height) {
+    vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(width, height));
+    cmd_buf.setScissor(0, 1, &scissor);
+}
 

@@ -280,11 +280,11 @@ void App::draw() {
     frame_index %= frame_lag;
 }
 
-void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffer) {
+void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
     auto const command_buffer_info = vk::CommandBufferBeginInfo()
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-    auto result = commandBuffer.begin(&command_buffer_info);
+    auto result = cmd_buf.begin(&command_buffer_info);
     VERIFY(result == vk::Result::eSuccess);
 
     vk::ClearValue const clearValues[1] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})) };
@@ -296,39 +296,19 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffe
         .setClearValueCount(2)
         .setPClearValues(clearValues);
 
-    commandBuffer.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
+    cmd_buf.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
 
-    commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
-    commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &frames[current_buffer].descriptor_set.get(), 0, nullptr);
+    cmd_buf.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
+    cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &frames[current_buffer].descriptor_set.get(), 0, nullptr);
 
-    float viewport_dimension;
-    float viewport_x = 0.0f;
-    float viewport_y = 0.0f;
-    if (window.width < window.height) {
-        viewport_dimension = (float)window.width;
-        viewport_y = (window.height - window.width) / 2.0f;
-    }
-    else {
-        viewport_dimension = (float)window.height;
-        viewport_x = (window.width - window.height) / 2.0f;
-    }
-    auto const viewport = vk::Viewport()
-        .setX(viewport_x)
-        .setY(viewport_y)
-        .setWidth((float)viewport_dimension)
-        .setHeight((float)viewport_dimension)
-        .setMinDepth((float)0.0f)
-        .setMaxDepth((float)1.0f);
-    commandBuffer.setViewport(0, 1, &viewport);
+    set_viewport(cmd_buf, (float)window.width, (float)window.height);
+    set_scissor(cmd_buf, window.width, window.height);
 
-    vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(window.width, window.height));
-    commandBuffer.setScissor(0, 1, &scissor);
+    cmd_buf.draw(12 * 3, 1, 0, 0);
 
-    commandBuffer.draw(12 * 3, 1, 0, 0);
+    cmd_buf.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
 
-    commandBuffer.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-
-    result = commandBuffer.end();
+    result = cmd_buf.end();
     VERIFY(result == vk::Result::eSuccess);
 }
 
