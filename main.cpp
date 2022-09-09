@@ -227,25 +227,7 @@ class App {
         frame_index %= frame_lag;
     }
 
-    bool proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-        switch (uMsg) {
-        case WM_PAINT: redraw(); return true;
-        case WM_SIZE: {
-                // Resize the application to the new window size, except when
-                // it was minimized. Vulkan doesn't support images or swapchains
-                // with width=0 and height=0.
-                if (wParam != SIZE_MINIMIZED) {
-                    const unsigned width = lParam & 0xffff;
-                    const unsigned height = (lParam & 0xffff0000) >> 16;
-                    resize(width, height);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         switch (uMsg) {
         case WM_CREATE: {
             LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
@@ -263,11 +245,25 @@ class App {
             ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
             return 0;
         }
+        case WM_PAINT: {
+            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+                app->redraw();
+            return 0;
         }
-
-        if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-            if (app->proc(hWnd, uMsg, wParam, lParam))
-                return 0;
+        case WM_SIZE: {
+            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+                // Resize the application to the new window size, except when
+                // it was minimized. Vulkan doesn't support images or swapchains
+                // with width=0 and height=0.
+                if (wParam != SIZE_MINIMIZED) {
+                    const unsigned width = lParam & 0xffff;
+                    const unsigned height = (lParam & 0xffff0000) >> 16;
+                    app->resize(width, height);
+                }
+            }
+            return 0;
+        }
+        }
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 
@@ -275,7 +271,7 @@ public:
     App(HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
-        auto hWnd = create_window(WndProc, hInstance, nCmdShow, this, width, height);
+        auto hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
         surface = create_surface(instance.get(), hInstance, hWnd);
         surface_format = select_format(gpu, surface.get());
         auto family_index = find_queue_family(gpu, surface.get());
