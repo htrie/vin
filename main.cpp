@@ -96,11 +96,9 @@ struct Matrices {
 struct Window { // [TODO] Use class.
     HINSTANCE hinstance = nullptr;
     HWND hwnd = nullptr;
-    int32_t width = 800;
-    int32_t height = 600;
 
     Window() {}
-    Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data)
+    Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height)
         : hinstance(hInstance) {
 
         const char* name = "vin";
@@ -169,6 +167,9 @@ struct Frame { // [TODO] Use class.
 };
 
 class App {
+    unsigned width = 800;
+    unsigned height = 600;
+
     Window window;
 
     vk::UniqueInstance instance; // [TODO] Move most to Device.
@@ -223,18 +224,21 @@ class App {
         memcpy(mem, &uniforms, sizeof uniforms);
     }
 
-    void resize() {
+    void resize(unsigned w, unsigned h) {
         if (!device) // [TODO] Remove.
             return;
 
         wait_idle(device.get());
 
-        swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
+        width = w;
+        height = h;
+
+        swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height);
         const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
 
         frames.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(gpu, device.get(), cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, window.width, window.height);
+            frames.emplace_back(gpu, device.get(), cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
         }
     }
 
@@ -246,13 +250,13 @@ class App {
 
         begin(frames[index].cmd.get()); // [TODO] Move to Frame::draw.
         const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, window.width, window.height);
+        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
 
         bind_pipeline(frames[index].cmd.get(), pipeline.get());
         bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
 
-        set_viewport(frames[index].cmd.get(), (float)window.width, (float)window.height);
-        set_scissor(frames[index].cmd.get(), window.width, window.height);
+        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
+        set_scissor(frames[index].cmd.get(), width, height);
 
         draw(frames[index].cmd.get(), 12 * 3);
 
@@ -274,9 +278,9 @@ class App {
                 // it was minimized. Vulkan doesn't support images or swapchains
                 // with width=0 and height=0.
                 if (wParam != SIZE_MINIMIZED) {
-                    window.width = lParam & 0xffff;
-                    window.height = (lParam & 0xffff0000) >> 16;
-                    resize();
+                    const unsigned width = lParam & 0xffff;
+                    const unsigned height = (lParam & 0xffff0000) >> 16;
+                    resize(width, height);
                 }
                 return true;
             }
@@ -310,7 +314,7 @@ public:
     App(HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
-        window = Window(WndProc, hInstance, nCmdShow, this); // Create as late as possible to avoid seeing empty window.
+        window = Window(WndProc, hInstance, nCmdShow, this, width, height); // Create as late as possible to avoid seeing empty window.
         surface = create_surface(instance.get(), window.hinstance, window.hwnd);
         surface_format = select_format(gpu, surface.get());
         auto family_index = find_queue_family(gpu, surface.get());
@@ -329,7 +333,7 @@ public:
             draw_complete_semaphores[i] = create_semaphore(device.get());
         }
 
-        resize();
+        resize(width, height);
     }
 
     ~App() {
