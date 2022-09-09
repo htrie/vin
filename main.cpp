@@ -132,6 +132,8 @@ struct Swapchain { // [TODO] Use class.
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
+    vk::UniqueSwapchainKHR swapchain;
+    std::vector<Frame> frames;
 
     Swapchain() {}
     Swapchain(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index) {
@@ -141,6 +143,15 @@ struct Swapchain { // [TODO] Use class.
         pipeline_layout = create_pipeline_layout(device, desc_layout.get());
         render_pass = create_render_pass(device, surface_format);
         pipeline = create_pipeline(device, pipeline_layout.get(), render_pass.get());
+    }
+
+    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
+        swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height);
+        const auto swapchain_images = get_swapchain_images(device, swapchain.get());
+        frames.clear();
+        for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
+            frames.emplace_back(gpu, device, cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
+        }
     }
 };
 
@@ -167,8 +178,6 @@ class App {
 
     Swapchain swapchain2; // [TODO] Rename.
 
-    vk::UniqueSwapchainKHR swapchain; // [TODO] Move SwapChain.
-    std::vector<Frame> frames;
 
     Matrices matrices;
 
@@ -206,38 +215,32 @@ class App {
         width = w;
         height = h;
 
-        swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height);
-        const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
-
-        frames.clear();
-        for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(gpu, device.get(), swapchain2.cmd_pool.get(), swapchain2.desc_pool.get(), swapchain2.desc_layout.get(), swapchain2.render_pass.get(), swapchain_images[i], surface_format, width, height);
-        }
+        swapchain2.resize(gpu, device.get(), surface.get(), surface_format, width, height);
     }
 
     void redraw() {
         wait(device.get(), fences[frame_index].get());
-        const auto index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
+        const auto index = acquire(device.get(), swapchain2.swapchain.get(), image_acquired_semaphores[frame_index].get());
 
-        patch(frames[index].uniform_memory_ptr);
+        patch(swapchain2.frames[index].uniform_memory_ptr);
 
-        begin(frames[index].cmd.get()); // [TODO] Move to Frame::draw.
+        begin(swapchain2.frames[index].cmd.get()); // [TODO] Move to Frame::draw.
         const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-        begin_pass(frames[index].cmd.get(), swapchain2.render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
+        begin_pass(swapchain2.frames[index].cmd.get(), swapchain2.render_pass.get(), swapchain2.frames[index].framebuffer.get(), clear_value, width, height);
 
-        bind_pipeline(frames[index].cmd.get(), swapchain2.pipeline.get());
-        bind_descriptor_set(frames[index].cmd.get(), swapchain2.pipeline_layout.get(), frames[index].descriptor_set.get());
+        bind_pipeline(swapchain2.frames[index].cmd.get(), swapchain2.pipeline.get());
+        bind_descriptor_set(swapchain2.frames[index].cmd.get(), swapchain2.pipeline_layout.get(), swapchain2.frames[index].descriptor_set.get());
 
-        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
-        set_scissor(frames[index].cmd.get(), width, height);
+        set_viewport(swapchain2.frames[index].cmd.get(), (float)width, (float)height);
+        set_scissor(swapchain2.frames[index].cmd.get(), width, height);
 
-        draw(frames[index].cmd.get(), 12 * 3);
+        draw(swapchain2.frames[index].cmd.get(), 12 * 3);
 
-        end_pass(frames[index].cmd.get());
-        end(frames[index].cmd.get());
+        end_pass(swapchain2.frames[index].cmd.get());
+        end(swapchain2.frames[index].cmd.get());
 
-        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
-        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
+        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), swapchain2.frames[index].cmd.get(), fences[frame_index].get());
+        present(swapchain2.swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
 
         frame_index += 1;
         frame_index %= frame_lag;
