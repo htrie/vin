@@ -313,6 +313,7 @@ vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
 
 vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
     auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
         .setQueueFamilyIndex(family_index);
 
     auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);

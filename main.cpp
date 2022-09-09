@@ -170,9 +170,8 @@ class App {
 
     Matrices matrices;
 
-    void draw_build_cmd(vk::CommandBuffer, unsigned current_buffer);
-
     void update_data_buffer(unsigned current_buffer);
+    void draw_build_cmd(vk::CommandBuffer, unsigned current_buffer);
 
     void resize();
     void draw();
@@ -272,6 +271,7 @@ void App::draw() {
     const auto current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
 
     update_data_buffer(current_buffer); // [TODO] Rename to record.
+    draw_build_cmd(frames[current_buffer].cmd.get(), current_buffer);
 
     submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
     present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer);
@@ -284,6 +284,9 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffe
     auto const command_buffer_info = vk::CommandBufferBeginInfo()
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
+    auto result = commandBuffer.begin(&command_buffer_info);
+    VERIFY(result == vk::Result::eSuccess);
+
     vk::ClearValue const clearValues[1] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})) };
 
     auto const pass_info = vk::RenderPassBeginInfo()
@@ -293,12 +296,11 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffe
         .setClearValueCount(2)
         .setPClearValues(clearValues);
 
-    auto result = commandBuffer.begin(&command_buffer_info);
-    VERIFY(result == vk::Result::eSuccess);
-
     commandBuffer.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
+
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
     commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &frames[current_buffer].descriptor_set.get(), 0, nullptr);
+
     float viewport_dimension;
     float viewport_x = 0.0f;
     float viewport_y = 0.0f;
@@ -321,9 +323,10 @@ void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffe
 
     vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(window.width, window.height));
     commandBuffer.setScissor(0, 1, &scissor);
+
     commandBuffer.draw(12 * 3, 1, 0, 0);
-    // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-    commandBuffer.endRenderPass();
+
+    commandBuffer.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
 
     result = commandBuffer.end();
     VERIFY(result == vk::Result::eSuccess);
@@ -361,7 +364,6 @@ void App::resize() {
         update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
         frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
 
-        draw_build_cmd(frames[i].cmd.get(), i); // [TODO] Do every frame.
     }
 }
 
