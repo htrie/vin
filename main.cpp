@@ -95,6 +95,7 @@ struct Window {
     int32_t width = 800;
     int32_t height = 600;
 
+    Window() {}
     Window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data)
         : hinstance(hInstance) {
 
@@ -228,10 +229,10 @@ bool App::proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return false;
 }
 
-App::App(HINSTANCE hInstance, int nCmdShow)
-    : window(WndProc, hInstance, nCmdShow, this) {
+App::App(HINSTANCE hInstance, int nCmdShow) {
     instance = create_instance();
     gpu = pick_gpu(instance.get());
+    window = Window(WndProc, hInstance, nCmdShow, this); // Create as late as possible to avoid seeing empty window.
     surface = create_surface(instance.get(), window.hinstance, window.hwnd);
     surface_format = select_format(gpu, surface.get());
     auto family_index = find_queue_family(gpu, surface.get());
