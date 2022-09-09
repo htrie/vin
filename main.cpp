@@ -170,7 +170,7 @@ class App {
 
     Matrices matrices;
 
-    void update_data_buffer(unsigned current_buffer);
+    void patch(void* mem);
 
     void resize();
     void redraw();
@@ -267,27 +267,27 @@ void App::run() {
 
 void App::redraw() {
     wait(device.get(), fences[frame_index].get());
-    const auto current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
+    const auto index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
 
-    update_data_buffer(current_buffer); // [TODO] Rename to record.
+    patch(frames[index].uniform_memory_ptr);
 
-    begin(frames[current_buffer].cmd.get());
+    begin(frames[index].cmd.get());
     const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-    begin_pass(frames[current_buffer].cmd.get(), render_pass.get(), frames[current_buffer].framebuffer.get(), clear_value, window.width, window.height);
+    begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, window.width, window.height);
 
-    bind_pipeline(frames[current_buffer].cmd.get(), pipeline.get());
-    bind_descriptor_set(frames[current_buffer].cmd.get(), pipeline_layout.get(), frames[current_buffer].descriptor_set.get());
+    bind_pipeline(frames[index].cmd.get(), pipeline.get());
+    bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
 
-    set_viewport(frames[current_buffer].cmd.get(), (float)window.width, (float)window.height);
-    set_scissor(frames[current_buffer].cmd.get(), window.width, window.height);
+    set_viewport(frames[index].cmd.get(), (float)window.width, (float)window.height);
+    set_scissor(frames[index].cmd.get(), window.width, window.height);
 
-    draw(frames[current_buffer].cmd.get(), 12 * 3);
+    draw(frames[index].cmd.get(), 12 * 3);
 
-    end_pass(frames[current_buffer].cmd.get());
-    end(frames[current_buffer].cmd.get());
+    end_pass(frames[index].cmd.get());
+    end(frames[index].cmd.get());
 
-    submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
-    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer);
+    submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
+    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
 
     frame_index += 1;
     frame_index %= frame_lag;
@@ -322,7 +322,7 @@ void App::resize() {
     }
 }
 
-void App::update_data_buffer(unsigned current_buffer) {
+void App::patch(void* mem) {
     mat4x4 VP;
     mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
@@ -345,7 +345,7 @@ void App::update_data_buffer(unsigned current_buffer) {
         uniforms.position[i][3] = 1.0f;
     }
 
-    memcpy(frames[current_buffer].uniform_memory_ptr, &uniforms, sizeof uniforms);
+    memcpy(mem, &uniforms, sizeof uniforms);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
