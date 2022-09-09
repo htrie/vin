@@ -737,3 +737,23 @@ void wait(const vk::Device& device, const vk::Fence& fence) {
     device.resetFences({ fence });
 }
 
+void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::CommandBuffer& cmd_buf, const vk::Fence& fence) {
+    // Wait for the image acquired semaphore to be signaled to ensure
+    // that the image won't be rendered to until the presentation
+    // engine has fully released ownership to the application, and it is
+    // okay to render to the image.
+    vk::PipelineStageFlags const pipe_stage_flags = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    auto const submit_info = vk::SubmitInfo()
+        .setPWaitDstStageMask(&pipe_stage_flags)
+        .setWaitSemaphoreCount(1)
+        .setPWaitSemaphores(&wait_sema)
+        .setSignalSemaphoreCount(1)
+        .setPSignalSemaphores(&signal_sema)
+        .setCommandBufferCount(1)
+        .setPCommandBuffers(&cmd_buf);
+
+    const auto result = queue.submit(1, &submit_info, fence);
+    VERIFY(result == vk::Result::eSuccess);
+}
+
+

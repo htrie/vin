@@ -175,7 +175,6 @@ class App {
 
     void acquire();
     void update_data_buffer();
-    void submit() const;
     void present();
 
     void resize();
@@ -275,7 +274,7 @@ void App::draw() {
     wait(device.get(), fences[frame_index].get());
     acquire(); // [TODO] Move to vk.
     update_data_buffer(); // [TODO] Rename to record.
-    submit(); // [TODO] Move to vk.
+    submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
     present(); // [TODO] Move to vk.
 
     frame_index += 1;
@@ -304,25 +303,6 @@ void App::acquire() {
             VERIFY(result == vk::Result::eSuccess);
         }
     } while (result != vk::Result::eSuccess);
-}
-
-void App::submit() const {
-    // Wait for the image acquired semaphore to be signaled to ensure
-    // that the image won't be rendered to until the presentation
-    // engine has fully released ownership to the application, and it is
-    // okay to render to the image.
-    vk::PipelineStageFlags const pipe_stage_flags = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    auto const submit_info = vk::SubmitInfo()
-        .setPWaitDstStageMask(&pipe_stage_flags)
-        .setWaitSemaphoreCount(1)
-        .setPWaitSemaphores(&image_acquired_semaphores[frame_index].get())
-        .setCommandBufferCount(1)
-        .setPCommandBuffers(&frames[current_buffer].cmd.get())
-        .setSignalSemaphoreCount(1)
-        .setPSignalSemaphores(&draw_complete_semaphores[frame_index].get());
-
-    const auto result = queue.submit(1, &submit_info, fences[frame_index].get());
-    VERIFY(result == vk::Result::eSuccess);
 }
 
 void App::present() {
