@@ -4,7 +4,11 @@
 #define _HAS_EXCEPTIONS 0
 
 #ifndef NDEBUG
-#define VERIFY(x) assert(x)
+#define VERIFY(expr) \
+    if (!(expr)) { \
+        MessageBox(nullptr, #expr, "Error", MB_OK); \
+        abort(); \
+    }
 #else
 #define VERIFY(x) ((void)(x))
 #endif
@@ -165,6 +169,8 @@ struct Frame { // [TODO] Use class.
 };
 
 class App {
+    Window window;
+
     vk::UniqueInstance instance; // [TODO] Move most to Device.
     vk::UniqueSurfaceKHR surface;
     vk::UniqueDevice device;
@@ -301,8 +307,6 @@ class App {
     }
 
 public:
-    Window window;
-
     App(HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
