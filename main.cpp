@@ -125,8 +125,23 @@ struct Frame { // [TODO] Use class.
     }
 };
 
-struct SwapChain { // [TODO] Use class.
+struct Swapchain { // [TODO] Use class.
+    vk::UniqueCommandPool cmd_pool;
+    vk::UniqueDescriptorPool desc_pool;
+    vk::UniqueRenderPass render_pass;
+    vk::UniqueDescriptorSetLayout desc_layout;
+    vk::UniquePipelineLayout pipeline_layout;
+    vk::UniquePipeline pipeline;
 
+    Swapchain() {}
+    Swapchain(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index) {
+        cmd_pool = create_command_pool(device, family_index);
+        desc_pool = create_descriptor_pool(device);
+        desc_layout = create_descriptor_layout(device);
+        pipeline_layout = create_pipeline_layout(device, desc_layout.get());
+        render_pass = create_render_pass(device, surface_format);
+        pipeline = create_pipeline(device, pipeline_layout.get(), render_pass.get());
+    }
 };
 
 struct Device { // [TODO] Use class.
@@ -150,14 +165,10 @@ class App {
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
 
-    vk::UniqueCommandPool cmd_pool; // [TODO] Move SwapChain.
-    vk::UniqueDescriptorPool desc_pool;
-    vk::UniqueSwapchainKHR swapchain;
+    Swapchain swapchain2; // [TODO] Rename.
+
+    vk::UniqueSwapchainKHR swapchain; // [TODO] Move SwapChain.
     std::vector<Frame> frames;
-    vk::UniqueRenderPass render_pass;
-    vk::UniqueDescriptorSetLayout desc_layout;
-    vk::UniquePipelineLayout pipeline_layout;
-    vk::UniquePipeline pipeline;
 
     Matrices matrices;
 
@@ -200,7 +211,7 @@ class App {
 
         frames.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(gpu, device.get(), cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
+            frames.emplace_back(gpu, device.get(), swapchain2.cmd_pool.get(), swapchain2.desc_pool.get(), swapchain2.desc_layout.get(), swapchain2.render_pass.get(), swapchain_images[i], surface_format, width, height);
         }
     }
 
@@ -212,10 +223,10 @@ class App {
 
         begin(frames[index].cmd.get()); // [TODO] Move to Frame::draw.
         const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
-        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
+        begin_pass(frames[index].cmd.get(), swapchain2.render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
 
-        bind_pipeline(frames[index].cmd.get(), pipeline.get());
-        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
+        bind_pipeline(frames[index].cmd.get(), swapchain2.pipeline.get());
+        bind_descriptor_set(frames[index].cmd.get(), swapchain2.pipeline_layout.get(), frames[index].descriptor_set.get());
 
         set_viewport(frames[index].cmd.get(), (float)width, (float)height);
         set_scissor(frames[index].cmd.get(), width, height);
@@ -277,12 +288,8 @@ public:
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
-        cmd_pool = create_command_pool(device.get(), family_index);
-        desc_pool = create_descriptor_pool(device.get());
-        desc_layout = create_descriptor_layout(device.get());
-        pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
-        render_pass = create_render_pass(device.get(), surface_format);
-        pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
+
+        swapchain2 = Swapchain(device.get(), surface_format, family_index);
 
         for (uint32_t i = 0; i < frame_lag; i++) {
             fences[i] = create_fence(device.get());
