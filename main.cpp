@@ -159,7 +159,6 @@ class App {
         mat4x4 VP;
         mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
-        // Rotate around the Y axis
         mat4x4 Model;
         mat4x4_dup(Model, matrices.model_matrix);
         mat4x4_rotate_Y(matrices.model_matrix, Model, (float)degreesToRadians(1.5f));
@@ -252,14 +251,9 @@ class App {
         }
         case WM_SIZE: {
             if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-                // Resize the application to the new window size, except when
-                // it was minimized. Vulkan doesn't support images or swapchains
-                // with width=0 and height=0.
-                if (wParam != SIZE_MINIMIZED) {
-                    const unsigned width = lParam & 0xffff;
-                    const unsigned height = (lParam & 0xffff0000) >> 16;
-                    app->resize(width, height);
-                }
+                const unsigned width = lParam & 0xffff;
+                const unsigned height = (lParam & 0xffff0000) >> 16;
+                app->resize(width, height);
             }
             return 0;
         }
