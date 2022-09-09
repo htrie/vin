@@ -737,6 +737,13 @@ void wait(const vk::Device& device, const vk::Fence& fence) {
     device.resetFences({ fence });
 }
 
+uint32_t acquire(const vk::Device& device, const vk::SwapchainKHR& swapchain, const vk::Semaphore& signal_sema) {
+    uint32_t image_index = 0;
+    const auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, signal_sema, vk::Fence(), &image_index);
+    VERIFY(result == vk::Result::eSuccess);
+    return image_index;
+}
+
 void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::CommandBuffer& cmd_buf, const vk::Fence& fence) {
     // Wait for the image acquired semaphore to be signaled to ensure
     // that the image won't be rendered to until the presentation
@@ -754,13 +761,6 @@ void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Se
 
     const auto result = queue.submit(1, &submit_info, fence);
     VERIFY(result == vk::Result::eSuccess);
-}
-
-uint32_t acquire(const vk::Device& device, const vk::SwapchainKHR& swapchain, const vk::Semaphore& wait_sema) {
-    uint32_t image_index = 0;
-    const auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, wait_sema, vk::Fence(), &image_index);
-    VERIFY(result == vk::Result::eSuccess);
-    return image_index;
 }
 
 void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk::Semaphore& wait_sema, uint32_t image_index) {

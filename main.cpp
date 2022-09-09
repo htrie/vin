@@ -157,7 +157,6 @@ class App {
 
     vk::UniqueSwapchainKHR swapchain; // [TODO] Move most to Frames.
     std::unique_ptr<Frame[]> frames;
-    uint32_t current_buffer = 0;
 
     static const unsigned frame_lag = 2;
     vk::UniqueFence fences[frame_lag];
@@ -171,9 +170,9 @@ class App {
 
     Matrices matrices;
 
-    void draw_build_cmd(vk::CommandBuffer);
+    void draw_build_cmd(vk::CommandBuffer, unsigned current_buffer);
 
-    void update_data_buffer();
+    void update_data_buffer(unsigned current_buffer);
 
     void resize();
     void draw();
@@ -270,16 +269,18 @@ void App::run() {
 
 void App::draw() {
     wait(device.get(), fences[frame_index].get());
-    current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
-    update_data_buffer(); // [TODO] Rename to record.
+    const auto current_buffer = acquire(device.get(), swapchain.get(), image_acquired_semaphores[frame_index].get());
+
+    update_data_buffer(current_buffer); // [TODO] Rename to record.
+
     submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[current_buffer].cmd.get(), fences[frame_index].get());
-    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer); // [TODO] Move to vk.
+    present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), current_buffer);
 
     frame_index += 1;
     frame_index %= frame_lag;
 }
 
-void App::draw_build_cmd(vk::CommandBuffer commandBuffer) {
+void App::draw_build_cmd(vk::CommandBuffer commandBuffer, unsigned current_buffer) {
     auto const command_buffer_info = vk::CommandBufferBeginInfo()
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
@@ -360,14 +361,11 @@ void App::resize() {
         update_descriptor_set(device.get(), frames[i].descriptor_set.get(), frames[i].uniform_buffer.get(), sizeof(Uniforms));
         frames[i].framebuffer = create_framebuffer(device.get(), render_pass.get(), frames[i].view.get(), window.width, window.height);
 
-        current_buffer = i;
-        draw_build_cmd(frames[i].cmd.get()); // [TODO] Do every frame.
+        draw_build_cmd(frames[i].cmd.get(), i); // [TODO] Do every frame.
     }
-
-    current_buffer = 0;
 }
 
-void App::update_data_buffer() {
+void App::update_data_buffer(unsigned current_buffer) {
     mat4x4 VP;
     mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
 
