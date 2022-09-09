@@ -156,7 +156,7 @@ class App {
     vk::UniquePipeline pipeline;
 
     vk::UniqueSwapchainKHR swapchain; // [TODO] Move most to Frames.
-    std::unique_ptr<Frame[]> frames;
+    std::vector<Frame> frames;
 
     static const unsigned frame_lag = 2;
     vk::UniqueFence fences[frame_lag];
@@ -301,19 +301,14 @@ void App::resize() {
 
     swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), window.width, window.height);
 
-    uint32_t swapchain_image_count = 0;
-    auto result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, static_cast<vk::Image*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
+    const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
 
-    std::unique_ptr<vk::Image[]> swapchainImages(new vk::Image[swapchain_image_count]);
-    result = device->getSwapchainImagesKHR(swapchain.get(), &swapchain_image_count, swapchainImages.get());
-    VERIFY(result == vk::Result::eSuccess);
+    frames.clear();
+    frames.resize(swapchain_images.size());
 
-    frames.reset(new Frame[swapchain_image_count]);
-
-    for (uint32_t i = 0; i < swapchain_image_count; ++i) {
-        frames[i].image = swapchainImages[i];
-        frames[i].view = create_image_view(device.get(), swapchainImages[i], surface_format);
+    for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
+        frames[i].image = swapchain_images[i];
+        frames[i].view = create_image_view(device.get(), swapchain_images[i], surface_format);
 
         frames[i].uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
         frames[i].uniform_memory = create_uniform_memory(gpu, device.get(), frames[i].uniform_buffer.get());

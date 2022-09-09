@@ -842,3 +842,16 @@ void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLay
 void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
     cmd_buf.draw(vertex_count, 1, 0, 0);
 }
+
+std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
+    uint32_t count = 0;
+    auto result = device.getSwapchainImagesKHR(swapchain, &count, static_cast<vk::Image*>(nullptr));
+    VERIFY(result == vk::Result::eSuccess);
+
+    std::vector<vk::Image> images(count);
+    result = device.getSwapchainImagesKHR(swapchain, &count, images.data());
+    VERIFY(result == vk::Result::eSuccess);
+
+    return images;
+}
+
