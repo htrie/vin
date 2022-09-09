@@ -776,6 +776,34 @@ void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk
     VERIFY(result == vk::Result::eSuccess);
 }
 
+void begin(const vk::CommandBuffer& cmd_buf) {
+    auto const command_buffer_info = vk::CommandBufferBeginInfo()
+        .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+
+    auto result = cmd_buf.begin(&command_buffer_info);
+    VERIFY(result == vk::Result::eSuccess);
+}
+
+void end(const vk::CommandBuffer& cmd_buf) {
+    auto result = cmd_buf.end();
+    VERIFY(result == vk::Result::eSuccess);
+}
+
+void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const vk::ClearValue& clear_value, uint32_t width, uint32_t height) {
+    auto const pass_info = vk::RenderPassBeginInfo()
+        .setRenderPass(render_pass)
+        .setFramebuffer(framebuffer)
+        .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(width, height)))
+        .setClearValueCount(1)
+        .setPClearValues(&clear_value);
+
+    cmd_buf.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
+}
+
+void end_pass(const vk::CommandBuffer& cmd_buf) {
+    cmd_buf.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
+}
+
 void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
     float viewport_dimension;
     float viewport_x = 0.0f;

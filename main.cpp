@@ -281,22 +281,9 @@ void App::draw() {
 }
 
 void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
-    auto const command_buffer_info = vk::CommandBufferBeginInfo()
-        .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-
-    auto result = cmd_buf.begin(&command_buffer_info);
-    VERIFY(result == vk::Result::eSuccess);
-
-    vk::ClearValue const clearValues[1] = { vk::ClearColorValue(std::array<float, 4>({{0.2f, 0.2f, 0.2f, 0.2f}})) };
-
-    auto const pass_info = vk::RenderPassBeginInfo()
-        .setRenderPass(render_pass.get())
-        .setFramebuffer(frames[current_buffer].framebuffer.get())
-        .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D((uint32_t)window.width, (uint32_t)window.height)))
-        .setClearValueCount(2)
-        .setPClearValues(clearValues);
-
-    cmd_buf.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
+    begin(cmd_buf);
+    const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} }));
+    begin_pass(cmd_buf, render_pass.get(), frames[current_buffer].framebuffer.get(), clear_value, window.width, window.height);
 
     cmd_buf.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.get());
     cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get(), 0, 1, &frames[current_buffer].descriptor_set.get(), 0, nullptr);
@@ -306,10 +293,8 @@ void App::draw_build_cmd(vk::CommandBuffer cmd_buf, unsigned current_buffer) {
 
     cmd_buf.draw(12 * 3, 1, 0, 0);
 
-    cmd_buf.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
-
-    result = cmd_buf.end();
-    VERIFY(result == vk::Result::eSuccess);
+    end_pass(cmd_buf);
+    end(cmd_buf);
 }
 
 void App::resize() {
