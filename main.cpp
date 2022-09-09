@@ -173,7 +173,6 @@ class App {
 
     void draw_build_cmd(vk::CommandBuffer);
 
-    void wait() const;
     void acquire();
     void update_data_buffer();
     void submit() const;
@@ -273,7 +272,7 @@ void App::run() {
 }
 
 void App::draw() {
-    wait(); // [TODO] Move to vk.
+    wait(device.get(), fences[frame_index].get());
     acquire(); // [TODO] Move to vk.
     update_data_buffer(); // [TODO] Rename to record.
     submit(); // [TODO] Move to vk.
@@ -281,13 +280,6 @@ void App::draw() {
 
     frame_index += 1;
     frame_index %= frame_lag;
-}
-
-void App::wait() const {
-    // Ensure no more than frame lag renderings are outstanding
-    const auto result = device->waitForFences(1, &fences[frame_index].get(), VK_TRUE, UINT64_MAX);
-    VERIFY(result == vk::Result::eSuccess);
-    device->resetFences({ fences[frame_index].get() });
 }
 
 void App::acquire() {

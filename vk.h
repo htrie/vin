@@ -730,3 +730,10 @@ void wait_idle(const vk::Device& device) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
+void wait(const vk::Device& device, const vk::Fence& fence) {
+    // Ensure no more than frame lag renderings are outstanding
+    const auto result = device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
+    VERIFY(result == vk::Result::eSuccess);
+    device.resetFences({ fence });
+}
+
