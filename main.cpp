@@ -94,6 +94,10 @@ struct Matrices {
     }
 };
 
+struct Device { // [TODO] Use class.
+
+};
+
 struct Frame { // [TODO] Use class.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
@@ -125,6 +129,10 @@ struct Frame { // [TODO] Use class.
     }
 };
 
+struct SwapChain { // [TODO] Use class.
+
+};
+
 class App {
     unsigned width = 800;
     unsigned height = 600;
@@ -135,21 +143,20 @@ class App {
     vk::UniqueCommandPool cmd_pool;
     vk::UniqueDescriptorPool desc_pool;
 
+    vk::UniqueSwapchainKHR swapchain; // [TODO] Move SwapChain.
+    std::vector<Frame> frames;
     vk::UniqueRenderPass render_pass;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
 
-    vk::UniqueSwapchainKHR swapchain; // [TODO] Move most to Frames.
-    std::vector<Frame> frames;
-
-    static const unsigned frame_lag = 2;
+    static const unsigned frame_lag = 2; // [TODO] Move to ?.
     vk::UniqueFence fences[frame_lag];
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
 
-    vk::PhysicalDevice gpu;
+    vk::PhysicalDevice gpu; // [TODO] Move to ?.
     vk::Queue queue;
     vk::SurfaceFormatKHR surface_format;
 
