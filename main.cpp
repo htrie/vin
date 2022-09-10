@@ -91,30 +91,29 @@ struct Matrices {
     mat4x4 MVP;
 
     Matrices() {
+        mat4x4_identity(model_matrix);
+        mat4x4_identity(view_matrix);
+        mat4x4_identity(projection_matrix);
+        mat4x4_identity(MVP);
+    }
+
+    void recompute() {
+
         vec3 eye = { 0.0f, 3.0f, 5.0f };
         vec3 origin = { 0, 0, 0 };
         vec3 up = { 0.0f, 1.0f, 0.0 };
-
-        memset(projection_matrix, 0, sizeof(projection_matrix));
-        memset(view_matrix, 0, sizeof(view_matrix));
-        memset(model_matrix, 0, sizeof(model_matrix));
+        mat4x4_look_at(view_matrix, eye, origin, up);
 
         mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-        mat4x4_look_at(view_matrix, eye, origin, up);
-        mat4x4_identity(model_matrix);
-        mat4x4_identity(MVP);
-
         projection_matrix[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
-    }
-
-    void update() {
-        mat4x4 VP;
-        mat4x4_mul(VP, projection_matrix, view_matrix);
 
         mat4x4 M;
         mat4x4_dup(M, model_matrix);
         mat4x4_rotate_Y(model_matrix, M, (float)degreesToRadians(1.5f));
         mat4x4_orthonormalize(model_matrix, model_matrix);
+
+        mat4x4 VP;
+        mat4x4_mul(VP, projection_matrix, view_matrix);
 
         mat4x4_mul(MVP, VP, model_matrix);
     }
@@ -254,15 +253,14 @@ class App {
     }
 
     void redraw() {
-        const auto index = swapchain.start(device.get());
-
-        matrices.update();
-        new(swapchain.frames[index].uniform_memory_ptr) Uniforms(matrices.MVP);
+        matrices.recompute();
 
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-        swapchain.record(color, vertex_count, index, width, height);
 
+        const auto index = swapchain.start(device.get());
+        new(swapchain.frames[index].uniform_memory_ptr) Uniforms(matrices.MVP);
+        swapchain.record(color, vertex_count, index, width, height);
         swapchain.finish(queue, index);
     }
 
