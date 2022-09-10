@@ -222,14 +222,7 @@ struct Swapchain { // [TODO] Use class.
 };
 
 struct Device { // [TODO] Use class.
-
-};
-
-class App {
-    unsigned width = 800;
-    unsigned height = 600;
-
-    vk::UniqueInstance instance; // [TODO] Move most to Device.
+    vk::UniqueInstance instance;
     vk::PhysicalDevice gpu;
     vk::UniqueSurfaceKHR surface;
     vk::SurfaceFormatKHR surface_format;
@@ -239,6 +232,28 @@ class App {
     Swapchain swapchain;
 
     Matrices matrices;
+
+    unsigned width = 800;
+    unsigned height = 600;
+
+    Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
+        instance = create_instance();
+        gpu = pick_gpu(instance.get());
+        auto hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
+        surface = create_surface(instance.get(), hInstance, hWnd);
+        surface_format = select_format(gpu, surface.get());
+        auto family_index = find_queue_family(gpu, surface.get());
+        device = create_device(gpu, family_index);
+        queue = fetch_queue(device.get(), family_index);
+
+        swapchain = Swapchain(device.get(), surface_format, family_index);
+
+        resize(width, height);
+    }
+
+    ~Device() {
+        wait_idle(device.get());
+    }
 
     void resize(unsigned w, unsigned h) {
         width = w;
@@ -262,6 +277,18 @@ class App {
         new(swapchain.frames[index].uniform_memory_ptr) Uniforms(matrices.MVP);
         swapchain.record(color, vertex_count, index, width, height);
         swapchain.finish(queue, index);
+    }
+};
+
+class App {
+    Device device;
+
+    void resize(unsigned w, unsigned h) {
+        device.resize(w, h);
+    }
+
+    void redraw() {
+        device.redraw();
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -300,23 +327,8 @@ class App {
     }
 
 public:
-    App(HINSTANCE hInstance, int nCmdShow) {
-        instance = create_instance();
-        gpu = pick_gpu(instance.get());
-        auto hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
-        surface = create_surface(instance.get(), hInstance, hWnd);
-        surface_format = select_format(gpu, surface.get());
-        auto family_index = find_queue_family(gpu, surface.get());
-        device = create_device(gpu, family_index);
-        queue = fetch_queue(device.get(), family_index);
-
-        swapchain = Swapchain(device.get(), surface_format, family_index);
-
-        resize(width, height);
-    }
-
-    ~App() {
-        wait_idle(device.get());
+    App(HINSTANCE hInstance, int nCmdShow)
+        : device(proc, hInstance, nCmdShow) {
     }
 
     void run() {
