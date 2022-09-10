@@ -147,7 +147,14 @@ struct Swapchain { // [TODO] Use class.
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
     vk::UniqueSwapchainKHR swapchain;
+
     std::vector<Frame> frames;
+
+    static const unsigned frame_lag = 2;
+    vk::UniqueFence fences[frame_lag];
+    vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
+    vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
+    uint32_t frame_index = 0;
 
     Swapchain() {}
     Swapchain(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index) {
@@ -157,6 +164,12 @@ struct Swapchain { // [TODO] Use class.
         pipeline_layout = create_pipeline_layout(device, desc_layout.get());
         render_pass = create_render_pass(device, surface_format);
         pipeline = create_pipeline(device, pipeline_layout.get(), render_pass.get());
+
+        for (uint32_t i = 0; i < frame_lag; i++) {
+            fences[i] = create_fence(device);
+            image_acquired_semaphores[i] = create_semaphore(device);
+            draw_complete_semaphores[i] = create_semaphore(device);
+        }
     }
 
     void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
@@ -168,7 +181,7 @@ struct Swapchain { // [TODO] Use class.
         }
     }
 
-    void redraw(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
+    void record(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
         begin(frames[index].cmd.get());
         begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), color, width, height);
 
@@ -183,6 +196,18 @@ struct Swapchain { // [TODO] Use class.
         end_pass(frames[index].cmd.get());
         end(frames[index].cmd.get());
     }
+
+     uint32_t start(const vk::Device& device) {
+         wait(device, fences[frame_index].get());
+         return acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
+    }
+
+     void finish(const vk::Queue& queue, uint32_t index) {
+         submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
+         present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
+         frame_index += 1;
+         frame_index %= frame_lag;
+     }
 };
 
 struct Device { // [TODO] Use class.
@@ -199,12 +224,6 @@ class App {
     vk::SurfaceFormatKHR surface_format;
     vk::UniqueDevice device;
     vk::Queue queue;
-
-    static const unsigned frame_lag = 2; // [TODO] Move to ?.
-    vk::UniqueFence fences[frame_lag];
-    vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
-    vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
-    uint32_t frame_index = 0;
 
     Swapchain swapchain2; // [TODO] Rename.
 
@@ -239,20 +258,15 @@ class App {
     }
 
     void redraw() {
-        wait(device.get(), fences[frame_index].get());
-        const auto index = acquire(device.get(), swapchain2.swapchain.get(), image_acquired_semaphores[frame_index].get());
+        const auto index = swapchain2.start(device.get());
 
         patch(swapchain2.frames[index].uniform_memory_ptr);
 
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-        swapchain2.redraw(color, vertex_count, index, width, height);
+        swapchain2.record(color, vertex_count, index, width, height);
 
-        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), swapchain2.frames[index].cmd.get(), fences[frame_index].get());
-        present(swapchain2.swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
-
-        frame_index += 1;
-        frame_index %= frame_lag;
+        swapchain2.finish(queue, index);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -302,12 +316,6 @@ public:
         queue = fetch_queue(device.get(), family_index);
 
         swapchain2 = Swapchain(device.get(), surface_format, family_index);
-
-        for (uint32_t i = 0; i < frame_lag; i++) {
-            fences[i] = create_fence(device.get());
-            image_acquired_semaphores[i] = create_semaphore(device.get());
-            draw_complete_semaphores[i] = create_semaphore(device.get());
-        }
 
         resize(width, height);
     }
