@@ -229,7 +229,7 @@ public:
     }
 };
 
-struct Device { // [TODO] Use class.
+class Device {
     vk::UniqueInstance instance;
     vk::PhysicalDevice gpu;
     vk::UniqueSurfaceKHR surface;
@@ -244,6 +244,7 @@ struct Device { // [TODO] Use class.
     unsigned width = 800;
     unsigned height = 600;
 
+public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
