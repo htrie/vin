@@ -151,6 +151,10 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     void patch(const mat4x4& MVP) {
         new(uniform_memory_ptr) Uniforms(MVP); // [TODO] Avoid this (move to app).
     }
+
+    void finish(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::Fence& fence) {
+        submit(queue, wait_sema, signal_sema, cmd.get(), fence);
+    }
 };
 
 class Swapchain { // [TODO] Move to vk.
@@ -192,7 +196,7 @@ class Swapchain { // [TODO] Move to vk.
     }
 
     void finish(const vk::Queue& queue, uint32_t index) {
-        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
+        frames[index].finish(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), fences[frame_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
         frame_index += 1;
         frame_index %= frame_lag;
