@@ -24,9 +24,6 @@
 #include "win.h"
 
 struct Uniforms {
-    float mvp[4][4];
-    float position[12 * 3][4];
-
     static inline const float vertex_data[] = {
         -1.0f,-1.0f,-1.0f,  // -X side
         -1.0f,-1.0f, 1.0f,
@@ -70,6 +67,21 @@ struct Uniforms {
          1.0f,-1.0f, 1.0f,
          1.0f, 1.0f, 1.0f,
     };
+
+    float mvp[4][4];
+    float position[12 * 3][4];
+
+public:
+    Uniforms(const mat4x4& MVP) {
+        memcpy(mvp, MVP, sizeof(mat4x4));
+
+        for (int32_t i = 0; i < 12 * 3; i++) {
+            position[i][0] = vertex_data[i * 3];
+            position[i][1] = vertex_data[i * 3 + 1];
+            position[i][2] = vertex_data[i * 3 + 2];
+            position[i][3] = 1.0f;
+        }
+    }
 };
 
 struct Matrices {
@@ -229,22 +241,6 @@ class App {
 
     Matrices matrices;
 
-    void patch(void* mem) {
-        matrices.update();
-
-        Uniforms uniforms;
-        memcpy(uniforms.mvp, matrices.MVP, sizeof(mat4x4));
-
-        for (int32_t i = 0; i < 12 * 3; i++) {
-            uniforms.position[i][0] = uniforms.vertex_data[i * 3];
-            uniforms.position[i][1] = uniforms.vertex_data[i * 3 + 1];
-            uniforms.position[i][2] = uniforms.vertex_data[i * 3 + 2];
-            uniforms.position[i][3] = 1.0f;
-        }
-
-        memcpy(mem, &uniforms, sizeof uniforms);
-    }
-
     void resize(unsigned w, unsigned h) {
         width = w;
         height = h;
@@ -260,7 +256,8 @@ class App {
     void redraw() {
         const auto index = swapchain.start(device.get());
 
-        patch(swapchain.frames[index].uniform_memory_ptr);
+        matrices.update();
+        new(swapchain.frames[index].uniform_memory_ptr) Uniforms(matrices.MVP);
 
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
