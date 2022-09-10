@@ -23,51 +23,51 @@
 #include "vk.h"
 #include "win.h"
 
-struct Uniforms { // [TODO] Use class.
-    static inline const float vertex_data[] = {
-        -1.0f,-1.0f,-1.0f,  // -X side
-        -1.0f,-1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
+static inline const float vertex_data[] = {
+    -1.0f,-1.0f,-1.0f,  // -X side
+    -1.0f,-1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,
 
-        -1.0f,-1.0f,-1.0f,  // -Z side
-         1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f,-1.0f,
-         1.0f, 1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,  // -Z side
+     1.0f, 1.0f,-1.0f,
+     1.0f,-1.0f,-1.0f,
+    -1.0f,-1.0f,-1.0f,
+    -1.0f, 1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
 
-        -1.0f,-1.0f,-1.0f,  // -Y side
-         1.0f,-1.0f,-1.0f,
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f,-1.0f,
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
+    -1.0f,-1.0f,-1.0f,  // -Y side
+     1.0f,-1.0f,-1.0f,
+     1.0f,-1.0f, 1.0f,
+    -1.0f,-1.0f,-1.0f,
+     1.0f,-1.0f, 1.0f,
+    -1.0f,-1.0f, 1.0f,
 
-        -1.0f, 1.0f,-1.0f,  // +Y side
-        -1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f,-1.0f,
+    -1.0f, 1.0f,-1.0f,  // +Y side
+    -1.0f, 1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f,-1.0f,
+     1.0f, 1.0f, 1.0f,
+     1.0f, 1.0f,-1.0f,
 
-         1.0f, 1.0f,-1.0f,  // +X side
-         1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,  // +X side
+     1.0f, 1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f,-1.0f,
+     1.0f, 1.0f,-1.0f,
 
-        -1.0f, 1.0f, 1.0f,  // +Z side
-        -1.0f,-1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
-         1.0f, 1.0f, 1.0f,
-    };
+    -1.0f, 1.0f, 1.0f,  // +Z side
+    -1.0f,-1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
+    -1.0f,-1.0f, 1.0f,
+     1.0f,-1.0f, 1.0f,
+     1.0f, 1.0f, 1.0f,
+};
 
+class Uniforms {
     float mvp[4][4];
     float position[12 * 3][4];
 
@@ -118,7 +118,7 @@ struct Matrices { // [TODO] Use class.
     }
 };
 
-struct Frame { // [TODO] Use class. // [TODO] Move to vk.
+class Frame { // [TODO] Move to vk.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
     vk::UniqueImageView view;
@@ -128,12 +128,10 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     vk::UniqueFramebuffer framebuffer;
     vk::UniqueDescriptorSet descriptor_set;
 
-    Frame(const vk::PhysicalDevice& gpu, const vk::Device& device,
-        const vk::CommandPool& cmd_pool,
-        const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout,
-        const vk::RenderPass& render_pass,
-        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format,
-        uint32_t width, uint32_t height) {
+public:
+    Frame(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::CommandPool& cmd_pool,
+        const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout, const vk::RenderPass& render_pass,
+        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height) {
         image = swapchain_image;
         view = create_image_view(device, swapchain_image, surface_format);
 
@@ -150,6 +148,23 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
 
     void patch(const mat4x4& MVP) {
         new(uniform_memory_ptr) Uniforms(MVP); // [TODO] Avoid this (move to app).
+    }
+
+    void record(const vk::RenderPass& render_pass, const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout,
+        const std::array<float, 4>& color, unsigned vertex_count, unsigned width, unsigned height) {
+        begin(cmd.get());
+        begin_pass(cmd.get(), render_pass, framebuffer.get(), color, width, height);
+
+        bind_pipeline(cmd.get(), pipeline);
+        bind_descriptor_set(cmd.get(), pipeline_layout, descriptor_set.get());
+
+        set_viewport(cmd.get(), (float)width, (float)height);
+        set_scissor(cmd.get(), width, height);
+
+        draw(cmd.get(), vertex_count);
+
+        end_pass(cmd.get());
+        end(cmd.get());
     }
 
     void finish(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::Fence& fence) {
@@ -173,34 +188,6 @@ class Swapchain { // [TODO] Move to vk.
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
-
-    void record(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
-        begin(frames[index].cmd.get());
-        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), color, width, height);
-
-        bind_pipeline(frames[index].cmd.get(), pipeline.get());
-        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
-
-        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
-        set_scissor(frames[index].cmd.get(), width, height);
-
-        draw(frames[index].cmd.get(), vertex_count);
-
-        end_pass(frames[index].cmd.get());
-        end(frames[index].cmd.get());
-    }
-
-    uint32_t start(const vk::Device& device) {
-        wait(device, fences[frame_index].get());
-        return acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
-    }
-
-    void finish(const vk::Queue& queue, uint32_t index) {
-        frames[index].finish(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), fences[frame_index].get());
-        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
-        frame_index += 1;
-        frame_index %= frame_lag;
-    }
 
 public:
     Swapchain() {}
@@ -229,10 +216,14 @@ public:
     }
 
     void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& MVP, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
-        const auto index = start(device);
+        wait(device, fences[frame_index].get());
+        const auto index = acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
         frames[index].patch(MVP);
-        record(color, vertex_count, index, width, height);
-        finish(queue, index);
+        frames[index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), color, vertex_count, width, height);
+        frames[index].finish(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), fences[frame_index].get());
+        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
+        frame_index += 1;
+        frame_index %= frame_lag;
     }
 };
 
