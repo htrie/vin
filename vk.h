@@ -919,16 +919,14 @@ struct Matrices { // [TODO] Use class.
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
-    mat4x4 MVP;
 
     Matrices() {
         mat4x4_identity(model_matrix);
         mat4x4_identity(view_matrix);
         mat4x4_identity(projection_matrix);
-        mat4x4_identity(MVP);
     }
 
-    void recompute() {
+    void recompute(mat4x4& out_mvp) {
         vec3 eye = { 0.0f, 3.0f, 5.0f };
         vec3 origin = { 0, 0, 0 };
         vec3 up = { 0.0f, 1.0f, 0.0 };
@@ -945,7 +943,7 @@ struct Matrices { // [TODO] Use class.
         mat4x4 VP;
         mat4x4_mul(VP, projection_matrix, view_matrix);
 
-        mat4x4_mul(MVP, VP, model_matrix);
+        mat4x4_mul(out_mvp, VP, model_matrix);
     }
 };
 
@@ -1106,11 +1104,13 @@ public:
     }
 
     void redraw() {
-        matrices.recompute();
-
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-        swapchain.redraw(device.get(), queue, matrices.MVP, width, height, color, vertex_count);
+
+        mat4x4 mvp;
+        matrices.recompute(mvp);
+
+        swapchain.redraw(device.get(), queue, mvp, width, height, color, vertex_count);
     }
 };
 
