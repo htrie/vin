@@ -154,9 +154,9 @@ struct Swapchain { // [TODO] Use class.
         }
     }
 
-    void redraw(const vk::ClearColorValue& clear_value, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
+    void redraw(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
         begin(frames[index].cmd.get());
-        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), clear_value, width, height);
+        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), color, width, height);
 
         bind_pipeline(frames[index].cmd.get(), pipeline.get());
         bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
@@ -239,9 +239,9 @@ class App {
 
         patch(swapchain2.frames[index].uniform_memory_ptr);
 
-        const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ {0.2f, 0.2f, 0.2f, 0.2f} })); // [TODO] Pass linmat float4 instead.
+        const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-        swapchain2.redraw(clear_value, vertex_count, index, width, height);
+        swapchain2.redraw(color, vertex_count, index, width, height);
 
         submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), swapchain2.frames[index].cmd.get(), fences[frame_index].get());
         present(swapchain2.swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);

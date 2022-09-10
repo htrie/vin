@@ -789,13 +789,13 @@ void end(const vk::CommandBuffer& cmd_buf) {
     VERIFY(result == vk::Result::eSuccess);
 }
 
-void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const vk::ClearValue& clear_value, uint32_t width, uint32_t height) {
+void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const vk::ClearColorValue& clear_value, uint32_t width, uint32_t height) {
     auto const pass_info = vk::RenderPassBeginInfo()
         .setRenderPass(render_pass)
         .setFramebuffer(framebuffer)
         .setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(width, height)))
         .setClearValueCount(1)
-        .setPClearValues(&clear_value);
+        .setPClearValues((vk::ClearValue*)&clear_value);
 
     cmd_buf.beginRenderPass(&pass_info, vk::SubpassContents::eInline);
 }
