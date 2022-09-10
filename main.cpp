@@ -76,6 +76,7 @@ struct Matrices {
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
+    mat4x4 MVP;
 
     Matrices() {
         vec3 eye = { 0.0f, 3.0f, 5.0f };
@@ -89,8 +90,21 @@ struct Matrices {
         mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
         mat4x4_look_at(view_matrix, eye, origin, up);
         mat4x4_identity(model_matrix);
+        mat4x4_identity(MVP);
 
         projection_matrix[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
+    }
+
+    void update() {
+        mat4x4 VP;
+        mat4x4_mul(VP, projection_matrix, view_matrix);
+
+        mat4x4 M;
+        mat4x4_dup(M, model_matrix);
+        mat4x4_rotate_Y(model_matrix, M, (float)degreesToRadians(1.5f));
+        mat4x4_orthonormalize(model_matrix, model_matrix);
+
+        mat4x4_mul(MVP, VP, model_matrix);
     }
 };
 
@@ -197,19 +211,10 @@ class App {
     Matrices matrices;
 
     void patch(void* mem) {
-        mat4x4 VP;
-        mat4x4_mul(VP, matrices.projection_matrix, matrices.view_matrix);
-
-        mat4x4 Model;
-        mat4x4_dup(Model, matrices.model_matrix);
-        mat4x4_rotate_Y(matrices.model_matrix, Model, (float)degreesToRadians(1.5f));
-        mat4x4_orthonormalize(matrices.model_matrix, matrices.model_matrix);
-
-        mat4x4 MVP;
-        mat4x4_mul(MVP, VP, matrices.model_matrix);
+        matrices.update();
 
         Uniforms uniforms;
-        memcpy(uniforms.mvp, MVP, sizeof(MVP));
+        memcpy(uniforms.mvp, matrices.MVP, sizeof(mat4x4));
 
         for (int32_t i = 0; i < 12 * 3; i++) {
             uniforms.position[i][0] = uniforms.vertex_data[i * 3];
