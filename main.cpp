@@ -23,7 +23,7 @@
 #include "vk.h"
 #include "win.h"
 
-struct Uniforms {
+struct Uniforms { // [TODO] Use class.
     static inline const float vertex_data[] = {
         -1.0f,-1.0f,-1.0f,  // -X side
         -1.0f,-1.0f, 1.0f,
@@ -84,7 +84,7 @@ public:
     }
 };
 
-struct Matrices {
+struct Matrices { // [TODO] Use class.
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
@@ -98,7 +98,6 @@ struct Matrices {
     }
 
     void recompute() {
-
         vec3 eye = { 0.0f, 3.0f, 5.0f };
         vec3 origin = { 0, 0, 0 };
         vec3 up = { 0.0f, 1.0f, 0.0 };
@@ -148,9 +147,13 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
         update_descriptor_set(device, descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
         framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
     }
+
+    void patch(const mat4x4& MVP) {
+        new(uniform_memory_ptr) Uniforms(MVP); // [TODO] Avoid this (move to app).
+    }
 };
 
-class Swapchain {
+class Swapchain { // [TODO] Move to vk.
     vk::UniqueCommandPool cmd_pool;
     vk::UniqueDescriptorPool desc_pool;
     vk::UniqueRenderPass render_pass;
@@ -223,13 +226,13 @@ public:
 
     void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& MVP, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
         const auto index = start(device);
-        new(frames[index].uniform_memory_ptr) Uniforms(MVP);
+        frames[index].patch(MVP);
         record(color, vertex_count, index, width, height);
         finish(queue, index);
     }
 };
 
-class Device {
+class Device { // [TODO] Move to vk.
     vk::UniqueInstance instance;
     vk::PhysicalDevice gpu;
     vk::UniqueSurfaceKHR surface;
@@ -281,7 +284,6 @@ public:
 
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-
         swapchain.redraw(device.get(), queue, matrices.MVP, width, height, color, vertex_count);
     }
 };
