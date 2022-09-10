@@ -915,11 +915,12 @@ public:
     }
 };
 
-struct Matrices { // [TODO] Use class.
+class Matrices {
     mat4x4 projection_matrix;
     mat4x4 view_matrix;
     mat4x4 model_matrix;
 
+public:
     Matrices() {
         mat4x4_identity(model_matrix);
         mat4x4_identity(view_matrix);
@@ -1095,21 +1096,17 @@ public:
         width = w;
         height = h;
 
-        if (!device) // [TODO] Remove.
-            return;
-
-        wait_idle(device.get());
-
-        swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height);
+        if (device) {
+            wait_idle(device.get());
+            swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height);
+        }
     }
 
     void redraw() {
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-
         mat4x4 mvp;
         matrices.recompute(mvp);
-
         swapchain.redraw(device.get(), queue, mvp, width, height, color, vertex_count);
     }
 };
