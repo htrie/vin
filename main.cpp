@@ -112,11 +112,11 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     vk::Image image;
     vk::UniqueCommandBuffer cmd;
     vk::UniqueImageView view;
-    vk::UniqueBuffer uniform_buffer; // [TODO] Move outside.
+    vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
     void* uniform_memory_ptr = nullptr;
     vk::UniqueFramebuffer framebuffer;
-    vk::UniqueDescriptorSet descriptor_set; // [TODO] Move outside.
+    vk::UniqueDescriptorSet descriptor_set;
 
     Frame(const vk::PhysicalDevice& gpu, const vk::Device& device,
         const vk::CommandPool& cmd_pool, 
@@ -225,7 +225,7 @@ class App {
     vk::UniqueDevice device;
     vk::Queue queue;
 
-    Swapchain swapchain2; // [TODO] Rename.
+    Swapchain swapchain;
 
     Matrices matrices;
 
@@ -254,19 +254,19 @@ class App {
 
         wait_idle(device.get());
 
-        swapchain2.resize(gpu, device.get(), surface.get(), surface_format, width, height);
+        swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height);
     }
 
     void redraw() {
-        const auto index = swapchain2.start(device.get());
+        const auto index = swapchain.start(device.get());
 
-        patch(swapchain2.frames[index].uniform_memory_ptr);
+        patch(swapchain.frames[index].uniform_memory_ptr);
 
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
-        swapchain2.record(color, vertex_count, index, width, height);
+        swapchain.record(color, vertex_count, index, width, height);
 
-        swapchain2.finish(queue, index);
+        swapchain.finish(queue, index);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -315,7 +315,7 @@ public:
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
 
-        swapchain2 = Swapchain(device.get(), surface_format, family_index);
+        swapchain = Swapchain(device.get(), surface_format, family_index);
 
         resize(width, height);
     }
