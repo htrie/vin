@@ -32,12 +32,20 @@
 class App {
     Device device;
 
+    bool minimized = false;
+
+    void set_minimized(bool b) {
+        minimized = b;
+    }
+
     void resize(unsigned w, unsigned h) {
-        device.resize(w, h);
+        if (!minimized)
+            device.resize(w, h);
     }
 
     void redraw() {
-        device.redraw();
+        if (!minimized)
+            device.redraw();
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -65,6 +73,7 @@ class App {
         }
         case WM_SIZE: {
             if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+                app->set_minimized(wParam == SIZE_MINIMIZED);
                 const unsigned width = lParam & 0xffff;
                 const unsigned height = (lParam & 0xffff0000) >> 16;
                 app->resize(width, height);
