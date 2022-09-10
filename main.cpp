@@ -130,7 +130,7 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     vk::UniqueDescriptorSet descriptor_set;
 
     Frame(const vk::PhysicalDevice& gpu, const vk::Device& device,
-        const vk::CommandPool& cmd_pool, 
+        const vk::CommandPool& cmd_pool,
         const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout,
         const vk::RenderPass& render_pass,
         const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format,
@@ -150,7 +150,7 @@ struct Frame { // [TODO] Use class. // [TODO] Move to vk.
     }
 };
 
-struct Swapchain { // [TODO] Use class.
+class Swapchain {
     vk::UniqueCommandPool cmd_pool;
     vk::UniqueDescriptorPool desc_pool;
     vk::UniqueRenderPass render_pass;
@@ -167,6 +167,35 @@ struct Swapchain { // [TODO] Use class.
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t frame_index = 0;
 
+    void record(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
+        begin(frames[index].cmd.get());
+        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), color, width, height);
+
+        bind_pipeline(frames[index].cmd.get(), pipeline.get());
+        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
+
+        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
+        set_scissor(frames[index].cmd.get(), width, height);
+
+        draw(frames[index].cmd.get(), vertex_count);
+
+        end_pass(frames[index].cmd.get());
+        end(frames[index].cmd.get());
+    }
+
+    uint32_t start(const vk::Device& device) {
+        wait(device, fences[frame_index].get());
+        return acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
+    }
+
+    void finish(const vk::Queue& queue, uint32_t index) {
+        submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
+        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
+        frame_index += 1;
+        frame_index %= frame_lag;
+    }
+
+public:
     Swapchain() {}
     Swapchain(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index) {
         cmd_pool = create_command_pool(device, family_index);
@@ -192,33 +221,12 @@ struct Swapchain { // [TODO] Use class.
         }
     }
 
-    void record(const std::array<float, 4>& color, unsigned vertex_count, unsigned index, unsigned width, unsigned height) {
-        begin(frames[index].cmd.get());
-        begin_pass(frames[index].cmd.get(), render_pass.get(), frames[index].framebuffer.get(), color, width, height);
-
-        bind_pipeline(frames[index].cmd.get(), pipeline.get());
-        bind_descriptor_set(frames[index].cmd.get(), pipeline_layout.get(), frames[index].descriptor_set.get());
-
-        set_viewport(frames[index].cmd.get(), (float)width, (float)height);
-        set_scissor(frames[index].cmd.get(), width, height);
-
-        draw(frames[index].cmd.get(), vertex_count);
-
-        end_pass(frames[index].cmd.get());
-        end(frames[index].cmd.get());
+    void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& MVP, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
+        const auto index = start(device);
+        new(frames[index].uniform_memory_ptr) Uniforms(MVP);
+        record(color, vertex_count, index, width, height);
+        finish(queue, index);
     }
-
-     uint32_t start(const vk::Device& device) {
-         wait(device, fences[frame_index].get());
-         return acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
-    }
-
-     void finish(const vk::Queue& queue, uint32_t index) {
-         submit(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), frames[index].cmd.get(), fences[frame_index].get());
-         present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
-         frame_index += 1;
-         frame_index %= frame_lag;
-     }
 };
 
 struct Device { // [TODO] Use class.
@@ -273,10 +281,7 @@ struct Device { // [TODO] Use class.
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3;
 
-        const auto index = swapchain.start(device.get());
-        new(swapchain.frames[index].uniform_memory_ptr) Uniforms(matrices.MVP);
-        swapchain.record(color, vertex_count, index, width, height);
-        swapchain.finish(queue, index);
+        swapchain.redraw(device.get(), queue, matrices.MVP, width, height, color, vertex_count);
     }
 };
 
