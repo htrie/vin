@@ -21,8 +21,6 @@
 #ifndef LINMATH_H
 #define LINMATH_H
 
-#include <math.h>
-
 // Converts degrees to radians.
 #define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
 

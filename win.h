@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Windows.h>
-
 HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height) {
     const char* name = "vin";
 
