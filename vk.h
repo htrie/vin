@@ -903,8 +903,8 @@ class Uniforms {
     float position[12 * 3][4];
 
 public:
-    Uniforms(const mat4x4& MVP) {
-        memcpy(mvp, MVP, sizeof(mat4x4));
+    Uniforms(const mat4x4& mvp) {
+        memcpy(this->mvp, mvp, sizeof(mat4x4));
 
         for (int32_t i = 0; i < 12 * 3; i++) {
             position[i][0] = vertex_data[i * 3];
@@ -936,15 +936,15 @@ public:
         mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
         projection_matrix[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
 
-        mat4x4 M;
-        mat4x4_dup(M, model_matrix);
-        mat4x4_rotate_Y(model_matrix, M, (float)degreesToRadians(1.5f));
+        mat4x4 m;
+        mat4x4_dup(m, model_matrix);
+        mat4x4_rotate_Y(model_matrix, m, (float)degreesToRadians(1.5f));
         mat4x4_orthonormalize(model_matrix, model_matrix);
 
-        mat4x4 VP;
-        mat4x4_mul(VP, projection_matrix, view_matrix);
+        mat4x4 vp;
+        mat4x4_mul(vp, projection_matrix, view_matrix);
 
-        mat4x4_mul(out_mvp, VP, model_matrix);
+        mat4x4_mul(out_mvp, vp, model_matrix);
     }
 };
 
@@ -976,8 +976,8 @@ public:
         framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
     }
 
-    void patch(const mat4x4& MVP) {
-        new(uniform_memory_ptr) Uniforms(MVP);
+    void patch(const mat4x4& mvp) {
+        new(uniform_memory_ptr) Uniforms(mvp);
     }
 
     void record(const vk::RenderPass& render_pass, const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout,
@@ -1045,10 +1045,10 @@ public:
         }
     }
 
-    void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& MVP, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
+    void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& mvp, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].patch(MVP);
+        frames[frame_index].patch(mvp); // [TODO] Use push constants for model matrix.
         frames[frame_index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), color, vertex_count, width, height);
         frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
