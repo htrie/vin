@@ -1017,7 +1017,7 @@ class Swapchain {
     vk::UniqueFence fences[frame_lag];
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
-    uint32_t frame_index = 0;
+    uint32_t fence_index = 0;
 
 public:
     Swapchain() {}
@@ -1046,14 +1046,14 @@ public:
     }
 
     void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& MVP, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
-        wait(device, fences[frame_index].get());
-        const auto index = acquire(device, swapchain.get(), image_acquired_semaphores[frame_index].get());
-        frames[index].patch(MVP);
-        frames[index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), color, vertex_count, width, height);
-        frames[index].finish(queue, image_acquired_semaphores[frame_index].get(), draw_complete_semaphores[frame_index].get(), fences[frame_index].get());
-        present(swapchain.get(), queue, draw_complete_semaphores[frame_index].get(), index);
-        frame_index += 1;
-        frame_index %= frame_lag;
+        wait(device, fences[fence_index].get());
+        const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
+        frames[frame_index].patch(MVP);
+        frames[frame_index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), color, vertex_count, width, height);
+        frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
+        present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
+        fence_index += 1;
+        fence_index %= frame_lag;
     }
 };
 
