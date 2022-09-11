@@ -10,7 +10,7 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
     win_class.cbClsExtra = 0;
     win_class.cbWndExtra = 0;
     win_class.hInstance = hInstance;
-    win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION); // [TODO] Use custom icon.
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.hbrBackground = CreateSolidBrush(0);
     win_class.lpszMenuName = nullptr;
