@@ -868,7 +868,7 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 }
 
 
-static inline const float vertex_data[] = {
+static inline const float vertex_data[] = { // [TODO] Use vertex buffer instead of uniforms.
     -1.0f,-1.0f,-1.0f,  // -X side
     -1.0f,-1.0f, 1.0f,
     -1.0f, 1.0f, 1.0f,
@@ -913,58 +913,28 @@ static inline const float vertex_data[] = {
 };
 
 class Constants {
-    float mvp[4][4];
+    float model[4][4];
 
 public:
-    Constants(const mat4x4& mvp) {
-        memcpy(this->mvp, mvp, sizeof(mat4x4));
+    Constants(const mat4x4& model) {
+        memcpy(this->model, model, sizeof(mat4x4));
     }
 };
 
 class Uniforms {
+    float view_proj[4][4];
     float position[12 * 3][4];
 
 public:
-    Uniforms() {
+    Uniforms(const mat4x4& view_proj) {
+        memcpy(this->view_proj, view_proj, sizeof(mat4x4));
+
         for (int32_t i = 0; i < 12 * 3; i++) {
             position[i][0] = vertex_data[i * 3];
             position[i][1] = vertex_data[i * 3 + 1];
             position[i][2] = vertex_data[i * 3 + 2];
             position[i][3] = 1.0f;
         }
-    }
-};
-
-class Matrices {
-    mat4x4 projection_matrix;
-    mat4x4 view_matrix;
-    mat4x4 model_matrix;
-
-public:
-    Matrices() {
-        mat4x4_identity(model_matrix);
-        mat4x4_identity(view_matrix);
-        mat4x4_identity(projection_matrix);
-    }
-
-    void recompute(mat4x4& out_mvp) {
-        vec3 eye = { 0.0f, 3.0f, 5.0f };
-        vec3 origin = { 0, 0, 0 };
-        vec3 up = { 0.0f, 1.0f, 0.0 };
-        mat4x4_look_at(view_matrix, eye, origin, up);
-
-        mat4x4_perspective(projection_matrix, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-        projection_matrix[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
-
-        mat4x4 m;
-        mat4x4_dup(m, model_matrix);
-        mat4x4_rotate_Y(model_matrix, m, (float)degreesToRadians(1.5f));
-        mat4x4_orthonormalize(model_matrix, model_matrix);
-
-        mat4x4 vp;
-        mat4x4_mul(vp, projection_matrix, view_matrix);
-
-        mat4x4_mul(out_mvp, vp, model_matrix);
     }
 };
 
@@ -980,7 +950,7 @@ class Frame {
 public:
     Frame(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::CommandPool& cmd_pool,
         const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout, const vk::RenderPass& render_pass,
-        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height) {
+        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height, const mat4x4& view_proj) {
         image = swapchain_image;
         view = create_image_view(device, swapchain_image, surface_format);
 
@@ -988,7 +958,7 @@ public:
         uniform_memory = create_uniform_memory(gpu, device, uniform_buffer.get());
         bind_memory(device, uniform_buffer.get(), uniform_memory.get());
         auto* uniform_memory_ptr = map_memory(device, uniform_memory.get());
-        new(uniform_memory_ptr) Uniforms();
+        new(uniform_memory_ptr) Uniforms(view_proj);
         unmap_memory(device, uniform_memory.get());
 
         cmd = create_command_buffer(device, cmd_pool);
@@ -1054,12 +1024,13 @@ public:
         }
     }
 
-    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
+    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, 
+        unsigned width, unsigned height, const mat4x4& view_proj) {
         swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height);
         const auto swapchain_images = get_swapchain_images(device, swapchain.get());
         frames.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(gpu, device, cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
+            frames.emplace_back(gpu, device, cmd_pool.get(), desc_pool.get(), desc_layout.get(), render_pass.get(), swapchain_images[i], surface_format, width, height, view_proj);
         }
     }
 
@@ -1084,10 +1055,27 @@ class Device {
 
     Swapchain swapchain;
 
-    Matrices matrices;
-
     unsigned width = 800;
     unsigned height = 600;
+
+    mat4x4 view_proj;
+    mat4x4 model;
+
+    void init_matrices() {
+        vec3 eye = { 0.0f, 3.0f, 5.0f };
+        vec3 origin = { 0, 0, 0 };
+        vec3 up = { 0.0f, 1.0f, 0.0 };
+        mat4x4 view;
+        mat4x4_look_at(view, eye, origin, up);
+
+        mat4x4 proj;
+        mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+        proj[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
+
+        mat4x4_mul(view_proj, proj, view);
+
+        mat4x4_identity(model);
+    }
 
 public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
@@ -1099,6 +1087,7 @@ public:
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
+        init_matrices();
 
         swapchain = Swapchain(device.get(), surface_format, family_index);
 
@@ -1115,16 +1104,20 @@ public:
 
         if (device) {
             wait_idle(device.get());
-            swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height);
+            swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height, view_proj);
         }
     }
 
     void redraw() {
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
         const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
-        mat4x4 mvp;
-        matrices.recompute(mvp);
-        Constants constants(mvp);
+
+        mat4x4 m;
+        mat4x4_dup(m, model);
+        mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
+        mat4x4_orthonormalize(model, model);
+
+        Constants constants(model);
         swapchain.redraw(device.get(), queue, constants, width, height, color, vertex_count);
     }
 };
