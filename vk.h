@@ -336,8 +336,15 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
     return std::move(desc_layout_handle.value);
 }
 
-vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout) {
+vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
+    auto const push_constants = vk::PushConstantRange()
+        .setOffset(0)
+        .setSize(constants_size)
+        .setStageFlags(vk::ShaderStageFlagBits::eVertex);
+
     auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+        .setPushConstantRangeCount(1)
+        .setPPushConstantRanges(&push_constants)
         .setSetLayoutCount(1)
         .setPSetLayouts(&desc_layout);
 
@@ -691,6 +698,10 @@ void* map_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
     return mem;
 }
 
+void unmap_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
+    device.unmapMemory(memory);
+}
+
 void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::DeviceMemory& memory) {
     const auto result = device.bindBufferMemory(buffer, memory, 0);
     VERIFY(result == vk::Result::eSuccess);
@@ -836,6 +847,10 @@ void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLay
     cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
 }
 
+void push(const vk::CommandBuffer& cmd_buf, const vk::PipelineLayout& pipeline_layout, uint32_t size, const void* data) {
+    cmd_buf.pushConstants(pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, size, data);
+}
+
 void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
     cmd_buf.draw(vertex_count, 1, 0, 0);
 }
@@ -897,15 +912,20 @@ static inline const float vertex_data[] = {
      1.0f, 1.0f, 1.0f,
 };
 
+class Constants {
+    float mvp[4][4];
+
+public:
+    Constants(const mat4x4& mvp) {
+        memcpy(this->mvp, mvp, sizeof(mat4x4));
+    }
+};
 
 class Uniforms {
-    float mvp[4][4];
     float position[12 * 3][4];
 
 public:
-    Uniforms(const mat4x4& mvp) {
-        memcpy(this->mvp, mvp, sizeof(mat4x4));
-
+    Uniforms() {
         for (int32_t i = 0; i < 12 * 3; i++) {
             position[i][0] = vertex_data[i * 3];
             position[i][1] = vertex_data[i * 3 + 1];
@@ -954,7 +974,6 @@ class Frame {
     vk::UniqueImageView view;
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
-    void* uniform_memory_ptr = nullptr;
     vk::UniqueFramebuffer framebuffer;
     vk::UniqueDescriptorSet descriptor_set;
 
@@ -968,7 +987,9 @@ public:
         uniform_buffer = create_uniform_buffer(device, sizeof(Uniforms));
         uniform_memory = create_uniform_memory(gpu, device, uniform_buffer.get());
         bind_memory(device, uniform_buffer.get(), uniform_memory.get());
-        uniform_memory_ptr = map_memory(device, uniform_memory.get());
+        auto* uniform_memory_ptr = map_memory(device, uniform_memory.get());
+        new(uniform_memory_ptr) Uniforms();
+        unmap_memory(device, uniform_memory.get());
 
         cmd = create_command_buffer(device, cmd_pool);
         descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
@@ -976,12 +997,8 @@ public:
         framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
     }
 
-    void patch(const mat4x4& mvp) {
-        new(uniform_memory_ptr) Uniforms(mvp);
-    }
-
     void record(const vk::RenderPass& render_pass, const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout,
-        const std::array<float, 4>& color, unsigned vertex_count, unsigned width, unsigned height) {
+        const Constants& constants, const std::array<float, 4>& color, unsigned vertex_count, unsigned width, unsigned height) {
         begin(cmd.get());
         begin_pass(cmd.get(), render_pass, framebuffer.get(), color, width, height);
 
@@ -990,7 +1007,8 @@ public:
 
         set_viewport(cmd.get(), (float)width, (float)height);
         set_scissor(cmd.get(), width, height);
-
+ 
+        push(cmd.get(), pipeline_layout, sizeof(Constants), &constants);
         draw(cmd.get(), vertex_count);
 
         end_pass(cmd.get());
@@ -1025,7 +1043,7 @@ public:
         cmd_pool = create_command_pool(device, family_index);
         desc_pool = create_descriptor_pool(device);
         desc_layout = create_descriptor_layout(device);
-        pipeline_layout = create_pipeline_layout(device, desc_layout.get());
+        pipeline_layout = create_pipeline_layout(device, desc_layout.get(), sizeof(Constants));
         render_pass = create_render_pass(device, surface_format);
         pipeline = create_pipeline(device, pipeline_layout.get(), render_pass.get());
 
@@ -1045,11 +1063,10 @@ public:
         }
     }
 
-    void redraw(const vk::Device& device, const vk::Queue& queue, const mat4x4& mvp, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
+    void redraw(const vk::Device& device, const vk::Queue& queue, const Constants& constants, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].patch(mvp); // [TODO] Use push constants for model matrix.
-        frames[frame_index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), color, vertex_count, width, height);
+        frames[frame_index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), constants, color, vertex_count, width, height);
         frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
         fence_index += 1;
@@ -1104,10 +1121,11 @@ public:
 
     void redraw() {
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
-        const auto vertex_count = 12 * 3;
+        const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
         mat4x4 mvp;
         matrices.recompute(mvp);
-        swapchain.redraw(device.get(), queue, mvp, width, height, color, vertex_count);
+        Constants constants(mvp);
+        swapchain.redraw(device.get(), queue, constants, width, height, color, vertex_count);
     }
 };
 
