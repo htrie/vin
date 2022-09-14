@@ -126,8 +126,9 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 
         for (uint32_t i = 0; i < gpu_count; i++) {
             const auto physicalDeviceProperties = physical_devices[i].getProperties();
-            VERIFY(static_cast<int>(physicalDeviceProperties.deviceType) <= VK_PHYSICAL_DEVICE_TYPE_CPU);
-            count_device_type[static_cast<int>(physicalDeviceProperties.deviceType)]++;
+            const auto device_type = static_cast<int>(physicalDeviceProperties.deviceType);
+            if (device_type <= VK_PHYSICAL_DEVICE_TYPE_CPU)
+                count_device_type[static_cast<int>(physicalDeviceProperties.deviceType)]++;
         }
 
         const vk::PhysicalDeviceType device_type_preference[] = {
@@ -868,49 +869,6 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 }
 
 
-static inline const float vertex_data[] = { // [TODO] Use vertex buffer instead of uniforms.
-    -1.0f,-1.0f,-1.0f,  // -X side
-    -1.0f,-1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-
-    -1.0f,-1.0f,-1.0f,  // -Z side
-     1.0f, 1.0f,-1.0f,
-     1.0f,-1.0f,-1.0f,
-    -1.0f,-1.0f,-1.0f,
-    -1.0f, 1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
-
-    -1.0f,-1.0f,-1.0f,  // -Y side
-     1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f,-1.0f,
-     1.0f,-1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-
-    -1.0f, 1.0f,-1.0f,  // +Y side
-    -1.0f, 1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
-    -1.0f, 1.0f,-1.0f,
-     1.0f, 1.0f, 1.0f,
-     1.0f, 1.0f,-1.0f,
-
-     1.0f, 1.0f,-1.0f,  // +X side
-     1.0f, 1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f,-1.0f,
-     1.0f, 1.0f,-1.0f,
-
-    -1.0f, 1.0f, 1.0f,  // +Z side
-    -1.0f,-1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
-    -1.0f,-1.0f, 1.0f,
-     1.0f,-1.0f, 1.0f,
-     1.0f, 1.0f, 1.0f,
-};
 
 class Constants {
     float model[4][4];
@@ -923,18 +881,10 @@ public:
 
 class Uniforms {
     float view_proj[4][4];
-    float position[12 * 3][4];
 
 public:
     Uniforms(const mat4x4& view_proj) {
         memcpy(this->view_proj, view_proj, sizeof(mat4x4));
-
-        for (int32_t i = 0; i < 12 * 3; i++) {
-            position[i][0] = vertex_data[i * 3];
-            position[i][1] = vertex_data[i * 3 + 1];
-            position[i][2] = vertex_data[i * 3 + 2];
-            position[i][3] = 1.0f;
-        }
     }
 };
 
