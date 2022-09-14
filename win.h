@@ -36,3 +36,6 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
     return hWnd;
 }
 
+void destroy_window(HWND hWnd) {
+    DestroyWindow(hWnd);
+}

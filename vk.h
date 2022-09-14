@@ -1005,6 +1005,8 @@ class Device {
 
     Swapchain swapchain;
 
+    HWND hWnd = NULL;
+
     unsigned width = 800;
     unsigned height = 600;
 
@@ -1031,12 +1033,13 @@ public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
         instance = create_instance();
         gpu = pick_gpu(instance.get());
-        auto hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
+        hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
         surface = create_surface(instance.get(), hInstance, hWnd);
         surface_format = select_format(gpu, surface.get());
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
+
         init_matrices();
 
         swapchain = Swapchain(device.get(), surface_format, family_index);
@@ -1046,6 +1049,8 @@ public:
 
     ~Device() {
         wait_idle(device.get());
+
+        destroy_window(hWnd);
     }
 
     void resize(unsigned w, unsigned h) {
