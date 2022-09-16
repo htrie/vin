@@ -916,15 +916,15 @@ class Device {
     std::vector<vk::UniqueFramebuffer> framebuffers;
     std::vector<vk::UniqueCommandBuffer> cmds;
 
-    unsigned width = 800;
-    unsigned height = 600;
+    unsigned width = 0;
+    unsigned height = 0;
 
     unsigned fence_index = 0;
 
     mat4x4 model; // [TODO] Build on-the-fly based on text position.
 
 public:
-    Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
+    Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, unsigned width, unsigned height) {
         mat4x4_identity(model);
 
         instance = create_instance();
@@ -965,7 +965,7 @@ public:
             mat4x4_look_at(view, eye, origin, up);
 
             mat4x4 proj;
-            mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+            mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f); // [TODO] Use orthographic camera.
             proj[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
 
             mat4x4 view_proj;
@@ -1005,7 +1005,7 @@ public:
         }
     }
 
-    void redraw() {
+    void redraw() { // [TODO] Pass clear color, text lines.
         mat4x4 m;
         mat4x4_dup(m, model);
         mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
