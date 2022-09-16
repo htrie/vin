@@ -889,38 +889,19 @@ public:
 };
 
 class Frame {
-    vk::Image image;
-    vk::UniqueCommandBuffer cmd; // [TODO] Move to device.
     vk::UniqueImageView view;
     vk::UniqueFramebuffer framebuffer;
 
 public:
-    Frame(const vk::Device& device, const vk::CommandPool& cmd_pool, const vk::RenderPass& render_pass,
-        const vk::Image& swapchain_image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height) {
-        cmd = create_command_buffer(device, cmd_pool);
-        image = swapchain_image;
-        view = create_image_view(device, swapchain_image, surface_format);
+    Frame(const vk::Device& device, const vk::RenderPass& render_pass,
+        const vk::Image& image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height) {
+        view = create_image_view(device, image, surface_format);
         framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
     }
 
-    void start(const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
-        begin(cmd.get());
-        begin_pass(cmd.get(), render_pass, framebuffer.get(), color, width, height);
-        set_viewport(cmd.get(), (float)width, (float)height);
-        set_scissor(cmd.get(), width, height);
-    }
-
-    void record(const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set, const Constants& constants,  unsigned vertex_count) {
-        bind_pipeline(cmd.get(), pipeline);
-        bind_descriptor_set(cmd.get(), pipeline_layout, descriptor_set);
-        push(cmd.get(), pipeline_layout, sizeof(Constants), &constants);
-        draw(cmd.get(), vertex_count);
-    }
-
-    void finish(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::Fence& fence) {
-        end_pass(cmd.get());
-        end(cmd.get());
-        submit(queue, wait_sema, signal_sema, cmd.get(), fence);
+    void start(const vk::CommandBuffer& cmd, const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
+        begin(cmd);
+        begin_pass(cmd, render_pass, framebuffer.get(), color, width, height);
     }
 };
 
@@ -932,6 +913,7 @@ class Swapchain {
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t fence_index = 0;
+    std::array<vk::UniqueCommandBuffer, 3> cmds; // [TODO] Move to device.
 
 public:
     Swapchain() {}
@@ -949,23 +931,33 @@ public:
         const auto swapchain_images = get_swapchain_images(device, swapchain.get());
         frames.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(device, cmd_pool, render_pass, swapchain_images[i], surface_format, width, height);
+            frames.emplace_back(device, render_pass, swapchain_images[i], surface_format, width, height);
+        }
+        for (auto& cmd : cmds) {
+            cmd = create_command_buffer(device, cmd_pool);
         }
     }
 
     unsigned start(const vk::Device& device, const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].start(render_pass, color, width, height);
+        frames[frame_index].start(cmds[frame_index].get(), render_pass, color, width, height);
+        set_viewport(cmds[frame_index].get(), (float)width, (float)height);
+        set_scissor(cmds[frame_index].get(), width, height);
         return frame_index;
     }
 
     void record(const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set, const Constants& constants, unsigned vertex_count, unsigned frame_index) {
-        frames[frame_index].record(pipeline, pipeline_layout, descriptor_set, constants, vertex_count);
+        bind_pipeline(cmds[frame_index].get(), pipeline);
+        bind_descriptor_set(cmds[frame_index].get(), pipeline_layout, descriptor_set);
+        push(cmds[frame_index].get(), pipeline_layout, sizeof(Constants), &constants);
+        draw(cmds[frame_index].get(), vertex_count);
     }
 
     void finish(const vk::Queue& queue, unsigned frame_index) {
-        frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
+        end_pass(cmds[frame_index].get());
+        end(cmds[frame_index].get());
+        submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmds[frame_index].get(), fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
         fence_index += 1;
         fence_index %= frame_lag;
