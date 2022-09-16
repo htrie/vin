@@ -903,25 +903,23 @@ public:
         framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
     }
 
-    void record(const vk::RenderPass& render_pass, const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set,
-        const Constants& constants, const std::array<float, 4>& color, unsigned vertex_count, unsigned width, unsigned height) {
+    void start(const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
         begin(cmd.get());
         begin_pass(cmd.get(), render_pass, framebuffer.get(), color, width, height);
-
-        bind_pipeline(cmd.get(), pipeline);
-        bind_descriptor_set(cmd.get(), pipeline_layout, descriptor_set);
-
         set_viewport(cmd.get(), (float)width, (float)height);
         set_scissor(cmd.get(), width, height);
- 
+    }
+
+    void record(const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set, const Constants& constants,  unsigned vertex_count) {
+        bind_pipeline(cmd.get(), pipeline);
+        bind_descriptor_set(cmd.get(), pipeline_layout, descriptor_set);
         push(cmd.get(), pipeline_layout, sizeof(Constants), &constants);
         draw(cmd.get(), vertex_count);
-
-        end_pass(cmd.get());
-        end(cmd.get());
     }
 
     void finish(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::Fence& fence) {
+        end_pass(cmd.get());
+        end(cmd.get());
         submit(queue, wait_sema, signal_sema, cmd.get(), fence);
     }
 };
@@ -955,12 +953,18 @@ public:
         }
     }
 
-    void redraw(const vk::Device& device, const vk::RenderPass& render_pass,
-        const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set,
-        const vk::Queue& queue, const Constants& constants, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
+    unsigned start(const vk::Device& device, const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].record(render_pass, pipeline, pipeline_layout, descriptor_set, constants, color, vertex_count, width, height);
+        frames[frame_index].start(render_pass, color, width, height);
+        return frame_index;
+    }
+
+    void record(const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set, const Constants& constants, unsigned vertex_count, unsigned frame_index) {
+        frames[frame_index].record(pipeline, pipeline_layout, descriptor_set, constants, vertex_count);
+    }
+
+    void finish(const vk::Queue& queue, unsigned frame_index) {
         frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
         fence_index += 1;
@@ -975,15 +979,17 @@ class Device {
     vk::SurfaceFormatKHR surface_format;
     vk::UniqueDevice device;
     vk::Queue queue;
+
     vk::UniqueCommandPool cmd_pool;
     vk::UniqueDescriptorPool desc_pool;
     vk::UniqueRenderPass render_pass;
     vk::UniqueDescriptorSetLayout desc_layout;
     vk::UniquePipelineLayout pipeline_layout;
     vk::UniquePipeline pipeline;
+    vk::UniqueDescriptorSet descriptor_set;
+
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
-    vk::UniqueDescriptorSet descriptor_set;
 
     Swapchain swapchain;
 
@@ -1032,6 +1038,7 @@ public:
         uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
         uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
         descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+        swapchain = Swapchain(gpu, device.get(), surface_format, family_index, view_proj);
 
         bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
@@ -1039,9 +1046,6 @@ public:
         unmap_memory(device.get(), uniform_memory.get());
 
         update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
-
-
-        swapchain = Swapchain(gpu, device.get(), surface_format, family_index, view_proj);
 
         resize(width, height);
     }
@@ -1063,16 +1067,19 @@ public:
     }
 
     void redraw() {
-        const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
-        const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
-
         mat4x4 m;
         mat4x4_dup(m, model);
         mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
         mat4x4_orthonormalize(model, model);
 
+        const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
+        const auto frame_index = swapchain.start(device.get(), render_pass.get(), color, width, height);
+
+        const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
         Constants constants(model);
-        swapchain.redraw(device.get(), render_pass.get(), pipeline.get(), pipeline_layout.get(), descriptor_set.get(), queue, constants, width, height, color, vertex_count);
+        swapchain.record(pipeline.get(), pipeline_layout.get(), descriptor_set.get(), constants, vertex_count, frame_index);
+
+        swapchain.finish(queue, frame_index);
     }
 };
 
