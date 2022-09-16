@@ -886,52 +886,6 @@ public:
     }
 };
 
-class Swapchain {
-    static const unsigned frame_lag = 2;
-    vk::UniqueFence fences[frame_lag];
-    vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
-    vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
-    uint32_t fence_index = 0;
-
-    vk::UniqueSwapchainKHR swapchain;
-    std::vector<vk::UniqueImageView> views;
-    std::vector<vk::UniqueFramebuffer> framebuffers;
-
-public:
-    Swapchain() {}
-    Swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index, const mat4x4& view_proj) {
-        for (uint32_t i = 0; i < frame_lag; i++) {
-            fences[i] = create_fence(device);
-            image_acquired_semaphores[i] = create_semaphore(device);
-            draw_complete_semaphores[i] = create_semaphore(device);
-        }
-    }
-
-    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::RenderPass& render_pass, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height, unsigned image_count) {
-        swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height, image_count);
-        const auto swapchain_images = get_swapchain_images(device, swapchain.get());
-        views.clear();
-        framebuffers.clear();
-        for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            views.emplace_back(create_image_view(device, swapchain_images[i], surface_format));
-            framebuffers.emplace_back(create_framebuffer(device, render_pass, views.back().get(), width, height));
-        }
-    }
-
-    std::pair<unsigned, vk::Framebuffer> start(const vk::Device& device) {
-        wait(device, fences[fence_index].get());
-        const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        return { frame_index, framebuffers[frame_index].get() };
-    }
-
-    void finish(const vk::CommandBuffer& cmd, const vk::Queue& queue, unsigned frame_index) {
-        submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmd, fences[fence_index].get());
-        present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
-        fence_index += 1;
-        fence_index %= frame_lag;
-    }
-};
-
 class Device {
     vk::UniqueInstance instance;
     vk::PhysicalDevice gpu;
@@ -951,11 +905,18 @@ class Device {
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
 
-    Swapchain swapchain;
+    std::vector<vk::UniqueFence> fences;
+    std::vector<vk::UniqueSemaphore> image_acquired_semaphores;
+    std::vector<vk::UniqueSemaphore> draw_complete_semaphores;
 
-    static const unsigned buffer_count = 3; // Triple-buffering.
+    vk::UniqueSwapchainKHR swapchain;
+    std::vector<vk::UniqueImageView> views;
+    std::vector<vk::UniqueFramebuffer> framebuffers;
+    std::vector<vk::UniqueCommandBuffer> cmds;
 
-    std::array<vk::UniqueCommandBuffer, buffer_count> cmds;
+    static const unsigned frame_lag = 2;
+    unsigned fence_index = 0;
+    unsigned buffer_count = 3; // Triple-buffering.
 
     HWND hWnd = NULL;
 
@@ -993,27 +954,30 @@ public:
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
+
         cmd_pool = create_command_pool(device.get(), family_index);
         desc_pool = create_descriptor_pool(device.get());
         desc_layout = create_descriptor_layout(device.get());
         pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
         render_pass = create_render_pass(device.get(), surface_format);
         pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
+
         uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
         uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
-        descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-        swapchain = Swapchain(gpu, device.get(), surface_format, family_index, view_proj);
+        bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
 
-        for (auto& cmd : cmds) {
-            cmd = create_command_buffer(device.get(), cmd_pool.get());
+        descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+        update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
+
+        for (auto i = 0; i < frame_lag; ++i) {
+            fences.emplace_back(create_fence(device.get()));
+            image_acquired_semaphores.emplace_back(create_semaphore(device.get()));
+            draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
         }
 
-        bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
         new(uniform_memory_ptr) Uniforms(view_proj);
         unmap_memory(device.get(), uniform_memory.get());
-
-        update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
 
         resize(width, height);
     }
@@ -1030,7 +994,21 @@ public:
 
         if (device) {
             wait_idle(device.get());
-            swapchain.resize(gpu, device.get(), render_pass.get(), surface.get(), surface_format, width, height, buffer_count);
+
+            swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, buffer_count);
+
+            const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
+            buffer_count = (unsigned)swapchain_images.size();
+
+            views.clear();
+            framebuffers.clear();
+            cmds.clear();
+
+            for (uint32_t i = 0; i < buffer_count; ++i) {
+                views.emplace_back(create_image_view(device.get(), swapchain_images[i], surface_format));
+                framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), views.back().get(), width, height));
+                cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
+            }
         }
     }
 
@@ -1040,14 +1018,13 @@ public:
         mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
         mat4x4_orthonormalize(model, model);
 
-        const auto res = swapchain.start(device.get());
-        const auto frame_index = res.first;
-        const auto& framebuffer = res.second;
+        wait(device.get(), fences[fence_index].get());
+        const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
 
         begin(cmd);
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
-        begin_pass(cmd, render_pass.get(), framebuffer, color, width, height);
+        begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), color, width, height);
 
         set_viewport(cmd, (float)width, (float)height);
         set_scissor(cmd, width, height);
@@ -1064,7 +1041,11 @@ public:
         end_pass(cmd);
         end(cmd);
 
-        swapchain.finish(cmd, queue, frame_index);
+        submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmd, fences[fence_index].get());
+        present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
+
+        fence_index += 1;
+        fence_index %= fences.size();
     }
 };
 
