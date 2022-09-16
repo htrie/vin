@@ -890,7 +890,7 @@ public:
 
 class Frame {
     vk::Image image;
-    vk::UniqueCommandBuffer cmd;
+    vk::UniqueCommandBuffer cmd; // [TODO] Move to device.
     vk::UniqueImageView view;
     vk::UniqueFramebuffer framebuffer;
 
@@ -927,20 +927,8 @@ public:
 };
 
 class Swapchain {
-    vk::UniqueCommandPool cmd_pool;
-    vk::UniqueDescriptorPool desc_pool;
-    vk::UniqueRenderPass render_pass;
-    vk::UniqueDescriptorSetLayout desc_layout;
-    vk::UniquePipelineLayout pipeline_layout;
-    vk::UniquePipeline pipeline;
     vk::UniqueSwapchainKHR swapchain;
-
-    vk::UniqueBuffer uniform_buffer;
-    vk::UniqueDeviceMemory uniform_memory;
-    vk::UniqueDescriptorSet descriptor_set;
-
     std::vector<Frame> frames;
-
     static const unsigned frame_lag = 2;
     vk::UniqueFence fences[frame_lag];
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
@@ -950,23 +938,6 @@ class Swapchain {
 public:
     Swapchain() {}
     Swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceFormatKHR& surface_format, uint32_t family_index, const mat4x4& view_proj) {
-        cmd_pool = create_command_pool(device, family_index);
-        desc_pool = create_descriptor_pool(device);
-        desc_layout = create_descriptor_layout(device);
-        pipeline_layout = create_pipeline_layout(device, desc_layout.get(), sizeof(Constants));
-        render_pass = create_render_pass(device, surface_format);
-        pipeline = create_pipeline(device, pipeline_layout.get(), render_pass.get());
-
-        uniform_buffer = create_uniform_buffer(device, sizeof(Uniforms));
-        uniform_memory = create_uniform_memory(gpu, device, uniform_buffer.get());
-        bind_memory(device, uniform_buffer.get(), uniform_memory.get());
-        auto* uniform_memory_ptr = map_memory(device, uniform_memory.get());
-        new(uniform_memory_ptr) Uniforms(view_proj);
-        unmap_memory(device, uniform_memory.get());
-
-        descriptor_set = create_descriptor_set(device, desc_pool.get(), desc_layout.get());
-        update_descriptor_set(device, descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
-
         for (uint32_t i = 0; i < frame_lag; i++) {
             fences[i] = create_fence(device);
             image_acquired_semaphores[i] = create_semaphore(device);
@@ -974,19 +945,22 @@ public:
         }
     }
 
-    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
+    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::CommandPool& cmd_pool, const vk::RenderPass& render_pass,
+        const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
         swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height);
         const auto swapchain_images = get_swapchain_images(device, swapchain.get());
         frames.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(device, cmd_pool.get(), render_pass.get(), swapchain_images[i], surface_format, width, height);
+            frames.emplace_back(device, cmd_pool, render_pass, swapchain_images[i], surface_format, width, height);
         }
     }
 
-    void redraw(const vk::Device& device, const vk::Queue& queue, const Constants& constants, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
+    void redraw(const vk::Device& device, const vk::RenderPass& render_pass,
+        const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set,
+        const vk::Queue& queue, const Constants& constants, unsigned width, unsigned height, const std::array<float, 4>& color, unsigned vertex_count) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].record(render_pass.get(), pipeline.get(), pipeline_layout.get(), descriptor_set.get(), constants, color, vertex_count, width, height);
+        frames[frame_index].record(render_pass, pipeline, pipeline_layout, descriptor_set, constants, color, vertex_count, width, height);
         frames[frame_index].finish(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
         fence_index += 1;
@@ -1001,6 +975,15 @@ class Device {
     vk::SurfaceFormatKHR surface_format;
     vk::UniqueDevice device;
     vk::Queue queue;
+    vk::UniqueCommandPool cmd_pool;
+    vk::UniqueDescriptorPool desc_pool;
+    vk::UniqueRenderPass render_pass;
+    vk::UniqueDescriptorSetLayout desc_layout;
+    vk::UniquePipelineLayout pipeline_layout;
+    vk::UniquePipeline pipeline;
+    vk::UniqueBuffer uniform_buffer;
+    vk::UniqueDeviceMemory uniform_memory;
+    vk::UniqueDescriptorSet descriptor_set;
 
     Swapchain swapchain;
 
@@ -1030,6 +1013,8 @@ class Device {
 
 public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
+        init_matrices();
+
         instance = create_instance();
         gpu = pick_gpu(instance.get());
         hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
@@ -1038,8 +1023,23 @@ public:
         auto family_index = find_queue_family(gpu, surface.get());
         device = create_device(gpu, family_index);
         queue = fetch_queue(device.get(), family_index);
+        cmd_pool = create_command_pool(device.get(), family_index);
+        desc_pool = create_descriptor_pool(device.get());
+        desc_layout = create_descriptor_layout(device.get());
+        pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
+        render_pass = create_render_pass(device.get(), surface_format);
+        pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
+        uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
+        uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
+        descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 
-        init_matrices();
+        bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
+        auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
+        new(uniform_memory_ptr) Uniforms(view_proj);
+        unmap_memory(device.get(), uniform_memory.get());
+
+        update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
+
 
         swapchain = Swapchain(gpu, device.get(), surface_format, family_index, view_proj);
 
@@ -1058,7 +1058,7 @@ public:
 
         if (device) {
             wait_idle(device.get());
-            swapchain.resize(gpu, device.get(), surface.get(), surface_format, width, height);
+            swapchain.resize(gpu, device.get(), cmd_pool.get(), render_pass.get(), surface.get(), surface_format, width, height);
         }
     }
 
@@ -1072,7 +1072,7 @@ public:
         mat4x4_orthonormalize(model, model);
 
         Constants constants(model);
-        swapchain.redraw(device.get(), queue, constants, width, height, color, vertex_count);
+        swapchain.redraw(device.get(), render_pass.get(), pipeline.get(), pipeline_layout.get(), descriptor_set.get(), queue, constants, width, height, color, vertex_count);
     }
 };
 
