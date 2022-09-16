@@ -887,6 +887,8 @@ public:
 };
 
 class Device {
+    HWND hWnd = NULL;
+
     vk::UniqueInstance instance;
     vk::PhysicalDevice gpu;
     vk::UniqueSurfaceKHR surface;
@@ -914,37 +916,16 @@ class Device {
     std::vector<vk::UniqueFramebuffer> framebuffers;
     std::vector<vk::UniqueCommandBuffer> cmds;
 
-    static const unsigned frame_lag = 2;
-    unsigned fence_index = 0;
-    unsigned buffer_count = 3; // Triple-buffering.
-
-    HWND hWnd = NULL;
-
     unsigned width = 800;
     unsigned height = 600;
 
-    mat4x4 view_proj;
-    mat4x4 model;
+    unsigned fence_index = 0;
 
-    void init_matrices() {
-        vec3 eye = { 0.0f, 3.0f, 5.0f };
-        vec3 origin = { 0, 0, 0 };
-        vec3 up = { 0.0f, 1.0f, 0.0 };
-        mat4x4 view;
-        mat4x4_look_at(view, eye, origin, up);
-
-        mat4x4 proj;
-        mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
-        proj[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
-
-        mat4x4_mul(view_proj, proj, view);
-
-        mat4x4_identity(model);
-    }
+    mat4x4 model; // [TODO] Build on-the-fly based on text position.
 
 public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow) {
-        init_matrices();
+        mat4x4_identity(model);
 
         instance = create_instance();
         gpu = pick_gpu(instance.get());
@@ -969,14 +950,29 @@ public:
         descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
         update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
 
-        for (auto i = 0; i < frame_lag; ++i) {
+        for (auto i = 0; i < 2; ++i) {
             fences.emplace_back(create_fence(device.get()));
             image_acquired_semaphores.emplace_back(create_semaphore(device.get()));
             draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
         }
 
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
-        new(uniform_memory_ptr) Uniforms(view_proj);
+        {
+            vec3 eye = { 0.0f, 3.0f, 5.0f };
+            vec3 origin = { 0, 0, 0 };
+            vec3 up = { 0.0f, 1.0f, 0.0 };
+            mat4x4 view;
+            mat4x4_look_at(view, eye, origin, up);
+
+            mat4x4 proj;
+            mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f);
+            proj[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
+
+            mat4x4 view_proj;
+            mat4x4_mul(view_proj, proj, view);
+
+            new(uniform_memory_ptr) Uniforms(view_proj);
+        }
         unmap_memory(device.get(), uniform_memory.get());
 
         resize(width, height);
@@ -995,16 +991,13 @@ public:
         if (device) {
             wait_idle(device.get());
 
-            swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, buffer_count);
-
-            const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
-            buffer_count = (unsigned)swapchain_images.size();
-
             views.clear();
             framebuffers.clear();
             cmds.clear();
 
-            for (uint32_t i = 0; i < buffer_count; ++i) {
+            swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, 3);
+            const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
+            for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
                 views.emplace_back(create_image_view(device.get(), swapchain_images[i], surface_format));
                 framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), views.back().get(), width, height));
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
