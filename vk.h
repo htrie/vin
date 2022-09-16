@@ -549,7 +549,7 @@ vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk
     return std::move(cmd_handles.value[0]);
 }
 
-vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height) {
+vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height, uint32_t image_count) {
     vk::SurfaceCapabilitiesKHR surf_caps;
     const auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surf_caps);
     VERIFY(result == vk::Result::eSuccess);
@@ -567,9 +567,7 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
     }
 
     // Determine the number of VkImages to use in the swap chain.
-    // Application desires to acquire 3 images at a time for triple
-    // buffering
-    uint32_t min_image_count = 3;
+    uint32_t min_image_count = image_count;
     if (min_image_count < surf_caps.minImageCount) {
         min_image_count = surf_caps.minImageCount;
     }
@@ -888,32 +886,16 @@ public:
     }
 };
 
-class Frame {
-    vk::UniqueImageView view;
-    vk::UniqueFramebuffer framebuffer;
-
-public:
-    Frame(const vk::Device& device, const vk::RenderPass& render_pass,
-        const vk::Image& image, const vk::SurfaceFormatKHR& surface_format, uint32_t width, uint32_t height) {
-        view = create_image_view(device, image, surface_format);
-        framebuffer = create_framebuffer(device, render_pass, view.get(), width, height);
-    }
-
-    void start(const vk::CommandBuffer& cmd, const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
-        begin(cmd);
-        begin_pass(cmd, render_pass, framebuffer.get(), color, width, height);
-    }
-};
-
 class Swapchain {
-    vk::UniqueSwapchainKHR swapchain;
-    std::vector<Frame> frames;
     static const unsigned frame_lag = 2;
     vk::UniqueFence fences[frame_lag];
     vk::UniqueSemaphore image_acquired_semaphores[frame_lag];
     vk::UniqueSemaphore draw_complete_semaphores[frame_lag];
     uint32_t fence_index = 0;
-    std::array<vk::UniqueCommandBuffer, 3> cmds; // [TODO] Move to device.
+
+    vk::UniqueSwapchainKHR swapchain;
+    std::vector<vk::UniqueImageView> views;
+    std::vector<vk::UniqueFramebuffer> framebuffers;
 
 public:
     Swapchain() {}
@@ -925,39 +907,25 @@ public:
         }
     }
 
-    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::CommandPool& cmd_pool, const vk::RenderPass& render_pass,
-        const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height) {
-        swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height);
+    void resize(const vk::PhysicalDevice gpu, const vk::Device& device, const vk::RenderPass& render_pass, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, unsigned width, unsigned height, unsigned image_count) {
+        swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height, image_count);
         const auto swapchain_images = get_swapchain_images(device, swapchain.get());
-        frames.clear();
+        views.clear();
+        framebuffers.clear();
         for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-            frames.emplace_back(device, render_pass, swapchain_images[i], surface_format, width, height);
-        }
-        for (auto& cmd : cmds) {
-            cmd = create_command_buffer(device, cmd_pool);
+            views.emplace_back(create_image_view(device, swapchain_images[i], surface_format));
+            framebuffers.emplace_back(create_framebuffer(device, render_pass, views.back().get(), width, height));
         }
     }
 
-    unsigned start(const vk::Device& device, const vk::RenderPass& render_pass, const std::array<float, 4>& color, unsigned width, unsigned height) {
+    std::pair<unsigned, vk::Framebuffer> start(const vk::Device& device) {
         wait(device, fences[fence_index].get());
         const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index].get());
-        frames[frame_index].start(cmds[frame_index].get(), render_pass, color, width, height);
-        set_viewport(cmds[frame_index].get(), (float)width, (float)height);
-        set_scissor(cmds[frame_index].get(), width, height);
-        return frame_index;
+        return { frame_index, framebuffers[frame_index].get() };
     }
 
-    void record(const vk::Pipeline& pipeline, const vk::PipelineLayout& pipeline_layout, const vk::DescriptorSet& descriptor_set, const Constants& constants, unsigned vertex_count, unsigned frame_index) {
-        bind_pipeline(cmds[frame_index].get(), pipeline);
-        bind_descriptor_set(cmds[frame_index].get(), pipeline_layout, descriptor_set);
-        push(cmds[frame_index].get(), pipeline_layout, sizeof(Constants), &constants);
-        draw(cmds[frame_index].get(), vertex_count);
-    }
-
-    void finish(const vk::Queue& queue, unsigned frame_index) {
-        end_pass(cmds[frame_index].get());
-        end(cmds[frame_index].get());
-        submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmds[frame_index].get(), fences[fence_index].get());
+    void finish(const vk::CommandBuffer& cmd, const vk::Queue& queue, unsigned frame_index) {
+        submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmd, fences[fence_index].get());
         present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
         fence_index += 1;
         fence_index %= frame_lag;
@@ -984,6 +952,10 @@ class Device {
     vk::UniqueDeviceMemory uniform_memory;
 
     Swapchain swapchain;
+
+    static const unsigned buffer_count = 3; // Triple-buffering.
+
+    std::array<vk::UniqueCommandBuffer, buffer_count> cmds;
 
     HWND hWnd = NULL;
 
@@ -1032,6 +1004,10 @@ public:
         descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
         swapchain = Swapchain(gpu, device.get(), surface_format, family_index, view_proj);
 
+        for (auto& cmd : cmds) {
+            cmd = create_command_buffer(device.get(), cmd_pool.get());
+        }
+
         bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
         new(uniform_memory_ptr) Uniforms(view_proj);
@@ -1054,7 +1030,7 @@ public:
 
         if (device) {
             wait_idle(device.get());
-            swapchain.resize(gpu, device.get(), cmd_pool.get(), render_pass.get(), surface.get(), surface_format, width, height);
+            swapchain.resize(gpu, device.get(), render_pass.get(), surface.get(), surface_format, width, height, buffer_count);
         }
     }
 
@@ -1064,14 +1040,31 @@ public:
         mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
         mat4x4_orthonormalize(model, model);
 
+        const auto res = swapchain.start(device.get());
+        const auto frame_index = res.first;
+        const auto& framebuffer = res.second;
+        const auto& cmd = cmds[frame_index].get();
+
+        begin(cmd);
         const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
-        const auto frame_index = swapchain.start(device.get(), render_pass.get(), color, width, height);
+        begin_pass(cmd, render_pass.get(), framebuffer, color, width, height);
+
+        set_viewport(cmd, (float)width, (float)height);
+        set_scissor(cmd, width, height);
+
+        bind_pipeline(cmd, pipeline.get());
+        bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
+
+        Constants constants(model);
+        push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 
         const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
-        Constants constants(model);
-        swapchain.record(pipeline.get(), pipeline_layout.get(), descriptor_set.get(), constants, vertex_count, frame_index);
+        draw(cmd, vertex_count);
 
-        swapchain.finish(queue, frame_index);
+        end_pass(cmd);
+        end(cmd);
+
+        swapchain.finish(cmd, queue, frame_index);
     }
 };
 
