@@ -812,22 +812,11 @@ void end_pass(const vk::CommandBuffer& cmd_buf) {
 }
 
 void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
-    float viewport_dimension;
-    float viewport_x = 0.0f;
-    float viewport_y = 0.0f;
-    if (width < height) {
-        viewport_dimension = width;
-        viewport_y = (height - width) / 2.0f;
-    }
-    else {
-        viewport_dimension = height;
-        viewport_x = (width - height) / 2.0f;
-    }
     auto const viewport = vk::Viewport()
-        .setX(viewport_x)
-        .setY(viewport_y)
-        .setWidth((float)viewport_dimension)
-        .setHeight((float)viewport_dimension)
+        .setX(0.0f)
+        .setY(0.0f)
+        .setWidth(width < height ? width : height)
+        .setHeight(width < height ? width : height)
         .setMinDepth((float)0.0f)
         .setMaxDepth((float)1.0f);
     cmd_buf.setViewport(0, 1, &viewport);
@@ -921,12 +910,8 @@ class Device {
 
     unsigned fence_index = 0;
 
-    mat4x4 model; // [TODO] Build on-the-fly based on text position.
-
 public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, unsigned width, unsigned height) {
-        mat4x4_identity(model);
-
         instance = create_instance();
         gpu = pick_gpu(instance.get());
         hWnd = create_window(proc, hInstance, nCmdShow, this, width, height);
@@ -958,15 +943,20 @@ public:
 
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
         {
-            vec3 eye = { 0.0f, 3.0f, 5.0f };
-            vec3 origin = { 0, 0, 0 };
-            vec3 up = { 0.0f, 1.0f, 0.0 };
+            const vec3 eye = { 0.0f, 0.0f, 10.0f };
+            const vec3 origin = { 0.0f, 0.0f, 0.0f };
+            const vec3 up = { 0.0f, 1.0f, 0.0f };
             mat4x4 view;
             mat4x4_look_at(view, eye, origin, up);
 
             mat4x4 proj;
-            mat4x4_perspective(proj, (float)degreesToRadians(45.0f), 1.0f, 0.1f, 100.0f); // [TODO] Use orthographic camera.
-            proj[1][1] *= -1.0f; // Flip projection matrix from GL to Vulkan orientation.
+            const float l = 0.0f;
+            const float r = 100.0f;
+            const float b = 0.0f;
+            const float t = 100.0f;
+            const float n = -100.0f;
+            const float f = 100.0f;
+            mat4x4_ortho(proj, l, r, b, t, n, f);
 
             mat4x4 view_proj;
             mat4x4_mul(view_proj, proj, view);
@@ -1006,11 +996,6 @@ public:
     }
 
     void redraw() { // [TODO] Pass clear color, text lines.
-        mat4x4 m;
-        mat4x4_dup(m, model);
-        mat4x4_rotate_Y(model, m, (float)degreesToRadians(1.5f)); // [TODO] Remove test.
-        mat4x4_orthonormalize(model, model);
-
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -1025,11 +1010,24 @@ public:
         bind_pipeline(cmd, pipeline.get());
         bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
-        Constants constants(model);
-        push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
+        for (unsigned row = 0; row < 10; ++row) {
+            for (unsigned col = 0; col < row; ++col) {
+                const float char_width = 3.0f;
+                const float char_height = 3.0f;
 
-        const auto vertex_count = 12 * 3; // [TODO] Draw more than 1 shape, add Text.
-        draw(cmd, vertex_count);
+                mat4x4 model;
+                mat4x4_translate(model,
+                    char_width * 0.5f + col * char_width,
+                    char_height * 0.5f + row * char_height,
+                    0.0f);
+
+                Constants constants(model);
+                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
+
+                const auto vertex_count = 12 * 3;
+                draw(cmd, vertex_count);
+            }
+        }
 
         end_pass(cmd);
         end(cmd);
