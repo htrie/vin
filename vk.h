@@ -857,22 +857,12 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 
 
-class Constants {
-    float model[4][4];
-
-public:
-    Constants(const mat4x4& model) {
-        memcpy(this->model, model, sizeof(mat4x4));
-    }
+struct Constants {
+    mat4x4 model;
 };
 
-class Uniforms {
-    float view_proj[4][4];
-
-public:
-    Uniforms(const mat4x4& view_proj) {
-        memcpy(this->view_proj, view_proj, sizeof(mat4x4));
-    }
+struct Uniforms {
+    mat4x4 view_proj;
 };
 
 class Device {
@@ -943,6 +933,8 @@ public:
 
         auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
         {
+            auto& uniforms = *(Uniforms*)uniform_memory_ptr;
+
             const vec3 eye = { 0.0f, 0.0f, 10.0f };
             const vec3 origin = { 0.0f, 0.0f, 0.0f };
             const vec3 up = { 0.0f, 1.0f, 0.0f };
@@ -958,10 +950,8 @@ public:
             const float f = 100.0f;
             mat4x4_ortho(proj, l, r, b, t, n, f);
 
-            mat4x4 view_proj;
-            mat4x4_mul(view_proj, proj, view);
+            mat4x4_mul(uniforms.view_proj, proj, view);
 
-            new(uniform_memory_ptr) Uniforms(view_proj);
         }
         unmap_memory(device.get(), uniform_memory.get());
 
@@ -995,7 +985,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color) { // [TODO] Pass text lines.
+    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) {
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -1009,23 +999,27 @@ public:
         bind_pipeline(cmd, pipeline.get());
         bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
-        for (unsigned row = 0; row < 10; ++row) {
-            for (unsigned col = 0; col < row; ++col) {
+        unsigned row = 0;
+        for (auto& line : text) {
+            unsigned col = 0;
+            for (auto& character : line) {
                 const float char_width = 3.0f;
                 const float char_height = 3.0f;
 
-                mat4x4 model;
-                mat4x4_translate(model,
+                Constants constants;
+                mat4x4_translate(constants.model,
                     char_width * 0.5f + col * char_width,
                     char_height * 0.5f + row * char_height,
                     0.0f);
 
-                Constants constants(model);
-                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
+                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants); // [TODO] Add char to push constants.
 
-                const auto vertex_count = 12 * 3;
+                const auto vertex_count = 12 * 3; // [TODO] Add font in shader.
                 draw(cmd, vertex_count);
+
+                col++;
             }
+            row++;
         }
 
         end_pass(cmd);

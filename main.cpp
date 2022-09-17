@@ -47,7 +47,12 @@ class App {
 
     void redraw() {
         if (!minimized)
-            device.redraw(clear_color);
+            device.redraw(clear_color, { 
+                "abcdefghijklmnopqrstuvwxyz",
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+                "`1234567890-=[]\\;',./",
+                "~!@#$%^&*()_+{}|:\"<>?"
+                });
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
