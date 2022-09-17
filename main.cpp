@@ -32,6 +32,8 @@
 class App {
     Device device;
 
+    std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
+
     bool minimized = false;
 
     void set_minimized(bool b) {
@@ -45,7 +47,7 @@ class App {
 
     void redraw() {
         if (!minimized)
-            device.redraw();
+            device.redraw(clear_color);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

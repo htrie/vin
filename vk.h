@@ -995,14 +995,13 @@ public:
         }
     }
 
-    void redraw() { // [TODO] Pass clear color, text lines.
+    void redraw(const std::array<float, 4>& clear_color) { // [TODO] Pass text lines.
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
 
         begin(cmd);
-        const std::array<float, 4> color = { 0.2f, 0.2f, 0.2f, 1.0f };
-        begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), color, width, height);
+        begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), clear_color, width, height);
 
         set_viewport(cmd, (float)width, (float)height);
         set_scissor(cmd, width, height);
