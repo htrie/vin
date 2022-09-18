@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include "../../ttf2mesh.h"
-#include "common/glwindow.h"
+#include "ttf2mesh.h"
+#include "glwindow.h"
 
 static int view_mode = 0;
 
