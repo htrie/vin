@@ -4,7 +4,7 @@ VisualStudioVersion = 17.3.32804.467
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vin", "vin.vcxproj", "{157661F1-12B5-471E-AE1F-FE80D5466618}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simple", "ttf2mesh-master\simple.vcxproj", "{EC189465-5C61-48ED-BBD1-0EEA506298FC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "font", "font.vcxproj", "{EC189465-5C61-48ED-BBD1-0EEA506298FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

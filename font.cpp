@@ -67,8 +67,6 @@ int app_main()
     // [TODO] Output font.inc file.
     // [TODO] Output font.h file.
     // [TODO] Remove glwindow.
-    // [TODO] Rename project to font.
-    // [TODO] Move to main folder.
 
     if (!glwindow_create(100, 100, "Press [space] or [A...Z] to select view"))
     {
