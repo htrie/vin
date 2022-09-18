@@ -815,8 +815,8 @@ void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
     auto const viewport = vk::Viewport()
         .setX(0.0f)
         .setY(0.0f)
-        .setWidth(width < height ? width : height)
-        .setHeight(width < height ? width : height)
+        .setWidth(width)
+        .setHeight(height)
         .setMinDepth((float)0.0f)
         .setMaxDepth((float)1.0f);
     cmd_buf.setViewport(0, 1, &viewport);
@@ -961,6 +961,9 @@ public:
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
             }
 
+            const float char_width = 3.0f;
+            const float char_height = 3.0f;
+
             auto& uniforms = *(Uniforms*)uniform_ptr;
 
             const vec3 eye = { 0.0f, 0.0f, 10.0f };
@@ -971,9 +974,9 @@ public:
 
             mat4x4 proj;
             const float l = 0.0f;
-            const float r = 100.0f;
+            const float r = width / char_width;
             const float b = 0.0f;
-            const float t = 100.0f;
+            const float t = height / char_height;
             const float n = -100.0f;
             const float f = 100.0f;
             mat4x4_ortho(proj, l, r, b, t, n, f);
@@ -982,7 +985,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) {
+    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) { // [TODO] Pass a character struct list with char/line/col.
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -1005,13 +1008,13 @@ public:
 
                 Constants constants;
                 mat4x4_translate(constants.model,
-                    char_width * 0.5f + col * char_width,
-                    char_height * 0.5f + row * char_height,
+                    2.0f + col * char_width,
+                    2.5f + row * char_height,
                     0.0f);
 
                 push(cmd, pipeline_layout.get(), sizeof(Constants), &constants); // [TODO] Add char to push constants.
 
-                const auto vertex_count = 12 * 3; // [TODO] Add font in shader.
+                const auto vertex_count = 12 * 3; // [TODO] Use font.h vertex_counts.
                 draw(cmd, vertex_count);
 
                 col++;
