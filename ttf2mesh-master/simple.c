@@ -140,6 +140,12 @@ int app_main()
 
     choose_glyph(L'A');
 
+    // [TODO] Output font.inc file.
+    // [TODO] Output font.h file.
+    // [TODO] Rename project to font.
+    // [TODO] Move to main folder.
+    // [TODO] Remove glwindow.
+
     if (!glwindow_create(400, 400, "Press [space] or [A...Z] to select view"))
     {
         fprintf(stderr, "unable to create opengl window\n");
