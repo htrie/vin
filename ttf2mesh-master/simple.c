@@ -9,19 +9,14 @@
 #include "glwindow.h"
 
 static ttf_t *font = NULL;
-static ttf_glyph_t *glyph = NULL;
 static ttf_mesh_t *mesh = NULL;
 
 static bool load_system_font()
 {
-    // list all system fonts by filename mask:
-
     const char* dir = ".";
     ttf_t **list = ttf_list_fonts(&dir, 1, "PragmataPro*");
     if (list == NULL) return false; // no memory in system
     if (list[0] == NULL) return false; // no fonts were found
-
-    // load the first font from the list
 
     ttf_load_from_file(list[0]->filename, &font, false);
     ttf_free_list(list);
@@ -33,21 +28,14 @@ static bool load_system_font()
 
 static void choose_glyph(wchar_t symbol)
 {
-    // find a glyph in the font file
-
     int index = ttf_find_glyph(font, symbol);
     if (index < 0) return;
-
-    // make mesh object from the glyph
 
     ttf_mesh_t *out;
     if (ttf_glyph2mesh(&font->glyphs[index], &out, TTF_QUALITY_HIGH, TTF_FEATURES_DFLT) != TTF_DONE)
         return;
 
-    // if successful, release the previous object and save the state
-
     ttf_free_mesh(mesh);
-    glyph = &font->glyphs[index];
     mesh = out;
 }
 
@@ -71,10 +59,8 @@ static void on_render()
 
     if (mesh != NULL)
     {
-        glTranslatef(width / 2, height / 10, 0);
-        glScalef(0.9f * height, 0.9f * height, 1.0f);
-        glScalef(1.0f, 1.0f, 0.1f);
-        glTranslatef(-(glyph->xbounds[0] + glyph->xbounds[1]) / 2, -glyph->ybounds[0], 0.0f);
+        glTranslatef(width / 4, height / 10, 0);
+        glScalef(height, height, 1.0f);
 
         glColor3f(0.0, 0.0, 0.0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
