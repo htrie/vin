@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="glwindow.c" />
-    <ClCompile Include="simple.c" />
+    <ClCompile Include="glwindow.cpp" />
+    <ClCompile Include="simple.cpp" />
     <ClCompile Include="ttf2mesh.c" />
   </ItemGroup>
   <ItemGroup>

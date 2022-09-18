@@ -1,9 +1,5 @@
 #include "glwindow.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void (*glwindow_key_cb)(wchar_t key, const bool ctrl_alt_shift[3], bool pressed) = NULL;
 void (*glwindow_mouse_cb)(char btn, int x, int y);
 void (*glwindow_timer_cb)();
@@ -290,7 +286,7 @@ void handle_mouse_event(UINT uMsg, WPARAM wParam, LPARAM lParam)
     glwindow_mouse_cb(b, x, y);
 }
 
-LONG WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
@@ -305,7 +301,7 @@ LONG WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         return 0;
     case WM_KEYDOWN:
     case WM_KEYUP:
-        handle_wm_key(wParam, uMsg == WM_KEYDOWN);
+        handle_wm_key((int)wParam, uMsg == WM_KEYDOWN);
         return 0;
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
@@ -567,6 +563,3 @@ void glwindow_eventloop()
 
 #endif
 
-#ifdef __cplusplus
-}
-#endif
