@@ -885,6 +885,7 @@ class Device {
 
     vk::UniqueBuffer uniform_buffer;
     vk::UniqueDeviceMemory uniform_memory;
+    void* uniform_ptr = nullptr;
 
     std::vector<vk::UniqueFence> fences;
     std::vector<vk::UniqueSemaphore> image_acquired_semaphores;
@@ -921,6 +922,7 @@ public:
         uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
         uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
         bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
+        uniform_ptr = map_memory(device.get(), uniform_memory.get());
 
         descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
         update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
@@ -930,30 +932,6 @@ public:
             image_acquired_semaphores.emplace_back(create_semaphore(device.get()));
             draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
         }
-
-        auto* uniform_memory_ptr = map_memory(device.get(), uniform_memory.get());
-        {
-            auto& uniforms = *(Uniforms*)uniform_memory_ptr;
-
-            const vec3 eye = { 0.0f, 0.0f, 10.0f };
-            const vec3 origin = { 0.0f, 0.0f, 0.0f };
-            const vec3 up = { 0.0f, 1.0f, 0.0f };
-            mat4x4 view;
-            mat4x4_look_at(view, eye, origin, up);
-
-            mat4x4 proj;
-            const float l = 0.0f;
-            const float r = 100.0f;
-            const float b = 0.0f;
-            const float t = 100.0f;
-            const float n = -100.0f;
-            const float f = 100.0f;
-            mat4x4_ortho(proj, l, r, b, t, n, f);
-
-            mat4x4_mul(uniforms.view_proj, proj, view);
-
-        }
-        unmap_memory(device.get(), uniform_memory.get());
 
         resize(width, height);
     }
@@ -982,6 +960,25 @@ public:
                 framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), views.back().get(), width, height));
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
             }
+
+            auto& uniforms = *(Uniforms*)uniform_ptr;
+
+            const vec3 eye = { 0.0f, 0.0f, 10.0f };
+            const vec3 origin = { 0.0f, 0.0f, 0.0f };
+            const vec3 up = { 0.0f, 1.0f, 0.0f };
+            mat4x4 view;
+            mat4x4_look_at(view, eye, origin, up);
+
+            mat4x4 proj;
+            const float l = 0.0f;
+            const float r = 100.0f;
+            const float b = 0.0f;
+            const float t = 100.0f;
+            const float n = -100.0f;
+            const float f = 100.0f;
+            mat4x4_ortho(proj, l, r, b, t, n, f);
+
+            mat4x4_mul(uniforms.view_proj, proj, view);
         }
     }
 
