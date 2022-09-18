@@ -8,8 +8,6 @@
 #include "ttf2mesh.h"
 #include "glwindow.h"
 
-static int view_mode = 0;
-
 static ttf_t *font = NULL;
 static ttf_glyph_t *glyph = NULL;
 static ttf_mesh_t *mesh = NULL;
@@ -78,31 +76,12 @@ static void on_render()
         glScalef(1.0f, 1.0f, 0.1f);
         glTranslatef(-(glyph->xbounds[0] + glyph->xbounds[1]) / 2, -glyph->ybounds[0], 0.0f);
 
-        /* Draw wireframe/solid */
-        if (view_mode == 0 || view_mode == 1)
-        {
-            glColor3f(0.0, 0.0, 0.0);
-            glPolygonMode(GL_FRONT_AND_BACK, view_mode == 1 ? GL_LINE : GL_FILL);
-            glEnableClientState(GL_VERTEX_ARRAY);
-            glVertexPointer(2, GL_FLOAT, 0, &mesh->vert->x);
-            glDrawElements(GL_TRIANGLES, mesh->nfaces * 3,  GL_UNSIGNED_INT, &mesh->faces->v1);
-            glDisableClientState(GL_VERTEX_ARRAY);
-        }
-
-        /* Draw contours */
-        if (view_mode == 2)
-        {
-            int i;
-            for (i = 0; i < mesh->outline->ncontours; i++)
-            {
-                glColor3f(0.0, 0.0, 0.0);
-                glLineWidth(1.0);
-                glEnableClientState(GL_VERTEX_ARRAY);
-                glVertexPointer(2, GL_FLOAT, sizeof(ttf_point_t), &mesh->outline->cont[i].pt->x);
-                glDrawArrays(GL_LINE_LOOP, 0, mesh->outline->cont[i].length);
-                glDisableClientState(GL_VERTEX_ARRAY);
-            }
-        }
+        glColor3f(0.0, 0.0, 0.0);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glVertexPointer(2, GL_FLOAT, 0, &mesh->vert->x);
+        glDrawElements(GL_TRIANGLES, mesh->nfaces * 3,  GL_UNSIGNED_INT, &mesh->faces->v1);
+        glDisableClientState(GL_VERTEX_ARRAY);
     }
 
     glwindow_end_draw();
@@ -115,14 +94,6 @@ static void on_key_event(wchar_t key, const bool ctrl_alt_shift[3], bool pressed
     if (key == 27 && !pressed) // escape
     {
         glwindow_destroy();
-        return;
-    }
-
-    if (key == L' ' && pressed)
-    {
-        //view_mode = view_mode ^ 1;
-        view_mode = (view_mode + 1) % 3;
-        glwindow_repaint();
         return;
     }
 
