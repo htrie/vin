@@ -8,36 +8,7 @@
 #include "ttf2mesh.h"
 #include "glwindow.h"
 
-static ttf_t *font = NULL;
 static ttf_mesh_t *mesh = NULL;
-
-static bool load_system_font()
-{
-    const char* dir = ".";
-    ttf_t **list = ttf_list_fonts(&dir, 1, "PragmataPro*");
-    if (list == NULL) return false; // no memory in system
-    if (list[0] == NULL) return false; // no fonts were found
-
-    ttf_load_from_file(list[0]->filename, &font, false);
-    ttf_free_list(list);
-    if (font == NULL) return false;
-
-    printf("font \"%s\" loaded\n", font->names.full_name);
-    return true;
-}
-
-static void choose_glyph(wchar_t symbol)
-{
-    int index = ttf_find_glyph(font, symbol);
-    if (index < 0) return;
-
-    ttf_mesh_t *out;
-    if (ttf_glyph2mesh(&font->glyphs[index], &out, TTF_QUALITY_HIGH, TTF_FEATURES_DFLT) != TTF_DONE)
-        return;
-
-    ttf_free_mesh(mesh);
-    mesh = out;
-}
 
 static void on_render()
 {
@@ -73,29 +44,24 @@ static void on_render()
     glwindow_end_draw();
 }
 
-static void on_key_event(wchar_t key, const bool ctrl_alt_shift[3], bool pressed)
-{
-    (void)ctrl_alt_shift;
-
-    if (key == 27 && !pressed) // escape
-    {
-        glwindow_destroy();
-        return;
-    }
-
-    choose_glyph(key + 32);
-    glwindow_repaint();
-}
-
 int app_main()
 {
-    if (!load_system_font())
-    {
-        fprintf(stderr, "unable to load system font\n");
-        return 1;
-    }
+    const char* dir = ".";
+    ttf_t** list = ttf_list_fonts(&dir, 1, "PragmataPro*");
+    if (list == NULL) return false; // no memory in system
+    if (list[0] == NULL) return false; // no fonts were found
 
-    choose_glyph(L'A');
+    static ttf_t *font = NULL;
+    ttf_load_from_file(list[0]->filename, &font, false);
+    ttf_free_list(list);
+    if (font == NULL) return false;
+
+    wchar_t symbol = L'a';
+    int index = ttf_find_glyph(font, symbol);
+    if (index < 0) return;
+
+    if (ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_HIGH, TTF_FEATURES_DFLT) != TTF_DONE)
+        return;
 
     // [TODO] Output font.inc file.
     // [TODO] Output font.h file.
@@ -109,12 +75,11 @@ int app_main()
         return 2;
     }
 
-    // init window callbacks
-    // and go to event loop
-
-    glwindow_key_cb = on_key_event;
     glwindow_render_cb = on_render;
     glwindow_eventloop();
+
+    ttf_free_mesh(mesh);
+    ttf_free(font);
 
     return 0;
 }
