@@ -49,8 +49,8 @@ int app_main()
 {
     const char* dir = ".";
     ttf_t** list = ttf_list_fonts(&dir, 1, "PragmataPro*");
-    if (list == nullptr) return 1; // no memory in system
-    if (list[0] == nullptr) return 1; // no fonts were found
+    if (list == nullptr) return 1;
+    if (list[0] == nullptr) return 1;
 
     ttf_t* font = nullptr;
     ttf_load_from_file(list[0]->filename, &font, false);
