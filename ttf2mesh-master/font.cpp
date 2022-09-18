@@ -8,7 +8,7 @@
 #include "ttf2mesh.h"
 #include "glwindow.h"
 
-static ttf_mesh_t *mesh = nullptr;
+ttf_mesh_t *mesh = nullptr;
 
 void on_render()
 {
@@ -31,7 +31,8 @@ void on_render()
     if (mesh != nullptr)
     {
         glTranslatef((float)width / 4.0f, (float)height / 10.0f, 0.0f);
-        glScalef((float)height, (float)height, 1.0f);
+        float scale = 0.12f;
+        glScalef((float)height * scale, (float)height * scale, 1.0f);
 
         glColor3f(0.0, 0.0, 0.0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -51,7 +52,7 @@ int app_main()
     if (list == nullptr) return 1; // no memory in system
     if (list[0] == nullptr) return 1; // no fonts were found
 
-    static ttf_t* font = nullptr;
+    ttf_t* font = nullptr;
     ttf_load_from_file(list[0]->filename, &font, false);
     ttf_free_list(list);
     if (font == nullptr) return 1;
@@ -69,7 +70,7 @@ int app_main()
     // [TODO] Rename project to font.
     // [TODO] Move to main folder.
 
-    if (!glwindow_create(400, 400, "Press [space] or [A...Z] to select view"))
+    if (!glwindow_create(100, 100, "Press [space] or [A...Z] to select view"))
     {
         fprintf(stderr, "unable to create opengl window\n");
         return 2;
