@@ -19,12 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="glwindow.cpp" />
     <ClCompile Include="font.cpp" />
     <ClCompile Include="ttf2mesh.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="glwindow.h" />
     <ClInclude Include="ttf2mesh.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

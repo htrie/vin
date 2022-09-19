@@ -6,48 +6,11 @@
 #include <time.h>
 #include <math.h>
 #include <fstream>
+#include <Windows.h>
 
 #include "ttf2mesh.h"
-#include "glwindow.h"
 
-ttf_mesh_t *mesh = nullptr;
-
-void on_render()
-{
-    int width, height;
-    glwindow_get_size(&width, &height);
-
-    glwindow_begin_draw();
-
-    glViewport(0, 0, width, height);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0.0, width, 0.0, height, -1.0, 1.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    if (mesh != nullptr)
-    {
-        glTranslatef((float)width / 4.0f, (float)height / 10.0f, 0.0f);
-        float scale = 0.12f;
-        glScalef((float)height * scale, (float)height * scale, 1.0f);
-
-        glColor3f(0.0, 0.0, 0.0);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glVertexPointer(2, GL_FLOAT, 0, &mesh->vert->x);
-        glDrawElements(GL_TRIANGLES, mesh->nfaces * 3, GL_UNSIGNED_INT, &mesh->faces->v1);
-        glDisableClientState(GL_VERTEX_ARRAY);
-    }
-
-    glwindow_end_draw();
-};
-
-int app_main()
+int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow)
 {
     const char* dir = ".";
     ttf_t** list = ttf_list_fonts(&dir, 1, "PragmataPro*");
@@ -63,9 +26,12 @@ int app_main()
     int index = ttf_find_glyph(font, symbol);
     if (index < 0) return 1;
 
+    ttf_mesh_t *mesh = nullptr;
     const auto res = ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_LOW, TTF_FEATURES_DFLT);
     if (res != TTF_DONE) return 1;
 
+    // [TODO] Output all ASCII 128 characters.
+    // [TODO] Also output vertex_offsets in font.inc.
     {
         std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
         out << "const vec2 vertices[" << mesh->nfaces * 3 << "] = vec2[" << mesh->nfaces * 3 << "](\n";
@@ -82,8 +48,7 @@ int app_main()
         out << ");\n";
     }
 
-    // [TODO] Output font.h file.
-    // [TODO] Remove glwindow.
+    // [TODO] Output vertex_counts in font.h.
 
     ttf_free_mesh(mesh);
     ttf_free(font);
