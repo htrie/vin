@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <fstream>
+
 #include "ttf2mesh.h"
 #include "glwindow.h"
 
@@ -61,21 +63,27 @@ int app_main()
     int index = ttf_find_glyph(font, symbol);
     if (index < 0) return 1;
 
-    const auto res = ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_HIGH, TTF_FEATURES_DFLT);
+    const auto res = ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_LOW, TTF_FEATURES_DFLT);
     if (res != TTF_DONE) return 1;
 
-    // [TODO] Output font.inc file.
-    // [TODO] Output font.h file.
-    // [TODO] Remove glwindow.
-
-    if (!glwindow_create(100, 100, "Press [space] or [A...Z] to select view"))
     {
-        fprintf(stderr, "unable to create opengl window\n");
-        return 2;
+        std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
+        out << "const vec2 vertices[" << mesh->nfaces * 3 << "] = vec2[" << mesh->nfaces * 3 << "](\n";
+        for (int i = 0; i < mesh->nfaces; i++)
+        {
+            out << "\tvec2(" << mesh->vert[mesh->faces[i].v1].x << ", " << mesh->vert[mesh->faces[i].v1].y << ")"; out << ",\n";
+            out << "\tvec2(" << mesh->vert[mesh->faces[i].v2].x << ", " << mesh->vert[mesh->faces[i].v2].y << ")"; out << ",\n";
+            out << "\tvec2(" << mesh->vert[mesh->faces[i].v3].x << ", " << mesh->vert[mesh->faces[i].v3].y << ")";
+            if (i < mesh->nfaces - 1)
+                out << ",\n";
+            else
+                out << "\n";
+        }
+        out << ");\n";
     }
 
-    glwindow_render_cb = on_render;
-    glwindow_eventloop();
+    // [TODO] Output font.h file.
+    // [TODO] Remove glwindow.
 
     ttf_free_mesh(mesh);
     ttf_free(font);

@@ -961,8 +961,8 @@ public:
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
             }
 
-            const float char_width = 3.0f;
-            const float char_height = 3.0f;
+            const float char_width = 4.0f;
+            const float char_height = 4.0f;
 
             auto& uniforms = *(Uniforms*)uniform_ptr;
 
@@ -1003,18 +1003,18 @@ public:
         for (auto& line : text) {
             unsigned col = 0;
             for (auto& character : line) {
-                const float char_width = 3.0f;
-                const float char_height = 3.0f;
+                const float char_width = 4.0f;
+                const float char_height = 4.0f;
 
                 Constants constants;
                 mat4x4_translate(constants.model,
-                    2.0f + col * char_width,
-                    2.5f + row * char_height,
+                    1.0f + col * char_width,
+                    7.0f + row * (char_height + 3.0f),
                     0.0f);
 
                 push(cmd, pipeline_layout.get(), sizeof(Constants), &constants); // [TODO] Add char to push constants.
 
-                const auto vertex_count = 12 * 3; // [TODO] Use font.h vertex_counts.
+                const auto vertex_count = 129; // [TODO] Use font.h vertex_counts.
                 draw(cmd, vertex_count);
 
                 col++;

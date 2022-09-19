@@ -14,5 +14,5 @@ layout (std140, binding = 0) uniform Uniforms {
 } uniforms;
 
 void main() {
-   gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex], 1.0f);
+   gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex] * vec2(1.0f, -1.0f) * 6.0f, -1.0f, 1.0f);
 }
