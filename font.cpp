@@ -7,6 +7,7 @@
 #include <math.h>
 #include <fstream>
 #include <vector>
+#include <array>
 #include <Windows.h>
 
 #include "ttf2mesh.h"
@@ -19,10 +20,8 @@ struct Vertex {
 };
 
 struct Symbol {
-    wchar_t character;
+    unsigned vertex_offset = 0;
     std::vector<Vertex> vertices;
-
-    Symbol(wchar_t c) : character(c) {}
 };
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
@@ -36,25 +35,25 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
     ttf_free_list(list);
     if (font == nullptr) return 1;
     
-    std::vector<Symbol> symbols;
-    symbols.emplace_back(L'a');
-    symbols.emplace_back(L'b');
+    std::array<Symbol, 128> symbols; // ASCII table.
     unsigned total_vertex_count = 0;
-    // [TODO] Output all ASCII 128 characters.
 
-    for (auto& symbol : symbols) {
-        int index = ttf_find_glyph(font, symbol.character);
-        if (index < 0) return 1;
+    for (unsigned c = 0; c < 128; ++c) {
+        int index = ttf_find_glyph(font, c);
+        if (index < 0) continue;
 
         ttf_mesh_t* mesh = nullptr;
         const auto res = ttf_glyph2mesh(&font->glyphs[index], &mesh, TTF_QUALITY_LOW, TTF_FEATURES_DFLT);
-        if (res != TTF_DONE) return 1;
+        if (res != TTF_DONE) continue;
 
-        for (int i = 0; i < mesh->nfaces; i++) {
-            symbol.vertices.emplace_back(mesh->vert[mesh->faces[i].v1].x, mesh->vert[mesh->faces[i].v1].y);
-            symbol.vertices.emplace_back(mesh->vert[mesh->faces[i].v2].x, mesh->vert[mesh->faces[i].v2].y);
-            symbol.vertices.emplace_back(mesh->vert[mesh->faces[i].v3].x, mesh->vert[mesh->faces[i].v3].y);
-            total_vertex_count += 3;
+        if (mesh->nfaces > 0) {
+            symbols[c].vertex_offset = total_vertex_count;
+            for (int i = 0; i < mesh->nfaces; i++) {
+                symbols[c].vertices.emplace_back(mesh->vert[mesh->faces[i].v1].x, mesh->vert[mesh->faces[i].v1].y);
+                symbols[c].vertices.emplace_back(mesh->vert[mesh->faces[i].v2].x, mesh->vert[mesh->faces[i].v2].y);
+                symbols[c].vertices.emplace_back(mesh->vert[mesh->faces[i].v3].x, mesh->vert[mesh->faces[i].v3].y);
+                total_vertex_count += 3;
+            }
         }
 
         ttf_free_mesh(mesh);
@@ -64,10 +63,9 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
 
     ttf_free(font);
 
-    // [TODO] Output vertex_counts in font.h.
-    // [TODO] Also output vertex_offsets in font.inc.
     {
         std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
+
         out << "const vec2 vertices[" << total_vertex_count << "] = vec2[" << total_vertex_count << "](\n";
         for (const auto& symbol : symbols) {
             for(const auto& vertex : symbol.vertices) {
@@ -76,6 +74,25 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
         }
         out << "\tvec2(0.0, 0.0)"; // EOV
         out << ");\n";
+        out << "\n";
+
+        out << "const uint vertex_offsets[129] = uint[129](\n";
+        for (unsigned c = 0; c < 128; ++c) {
+            out << "\t" << symbols[c].vertex_offset << ",\n";
+        }
+        out << "\t0\n";
+        out << ");\n";
+    }
+
+    {
+        std::ofstream out("font.h", std::ios::trunc | std::ios::out);
+
+        out << "const std::array<unsigned, 129> vertex_counts = {\n";
+        for (unsigned c = 0; c < 128; ++c) {
+            out << "\t" << symbols[c].vertices.size() << ",\n";
+        }
+        out << "\t0\n";
+        out << "};\n";
     }
 
     return 0;

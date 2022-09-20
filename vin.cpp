@@ -26,6 +26,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "linmath.h"
+#include "font.h"
 #include "win.h"
 #include "vk.h"
 

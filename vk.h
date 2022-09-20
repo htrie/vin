@@ -859,6 +859,7 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 struct Constants {
     mat4x4 model;
+    uint32_t character;
 };
 
 struct Uniforms {
@@ -1011,10 +1012,11 @@ public:
                     1.0f + col * char_width,
                     7.0f + row * (char_height + 3.0f),
                     0.0f);
+                constants.character = character;
 
-                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants); // [TODO] Add char to push constants.
+                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 
-                const auto vertex_count = 129; // [TODO] Use font.h vertex_counts.
+                const auto vertex_count = vertex_counts[character];
                 draw(cmd, vertex_count);
 
                 col++;
