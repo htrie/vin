@@ -962,9 +962,6 @@ public:
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
             }
 
-            const float char_width = 4.0f;
-            const float char_height = 4.0f;
-
             auto& uniforms = *(Uniforms*)uniform_ptr;
 
             const vec3 eye = { 0.0f, 0.0f, 10.0f };
@@ -975,9 +972,9 @@ public:
 
             mat4x4 proj;
             const float l = 0.0f;
-            const float r = width / char_width;
+            const float r = width / 4.0f;
             const float b = 0.0f;
-            const float t = height / char_height;
+            const float t = height / 4.0f;
             const float n = -100.0f;
             const float f = 100.0f;
             mat4x4_ortho(proj, l, r, b, t, n, f);
@@ -1004,13 +1001,13 @@ public:
         for (auto& line : text) {
             unsigned col = 0;
             for (auto& character : line) {
-                const float char_width = 4.0f;
-                const float char_height = 4.0f;
+                const float char_width = 3.0f;
+                const float char_height = 3.0f;
 
                 Constants constants;
                 mat4x4_translate(constants.model,
                     1.0f + col * char_width,
-                    7.0f + row * (char_height + 3.0f),
+                    5.0f + row * (char_height + 2.0f),
                     0.0f);
                 constants.character = character;
 
