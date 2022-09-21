@@ -36,24 +36,29 @@ class App {
     std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
 
     bool minimized = false;
+    bool dirty = true;
 
-    void set_minimized(bool b) {
-        minimized = b;
-    }
+    void set_minimized(bool b) { minimized = b; } 
+    void set_dirty(bool b) { dirty = b; } 
 
     void resize(unsigned w, unsigned h) {
         if (!minimized)
+        {
             device.resize(w, h);
+            set_dirty(true);
+        }
     }
 
     void redraw() {
-        if (!minimized)
-            device.redraw(clear_color, { 
+        if (!minimized && dirty) {
+            set_dirty(false);
+            device.redraw(clear_color, {
                 "abcdefghijklmnopqrstuvwxyz",
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
                 "`1234567890-=[]\\;',./",
                 "~!@#$%^&*()_+{}|:\"<>?"
                 });
+        }
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -61,6 +66,15 @@ class App {
         case WM_CREATE: {
             LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
             SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+            return 0;
+        }
+        case WM_MOVE:
+        case WM_SETFOCUS: {
+            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+                app->set_dirty(true);
+            return 0;
+        }
+        case WM_KILLFOCUS: {
             return 0;
         }
         case WM_DESTROY:
