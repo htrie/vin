@@ -23,6 +23,7 @@
 #include <Windows.h>
 #include <math.h>
 #include <stdlib.h>
+#include <thread>
 #include <vulkan/vulkan.hpp>
 
 #include "linmath.h"
@@ -42,22 +43,23 @@ class App {
     void set_dirty(bool b) { dirty = b; } 
 
     void resize(unsigned w, unsigned h) {
-        if (!minimized)
-        {
+        if (!minimized) {
             device.resize(w, h);
-            set_dirty(true);
         }
     }
 
     void redraw() {
         if (!minimized && dirty) {
-            set_dirty(false);
+            dirty = false;
             device.redraw(clear_color, {
                 "abcdefghijklmnopqrstuvwxyz",
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
                 "`1234567890-=[]\\;',./",
                 "~!@#$%^&*()_+{}|:\"<>?"
                 });
+        }
+        else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
@@ -74,9 +76,6 @@ class App {
                 app->set_dirty(true);
             return 0;
         }
-        case WM_KILLFOCUS: {
-            return 0;
-        }
         case WM_DESTROY:
         case WM_CLOSE: {
             PostQuitMessage(0);
@@ -84,8 +83,7 @@ class App {
         }
         case WM_GETMINMAXINFO: {
             // Window client area size must be at least 1 pixel high, to prevent crash.
-            const POINT minsize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
-            ((MINMAXINFO*)lParam)->ptMinTrackSize = minsize;
+            ((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
             return 0;
         }
         case WM_PAINT: {
@@ -99,6 +97,7 @@ class App {
                 const unsigned width = lParam & 0xffff;
                 const unsigned height = (lParam & 0xffff0000) >> 16;
                 app->resize(width, height);
+                app->set_dirty(true);
             }
             return 0;
         }
