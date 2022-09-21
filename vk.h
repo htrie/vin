@@ -1,6 +1,7 @@
 #pragma once
 
 vk::UniqueInstance create_instance() {
+    // Look for validation layers
     uint32_t enabled_layer_count = 0;
     char const* enabled_layers[64];
 
@@ -17,6 +18,7 @@ vk::UniqueInstance create_instance() {
     }
 #endif
 
+    // Look for instance extensions
     uint32_t instance_extension_count = 0;
     const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
@@ -99,6 +101,7 @@ vk::UniqueInstance create_instance() {
 }
 
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
+    // Make initial call to query gpu_count, then second call for gpu info
     uint32_t gpu_count = 0;
     auto result = instance.enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
@@ -115,6 +118,7 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
     result = instance.enumeratePhysicalDevices(&gpu_count, physical_devices.get());
     VERIFY(result == vk::Result::eSuccess);
 
+    // Try to auto select most suitable device
     int32_t gpu_number = -1;
     {
         uint32_t count_device_type[VK_PHYSICAL_DEVICE_TYPE_CPU + 1];
@@ -167,6 +171,7 @@ vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hIns
 }
 
 uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
+    // Call with nullptr data to get count
     uint32_t queue_family_count = 0;
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
     VERIFY(queue_family_count >= 1);
@@ -175,6 +180,7 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
     queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
     gpu.getQueueFamilyProperties(&queue_family_count, queue_props.get());
 
+    // Iterate over each queue to learn whether it supports presenting:
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
         const auto result = gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
@@ -198,6 +204,8 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
     }
 
     if (present_queue_family_index == UINT32_MAX) {
+        // If didn't find a queue that supports both graphics and present, then
+        // find a separate present queue.
         for (uint32_t i = 0; i < queue_family_count; ++i) {
             if (supportsPresent[i] == VK_TRUE) {
                 present_queue_family_index = i;
@@ -206,6 +214,7 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
         }
     }
 
+    // Generate error if could not find both a graphics and a present queue
     if (graphics_queue_family_index == UINT32_MAX || present_queue_family_index == UINT32_MAX) {
         ERR_EXIT("Could not find both graphics and present queues\n", "Swapchain Initialization Failure");
     }
@@ -223,6 +232,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
         .setQueueCount((uint32_t)priorities.size())
         .setPQueuePriorities(priorities.data()) };
 
+    // Look for device extensions
     uint32_t enabled_extension_count = 0;
     char const* extension_names[64];
 
@@ -274,6 +284,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 }
 
 vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
+    // Get the list of VkFormat's that are supported:
     uint32_t format_count = 0;
     auto result = gpu.getSurfaceFormatsKHR(surface, &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
     VERIFY(result == vk::Result::eSuccess);
@@ -283,6 +294,75 @@ vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::Surf
     result = gpu.getSurfaceFormatsKHR(surface, &format_count, surface_formats.get());
     VERIFY(result == vk::Result::eSuccess);
 
+    // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+    // the surface has no preferred format.  Otherwise, at least one
+    // supported format will be returned.
+    vk::SurfaceFormatKHR res = surface_formats[0];
+    if (surface_formats[0].format == vk::Format::eUndefined)
+        res.format = vk::Format::eB8G8R8A8Unorm;
+    return res;
+}
+
+vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
+    vk::Queue queue;
+    device.getQueue(family_index, 0, &queue);
+    return queue;
+}
+
+vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
+    auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+        .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+        .setQueueFamilyIndex(family_index);
+
+    auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);
+    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    return std::move(cmd_pool_handle.value);
+}
+
+vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
+    std::array<vk::DescriptorSetLayoutBinding, 1> const layout_bindings = { 
+        vk::DescriptorSetLayoutBinding()
+           .setBinding(0)
+           .setDescriptorType(vk::DescriptorType::eUniformBuffer)
+           .setDescriptorCount(1)
+           .setStageFlags(vk::ShaderStageFlagBits::eVertex)
+           .setPImmutableSamplers(nullptr) };
+
+    auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
+        .setBindingCount((uint32_t)layout_bindings.size())
+        .setPBindings(layout_bindings.data());
+
+    auto desc_layout_handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
+    VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
+    return std::move(desc_layout_handle.value);
+}
+
+vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
+    std::array<vk::PushConstantRange, 1> const push_constants = { vk::PushConstantRange()
+        .setOffset(0)
+        .setSize(constants_size)
+        .setStageFlags(vk::ShaderStageFlagBits::eVertex) };
+
+    auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+        .setPushConstantRangeCount((uint32_t)push_constants.size())
+        .setPPushConstantRanges(push_constants.data())
+        .setSetLayoutCount(1)
+        .setPSetLayouts(&desc_layout);
+
+    auto pipeline_layout_handle = device.createPipelineLayoutUnique(pipeline_layout_info);
+    VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
+    return std::move(pipeline_layout_handle.value);
+}
+
+vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
+    // The initial layout for the color and depth attachments will be LAYOUT_UNDEFINED
+    // because at the start of the renderpass, we don't care about their contents.
+    // At the start of the subpass, the color attachment's layout will be transitioned
+    // to LAYOUT_COLOR_ATTACHMENT_OPTIMAL and the depth stencil attachment's layout
+    // will be transitioned to LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL.  At the end of
+    // the renderpass, the color attachment's layout will be transitioned to
+    // LAYOUT_PRESENT_SRC_KHR to be ready to present.  This is all done as part of
+    // the renderpass, no barriers are necessary.
     const std::array<vk::AttachmentDescription, 1> attachments = {
         vk::AttachmentDescription()
             .setFormat(surface_format.format)
@@ -310,7 +390,7 @@ vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::Surf
         .setPPreserveAttachments(nullptr);
 
     std::array<vk::SubpassDependency, 1> const dependencies = {
-        vk::SubpassDependency()
+        vk::SubpassDependency()  // Image layout transition
             .setSrcSubpass(VK_SUBPASS_EXTERNAL)
             .setDstSubpass(0)
             .setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
@@ -475,26 +555,33 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
     VERIFY(result == vk::Result::eSuccess);
 
     vk::Extent2D extent;
+    // width and height are either both -1, or both not -1.
     if (surf_caps.currentExtent.width == (uint32_t)-1) {
+        // If the surface size is undefined, the size is set to the size of the images requested.
         extent.width = window_width;
         extent.height = window_height;
     }
     else {
+        // If the surface size is defined, the swap chain size must match
         extent = surf_caps.currentExtent;
     }
 
+    // Determine the number of VkImages to use in the swap chain.
     uint32_t min_image_count = image_count;
     if (min_image_count < surf_caps.minImageCount) {
         min_image_count = surf_caps.minImageCount;
     }
 
+    // If maxImageCount is 0, we can ask for as many images as we want, otherwise we're limited to maxImageCount
     if ((surf_caps.maxImageCount > 0) && (min_image_count > surf_caps.maxImageCount)) {
+        // Application must settle for fewer images than desired:
         min_image_count = surf_caps.maxImageCount;
     }
 
     const auto preTransform = surf_caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity ?
         vk::SurfaceTransformFlagBitsKHR::eIdentity : surf_caps.currentTransform;
 
+    // Find a supported composite alpha mode - one of these is guaranteed to be set
     vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     vk::CompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
         vk::CompositeAlphaFlagBitsKHR::eOpaque,
@@ -573,8 +660,10 @@ bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBit
     vk::PhysicalDeviceMemoryProperties memory_properties;
     gpu.getMemoryProperties(&memory_properties);
 
+    // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
+            // Type is available, does it match user properties?
             if ((memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                 *typeIndex = i;
                 return true;
@@ -650,6 +739,7 @@ void wait_idle(const vk::Device& device) {
 }
 
 void wait(const vk::Device& device, const vk::Fence& fence) {
+    // Ensure no more than frame lag renderings are outstanding
     const auto result = device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
     VERIFY(result == vk::Result::eSuccess);
     device.resetFences({ fence });
@@ -663,6 +753,10 @@ uint32_t acquire(const vk::Device& device, const vk::SwapchainKHR& swapchain, co
 }
 
 void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::CommandBuffer& cmd_buf, const vk::Fence& fence) {
+    // Wait for the image acquired semaphore to be signaled to ensure
+    // that the image won't be rendered to until the presentation
+    // engine has fully released ownership to the application, and it is
+    // okay to render to the image.
     vk::PipelineStageFlags const pipe_stage_flags = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     auto const submit_info = vk::SubmitInfo()
         .setPWaitDstStageMask(&pipe_stage_flags)
@@ -714,7 +808,7 @@ void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_p
 }
 
 void end_pass(const vk::CommandBuffer& cmd_buf) {
-    cmd_buf.endRenderPass();
+    cmd_buf.endRenderPass(); // Note that ending the renderpass changes the image's layout from COLOR_ATTACHMENT_OPTIMAL to PRESENT_SRC_KHR
 }
 
 void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
@@ -889,7 +983,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) {
+    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) { // [TODO] Pass a character struct list with char/line/col.
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
