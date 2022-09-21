@@ -24,6 +24,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <thread>
+#include <string>
 #include <vulkan/vulkan.hpp>
 
 #include "linmath.h"
@@ -35,6 +36,13 @@ class App {
     Device device;
 
     std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
+
+    std::vector<std::string> text = {
+        "abcdefghijklmnopqrstuvwxyz",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+        "`1234567890-=[]\\;',./",
+        "~!@#$%^&*()_+{}|:\"<>?",
+        ""};
 
     bool minimized = false;
     bool dirty = true;
@@ -51,58 +59,71 @@ class App {
     void redraw() {
         if (!minimized && dirty) {
             dirty = false;
-            device.redraw(clear_color, {
-                "abcdefghijklmnopqrstuvwxyz",
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                "`1234567890-=[]\\;',./",
-                "~!@#$%^&*()_+{}|:\"<>?"
-                });
+            device.redraw(clear_color, text);
         }
         else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
+    void process(WPARAM key) {
+        // [TODO] Handle backspace.
+        // [TODO] Handle enter.
+        // [TODO] Add text.h.
+        // [TODO] Handle space+Q to quit.
+        text.back() += (char)key;
+    }
+
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         switch (uMsg) {
-        case WM_CREATE: {
-            LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-            SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
-            return 0;
-        }
-        case WM_MOVE:
-        case WM_SETFOCUS: {
-            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-                app->set_dirty(true);
-            return 0;
-        }
-        case WM_DESTROY:
-        case WM_CLOSE: {
-            PostQuitMessage(0);
-            return 0;
-        }
-        case WM_GETMINMAXINFO: {
-            // Window client area size must be at least 1 pixel high, to prevent crash.
-            ((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
-            return 0;
-        }
-        case WM_PAINT: {
-            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-                app->redraw();
-            return 0;
-        }
-        case WM_SIZE: {
-            if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-                app->set_minimized(wParam == SIZE_MINIMIZED);
-                const unsigned width = lParam & 0xffff;
-                const unsigned height = (lParam & 0xffff0000) >> 16;
-                app->resize(width, height);
-                app->set_dirty(true);
+            case WM_CREATE: {
+                LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+                SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+                break;
             }
-            return 0;
+            case WM_MOVE:
+            case WM_SETFOCUS: {
+                if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+                    app->set_dirty(true);
+                break;
+            }
+            case WM_DESTROY:
+            case WM_CLOSE: {
+                PostQuitMessage(0);
+                break;
+            }
+            case WM_GETMINMAXINFO: {
+                // Window client area size must be at least 1 pixel high, to prevent crash.
+                ((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
+                break;
+            }
+            case WM_PAINT: {
+                if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+                    app->redraw();
+                break;
+            }
+            case WM_SIZE: {
+                if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+                    app->set_minimized(wParam == SIZE_MINIMIZED);
+                    const unsigned width = lParam & 0xffff;
+                    const unsigned height = (lParam & 0xffff0000) >> 16;
+                    app->resize(width, height);
+                    app->set_dirty(true);
+                }
+                break;
+            }
+            case WM_CHAR: {
+                if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+                    app->process(wParam);
+                    app->set_dirty(true);
+                }
+                break;
+            }
+            default: {
+                return DefWindowProc(hWnd, uMsg, wParam, lParam);
+            }
         }
-        }
-        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+        return 0;
     }
 
 public:
