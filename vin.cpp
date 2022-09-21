@@ -68,9 +68,11 @@ class App {
 
     void process(WPARAM key) {
         // [TODO] Handle backspace.
+        // [TODO] Use only one line of text.
         // [TODO] Handle enter.
         // [TODO] Add text.h.
         // [TODO] Handle space+Q to quit.
+        // [TODO] Display block cursor.
         text.back() += (char)key;
     }
 
@@ -128,7 +130,7 @@ class App {
 
 public:
     App(HINSTANCE hInstance, int nCmdShow)
-        : device(proc, hInstance, nCmdShow, 800, 600) {
+        : device(proc, hInstance, nCmdShow, 640, 480) {
     }
 
     void run() {
