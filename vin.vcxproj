@@ -154,6 +154,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="linmath.h" />
+    <ClInclude Include="text.h" />
     <ClInclude Include="vk.h" />
     <ClInclude Include="win.h" />
   </ItemGroup>

@@ -947,7 +947,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color, const std::string& text) {
+    void redraw(const std::array<float, 4>& clear_color, const std::string& string) {
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -963,7 +963,7 @@ public:
 
         unsigned row = 0;
         unsigned col = 0;
-        for (auto& character : text) {
+        for (auto& character : string) {
             if (character == '\n') {
                 row++;
                 col = 0;

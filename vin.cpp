@@ -29,20 +29,15 @@
 
 #include "linmath.h"
 #include "font.h"
+#include "text.h"
 #include "win.h"
 #include "vk.h"
 
 class App {
     Device device;
+    Text text;
 
     std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
-
-    std::string text = {
-        "abcdefghijklmnopqrstuvwxyz\n"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
-        "`1234567890-=[]\\;',./\n"
-        "~!@#$%^&*()_+{}|:\"<>?\n"
-        "\n"};
 
     bool minimized = false;
     bool dirty = true;
@@ -59,7 +54,7 @@ class App {
     void redraw() {
         if (!minimized && dirty) {
             dirty = false;
-            device.redraw(clear_color, text);
+            device.redraw(clear_color, text.cull());
         }
         else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -67,15 +62,7 @@ class App {
     }
 
     void process(WPARAM key) {
-        // [TODO] Handle backspace.
-        // [TODO] Add text.h.
-        // [TODO] Handle space+Q to quit.
-        // [TODO] Display block cursor.
-
-        if (key == 13) // Enter.
-            text += '\n';
-        else
-            text += (char)key;
+        text.process(key);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
