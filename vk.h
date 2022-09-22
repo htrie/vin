@@ -970,13 +970,13 @@ public:
             }
             else
             {
-                const float char_width = 3.0f;
+                const float char_width = 2.0f;
                 const float char_height = 3.0f;
 
                 Constants constants;
                 mat4x4_translate(constants.model,
                     1.0f + col * char_width,
-                    5.0f + row * (char_height + 2.0f),
+                    5.0f + row * (char_height + 1.0f),
                     0.0f);
                 constants.character = character;
 
