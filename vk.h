@@ -823,7 +823,7 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 struct Constants {
     mat4x4 model;
-    uint32_t character;
+    uint32_t char_index;
 };
 
 struct Uniforms {
@@ -972,18 +972,17 @@ public:
             {
                 const float char_width = 2.0f;
                 const float char_height = 3.0f;
+                const unsigned char_index = (uint8_t)character;
 
                 Constants constants;
                 mat4x4_translate(constants.model,
                     1.0f + col * char_width,
                     5.0f + row * (char_height + 1.0f),
                     0.0f);
-                constants.character = character;
+                constants.char_index = char_index;
 
                 push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
-
-                const auto vertex_count = vertex_counts[character];
-                draw(cmd, vertex_count);
+                draw(cmd, vertex_counts[char_index]);
 
                 col++;
             }

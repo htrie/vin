@@ -7,7 +7,7 @@
 
 layout (push_constant) uniform Constants {
 	mat4 model;
-	uint character;
+	uint char_index;
 } constants;
 
 layout (std140, binding = 0) uniform Uniforms {
@@ -15,7 +15,7 @@ layout (std140, binding = 0) uniform Uniforms {
 } uniforms;
 
 void main() {
-	uint vertex_offset = vertex_offsets[constants.character];
+	uint vertex_offset = vertex_offsets[constants.char_index];
 	vec2 vertex = vertices[vertex_offset + gl_VertexIndex];
 	gl_Position = uniforms.view_proj * constants.model * vec4(vertex * vec2(1.0f, -1.0f) * 3.4f, -1.0f, 1.0f); // [TODO] Do transformation at export.
 }

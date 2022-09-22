@@ -9,8 +9,10 @@ class Text {
 
 public:
     void process(WPARAM key) {
-        // [TODO] Display block cursor.
-        // [TODO] Handle space+Q to quit.
+        // [TODO] block cursor.
+        // [TODO] space+Q to quit.
+        // [TODO] h/j/k/l to move.
+        // [TODO] insert/normal mode.
         if (key == 8/*BS*/) {
             if (!buffer.empty())
                 buffer.pop_back();
@@ -22,10 +24,11 @@ public:
             buffer += '\n';
         }
         else if (key == 27/*ESC*/) {
-            // [TODO] Handle escape.
+            // [TODO]
+            buffer += (char)128/*custom BLOCK*/;
         }
         else if (key == 127/*DEL*/) {
-            // [TODO] Handle delete.
+            // [TODO]
         }
         else {
             buffer += (char)key;
