@@ -947,7 +947,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color, const std::vector<std::string>& text) {
+    void redraw(const std::array<float, 4>& clear_color, const std::string& text) {
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -962,9 +962,14 @@ public:
         bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
         unsigned row = 0;
-        for (auto& line : text) {
-            unsigned col = 0;
-            for (auto& character : line) {
+        unsigned col = 0;
+        for (auto& character : text) {
+            if (character == '\n') {
+                row++;
+                col = 0;
+            }
+            else
+            {
                 const float char_width = 3.0f;
                 const float char_height = 3.0f;
 
@@ -982,7 +987,6 @@ public:
 
                 col++;
             }
-            row++;
         }
 
         end_pass(cmd);

@@ -37,12 +37,12 @@ class App {
 
     std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
 
-    std::vector<std::string> text = {
-        "abcdefghijklmnopqrstuvwxyz",
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-        "`1234567890-=[]\\;',./",
-        "~!@#$%^&*()_+{}|:\"<>?",
-        ""};
+    std::string text = {
+        "abcdefghijklmnopqrstuvwxyz\n"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+        "`1234567890-=[]\\;',./\n"
+        "~!@#$%^&*()_+{}|:\"<>?\n"
+        "\n"};
 
     bool minimized = false;
     bool dirty = true;
@@ -68,12 +68,14 @@ class App {
 
     void process(WPARAM key) {
         // [TODO] Handle backspace.
-        // [TODO] Use only one line of text.
-        // [TODO] Handle enter.
         // [TODO] Add text.h.
         // [TODO] Handle space+Q to quit.
         // [TODO] Display block cursor.
-        text.back() += (char)key;
+
+        if (key == 13) // Enter.
+            text += '\n';
+        else
+            text += (char)key;
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
