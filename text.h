@@ -1,5 +1,14 @@
 #pragma once
 
+enum Glyph {
+    BS = 8,
+    TAB = 9,
+    CR = 13,
+    ESC = 27,
+    DEL = 127,
+    BLOCK = 128,
+};
+
 class Text {
     std::string buffer = {
         "abcdefghijklmnopqrstuvwxyz\n"
@@ -13,21 +22,21 @@ public:
         // [TODO] space+Q to quit.
         // [TODO] h/j/k/l to move.
         // [TODO] insert/normal mode.
-        if (key == 8/*BS*/) {
+        if (key == Glyph::BS) {
             if (!buffer.empty())
                 buffer.pop_back();
         }
-        else if (key == 9/*TAB*/) {
+        else if (key == Glyph::TAB) {
             buffer += "    ";
         }
-        else if (key == 13/*CR*/) {
+        else if (key == Glyph::CR) {
             buffer += '\n';
         }
-        else if (key == 27/*ESC*/) {
+        else if (key == Glyph::ESC) {
             // [TODO]
-            buffer += (char)128/*custom BLOCK*/;
+            buffer += (char)Glyph::BLOCK;
         }
-        else if (key == 127/*DEL*/) {
+        else if (key == Glyph::DEL) {
             // [TODO]
         }
         else {
