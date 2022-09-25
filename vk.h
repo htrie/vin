@@ -955,7 +955,7 @@ public:
         const auto& cmd = cmds[frame_index].get();
 
         begin(cmd);
-        begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), clear_color, width, height);
+        begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), clear_color.rgba(), width, height);
 
         set_viewport(cmd, (float)width, (float)height);
         set_scissor(cmd, width, height);
@@ -971,12 +971,12 @@ public:
             const float trans_y = (1.0f + character.row) * char_height;
 
             Constants constants;
-            // [TODO] Use simd::matrix.
+            // [TODO] Use simd::matrix like math code.
             vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
             vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
             vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
             vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
-            vec4_init(constants.color, character.color);
+            vec4_init(constants.color, character.color.rgba());
             constants.char_index = character.index;
 
             push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);

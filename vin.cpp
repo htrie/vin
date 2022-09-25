@@ -37,7 +37,7 @@ class App {
     Device device;
     Text text;
 
-    Color clear_color = { 1.0f / 255.0f, 22.0f / 255.0f, 39.0f / 255.0f, 1.0f }; // Night Owl theme background color.
+    Color clear_color = Color::rgba(1, 22, 39, 255); // Night Owl theme background color.
 
     bool minimized = false;
     bool dirty = true;
