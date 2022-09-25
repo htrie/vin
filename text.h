@@ -39,8 +39,8 @@ struct Character {
     unsigned row = 0;
     unsigned col = 0;
 
-    Character(uint8_t index, unsigned row, unsigned col)
-        : index(index), row(row), col(col) {}
+    Character(uint8_t index, Color color, unsigned row, unsigned col)
+        : index(index), color(color), row(row), col(col) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -110,8 +110,8 @@ public:
             else
             {
                 if (row == cursor_row && col == cursor_col)
-                    characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, row, col); // [TODO] Display cursor in yellow.
-                characters.emplace_back((uint8_t)character, row, col);
+                    characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, Color::rgba(255, 255, 0, 255), row, col);
+                characters.emplace_back((uint8_t)character, Color::rgba(205, 226, 239, 255), row, col);
                 col++;
             }
         }
