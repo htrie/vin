@@ -949,7 +949,7 @@ public:
         }
     }
 
-    void redraw(const Color& clear_color, const std::string& string) {
+    void redraw(const Color& clear_color, const std::string& string) { // [TODO] Pass row/col, char and color instead.
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();

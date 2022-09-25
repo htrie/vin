@@ -103,6 +103,7 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
 
     for (unsigned c = 0; c < 128; ++c) { add_char(c); } // ASCII table.
     add_char(0x2588); // 128: block
+    add_char(0x258F); // 129: left vertical line
     total_vertex_count += 1; // EOV
 
     ttf_free(font);

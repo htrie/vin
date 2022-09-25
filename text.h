@@ -5,8 +5,8 @@ enum Glyph {
     TAB = 9,
     CR = 13,
     ESC = 27,
-    DEL = 127,
     BLOCK = 128,
+    LINE = 129,
 };
 
 typedef std::array<float, 4> Color;
@@ -20,10 +20,11 @@ class Text {
 
 public:
     void process(WPARAM key) {
-        // [TODO] block cursor.
-        // [TODO] space+Q to quit.
-        // [TODO] h/j/k/l to move.
+        // [TODO] display cursor.
         // [TODO] insert/normal mode.
+        // [TODO] block/line cursor.
+        // [TODO] h/j/k/l to move.
+        // [TODO] space+Q to quit.
         if (key == Glyph::BS) {
             if (!buffer.empty())
                 buffer.pop_back();
@@ -35,11 +36,8 @@ public:
             buffer += '\n';
         }
         else if (key == Glyph::ESC) {
-            // [TODO]
-            buffer += (char)Glyph::BLOCK;
-        }
-        else if (key == Glyph::DEL) {
-            // [TODO]
+            //buffer += (char)Glyph::BLOCK;
+            buffer += (char)Glyph::LINE;
         }
         else {
             buffer += (char)key;
