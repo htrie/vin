@@ -11,6 +11,18 @@ enum Glyph {
 
 typedef std::array<float, 4> Color;
 
+struct Character {
+    uint8_t index;
+    Color color = { 1.0f, 0.0f, 0.0f, 1.0f }; // [TODO] Use simd::color.
+    unsigned row = 0;
+    unsigned col = 0;
+
+    Character(uint8_t index, unsigned row, unsigned col)
+        : index(index), row(row), col(col) {}
+};
+
+typedef std::vector<Character> Characters;
+
 class Text {
     std::string buffer = {
         "abcdefghijklmnopqrstuvwxyz\n"
@@ -44,9 +56,27 @@ public:
         }
     }
 
-    std::string cull() {
+    Characters cull() {
         // [TODO] Clip lines to fit screen.
-        return buffer;
+        Characters characters;
+        characters.reserve(256);
+
+        unsigned row = 0;
+        unsigned col = 0;
+        for (auto& character : buffer)
+        {
+            if (character == '\n') {
+                row++;
+                col = 0;
+            }
+            else
+            {
+                characters.emplace_back((uint8_t)character, row, col);
+                col++;
+            }
+        }
+
+        return characters;
     }
 };
 

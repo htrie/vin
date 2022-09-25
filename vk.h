@@ -949,7 +949,7 @@ public:
         }
     }
 
-    void redraw(const Color& clear_color, const std::string& string) { // [TODO] Pass row/col, char and color instead.
+    void redraw(const Color& clear_color, const Characters& characters) {
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -963,37 +963,24 @@ public:
         bind_pipeline(cmd, pipeline.get());
         bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
-        unsigned row = 0;
-        unsigned col = 0;
-        for (auto& character : string) {
-            if (character == '\n') {
-                row++;
-                col = 0;
-            }
-            else
-            {
-                const unsigned char_index = (uint8_t)character;
+        for (auto& character : characters) {
+            const float scale = 14.0f; // [TODO] Move to character.
+            const float char_width = scale * 0.5f;
+            const float char_height = scale * 1.05f;
+            const float trans_x = (1.0f + character.col) * char_width;
+            const float trans_y = (1.0f + character.row) * char_height;
 
-                const float scale = 14.0f;
-                const float char_width = scale * 0.5f;
-                const float char_height = scale * 1.05f;
-                const float trans_x = (1.0f + col) * char_width;
-                const float trans_y = (1.0f + row) * char_height;
+            Constants constants;
+            // [TODO] Use simd::matrix.
+            vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
+            vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
+            vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
+            vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
+            vec4_init(constants.color, character.color);
+            constants.char_index = character.index;
 
-                Constants constants;
-                // [TODO] Use simd::matrix.
-                vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
-                vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
-                vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
-                vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
-                vec4_init(constants.color, { 1.0f, 0.0f, 0.0f, 1.0f });
-                constants.char_index = char_index;
-
-                push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
-                draw(cmd, vertex_counts[char_index]);
-
-                col++;
-            }
+            push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
+            draw(cmd, vertex_counts[character.index]);
         }
 
         end_pass(cmd);
