@@ -7,6 +7,7 @@
 
 layout (push_constant) uniform Constants {
 	mat4 model;
+	vec4 color;
 	uint char_index;
 } constants;
 

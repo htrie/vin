@@ -9,6 +9,8 @@ enum Glyph {
     BLOCK = 128,
 };
 
+typedef std::array<float, 4> Color;
+
 class Text {
     std::string buffer = {
         "abcdefghijklmnopqrstuvwxyz\n"

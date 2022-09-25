@@ -37,7 +37,7 @@ class App {
     Device device;
     Text text;
 
-    std::array<float, 4> clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
+    Color clear_color = { 0.2f, 0.2f, 0.2f, 1.0f };
 
     bool minimized = false;
     bool dirty = true;

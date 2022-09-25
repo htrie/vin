@@ -324,10 +324,11 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
 }
 
 vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
-    std::array<vk::PushConstantRange, 1> const push_constants = { vk::PushConstantRange()
-        .setOffset(0)
-        .setSize(constants_size)
-        .setStageFlags(vk::ShaderStageFlagBits::eVertex) };
+    std::array<vk::PushConstantRange, 1> const push_constants = {
+        vk::PushConstantRange()
+            .setOffset(0)
+            .setSize(constants_size)
+            .setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment) };
 
     auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
         .setPushConstantRangeCount((uint32_t)push_constants.size())
@@ -800,7 +801,7 @@ void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLay
 }
 
 void push(const vk::CommandBuffer& cmd_buf, const vk::PipelineLayout& pipeline_layout, uint32_t size, const void* data) {
-    cmd_buf.pushConstants(pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, size, data);
+    cmd_buf.pushConstants(pipeline_layout, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, size, data);
 }
 
 void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
@@ -823,6 +824,7 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 struct Constants {
     mat4x4 model;
+    vec4 color;
     uint32_t char_index;
 };
 
@@ -947,7 +949,7 @@ public:
         }
     }
 
-    void redraw(const std::array<float, 4>& clear_color, const std::string& string) {
+    void redraw(const Color& clear_color, const std::string& string) {
         wait(device.get(), fences[fence_index].get());
         const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
         const auto& cmd = cmds[frame_index].get();
@@ -979,13 +981,13 @@ public:
                 const float trans_y = (1.0f + row) * char_height;
 
                 Constants constants;
+                // [TODO] Use simd::matrix.
                 vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
                 vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
                 vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
                 vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
+                vec4_init(constants.color, { 1.0f, 0.0f, 0.0f, 1.0f });
                 constants.char_index = char_index;
-
-                // [TODO] Use simd::matrix.
 
                 push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
                 draw(cmd, vertex_counts[char_index]);
