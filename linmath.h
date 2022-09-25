@@ -63,6 +63,9 @@ static inline void vec3_reflect(vec3 r, vec3 const v, vec3 const n) {
 }
 
 typedef float vec4[4];
+static inline void vec4_init(vec4& r, const std::array<float, 4>& v) {
+    (std::array<float, 4>&)r = v;
+}
 static inline void vec4_add(vec4 r, vec4 const a, vec4 const b) {
     int i;
     for (i = 0; i < 4; ++i) r[i] = a[i] + b[i];

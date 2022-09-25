@@ -936,9 +936,9 @@ public:
 
             mat4x4 proj;
             const float l = 0.0f;
-            const float r = width / 4.0f;
+            const float r = (float)width;
             const float b = 0.0f;
-            const float t = height / 4.0f;
+            const float t = (float)height;
             const float n = -100.0f;
             const float f = 100.0f;
             mat4x4_ortho(proj, l, r, b, t, n, f);
@@ -970,16 +970,22 @@ public:
             }
             else
             {
-                const float char_width = 2.0f;
-                const float char_height = 3.0f;
                 const unsigned char_index = (uint8_t)character;
 
+                const float scale = 14.0f;
+                const float char_width = scale * 0.5f;
+                const float char_height = scale * 1.05f;
+                const float trans_x = (1.0f + col) * char_width;
+                const float trans_y = (1.0f + row) * char_height;
+
                 Constants constants;
-                mat4x4_translate(constants.model,
-                    1.0f + col * char_width,
-                    5.0f + row * (char_height + 1.0f),
-                    0.0f);
+                vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
+                vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
+                vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
+                vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
                 constants.char_index = char_index;
+
+                // [TODO] Use simd::matrix.
 
                 push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
                 draw(cmd, vertex_counts[char_index]);

@@ -17,5 +17,5 @@ layout (std140, binding = 0) uniform Uniforms {
 void main() {
 	uint vertex_offset = vertex_offsets[constants.char_index];
 	vec2 vertex = vertices[vertex_offset + gl_VertexIndex];
-	gl_Position = uniforms.view_proj * constants.model * vec4(vertex * vec2(1.0f, -1.0f) * 3.4f, -1.0f, 1.0f); // [TODO] Do transformation at export.
+	gl_Position = uniforms.view_proj * constants.model * vec4(vertex * vec2(1.0f, -1.0f), -1.0f, 1.0f); // [TODO] Do transformation at export.
 }
