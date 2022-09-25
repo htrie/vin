@@ -30,13 +30,9 @@ class Text {
         "`1234567890-=[]\\;',./\n"
         "~!@#$%^&*()_+{}|:\"<>?\n" };
 
-public:
-    void process(WPARAM key) {
-        // [TODO] display cursor.
-        // [TODO] insert/normal mode.
-        // [TODO] block/line cursor.
-        // [TODO] h/j/k/l to move.
-        // [TODO] space+Q to quit.
+    bool insert_mode = false;
+
+    void process_insert(WPARAM key) {
         if (key == Glyph::BS) {
             if (!buffer.empty())
                 buffer.pop_back();
@@ -48,12 +44,30 @@ public:
             buffer += '\n';
         }
         else if (key == Glyph::ESC) {
-            //buffer += (char)Glyph::BLOCK;
-            buffer += (char)Glyph::LINE;
+            insert_mode = false;
         }
         else {
             buffer += (char)key;
+            //buffer += (char)Glyph::BLOCK;
+            //buffer += (char)Glyph::LINE;
         }
+    }
+
+    void process_normal(WPARAM key) {
+        if (key == 'i') {
+            insert_mode = true;
+        }
+        else {
+        }
+    }
+
+public:
+    void process(WPARAM key) {
+        // [TODO] display cursor
+        // [TODO] block/line cursor
+        // [TODO] h/j/k/l to move
+        // [TODO] space+Q to quit
+        return insert_mode ? process_insert(key) : process_normal(key);
     }
 
     Characters cull() {
