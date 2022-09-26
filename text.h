@@ -114,6 +114,11 @@ class Text {
         cursor = cursor > 0 ? cursor - 1 : buffer.size() - 1;
     }
 
+    void line_start() {
+        Line current(buffer, cursor);
+        cursor = current.begin();
+    }
+
     void next_line() {
         Line current(buffer, cursor);
         Line next(buffer, current.end() < buffer.size() - 1 ? current.end() + 1 : 0);
@@ -136,7 +141,8 @@ class Text {
 
     void process_normal(WPARAM key) {
         if (key == 'i') { insert_mode = true; }
-        else if (key == 'a') { insert_mode = true; next_char(); }
+        else if (key == 'a') { next_char(); insert_mode = true; }
+        else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
         else if (key == 'h') { prev_char(); }
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
