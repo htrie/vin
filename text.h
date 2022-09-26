@@ -46,6 +46,38 @@ struct Character {
 
 typedef std::vector<Character> Characters;
 
+class Line {
+    const std::string_view buffer;
+    size_t start = 0;
+    size_t finish = 0;
+
+public:
+    Line(std::string_view buffer, size_t pos) {
+        if (buffer.size() > 0) {
+            assert(pos < buffer.size());
+            const auto pn = buffer.rfind('\n', buffer[pos] == '\n' ? pos - 1 : pos);
+            const auto nn = buffer.find('\n', pos);
+            start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
+            finish = nn != std::string::npos ? nn : buffer.size();
+            assert(start <= finish);
+        }
+    }
+
+    size_t to_relative(size_t pos) const {
+        assert(pos != std::string::npos);
+        assert(pos >= start && pos <= finish);
+        return pos - start;
+    }
+
+    size_t to_absolute(size_t pos) const {
+        assert(pos != std::string::npos);
+        return std::min(start + pos, finish);
+    }
+
+    size_t begin() const { return start; }
+    size_t end() const { return finish; }
+};
+
 class Text {
     std::string buffer = {
         "abcdefghijklmnopqrstuvwxyz\n"
@@ -57,52 +89,60 @@ class Text {
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
     Color text_color = Color::rgba(205, 226, 239, 255);
 
-    unsigned cursor = 0;
+    size_t cursor = 0;
 
     bool insert_mode = false;
 
-    void process_insert(WPARAM key) {
-        if (key == Glyph::BS) {
-            if (!buffer.empty())
-                buffer.pop_back();
-        }
-        else if (key == Glyph::TAB) {
-            buffer += "    ";
-        }
-        else if (key == Glyph::CR) {
-            buffer += '\n';
-        }
-        else if (key == Glyph::ESC) {
-            insert_mode = false;
-        }
-        else {
-            buffer += (char)key;
-            //buffer += (char)Glyph::BLOCK;
-            //buffer += (char)Glyph::LINE;
+    void insert(std::string_view s) {
+        buffer.insert(cursor, s);
+        cursor = std::min(cursor + s.length(), buffer.size() - 1);
+    }
+
+    void erase() {
+        if (cursor > 0) {
+            buffer.erase(cursor - 1, 1);
+            cursor = cursor > 0 ? cursor - 1 : cursor;
         }
     }
 
+    void next_char() {
+        cursor = cursor < buffer.size() - 1 ? cursor + 1 : 0;
+    }
+
+    void prev_char() {
+        cursor = cursor > 0 ? cursor - 1 : buffer.size() - 1;
+    }
+
+    void next_line() {
+        Line current(buffer, cursor);
+        Line next(buffer, current.end() < buffer.size() - 1 ? current.end() + 1 : 0);
+        cursor = next.to_absolute(current.to_relative(cursor));
+    }
+
+    void prev_line() {
+        Line current(buffer, cursor);
+        Line prev(buffer, current.begin() > 0 ? current.begin() - 1 : buffer.size() - 1);
+        cursor = prev.to_absolute(current.to_relative(cursor));
+    }
+
+    void process_insert(WPARAM key) {
+        if (key == Glyph::BS) { erase(); }
+        else if (key == Glyph::TAB) { insert("    "); }
+        else if (key == Glyph::CR) { insert("\n"); }
+        else if (key == Glyph::ESC) { insert_mode = false; }
+        else { insert(std::string(1, (char)key)); }
+    }
+
     void process_normal(WPARAM key) {
-        if (key == 'i') {
-            insert_mode = true;
-        }
-        else if (key == 'h') {
-            cursor = cursor > 0 ? cursor-1 : cursor;
-        }
-        else if (key == 'j') {
-        }
-        else if (key == 'k') {
-        }
-        else if (key == 'l') {
-            cursor = cursor < buffer.size()-1 ? cursor+1 : cursor;
-        }
-        else {
-        }
+        if (key == 'i') { insert_mode = true; }
+        else if (key == 'h') { prev_char(); }
+        else if (key == 'j') { next_line(); }
+        else if (key == 'k') { prev_line(); }
+        else if (key == 'l') { next_char(); }
     }
 
 public:
     void process(WPARAM key) {
-        // [TODO] <h/j/k/l> to move.
         // [TODO] <space+Q> to quit.
         return insert_mode ? process_insert(key) : process_normal(key);
     }
