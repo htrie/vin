@@ -126,6 +126,11 @@ class Text {
         cursor = current.begin();
     }
 
+    void line_end() {
+        Line current(buffer, cursor);
+        cursor = current.end();
+    }
+
     void next_line() {
         Line current(buffer, cursor);
         Line next(buffer, current.end() < buffer.size() - 1 ? current.end() + 1 : 0);
@@ -155,9 +160,9 @@ class Text {
         else if (key == 'x') { erase(); }
         else if (key == 'u') { } // [TODO]
         else if (key == 'G') { } // [TODO]
-        else if (key == '0') { } // [TODO]
+        else if (key == '0') { line_start(); }
         else if (key == '_') { } // [TODO]
-        else if (key == '$') { } // [TODO]
+        else if (key == '$') { line_end(); }
         else if (key == 'h') { prev_char(); }
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
