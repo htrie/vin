@@ -96,9 +96,9 @@ public:
         Characters characters;
         characters.reserve(256);
 
-        unsigned cursor_row = 0; // [TODO] Place cursor.
-        unsigned cursor_col = 0;
+        unsigned cursor = 0;
 
+        unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
         for (auto& character : buffer)
@@ -109,11 +109,12 @@ public:
             }
             else
             {
-                if (row == cursor_row && col == cursor_col)
+                if (index == cursor)
                     characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, Color::rgba(255, 255, 0, 255), row, col);
                 characters.emplace_back((uint8_t)character, Color::rgba(205, 226, 239, 255), row, col);
                 col++;
             }
+            index++;
         }
 
         return characters;
