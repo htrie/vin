@@ -7,6 +7,7 @@ enum Glyph {
     ESC = 27,
     BLOCK = 128,
     LINE = 129,
+    RETURN = 130,
 };
 
 class Color
@@ -52,6 +53,12 @@ class Text {
         "`1234567890-=[]\\;',./\n"
         "~!@#$%^&*()_+{}|:\"<>?\n" };
 
+    Color cursor_color = Color::rgba(255, 255, 0, 255);
+    Color whitespace_color = Color::rgba(75, 100, 93, 255);
+    Color text_color = Color::rgba(205, 226, 239, 255);
+
+    unsigned cursor = 0;
+
     bool insert_mode = false;
 
     void process_insert(WPARAM key) {
@@ -79,6 +86,16 @@ class Text {
         if (key == 'i') {
             insert_mode = true;
         }
+        else if (key == 'h') {
+            cursor = cursor > 0 ? cursor-1 : cursor;
+        }
+        else if (key == 'j') {
+        }
+        else if (key == 'k') {
+        }
+        else if (key == 'l') {
+            cursor = cursor < buffer.size()-1 ? cursor+1 : cursor;
+        }
         else {
         }
     }
@@ -96,22 +113,22 @@ public:
         Characters characters;
         characters.reserve(256);
 
-        unsigned cursor = 0;
-
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
         for (auto& character : buffer)
         {
+            if (index == cursor)
+                characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
+
             if (character == '\n') {
+                characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
                 row++;
                 col = 0;
             }
             else
             {
-                if (index == cursor)
-                    characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, Color::rgba(255, 255, 0, 255), row, col);
-                characters.emplace_back((uint8_t)character, Color::rgba(205, 226, 239, 255), row, col);
+                characters.emplace_back((uint8_t)character, text_color, row, col);
                 col++;
             }
             index++;
