@@ -8,7 +8,7 @@ vk::UniqueInstance create_instance() {
     {
         uint32_t instance_layer_count = 0;
         const auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
-        VERIFY(result == vk::Result::eSuccess);
+        verify(result == vk::Result::eSuccess);
 
         if (instance_layer_count > 0) {
             enabled_layer_count = 1;
@@ -19,7 +19,7 @@ vk::UniqueInstance create_instance() {
 
     uint32_t instance_extension_count = 0;
     const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     uint32_t enabled_extension_count = 0;
     char const* extension_names[64];
@@ -31,7 +31,7 @@ vk::UniqueInstance create_instance() {
     if (instance_extension_count > 0) {
         std::unique_ptr<vk::ExtensionProperties[]> instance_extensions(new vk::ExtensionProperties[instance_extension_count]);
         const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.get());
-        VERIFY(result == vk::Result::eSuccess);
+        verify(result == vk::Result::eSuccess);
 
         for (uint32_t i = 0; i < instance_extension_count; i++) {
             if (!strcmp(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, instance_extensions[i].extensionName)) {
@@ -45,12 +45,12 @@ vk::UniqueInstance create_instance() {
                 platformSurfaceExtFound = 1;
                 extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
             }
-            VERIFY(enabled_extension_count < 64);
+            verify(enabled_extension_count < 64);
         }
     }
 
     if (!surfaceExtFound) {
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_SURFACE_EXTENSION_NAME
+        error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_SURFACE_EXTENSION_NAME
             " extension.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
@@ -58,7 +58,7 @@ vk::UniqueInstance create_instance() {
     }
 
     if (!platformSurfaceExtFound) {
-        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+        error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
             " extension.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
@@ -77,19 +77,19 @@ vk::UniqueInstance create_instance() {
 
     auto instance_handle = vk::createInstanceUnique(inst_info);
     if (instance_handle.result == vk::Result::eErrorIncompatibleDriver) {
-        ERR_EXIT(
+        error(
             "Cannot find a compatible Vulkan installable client driver (ICD).\n\n"
             "Please look at the Getting Started guide for additional information.\n",
             "vkCreateInstance Failure");
     }
     else if (instance_handle.result == vk::Result::eErrorExtensionNotPresent) {
-        ERR_EXIT(
+        error(
             "Cannot find a specified extension library.\n"
             "Make sure your layers path is set appropriately.\n",
             "vkCreateInstance Failure");
     }
     else if (instance_handle.result != vk::Result::eSuccess) {
-        ERR_EXIT(
+        error(
             "vkCreateInstance failed.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
@@ -101,10 +101,10 @@ vk::UniqueInstance create_instance() {
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
     uint32_t gpu_count = 0;
     auto result = instance.enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     if (gpu_count <= 0) {
-        ERR_EXIT(
+        error(
             "vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
@@ -113,7 +113,7 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 
     std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
     result = instance.enumeratePhysicalDevices(&gpu_count, physical_devices.get());
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     int32_t gpu_number = -1;
     {
@@ -151,7 +151,7 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
         }
     }
     if (gpu_number == (uint32_t)-1) {
-        ERR_EXIT("physical device auto-select failed.\n", "Device Selection Failure");
+        error("physical device auto-select failed.\n", "Device Selection Failure");
     }
     return physical_devices[gpu_number];
 }
@@ -162,14 +162,14 @@ vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hIns
         .setHwnd(hWnd);
 
     auto surface_handle = instance.createWin32SurfaceKHRUnique(surf_info);
-    VERIFY(surface_handle.result == vk::Result::eSuccess);
+    verify(surface_handle.result == vk::Result::eSuccess);
     return std::move(surface_handle.value);
 }
 
 uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
     uint32_t queue_family_count = 0;
     gpu.getQueueFamilyProperties(&queue_family_count, static_cast<vk::QueueFamilyProperties*>(nullptr));
-    VERIFY(queue_family_count >= 1);
+    verify(queue_family_count >= 1);
 
     std::unique_ptr<vk::QueueFamilyProperties[]> queue_props;
     queue_props.reset(new vk::QueueFamilyProperties[queue_family_count]);
@@ -178,7 +178,7 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
     std::unique_ptr<vk::Bool32[]> supportsPresent(new vk::Bool32[queue_family_count]);
     for (uint32_t i = 0; i < queue_family_count; i++) {
         const auto result = gpu.getSurfaceSupportKHR(i, surface, &supportsPresent[i]);
-        VERIFY(result == vk::Result::eSuccess);
+        verify(result == vk::Result::eSuccess);
     }
 
     uint32_t graphics_queue_family_index = UINT32_MAX;
@@ -207,10 +207,10 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
     }
 
     if (graphics_queue_family_index == UINT32_MAX || present_queue_family_index == UINT32_MAX) {
-        ERR_EXIT("Could not find both graphics and present queues\n", "Swapchain Initialization Failure");
+        error("Could not find both graphics and present queues\n", "Swapchain Initialization Failure");
     }
     if (graphics_queue_family_index != present_queue_family_index) {
-        ERR_EXIT("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
+        error("Separate graphics and present queues not supported\n", "Swapchain Initialization Failure");
     }
     return graphics_queue_family_index;
 }
@@ -232,12 +232,12 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
     memset(extension_names, 0, sizeof(extension_names));
 
     const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     if (device_extension_count > 0) {
         std::unique_ptr<vk::ExtensionProperties[]> device_extensions(new vk::ExtensionProperties[device_extension_count]);
         const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, device_extensions.get());
-        VERIFY(result == vk::Result::eSuccess);
+        verify(result == vk::Result::eSuccess);
 
         for (uint32_t i = 0; i < device_extension_count; i++) {
             if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
@@ -247,12 +247,12 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
             if (!strcmp("VK_KHR_portability_subset", device_extensions[i].extensionName)) {
                 extension_names[enabled_extension_count++] = "VK_KHR_portability_subset";
             }
-            VERIFY(enabled_extension_count < 64);
+            verify(enabled_extension_count < 64);
         }
     }
 
     if (!swapchainExtFound) {
-        ERR_EXIT("vkEnumerateDeviceExtensionProperties failed to find the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        error("vkEnumerateDeviceExtensionProperties failed to find the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
             " extension.\n\n"
             "Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
             "Please look at the Getting Started guide for additional information.\n",
@@ -269,19 +269,19 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
         .setPEnabledFeatures(nullptr);
 
     auto device_handle = gpu.createDeviceUnique(device_info);
-    VERIFY(device_handle.result == vk::Result::eSuccess);
+    verify(device_handle.result == vk::Result::eSuccess);
     return std::move(device_handle.value);
 }
 
 vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
     uint32_t format_count = 0;
     auto result = gpu.getSurfaceFormatsKHR(surface, &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
-    VERIFY(format_count > 0);
+    verify(result == vk::Result::eSuccess);
+    verify(format_count > 0);
 
     std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
     result = gpu.getSurfaceFormatsKHR(surface, &format_count, surface_formats.get());
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     vk::SurfaceFormatKHR res = surface_formats[0];
     if (surface_formats[0].format == vk::Format::eUndefined)
@@ -301,7 +301,7 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
         .setQueueFamilyIndex(family_index);
 
     auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);
-    VERIFY(cmd_pool_handle.result == vk::Result::eSuccess);
+    verify(cmd_pool_handle.result == vk::Result::eSuccess);
     return std::move(cmd_pool_handle.value);
 }
 
@@ -319,7 +319,7 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
         .setPBindings(layout_bindings.data());
 
     auto desc_layout_handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
-    VERIFY(desc_layout_handle.result == vk::Result::eSuccess);
+    verify(desc_layout_handle.result == vk::Result::eSuccess);
     return std::move(desc_layout_handle.value);
 }
 
@@ -337,7 +337,7 @@ vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const 
         .setPSetLayouts(&desc_layout);
 
     auto pipeline_layout_handle = device.createPipelineLayoutUnique(pipeline_layout_info);
-    VERIFY(pipeline_layout_handle.result == vk::Result::eSuccess);
+    verify(pipeline_layout_handle.result == vk::Result::eSuccess);
     return std::move(pipeline_layout_handle.value);
 }
 
@@ -387,7 +387,7 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
         .setPDependencies(dependencies.data());
 
     auto render_pass_handle = device.createRenderPassUnique(rp_info);
-    VERIFY(render_pass_handle.result == vk::Result::eSuccess);
+    verify(render_pass_handle.result == vk::Result::eSuccess);
     return std::move(render_pass_handle.value);
 }
 
@@ -404,7 +404,7 @@ vk::UniqueShaderModule create_module(const vk::Device& device, const uint32_t* c
         .setPCode(code);
 
     auto module_handle = device.createShaderModuleUnique(module_info);
-    VERIFY(module_handle.result == vk::Result::eSuccess);
+    verify(module_handle.result == vk::Result::eSuccess);
     return std::move(module_handle.value);
 }
 
@@ -479,7 +479,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
         .setRenderPass(render_pass);
 
     auto pipeline_handles = device.createGraphicsPipelinesUnique(nullptr, pipeline_info);
-    VERIFY(pipeline_handles.result == vk::Result::eSuccess);
+    verify(pipeline_handles.result == vk::Result::eSuccess);
     return std::move(pipeline_handles.value[0]);
 }
 
@@ -496,7 +496,7 @@ vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
         .setPPoolSizes(pool_sizes.data());
 
     auto desc_pool_handle = device.createDescriptorPoolUnique(desc_pool_info);
-    VERIFY(desc_pool_handle.result == vk::Result::eSuccess);
+    verify(desc_pool_handle.result == vk::Result::eSuccess);
     return std::move(desc_pool_handle.value);
 }
 
@@ -505,7 +505,7 @@ vk::UniqueFence create_fence(const vk::Device& device) {
         .setFlags(vk::FenceCreateFlagBits::eSignaled);
 
     auto fence_handle = device.createFenceUnique(fence_info);
-    VERIFY(fence_handle.result == vk::Result::eSuccess);
+    verify(fence_handle.result == vk::Result::eSuccess);
     return std::move(fence_handle.value);
 }
 
@@ -513,7 +513,7 @@ vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
     auto const semaphore_info = vk::SemaphoreCreateInfo();
 
     auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
-    VERIFY(semaphore_handle.result == vk::Result::eSuccess);
+    verify(semaphore_handle.result == vk::Result::eSuccess);
     return std::move(semaphore_handle.value);
 }
 
@@ -524,14 +524,14 @@ vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk
         .setCommandBufferCount(1);
 
     auto cmd_handles = device.allocateCommandBuffersUnique(cmd_info);
-    VERIFY(cmd_handles.result == vk::Result::eSuccess);
+    verify(cmd_handles.result == vk::Result::eSuccess);
     return std::move(cmd_handles.value[0]);
 }
 
 vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height, uint32_t image_count) {
     vk::SurfaceCapabilitiesKHR surf_caps;
     const auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surf_caps);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     vk::Extent2D extent;
     if (surf_caps.currentExtent.width == (uint32_t)-1) {
@@ -586,7 +586,7 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
         .setOldSwapchain(old_swapchain);
 
     auto swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
-    VERIFY(swapchain_handle.result == vk::Result::eSuccess);
+    verify(swapchain_handle.result == vk::Result::eSuccess);
     return std::move(swapchain_handle.value);
 }
 
@@ -598,7 +598,7 @@ vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image&
         .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
     auto view_handle = device.createImageViewUnique(view_info);
-    VERIFY(view_handle.result == vk::Result::eSuccess);
+    verify(view_handle.result == vk::Result::eSuccess);
     return std::move(view_handle.value);
 }
 
@@ -614,7 +614,7 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
         .setLayers(1);
 
     auto framebuffer_handle = device.createFramebufferUnique(fb_info);
-    VERIFY(framebuffer_handle.result == vk::Result::eSuccess);
+    verify(framebuffer_handle.result == vk::Result::eSuccess);
     return std::move(framebuffer_handle.value);
 }
 
@@ -624,7 +624,7 @@ vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
         .setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
     auto buffer_handle = device.createBufferUnique(buf_info);
-    VERIFY(buffer_handle.result == vk::Result::eSuccess);
+    verify(buffer_handle.result == vk::Result::eSuccess);
     return std::move(buffer_handle.value);
 }
 
@@ -653,17 +653,17 @@ vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, cons
         .setMemoryTypeIndex(0);
 
     bool const pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
-    VERIFY(pass);
+    verify(pass);
 
     auto memory_handle = device.allocateMemoryUnique(mem_info);
-    VERIFY(memory_handle.result == vk::Result::eSuccess);
+    verify(memory_handle.result == vk::Result::eSuccess);
     return std::move(memory_handle.value);
 }
 
 void* map_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
     void* mem = nullptr;
     const auto result = device.mapMemory(memory, 0, VK_WHOLE_SIZE, vk::MemoryMapFlags(), &mem);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
     return mem;
 }
 
@@ -673,7 +673,7 @@ void unmap_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
 
 void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::DeviceMemory& memory) {
     const auto result = device.bindBufferMemory(buffer, memory, 0);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
@@ -683,7 +683,7 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
         .setPSetLayouts(&desc_layout);
 
     auto descriptor_set_handles = device.allocateDescriptorSetsUnique(alloc_info);
-    VERIFY(descriptor_set_handles.result == vk::Result::eSuccess);
+    verify(descriptor_set_handles.result == vk::Result::eSuccess);
     return std::move(descriptor_set_handles.value[0]);
 }
 
@@ -705,19 +705,19 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 
 void wait_idle(const vk::Device& device) {
     const auto result = device.waitIdle();
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 void wait(const vk::Device& device, const vk::Fence& fence) {
     const auto result = device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
     device.resetFences({ fence });
 }
 
 uint32_t acquire(const vk::Device& device, const vk::SwapchainKHR& swapchain, const vk::Semaphore& signal_sema) {
     uint32_t image_index = 0;
     const auto result = device.acquireNextImageKHR(swapchain, UINT64_MAX, signal_sema, vk::Fence(), &image_index);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
     return image_index;
 }
 
@@ -733,7 +733,7 @@ void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Se
         .setPCommandBuffers(&cmd_buf);
 
     const auto result = queue.submit(1, &submit_info, fence);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk::Semaphore& wait_sema, uint32_t image_index) {
@@ -745,7 +745,7 @@ void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk
         .setPImageIndices(&image_index);
 
     const auto result = queue.presentKHR(&present_info);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 void begin(const vk::CommandBuffer& cmd_buf) {
@@ -753,12 +753,12 @@ void begin(const vk::CommandBuffer& cmd_buf) {
         .setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
     auto result = cmd_buf.begin(&command_buffer_info);
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 void end(const vk::CommandBuffer& cmd_buf) {
     auto result = cmd_buf.end();
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 }
 
 void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const vk::ClearColorValue& clear_value, uint32_t width, uint32_t height) {
@@ -811,11 +811,11 @@ void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
 std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
     uint32_t count = 0;
     auto result = device.getSwapchainImagesKHR(swapchain, &count, static_cast<vk::Image*>(nullptr));
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     std::vector<vk::Image> images(count);
     result = device.getSwapchainImagesKHR(swapchain, &count, images.data());
-    VERIFY(result == vk::Result::eSuccess);
+    verify(result == vk::Result::eSuccess);
 
     return images;
 }

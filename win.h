@@ -18,7 +18,7 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
     win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
 
     if (!RegisterClassEx(&win_class)) {
-        ERR_EXIT("Unexpected error trying to start the application!\n", "RegisterClass Failure");
+        error("Unexpected error trying to start the application!\n", "RegisterClass Failure");
     }
 
     RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
@@ -28,7 +28,7 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
         CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
         nullptr, nullptr, hInstance, data);
     if (!hWnd) {
-        ERR_EXIT("Cannot create a window in which to draw!\n", "CreateWindow Failure");
+        error("Cannot create a window in which to draw!\n", "CreateWindow Failure");
     }
 
     ShowWindow(hWnd, nCmdShow);

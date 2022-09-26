@@ -4,28 +4,27 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
-#ifndef NDEBUG
-#define VERIFY(expr) \
-    if (!(expr)) { \
-        MessageBox(nullptr, #expr, "Error", MB_OK); \
-        abort(); \
-    }
-#else
-#define VERIFY(x) ((void)(x))
-#endif
-
-#define ERR_EXIT(err_msg, err_class) \
-    do { \
-        MessageBox(nullptr, err_msg, err_class, MB_OK); \
-        exit(1); \
-    } while (0)
-
 #include <Windows.h>
 #include <math.h>
 #include <stdlib.h>
 #include <thread>
 #include <string>
 #include <vulkan/vulkan.hpp>
+
+void verify(bool expr) {
+#ifndef NDEBUG
+    if (!(expr)) {
+        abort();
+    }
+#endif
+}
+
+void error(std::string_view err_msg, std::string_view err_class) {
+    do {
+        MessageBox(nullptr, err_msg.data(), err_class.data(), MB_OK);
+        exit(1);
+    } while (0);
+}
 
 #include "linmath.h" // [TODO] Use propre classes instead of arrays.
 #include "font.h"

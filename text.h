@@ -54,23 +54,23 @@ class Line {
 public:
     Line(std::string_view buffer, size_t pos) {
         if (buffer.size() > 0) {
-            assert(pos < buffer.size());
-            const auto pn = buffer.rfind('\n', buffer[pos] == '\n' ? pos - 1 : pos);
+            verify(pos < buffer.size());
+            const auto pn = buffer.rfind('\n', pos > 0 && buffer[pos] == '\n' ? pos - 1 : pos);
             const auto nn = buffer.find('\n', pos);
             start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
-            finish = nn != std::string::npos ? nn : buffer.size();
-            assert(start <= finish);
+            finish = nn != std::string::npos ? nn : buffer.size() - 1;
+            verify(start <= finish);
         }
     }
 
     size_t to_relative(size_t pos) const {
-        assert(pos != std::string::npos);
-        assert(pos >= start && pos <= finish);
+        verify(pos != std::string::npos);
+        verify(pos >= start && pos <= finish);
         return pos - start;
     }
 
     size_t to_absolute(size_t pos) const {
-        assert(pos != std::string::npos);
+        verify(pos != std::string::npos);
         return std::min(start + pos, finish);
     }
 
@@ -84,7 +84,7 @@ class Text {
         "\n"
         "\t\n"
         "`1234567890-=[]\\;',./\n"
-        "~!@#$%^&*()_+{}|:\"<>?\n" };
+        "~!@#$%^&*()_+{}|:\"<>?" };
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
@@ -99,10 +99,17 @@ class Text {
         cursor = std::min(cursor + s.length(), buffer.size() - 1);
     }
 
-    void erase() {
+    void erase_back() {
         if (cursor > 0) {
             buffer.erase(cursor - 1, 1);
             cursor = cursor > 0 ? cursor - 1 : cursor;
+        }
+    }
+
+    void erase() {
+        if (buffer.size() > 0) {
+            buffer.erase(cursor, 1);
+            cursor = cursor == buffer.size() ? cursor - 1 : cursor;
         }
     }
 
@@ -132,25 +139,37 @@ class Text {
     }
 
     void process_insert(WPARAM key) {
-        if (key == Glyph::BS) { erase(); }
+        if (key == Glyph::BS) { erase_back(); }
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
         else if (key == Glyph::ESC) { insert_mode = false; }
         else { insert(std::string(1, (char)key)); }
+        verify(cursor < buffer.size());
     }
 
     void process_normal(WPARAM key) {
         if (key == 'i') { insert_mode = true; }
         else if (key == 'a') { next_char(); insert_mode = true; }
         else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
+        else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; }
+        else if (key == 'x') { erase(); }
+        else if (key == 'u') { } // [TODO]
+        else if (key == 'G') { } // [TODO]
+        else if (key == '0') { } // [TODO]
+        else if (key == '_') { } // [TODO]
+        else if (key == '$') { } // [TODO]
         else if (key == 'h') { prev_char(); }
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
+        verify(cursor < buffer.size());
     }
 
 public:
     void process(WPARAM key) {
+        // [TODO] zz.
+        // [TODO] gg.
+        // [TODO] dd.
         // [TODO] <space+Q> to quit.
         return insert_mode ? process_insert(key) : process_normal(key);
     }
