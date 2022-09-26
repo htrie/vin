@@ -821,95 +821,10 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 }
 
 
-struct float4
-{
-public:
-    union
-    {
-        float v[4];
-        struct { float x, y, z, w; };
-    };
-
-    float4() {}
-    explicit float4(const float& a) { v[0] = a; v[1] =a; v[2] = a; v[3] = a; }
-    explicit float4(const float& x, const float& y, const float& z, const float& w) { v[0] = x; v[1] = y; v[2] = z; v[3] = w; }
-    float4(const float4& o) { v[0] = o[0]; v[1] = o[1]; v[2] = o[2]; v[3] = o[3]; }
-
-    bool validate() const { return !std::isnan(v[0]) && !std::isnan(v[1]) && !std::isnan(v[2]) && !std::isnan(v[3]); }
-    
-    float& operator[](const unsigned int i) { return v[i]; }
-    const float& operator[](const unsigned int i) const { return v[i]; }
-
-    float4 operator+(const float4& o) const { return float4(v[0] + o[0], v[1] + o[1], v[2] + o[2], v[3] + o[3]); }
-    float4 operator-(const float4& o) const { return float4(v[0] - o[0], v[1] - o[1], v[2] - o[2], v[3] - o[3]); }
-    float4 operator*(const float4& o) const { return float4(v[0] * o[0], v[1] * o[1], v[2] * o[2], v[3] * o[3]); }
-    float4 operator/(const float4& o) const { return float4(v[0] / o[0], v[1] / o[1], v[2] / o[2], v[3] / o[3]); }
-
-    float4 operator-() const { return float4(-v[0], -v[1], -v[2], -v[3]); };
-
-    static float4 load(const float4& a) { return a; }
-
-    static void store(float4& dst, const float4& src) { dst = src; }
-    static void stream(float4& dst, const float4& src) { dst = src; }
-
-    static float dot(const float4& a, const float4& b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]; }
-
-    static float4 zero() { return float4(0.0f); }
-
-    static float4 sin(const float4& a) { return float4(sinf(a[0]), sinf(a[1]), sinf(a[2]), sinf(a[3])); }
-    static float4 cos(const float4& a) { return float4(cosf(a[0]), cosf(a[1]), cosf(a[2]), cosf(a[3])); }
-    static float4 acos(const float4& a) { return float4(acosf(a[0]), acosf(a[1]), acosf(a[2]), acosf(a[3])); }
-
-    static float4 mod(const float4& a, const float4& b) { return float4(fmod(a[0], b[0]), fmod(a[1], b[1]), fmod(a[2], b[2]), fmod(a[3], b[3])); }
-
-    static float4 sqrt(const float4& a) { return float4(sqrtf(a[0]), sqrtf(a[1]), sqrtf(a[2]), sqrtf(a[3])); }
-    static float4 invsqrt(const float4& a) { return float4(1.0f / sqrtf(a[0]), 1.0f / sqrtf(a[1]), 1.0f / sqrtf(a[2]), 1.0f / sqrtf(a[3])); }
-
-    static float4 min(const float4& l, const float4& r) { return float4(std::min(l[0], r[0]), std::min(l[1], r[1]), std::min(l[2], r[2]), std::min(l[3], r[3])); }
-    static float4 max(const float4& l, const float4& r) { return float4(std::max(l[0], r[0]), std::max(l[1], r[1]), std::max(l[2], r[2]), std::max(l[3], r[3])); }
-
-    static float4 lerp(const float4& a, const float4& b, const float4& t) { return a + (b - a) * t; }
-
-    static float4 muladd(const float4& a, const float4& b, const float4& c) { return (a * b) + c; };
-    static float4 mulsub(const float4& a, const float4& b, const float4& c) { return (a * b) - c; };
-
-    static float4 floor(const float4& o) { return float4(floorf(o[0]), floorf(o[1]), floorf(o[2]), floorf(o[3])); }
-};
-
-class vector4 : public float4
-{
-public:
-    vector4() noexcept {}
-    vector4(const float& f) : float4(f) {}
-    vector4(const float& x, const float& y, const float& z, const float& w) : float4(x, y, z, w) {}
-    vector4(const std::array<float, 4>& v) : float4((float4&)v) {}
-    vector4(const float4& o) { (float4&)*this = o; }
-    vector4(const vector4& o) { *this = o; }
-
-    using V = float[4];
-    V& as_array() { return ( V& )*this; }
-
-    vector4 operator+(const float f) const { return (float4&)*this + float4(f); }
-    vector4 operator-(const float f) const { return (float4&)*this - float4(f); }
-
-    vector4 operator+(const vector4& o) const { return (float4&)*this + o; }
-    vector4 operator-(const vector4& o) const { return (float4&)*this - o; }
-    vector4 operator*(const vector4& o) const { return (float4&)*this * o; }
-    vector4 operator/(const vector4& o) const { return (float4&)*this / o; }
-
-    bool operator==( const vector4& o ) const { return x == o.x && y == o.y && z == o.z && w == o.w; }
-    bool operator!=( const vector4& o ) const { return !( *this == o ); }
-
-    vector4 lerp(const vector4& o, float t) const { return *this + (o - *this) * t; }
-
-    float sqrlen() const { return dot(*this, *(this)); }
-    float len() const { return sqrtf(sqrlen()); }
-};
-
 
 struct Constants {
     mat4x4 model;
-    vector4 color;
+    vec4 color;
     uint32_t char_index;
 };
 
@@ -1061,7 +976,7 @@ public:
             vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
             vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
             vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
-            constants.color = character.color.rgba();
+            vec4_init(constants.color, character.color.rgba());
             constants.char_index = character.index;
 
             push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
