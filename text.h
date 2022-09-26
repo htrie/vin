@@ -80,8 +80,9 @@ public:
 
 class Text {
     std::string buffer = {
-        "abcdefghijklmnopqrstuvwxyz\n"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz\n"
+        "\n"
+        "\t\n"
         "`1234567890-=[]\\;',./\n"
         "~!@#$%^&*()_+{}|:\"<>?\n" };
 
@@ -127,7 +128,7 @@ class Text {
 
     void process_insert(WPARAM key) {
         if (key == Glyph::BS) { erase(); }
-        else if (key == Glyph::TAB) { insert("    "); }
+        else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
         else if (key == Glyph::ESC) { insert_mode = false; }
         else { insert(std::string(1, (char)key)); }
@@ -165,6 +166,10 @@ public:
                 characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
                 row++;
                 col = 0;
+            }
+            else if (character == '\t') {
+                characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
+                col += 4;
             }
             else
             {
