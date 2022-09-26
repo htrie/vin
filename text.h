@@ -10,6 +10,9 @@ enum Glyph {
     RETURN = 130,
 };
 
+constexpr bool is_whitespace(char c) { return c == '\t' || c == ' '; }
+constexpr bool is_eol(char c) { return c == '\n'; }
+
 class Color
 {
 public:
@@ -80,11 +83,12 @@ public:
 
 class Text {
     std::string buffer = {
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz\n"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+        "abcdefghijklmnopqrstuvwxyz\n"
         "\n"
-        "\t\n"
+        "\tlorep ipsum\n"
         "`1234567890-=[]\\;',./\n"
-        "~!@#$%^&*()_+{}|:\"<>?" };
+        "~!@#$%^&*()_+{}|:\"<>?\n" };
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
@@ -131,6 +135,16 @@ class Text {
         cursor = current.end();
     }
 
+    void line_start_whitespace() {
+        Line current(buffer, cursor);
+        cursor = current.begin();
+        while (cursor <= current.end()) {
+            if (!is_whitespace(buffer[cursor]))
+                break;
+            next_char();
+        }
+    }
+
     void next_line() {
         Line current(buffer, cursor);
         Line next(buffer, current.end() < buffer.size() - 1 ? current.end() + 1 : 0);
@@ -154,19 +168,24 @@ class Text {
 
     void process_normal(WPARAM key) {
         if (key == 'i') { insert_mode = true; }
+        else if (key == 'I') { line_start_whitespace(); insert_mode = true; }
         else if (key == 'a') { next_char(); insert_mode = true; }
+        else if (key == 'A') { line_end(); insert_mode = true; }
         else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
         else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; }
         else if (key == 'x') { erase(); }
         else if (key == 'u') { } // [TODO]
         else if (key == 'G') { } // [TODO]
         else if (key == '0') { line_start(); }
-        else if (key == '_') { } // [TODO]
+        else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
         else if (key == 'h') { prev_char(); }
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
+        else if (key == 'w') { } // [TODO]
+        else if (key == 'e') { } // [TODO]
+        else if (key == 'b') { } // [TODO]
         verify(cursor < buffer.size());
     }
 

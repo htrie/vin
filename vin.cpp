@@ -4,15 +4,15 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
-#include <Windows.h>
 #include <math.h>
 #include <stdlib.h>
-#include <thread>
 #include <string>
+#include <thread>
 #include <vulkan/vulkan.hpp>
+#include <Windows.h>
 
 #include "util.h"
-#include "linmath.h" // [TODO] Use propre classes instead of arrays.
+#include "linmath.h" // [TODO] Use proper classes instead of arrays.
 #include "font.h"
 #include "text.h"
 #include "win.h"
@@ -22,7 +22,7 @@ class App {
     Device device;
     Text text;
 
-    Color clear_color = Color::rgba(1, 22, 39, 255); // Night Owl theme background color.
+    Color clear_color = Color::rgba(1, 22, 39, 255);
 
     bool minimized = false;
     bool dirty = true;
