@@ -136,6 +136,7 @@ class Text {
 
     void process_normal(WPARAM key) {
         if (key == 'i') { insert_mode = true; }
+        else if (key == 'a') { insert_mode = true; next_char(); }
         else if (key == 'h') { prev_char(); }
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
