@@ -971,7 +971,6 @@ public:
             const float trans_y = (1.0f + character.row) * char_height;
 
             Constants constants;
-            // [TODO] Use simd::matrix like math code.
             vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
             vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
             vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });

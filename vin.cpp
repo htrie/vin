@@ -27,7 +27,7 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
-#include "linmath.h"
+#include "linmath.h" // [TODO] Use propre classes instead of arrays.
 #include "font.h"
 #include "text.h"
 #include "win.h"
