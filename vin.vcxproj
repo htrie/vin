@@ -153,8 +153,9 @@
     <ClCompile Include="vin.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="linmath.h" />
+    <ClInclude Include="matrix.h" />
     <ClInclude Include="text.h" />
+    <ClInclude Include="util.h" />
     <ClInclude Include="vk.h" />
     <ClInclude Include="win.h" />
   </ItemGroup>

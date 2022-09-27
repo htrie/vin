@@ -12,7 +12,7 @@
 #include <Windows.h>
 
 #include "util.h"
-#include "linmath.h" // [TODO] Use proper classes instead of arrays.
+#include "matrix.h"
 #include "font.h"
 #include "text.h"
 #include "win.h"

@@ -167,10 +167,10 @@ class Text {
 
 public:
     void process(WPARAM key) {
+        // [TODO] <space+Q> to quit (use separate space state).
         // [TODO] zz.
         // [TODO] gg.
         // [TODO] dd.
-        // [TODO] <space+Q> to quit.
         return insert_mode ? process_insert(key) : process_normal(key);
     }
 
