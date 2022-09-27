@@ -20,7 +20,7 @@
 
 class App {
     Device device;
-    Text text;
+    Buffer buffer;
 
     Color clear_color = Color::rgba(1, 22, 39, 255);
 
@@ -39,7 +39,7 @@ class App {
     void redraw() {
         if (!minimized && dirty) {
             dirty = false;
-            device.redraw(clear_color, text.cull());
+            device.redraw(clear_color, buffer.cull());
         }
         else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -47,7 +47,7 @@ class App {
     }
 
     void process(WPARAM key) {
-        if (text.process(key))
+        if (buffer.process(key))
             PostQuitMessage(0);
     }
 

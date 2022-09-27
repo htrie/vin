@@ -26,18 +26,18 @@ struct Character {
 typedef std::vector<Character> Characters;
 
 class Line {
-    const std::string_view buffer;
+    const std::string_view text;
     size_t start = 0;
     size_t finish = 0;
 
 public:
-    Line(std::string_view buffer, size_t pos) {
-        if (buffer.size() > 0) {
-            verify(pos < buffer.size());
-            const auto pn = buffer.rfind('\n', pos > 0 && buffer[pos] == '\n' ? pos - 1 : pos);
-            const auto nn = buffer.find('\n', pos);
+    Line(std::string_view text, size_t pos) {
+        if (text.size() > 0) {
+            verify(pos < text.size());
+            const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
+            const auto nn = text.find('\n', pos);
             start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
-            finish = nn != std::string::npos ? nn : buffer.size() - 1;
+            finish = nn != std::string::npos ? nn : text.size() - 1;
             verify(start <= finish);
         }
     }
@@ -57,8 +57,8 @@ public:
     size_t end() const { return finish; }
 };
 
-class Text {
-    std::string buffer = {
+class Buffer {
+    std::string text = {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
         "abcdefghijklmnopqrstuvwxyz\n"
         "\n"
@@ -76,61 +76,61 @@ class Text {
     bool insert_mode = false;
 
     void insert(std::string_view s) {
-        buffer.insert(cursor, s);
-        cursor = std::min(cursor + s.length(), buffer.size() - 1);
+        text.insert(cursor, s);
+        cursor = std::min(cursor + s.length(), text.size() - 1);
     }
 
     void erase_back() {
         if (cursor > 0) {
-            buffer.erase(cursor - 1, 1);
+            text.erase(cursor - 1, 1);
             cursor = cursor > 0 ? cursor - 1 : cursor;
         }
     }
 
     void erase() {
-        if (buffer.size() > 0) {
-            buffer.erase(cursor, 1);
-            cursor = cursor == buffer.size() ? cursor - 1 : cursor;
+        if (text.size() > 0) {
+            text.erase(cursor, 1);
+            cursor = cursor == text.size() ? cursor - 1 : cursor;
         }
     }
 
     void next_char() {
-        cursor = cursor < buffer.size() - 1 ? cursor + 1 : 0;
+        cursor = cursor < text.size() - 1 ? cursor + 1 : 0;
     }
 
     void prev_char() {
-        cursor = cursor > 0 ? cursor - 1 : buffer.size() - 1;
+        cursor = cursor > 0 ? cursor - 1 : text.size() - 1;
     }
 
     void line_start() {
-        Line current(buffer, cursor);
+        Line current(text, cursor);
         cursor = current.begin();
     }
 
     void line_end() {
-        Line current(buffer, cursor);
+        Line current(text, cursor);
         cursor = current.end();
     }
 
     void line_start_whitespace() {
-        Line current(buffer, cursor);
+        Line current(text, cursor);
         cursor = current.begin();
         while (cursor <= current.end()) {
-            if (!is_whitespace(buffer[cursor]))
+            if (!is_whitespace(text[cursor]))
                 break;
             next_char();
         }
     }
 
     void next_line() {
-        Line current(buffer, cursor);
-        Line next(buffer, current.end() < buffer.size() - 1 ? current.end() + 1 : 0);
+        Line current(text, cursor);
+        Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : 0);
         cursor = next.to_absolute(current.to_relative(cursor));
     }
 
     void prev_line() {
-        Line current(buffer, cursor);
-        Line prev(buffer, current.begin() > 0 ? current.begin() - 1 : buffer.size() - 1);
+        Line current(text, cursor);
+        Line prev(text, current.begin() > 0 ? current.begin() - 1 : text.size() - 1);
         cursor = prev.to_absolute(current.to_relative(cursor));
     }
 
@@ -140,7 +140,7 @@ class Text {
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
         else { insert(std::string(1, (char)key)); }
-        verify(cursor < buffer.size());
+        verify(cursor < text.size());
         return false;
     }
 
@@ -153,8 +153,6 @@ class Text {
         else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
         else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; }
         else if (key == 'x') { erase(); }
-        else if (key == 'u') { } // [TODO]
-        else if (key == 'G') { } // [TODO]
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
@@ -162,10 +160,7 @@ class Text {
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
-        else if (key == 'w') { } // [TODO]
-        else if (key == 'e') { } // [TODO]
-        else if (key == 'b') { } // [TODO]
-        verify(cursor < buffer.size());
+        verify(cursor < text.size());
         return false;
     }
 
@@ -177,11 +172,13 @@ class Text {
 
 public:
     bool process(WPARAM key) {
-        // [TODO] Open test.cpp file and move buffer init there.
-        // [TODO] Save test.cpp file using <space-s>.
-        // [TODO] zz.
-        // [TODO] gg.
+        // [TODO] Open test file using <space-e>.
+        // [TODO] Save test file using <space-s>.
+        // [TODO] Unit tests.
+        // [TODO] zz/zt/zb.
+        // [TODO] gg/G.
         // [TODO] dd.
+        // [TODO] u.
         return space_mode ? process_space(key) : 
             insert_mode ? process_insert(key) :
             process_normal(key);
@@ -196,7 +193,7 @@ public:
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
-        for (auto& character : buffer)
+        for (auto& character : text)
         {
             if (index == cursor)
                 characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
