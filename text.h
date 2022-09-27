@@ -13,30 +13,6 @@ enum Glyph {
 constexpr bool is_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_eol(char c) { return c == '\n'; }
 
-class Color
-{
-public:
-    uint8_t b = 0, g = 0, r = 0, a = 0;
-
-    uint32_t& c() { return ( uint32_t& )*this; }
-    const uint32_t& c() const { return ( uint32_t& )*this; }
-
-    Color() noexcept {}
-    Color(const Color& o) { *this = o; }
-
-    explicit Color(uint32_t C) { c() = C; }
-    explicit Color(float r, float g, float b, float a) : r((uint8_t)(r * 255.0f)), g((uint8_t)(g * 255.0f)), b((uint8_t)(b * 255.0f)), a((uint8_t)(a * 255.0f)) {}
-    explicit Color(const std::array<float, 4>& v) : Color(v[0], v[1], v[2], v[3]) {}
-
-    static Color argb(unsigned a, unsigned r, unsigned g, unsigned b) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
-    static Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
-
-    std::array<float, 4> rgba() const { return { (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f }; }
-
-    bool operator==(const Color& o) const { return b == o.b && g == o.g && r == o.r && a == o.a; }
-    bool operator!=(const Color& o) const { return !(*this == o); }
-};
-
 struct Character {
     uint8_t index;
     Color color = Color::rgba(255, 0, 0, 255);
