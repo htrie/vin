@@ -1,69 +1,57 @@
 #pragma once
 
-typedef float vec3[3];
-static inline void vec3_add(vec3 r, vec3 const a, vec3 const b) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = a[i] + b[i];
+typedef std::array<float, 3> vec3;
+static inline void vec3_sub(vec3& r, vec3 const a, vec3 const b) {
+    for (int i = 0; i < 3; ++i) r[i] = a[i] - b[i];
 }
-static inline void vec3_sub(vec3 r, vec3 const a, vec3 const b) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = a[i] - b[i];
-}
-static inline void vec3_scale(vec3 r, vec3 const v, float const s) {
-    int i;
-    for (i = 0; i < 3; ++i) r[i] = v[i] * s;
+static inline void vec3_scale(vec3& r, vec3 const v, float const s) {
+    for (int i = 0; i < 3; ++i) r[i] = v[i] * s;
 }
 static inline float vec3_mul_inner(vec3 const a, vec3 const b) {
     float p = 0.f;
-    int i;
-    for (i = 0; i < 3; ++i) p += b[i] * a[i];
+    for (int i = 0; i < 3; ++i) p += b[i] * a[i];
     return p;
 }
-static inline void vec3_mul_cross(vec3 r, vec3 const a, vec3 const b) {
+static inline void vec3_mul_cross(vec3& r, vec3 const a, vec3 const b) {
     r[0] = a[1] * b[2] - a[2] * b[1];
     r[1] = a[2] * b[0] - a[0] * b[2];
     r[2] = a[0] * b[1] - a[1] * b[0];
 }
-static inline float vec3_len(vec3 const v) { return sqrtf(vec3_mul_inner(v, v)); }
-static inline void vec3_norm(vec3 r, vec3 const v) {
+static inline float vec3_len(vec3 const v) {
+    return sqrtf(vec3_mul_inner(v, v));
+}
+static inline void vec3_norm(vec3& r, vec3 const v) {
     float k = 1.f / vec3_len(v);
     vec3_scale(r, v, k);
 }
 
-typedef float vec4[4];
-static inline void vec4_init(vec4& r, const std::array<float, 4>& v) {
-    (std::array<float, 4>&)r = v;
-}
+typedef std::array<float, 4> vec4;
 static inline float vec4_mul_inner(vec4 a, vec4 b) {
     float p = 0.f;
-    int i;
-    for (i = 0; i < 4; ++i) p += b[i] * a[i];
+    for (int i = 0; i < 4; ++i) p += b[i] * a[i];
     return p;
 }
 
-typedef vec4 mat4x4[4];
-static inline void mat4x4_row(vec4 r, mat4x4 M, int i) {
-    int k;
-    for (k = 0; k < 4; ++k) r[k] = M[k][i];
+typedef std::array<vec4, 4> mat4x4;
+static inline void mat4x4_row(vec4& r, mat4x4 const M, int i) {
+    for (int k = 0; k < 4; ++k) r[k] = M[k][i];
 }
-static inline void mat4x4_mul(mat4x4 M, mat4x4 a, mat4x4 b) {
-    int k, r, c;
-    for (c = 0; c < 4; ++c)
-        for (r = 0; r < 4; ++r) {
+static inline void mat4x4_mul(mat4x4& M, mat4x4 const a, mat4x4 const b) {
+    for (int c = 0; c < 4; ++c)
+        for (int r = 0; r < 4; ++r) {
             M[c][r] = 0.f;
-            for (k = 0; k < 4; ++k) M[c][r] += a[k][r] * b[c][k];
+            for (int k = 0; k < 4; ++k) M[c][r] += a[k][r] * b[c][k];
         }
 }
-static inline void mat4x4_translate_in_place(mat4x4 M, float x, float y, float z) {
+static inline void mat4x4_translate_in_place(mat4x4& M, float x, float y, float z) {
     vec4 t = {x, y, z, 0};
-    vec4 r;
-    int i;
-    for (i = 0; i < 4; ++i) {
+    vec4 r = {};
+    for (int i = 0; i < 4; ++i) {
         mat4x4_row(r, M, i);
         M[3][i] += vec4_mul_inner(r, t);
     }
 }
-static inline void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, float n, float f) {
+static inline void mat4x4_ortho(mat4x4& M, float l, float r, float b, float t, float n, float f) {
     M[0][0] = 2.f / (r - l);
     M[0][1] = M[0][2] = M[0][3] = 0.f;
 
@@ -78,16 +66,16 @@ static inline void mat4x4_ortho(mat4x4 M, float l, float r, float b, float t, fl
     M[3][2] = -(f + n) / (f - n);
     M[3][3] = 1.f;
 }
-static inline void mat4x4_look_at(mat4x4 m, const vec3 eye, const vec3 center, const vec3 up) {
-    vec3 f;
+static inline void mat4x4_look_at(mat4x4& m, const vec3 eye, const vec3 center, const vec3 up) {
+    vec3 f = {};
     vec3_sub(f, center, eye);
     vec3_norm(f, f);
 
-    vec3 s;
+    vec3 s = {};
     vec3_mul_cross(s, f, up);
     vec3_norm(s, s);
 
-    vec3 t;
+    vec3 t = {};
     vec3_mul_cross(t, s, f);
 
     m[0][0] = s[0];

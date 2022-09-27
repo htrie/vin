@@ -971,11 +971,11 @@ public:
             const float trans_y = (1.0f + character.row) * char_height;
 
             Constants constants;
-            vec4_init(constants.model[0], { scale, 0.0f, 0.0f, 0.0f });
-            vec4_init(constants.model[1], { 0.0f, scale, 0.0f, 0.0f });
-            vec4_init(constants.model[2], { 0.0f, 0.0f, scale, 0.0f });
-            vec4_init(constants.model[3], { trans_x, trans_y, 0.0f, 1.0f });
-            vec4_init(constants.color, character.color.rgba());
+            constants.model[0] = { scale, 0.0f, 0.0f, 0.0f };
+            constants.model[1] = { 0.0f, scale, 0.0f, 0.0f };
+            constants.model[2] = { 0.0f, 0.0f, scale, 0.0f };
+            constants.model[3] = { trans_x, trans_y, 0.0f, 1.0f };
+            constants.color = character.color.rgba();
             constants.char_index = character.index;
 
             push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
