@@ -47,7 +47,8 @@ class App {
     }
 
     void process(WPARAM key) {
-        text.process(key);
+        if (text.process(key))
+            PostQuitMessage(0);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

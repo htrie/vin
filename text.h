@@ -72,6 +72,7 @@ class Text {
 
     size_t cursor = 0;
 
+    bool space_mode = false;
     bool insert_mode = false;
 
     void insert(std::string_view s) {
@@ -133,17 +134,19 @@ class Text {
         cursor = prev.to_absolute(current.to_relative(cursor));
     }
 
-    void process_insert(WPARAM key) {
-        if (key == Glyph::BS) { erase_back(); }
+    bool process_insert(WPARAM key) {
+        if (key == Glyph::ESC) { insert_mode = false; }
+        else if (key == Glyph::BS) { erase_back(); }
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
-        else if (key == Glyph::ESC) { insert_mode = false; }
         else { insert(std::string(1, (char)key)); }
         verify(cursor < buffer.size());
+        return false;
     }
 
-    void process_normal(WPARAM key) {
-        if (key == 'i') { insert_mode = true; }
+    bool process_normal(WPARAM key) {
+        if (key == ' ') { space_mode = true; }
+        else if (key == 'i') { insert_mode = true; }
         else if (key == 'I') { line_start_whitespace(); insert_mode = true; }
         else if (key == 'a') { next_char(); insert_mode = true; }
         else if (key == 'A') { line_end(); insert_mode = true; }
@@ -163,15 +166,25 @@ class Text {
         else if (key == 'e') { } // [TODO]
         else if (key == 'b') { } // [TODO]
         verify(cursor < buffer.size());
+        return false;
+    }
+
+    bool process_space(WPARAM key) {
+        if (key == 'q') { return true; }
+        else { space_mode = false; }
+        return false;
     }
 
 public:
-    void process(WPARAM key) {
-        // [TODO] <space+Q> to quit (use separate space state).
+    bool process(WPARAM key) {
+        // [TODO] Open test.cpp file and move buffer init there.
+        // [TODO] Save test.cpp file using <space-s>.
         // [TODO] zz.
         // [TODO] gg.
         // [TODO] dd.
-        return insert_mode ? process_insert(key) : process_normal(key);
+        return space_mode ? process_space(key) : 
+            insert_mode ? process_insert(key) :
+            process_normal(key);
     }
 
     Characters cull() {
