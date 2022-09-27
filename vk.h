@@ -824,7 +824,7 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 struct Constants {
     mat4x4 model;
-    vector4 color;
+    Vec4 color;
     uint32_t char_index;
 };
 
@@ -930,9 +930,9 @@ public:
 
             auto& uniforms = *(Uniforms*)uniform_ptr;
 
-            const vector3 eye = { 0.0f, 0.0f, 10.0f };
-            const vector3 origin = { 0.0f, 0.0f, 0.0f };
-            const vector3 up = { 0.0f, 1.0f, 0.0f };
+            const Vec3 eye = { 0.0f, 0.0f, 10.0f };
+            const Vec3 origin = { 0.0f, 0.0f, 0.0f };
+            const Vec3 up = { 0.0f, 1.0f, 0.0f };
             mat4x4 view;
             mat4x4_look_at(view, eye, origin, up);
 
