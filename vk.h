@@ -823,13 +823,13 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 
 
 struct Constants {
-    mat4x4 model;
+    Matrix model;
     Vec4 color;
     uint32_t char_index;
 };
 
 struct Uniforms {
-    mat4x4 view_proj;
+    Matrix view_proj;
 };
 
 class Device {
@@ -928,24 +928,10 @@ public:
                 cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
             }
 
+            const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
+            const auto proj = Matrix::ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
             auto& uniforms = *(Uniforms*)uniform_ptr;
-
-            const Vec3 eye = { 0.0f, 0.0f, 10.0f };
-            const Vec3 origin = { 0.0f, 0.0f, 0.0f };
-            const Vec3 up = { 0.0f, 1.0f, 0.0f };
-            mat4x4 view;
-            mat4x4_look_at(view, eye, origin, up);
-
-            mat4x4 proj;
-            const float l = 0.0f;
-            const float r = (float)width;
-            const float b = 0.0f;
-            const float t = (float)height;
-            const float n = -100.0f;
-            const float f = 100.0f;
-            mat4x4_ortho(proj, l, r, b, t, n, f);
-
-            mat4x4_mul(uniforms.view_proj, proj, view);
+            uniforms.view_proj = view * proj;
         }
     }
 
@@ -971,10 +957,11 @@ public:
             const float trans_y = (1.0f + character.row) * char_height;
 
             Constants constants;
-            constants.model[0] = { scale, 0.0f, 0.0f, 0.0f };
-            constants.model[1] = { 0.0f, scale, 0.0f, 0.0f };
-            constants.model[2] = { 0.0f, 0.0f, scale, 0.0f };
-            constants.model[3] = { trans_x, trans_y, 0.0f, 1.0f };
+            constants.model =  {
+                { scale, 0.0f, 0.0f, 0.0f },
+                { 0.0f, scale, 0.0f, 0.0f },
+                { 0.0f, 0.0f, scale, 0.0f },
+                { trans_x, trans_y, 0.0f, 1.0f } };
             constants.color = character.color.rgba();
             constants.char_index = character.index;
 

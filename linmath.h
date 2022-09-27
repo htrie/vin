@@ -1,7 +1,6 @@
 #pragma once
 
-struct Vec2
-{
+struct Vec2 {
     float x = 0.0f, y = 0.0f;
 
     Vec2() noexcept {}
@@ -32,6 +31,8 @@ struct Vec2
     bool operator==( const Vec2& o ) const { return x == o[0] && y == o[1]; }
     bool operator!=( const Vec2& o ) const { return !( *this == o ); }
 
+    float dot(const Vec2& o) const { return x * o[0] + y * o[1]; }
+
     Vec2 normalize() const { const float s = len(); const float inv_s = s > 0.0f ? 1.0f / s : s; return *this * inv_s; }
 
     Vec2 lerp(const Vec2& o, float t) const { return *this + (o - *this) * t; }
@@ -40,11 +41,9 @@ struct Vec2
 
     float sqrlen() const { return x * x + y * y; }
     float len() const { return sqrt(sqrlen()); }
-    float dot(const Vec2& o) const { return x * o[0] + y * o[1]; }
 };
 
-struct Vec3
-{
+struct Vec3 {
     float x = 0.0f, y = 0.0f, z = 0.0f;
 
     Vec3() noexcept {}
@@ -96,8 +95,7 @@ struct Vec3
     float len() const { return sqrt(sqrlen()); }
 };
 
-struct Vec4
-{
+struct Vec4 {
     float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f;
 
     Vec4() noexcept {}
@@ -133,17 +131,16 @@ struct Vec4
     float len() const { return sqrtf(sqrlen()); }
 };
 
-struct Color
-{
+struct Color {
     uint8_t b = 0, g = 0, r = 0, a = 0;
 
-    uint32_t& c() { return ( uint32_t& )*this; }
-    const uint32_t& c() const { return ( uint32_t& )*this; }
+    uint32_t& as_uint() { return ( uint32_t& )*this; }
+    const uint32_t& as_uint() const { return ( uint32_t& )*this; }
 
     Color() noexcept {}
     Color(const Color& o) { *this = o; }
 
-    explicit Color(uint32_t C) { c() = C; }
+    explicit Color(uint32_t C) { as_uint() = C; }
     explicit Color(float r, float g, float b, float a) : r((uint8_t)(r * 255.0f)), g((uint8_t)(g * 255.0f)), b((uint8_t)(b * 255.0f)), a((uint8_t)(a * 255.0f)) {}
     explicit Color(const std::array<float, 4>& v) : Color(v[0], v[1], v[2], v[3]) {}
 
@@ -156,65 +153,78 @@ struct Color
     bool operator!=(const Color& o) const { return !(*this == o); }
 };
 
-typedef std::array<Vec4, 4> mat4x4;
-static inline void mat4x4_row(Vec4& r, mat4x4 const M, int i) {
-    for (int k = 0; k < 4; ++k) r[k] = M[k][i];
-}
-static inline void mat4x4_mul(mat4x4& M, mat4x4 const a, mat4x4 const b) {
-    for (int c = 0; c < 4; ++c)
-        for (int r = 0; r < 4; ++r) {
-            M[c][r] = 0.f;
-            for (int k = 0; k < 4; ++k) M[c][r] += a[k][r] * b[c][k];
+struct Matrix {
+    Vec4 cols[4];
+
+    Matrix() {}
+    Matrix(const Vec4 a, const Vec4 b, const Vec4 c, const Vec4 d) { cols[0] = a; cols[1] = b; cols[2] = c; cols[3] = d; }
+
+    Vec4& operator[](const unsigned int i) { return cols[i]; }
+    const Vec4& operator[](const unsigned int i) const { return cols[i]; }
+
+    Vec4 row(unsigned i) { return Vec4(cols[0][i], cols[1][i], cols[2][i], cols[3][i]); }
+
+    Matrix operator*(const Matrix& o) const {
+        Matrix m;
+        for (int c = 0; c < 4; ++c) {
+            for (int r = 0; r < 4; ++r) {
+                m[c][r] = 0.f;
+                for (int k = 0; k < 4; ++k) m[c][r] += o[k][r] * (*this)[c][k];
+            }
         }
-}
-static inline void mat4x4_translate_in_place(mat4x4& M, float x, float y, float z) {
-    Vec4 t = {x, y, z, 0};
-    Vec4 r = {};
-    for (int i = 0; i < 4; ++i) {
-        mat4x4_row(r, M, i);
-        M[3][i] += r.dot(t);
+        return m;
     }
-}
-static inline void mat4x4_ortho(mat4x4& M, float l, float r, float b, float t, float n, float f) {
-    M[0][0] = 2.f / (r - l);
-    M[0][1] = M[0][2] = M[0][3] = 0.f;
 
-    M[1][1] = 2.f / (t - b);
-    M[1][0] = M[1][2] = M[1][3] = 0.f;
+    static Matrix ortho(float l, float r, float b, float t, float n, float f) {
+        Matrix m;
 
-    M[2][2] = -2.f / (f - n);
-    M[2][0] = M[2][1] = M[2][3] = 0.f;
+        m[0][0] = 2.f / (r - l);
+        m[0][1] = m[0][2] = m[0][3] = 0.f;
 
-    M[3][0] = -(r + l) / (r - l);
-    M[3][1] = -(t + b) / (t - b);
-    M[3][2] = -(f + n) / (f - n);
-    M[3][3] = 1.f;
-}
-static inline void mat4x4_look_at(mat4x4& m, const Vec3& eye, const Vec3& center, const Vec3& up) {
-    const auto f = (center - eye).normalize();
-    const auto s = f.cross(up).normalize();
-    const auto t = s.cross(f).normalize();
+        m[1][1] = 2.f / (t - b);
+        m[1][0] = m[1][2] = m[1][3] = 0.f;
 
-    m[0][0] = s[0];
-    m[0][1] = t[0];
-    m[0][2] = -f[0];
-    m[0][3] = 0.f;
+        m[2][2] = -2.f / (f - n);
+        m[2][0] = m[2][1] = m[2][3] = 0.f;
 
-    m[1][0] = s[1];
-    m[1][1] = t[1];
-    m[1][2] = -f[1];
-    m[1][3] = 0.f;
+        m[3][0] = -(r + l) / (r - l);
+        m[3][1] = -(t + b) / (t - b);
+        m[3][2] = -(f + n) / (f - n);
+        m[3][3] = 1.f;
 
-    m[2][0] = s[2];
-    m[2][1] = t[2];
-    m[2][2] = -f[2];
-    m[2][3] = 0.f;
+        return m;
+    }
 
-    m[3][0] = 0.f;
-    m[3][1] = 0.f;
-    m[3][2] = 0.f;
-    m[3][3] = 1.f;
+    static Matrix look_at(const Vec3& eye, const Vec3& center, const Vec3& up) {
+        const auto f = (center - eye).normalize();
+        const auto s = f.cross(up).normalize();
+        const auto t = s.cross(f).normalize();
+        Vec4 trans(-eye, 0.0f);
 
-    mat4x4_translate_in_place(m, -eye[0], -eye[1], -eye[2]);
-}
+        Matrix m;
+
+        m[0][0] = s[0];
+        m[0][1] = t[0];
+        m[0][2] = -f[0];
+        m[0][3] = 0.f;
+
+        m[1][0] = s[1];
+        m[1][1] = t[1];
+        m[1][2] = -f[1];
+        m[1][3] = 0.f;
+
+        m[2][0] = s[2];
+        m[2][1] = t[2];
+        m[2][2] = -f[2];
+        m[2][3] = 0.f;
+
+        m[3][0] = m.row(0).dot(trans);
+        m[3][1] = m.row(1).dot(trans);
+        m[3][2] = m.row(2).dot(trans);
+        m[3][3] = m.row(3).dot(trans) + 1.0f;
+
+        return m;
+    }
+};
+
 
