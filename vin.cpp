@@ -11,6 +11,7 @@
 #include <vulkan/vulkan.hpp>
 #include <Windows.h>
 
+#include "resource.h"
 #include "util.h"
 #include "matrix.h"
 #include "font.h"

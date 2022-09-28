@@ -2,6 +2,7 @@
 
 HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height) {
     const char* name = "vin";
+    const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 
     WNDCLASSEX win_class;
     win_class.cbSize = sizeof(WNDCLASSEX);
@@ -10,12 +11,12 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
     win_class.cbClsExtra = 0;
     win_class.cbWndExtra = 0;
     win_class.hInstance = hInstance;
-    win_class.hIcon = LoadIcon(nullptr, IDI_APPLICATION); // [TODO] Use custom icon.
+    win_class.hIcon = hIcon;
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.hbrBackground = CreateSolidBrush(0);
     win_class.lpszMenuName = nullptr;
     win_class.lpszClassName = name;
-    win_class.hIconSm = LoadIcon(nullptr, IDI_WINLOGO);
+    win_class.hIconSm = hIcon;
 
     if (!RegisterClassEx(&win_class)) {
         error("Unexpected error trying to start the application!\n", "RegisterClass Failure");
