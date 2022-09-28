@@ -76,6 +76,7 @@ class Buffer {
 
     size_t cursor = 0;
 
+    bool quit = false;
     bool space_mode = false;
     bool insert_mode = false;
 
@@ -144,7 +145,6 @@ class Buffer {
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
         else { insert(std::string(1, (char)key)); }
-        verify(cursor < texts.back().size());
         return false;
     }
 
@@ -164,12 +164,11 @@ class Buffer {
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
-        verify(cursor < texts.back().size());
         return false;
     }
 
     bool process_space(WPARAM key) {
-        if (key == 'q') { return true; }
+        if (key == 'q') { quit = true; return true; }
         else { space_mode = false; }
         return false;
     }
@@ -222,16 +221,18 @@ public:
     }
 
     bool process(WPARAM key) {
+        // [TODO] u.
         // [TODO] Open test file using <space-e>.
         // [TODO] Save test file using <space-s>.
         // [TODO] Unit tests.
         // [TODO] zz/zt/zb.
         // [TODO] gg/G.
         // [TODO] dd.
-        // [TODO] u.
-        return space_mode ? process_space(key) : 
+        space_mode ? process_space(key) : 
             insert_mode ? process_insert(key) :
             process_normal(key);
+        verify(cursor < texts.back().size());
+        return quit;
     }
 
     Characters cull() {
