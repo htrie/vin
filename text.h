@@ -70,6 +70,7 @@ class Buffer {
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
     Color text_color = Color::rgba(205, 226, 239, 255);
+    Color text_cursor_color = Color::rgba(5, 5, 5, 255);
 
     size_t cursor = 0;
 
@@ -189,8 +190,8 @@ class Buffer {
         characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
     };
 
-    void push_char(Characters& characters, unsigned row, unsigned col, char character) {
-        characters.emplace_back((uint8_t)character, text_color, row, col);
+    void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) {
+        characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
     };
 
 
@@ -209,6 +210,8 @@ public:
     }
 
     Characters cull() {
+        // [TODO] Display line numbers.
+        // [TODO] Relative line numbers.
         // [TODO] Clip lines to fit screen.
         Line cursor_line(text, cursor);
         Characters characters;
@@ -221,7 +224,7 @@ public:
             if (index == cursor) { push_cursor(characters, row, col); }
             if (character == '\n') { push_return(characters, row, col); row++; col = 0; }
             else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-            else { push_char(characters, row, col, character); col++; }
+            else { push_char(characters, row, col, character, index == cursor && !insert_mode); col++; }
             index++;
         }
         return characters;
