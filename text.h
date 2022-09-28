@@ -1,5 +1,16 @@
 #pragma once
 
+// [TODO] u.
+// [TODO] Open test file using <space-e>.
+// [TODO] Save test file using <space-s>.
+// [TODO] Unit tests.
+// [TODO] zz/zt/zb.
+// [TODO] gg/G.
+// [TODO] dd.
+// [TODO] Relative line numbers.
+// [TODO] Vertical scrolling.
+// [TODO] Clip lines to fit screen.
+
 enum Glyph {
     BS = 8,
     TAB = 9,
@@ -77,6 +88,7 @@ class Buffer {
     size_t cursor = 0;
 
     bool quit = false;
+    bool undo = false;
     bool space_mode = false;
     bool insert_mode = false;
 
@@ -140,36 +152,37 @@ class Buffer {
     }
 
     bool process_insert(WPARAM key) {
-        if (key == Glyph::ESC) { insert_mode = false; }
-        else if (key == Glyph::BS) { erase_back(); }
-        else if (key == Glyph::TAB) { insert("\t"); }
-        else if (key == Glyph::CR) { insert("\n"); }
-        else { insert(std::string(1, (char)key)); }
+        if (key == Glyph::ESC) { insert_mode = false; return false; }
+        else if (key == Glyph::BS) { erase_back(); return true; }
+        else if (key == Glyph::TAB) { insert("\t"); return true; }
+        else if (key == Glyph::CR) { insert("\n"); return true; }
+        else { insert(std::string(1, (char)key)); return true; }
         return false;
     }
 
     bool process_normal(WPARAM key) {
-        if (key == ' ') { space_mode = true; }
-        else if (key == 'i') { insert_mode = true; }
-        else if (key == 'I') { line_start_whitespace(); insert_mode = true; }
-        else if (key == 'a') { next_char(); insert_mode = true; }
-        else if (key == 'A') { line_end(); insert_mode = true; }
-        else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
-        else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; }
-        else if (key == 'x') { erase(); }
-        else if (key == '0') { line_start(); }
-        else if (key == '_') { line_start_whitespace(); }
-        else if (key == '$') { line_end(); }
-        else if (key == 'h') { prev_char(); }
-        else if (key == 'j') { next_line(); }
-        else if (key == 'k') { prev_line(); }
-        else if (key == 'l') { next_char(); }
+        if (key == ' ') { space_mode = true; return false; }
+        else if (key == 'u') { undo = true; return false; }
+        else if (key == 'i') { insert_mode = true; return false; }
+        else if (key == 'I') { line_start_whitespace(); insert_mode = true; return false; }
+        else if (key == 'a') { next_char(); insert_mode = true; return false; }
+        else if (key == 'A') { line_end(); insert_mode = true; return false; }
+        else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; return true; }
+        else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; return true; }
+        else if (key == 'x') { erase(); return true; }
+        else if (key == '0') { line_start(); return false; }
+        else if (key == '_') { line_start_whitespace(); return false; }
+        else if (key == '$') { line_end(); return false; }
+        else if (key == 'h') { prev_char(); return false; }
+        else if (key == 'j') { next_line(); return false; }
+        else if (key == 'k') { prev_line(); return false; }
+        else if (key == 'l') { next_char(); return false; }
         return false;
     }
 
     bool process_space(WPARAM key) {
-        if (key == 'q') { quit = true; return true; }
-        else { space_mode = false; }
+        if (key == 'q') { quit = true; return false; }
+        else { space_mode = false; return false; }
         return false;
     }
 
@@ -221,24 +234,18 @@ public:
     }
 
     bool process(WPARAM key) {
-        // [TODO] u.
-        // [TODO] Open test file using <space-e>.
-        // [TODO] Save test file using <space-s>.
-        // [TODO] Unit tests.
-        // [TODO] zz/zt/zb.
-        // [TODO] gg/G.
-        // [TODO] dd.
-        space_mode ? process_space(key) : 
+        if (texts.size() > 100) { texts.erase(texts.begin(), texts.begin()); } // Trim undo stack to avoid using too much memory.
+        if (texts.size() > 0) { texts.push_back(texts.back()); } // Assume change.
+        const bool modified = space_mode ? process_space(key) : 
             insert_mode ? process_insert(key) :
             process_normal(key);
+        if (!modified && texts.size() > 1) { texts.pop_back(); } // Revert last undo stack if no changes.
+        if (undo && texts.size() > 1) { texts.pop_back(); } // Actual undo.
         verify(cursor < texts.back().size());
         return quit;
     }
 
     Characters cull() {
-        // [TODO] Relative line numbers.
-        // [TODO] Vertical scrolling.
-        // [TODO] Clip lines to fit screen.
         Line cursor_line(texts.back(), cursor);
         Characters characters;
         characters.reserve(256);
