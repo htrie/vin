@@ -68,15 +68,13 @@ public:
     size_t end() const { return finish; }
 };
 
+struct State {
+    std::string text;
+    size_t cursor = 0;
+};
+
 class Buffer {
-    std::vector<std::string> texts = {
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
-        "abcdefghijklmnopqrstuvwxyz\n"
-        "\n"
-        "\tlorep ipsum\n"
-        "`1234567890-=[]\\;',./\n"
-        "~!@#$%^&*()_+{}|:\"<>?\n"
-        "\n" };
+    std::vector<State> states;
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
@@ -85,70 +83,72 @@ class Buffer {
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
     Color line_number_color = Color::rgba(75, 100, 121, 255);
 
-    size_t cursor = 0;
-
     bool quit = false;
     bool undo = false;
     bool space_mode = false;
     bool insert_mode = false;
 
+    std::string& get_text() { return states.back().text; }
+    size_t get_cursor() const { return states.back().cursor; }
+    void set_cursor(size_t u) { states.back().cursor = u; }
+
     void insert(std::string_view s) {
-        texts.back().insert(cursor, s);
-        cursor = std::min(cursor + s.length(), texts.back().size() - 1);
+        get_text().insert(get_cursor(), s);
+        set_cursor(std::min(get_cursor() + s.length(), get_text().size() - 1));
     }
 
     void erase_back() {
-        if (cursor > 0) {
-            texts.back().erase(cursor - 1, 1);
-            cursor = cursor > 0 ? cursor - 1 : cursor;
+        if (get_cursor() > 0) {
+            get_text().erase(get_cursor() - 1, 1);
+            set_cursor(get_cursor() > 0 ? get_cursor() - 1 : get_cursor());
         }
     }
 
     void erase() {
-        if (texts.back().size() > 0) {
-            texts.back().erase(cursor, 1);
-            cursor = cursor == texts.back().size() ? cursor - 1 : cursor;
+        if (get_text().size() > 0) {
+            get_text().erase(get_cursor(), 1);
+            set_cursor(get_cursor() == get_text().size() ? get_cursor() - 1 : get_cursor());
         }
     }
 
     void next_char() {
-        cursor = cursor < texts.back().size() - 1 ? cursor + 1 : 0;
+        set_cursor(get_cursor() < get_text().size() - 1 ? get_cursor() + 1 : 0);
     }
 
     void prev_char() {
-        cursor = cursor > 0 ? cursor - 1 : texts.back().size() - 1;
+        set_cursor(get_cursor() > 0 ? get_cursor() - 1 : get_text().size() - 1);
     }
 
     void line_start() {
-        Line current(texts.back(), cursor);
-        cursor = current.begin();
+        Line current(get_text(), get_cursor());
+        set_cursor(current.begin());
     }
 
     void line_end() {
-        Line current(texts.back(), cursor);
-        cursor = current.end();
+        Line current(get_text(), get_cursor());
+        set_cursor(current.end());
     }
 
     void line_start_whitespace() {
-        Line current(texts.back(), cursor);
-        cursor = current.begin();
-        while (cursor <= current.end()) {
-            if (!is_whitespace(texts.back()[cursor]))
+        Line current(get_text(), get_cursor());
+        set_cursor(current.begin());
+        while (get_cursor() <= current.end()) {
+            if (!is_whitespace(get_text()[get_cursor()]))
                 break;
             next_char();
         }
     }
 
     void next_line() {
-        Line current(texts.back(), cursor);
-        Line next(texts.back(), current.end() < texts.back().size() - 1 ? current.end() + 1 : 0);
-        cursor = next.to_absolute(current.to_relative(cursor));
+        Line current(get_text(), get_cursor());
+        Line next(get_text(), current.end() < get_text().size() - 1 ? current.end() + 1 : 0);
+        set_cursor(next.to_absolute(current.to_relative(get_cursor())));
     }
 
     void prev_line() {
-        Line current(texts.back(), cursor);
-        Line prev(texts.back(), current.begin() > 0 ? current.begin() - 1 : texts.back().size() - 1);
-        cursor = prev.to_absolute(current.to_relative(cursor));
+        Line current(get_text(), get_cursor());
+        Line prev(get_text(), current.begin() > 0 ? current.begin() - 1 : get_text().size() - 1);
+        set_cursor(prev.to_absolute(current.to_relative(get_cursor())));
     }
 
     bool process_insert(WPARAM key) {
@@ -223,43 +223,44 @@ class Buffer {
 
 public:
     Buffer() {
-        texts.push_back({
+        states.emplace_back();
+        states.back().text = {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
             "abcdefghijklmnopqrstuvwxyz\n"
             "\n"
             "\tlorep ipsum\n"
             "`1234567890-=[]\\;',./\n"
             "~!@#$%^&*()_+{}|:\"<>?\n"
-            "\n" });
+            "\n" };
     }
 
     bool process(WPARAM key) {
-        if (texts.size() > 100) { texts.erase(texts.begin(), texts.begin()); } // Trim undo stack to avoid using too much memory.
-        if (texts.size() > 0) { texts.push_back(texts.back()); } // Assume change.
+        if (states.size() > 100) { states.erase(states.begin()); } // [TODO] State stack class.
+        if (states.size() > 0) { states.push_back(states.back()); }
         const bool modified = space_mode ? process_space(key) : 
             insert_mode ? process_insert(key) :
             process_normal(key);
-        if (!modified && texts.size() > 1) { texts.pop_back(); } // Revert last undo stack if no changes.
-        if (undo && texts.size() > 1) { texts.pop_back(); } // Actual undo.
-        verify(cursor < texts.back().size());
+        if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
+        if (undo && states.size() > 1) { states.pop_back(); undo = false; }
+        verify(get_cursor() < get_text().size());
         return quit;
     }
 
     Characters cull() {
-        Line cursor_line(texts.back(), cursor);
+        Line cursor_line(get_text(), get_cursor());
         Characters characters;
         characters.reserve(256);
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
         bool new_row = true;
-        for (auto& character : texts.back()) {
+        for (auto& character : get_text()) {
             if (new_row) { push_line_number(characters, row, col, row); col += 5; new_row = false; }
             if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
-            if (index == cursor) { push_cursor(characters, row, col); }
+            if (index == get_cursor()) { push_cursor(characters, row, col); }
             if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
             else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-            else { push_char(characters, row, col, character, index == cursor && !insert_mode); col++; }
+            else { push_char(characters, row, col, character, index == get_cursor() && !insert_mode); col++; }
             index++;
         }
         return characters;
