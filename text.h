@@ -58,7 +58,7 @@ public:
 };
 
 class Buffer {
-    std::string text = {
+    std::vector<std::string> texts = {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
         "abcdefghijklmnopqrstuvwxyz\n"
         "\n"
@@ -80,61 +80,61 @@ class Buffer {
     bool insert_mode = false;
 
     void insert(std::string_view s) {
-        text.insert(cursor, s);
-        cursor = std::min(cursor + s.length(), text.size() - 1);
+        texts.back().insert(cursor, s);
+        cursor = std::min(cursor + s.length(), texts.back().size() - 1);
     }
 
     void erase_back() {
         if (cursor > 0) {
-            text.erase(cursor - 1, 1);
+            texts.back().erase(cursor - 1, 1);
             cursor = cursor > 0 ? cursor - 1 : cursor;
         }
     }
 
     void erase() {
-        if (text.size() > 0) {
-            text.erase(cursor, 1);
-            cursor = cursor == text.size() ? cursor - 1 : cursor;
+        if (texts.back().size() > 0) {
+            texts.back().erase(cursor, 1);
+            cursor = cursor == texts.back().size() ? cursor - 1 : cursor;
         }
     }
 
     void next_char() {
-        cursor = cursor < text.size() - 1 ? cursor + 1 : 0;
+        cursor = cursor < texts.back().size() - 1 ? cursor + 1 : 0;
     }
 
     void prev_char() {
-        cursor = cursor > 0 ? cursor - 1 : text.size() - 1;
+        cursor = cursor > 0 ? cursor - 1 : texts.back().size() - 1;
     }
 
     void line_start() {
-        Line current(text, cursor);
+        Line current(texts.back(), cursor);
         cursor = current.begin();
     }
 
     void line_end() {
-        Line current(text, cursor);
+        Line current(texts.back(), cursor);
         cursor = current.end();
     }
 
     void line_start_whitespace() {
-        Line current(text, cursor);
+        Line current(texts.back(), cursor);
         cursor = current.begin();
         while (cursor <= current.end()) {
-            if (!is_whitespace(text[cursor]))
+            if (!is_whitespace(texts.back()[cursor]))
                 break;
             next_char();
         }
     }
 
     void next_line() {
-        Line current(text, cursor);
-        Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : 0);
+        Line current(texts.back(), cursor);
+        Line next(texts.back(), current.end() < texts.back().size() - 1 ? current.end() + 1 : 0);
         cursor = next.to_absolute(current.to_relative(cursor));
     }
 
     void prev_line() {
-        Line current(text, cursor);
-        Line prev(text, current.begin() > 0 ? current.begin() - 1 : text.size() - 1);
+        Line current(texts.back(), cursor);
+        Line prev(texts.back(), current.begin() > 0 ? current.begin() - 1 : texts.back().size() - 1);
         cursor = prev.to_absolute(current.to_relative(cursor));
     }
 
@@ -144,7 +144,7 @@ class Buffer {
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
         else { insert(std::string(1, (char)key)); }
-        verify(cursor < text.size());
+        verify(cursor < texts.back().size());
         return false;
     }
 
@@ -164,7 +164,7 @@ class Buffer {
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
-        verify(cursor < text.size());
+        verify(cursor < texts.back().size());
         return false;
     }
 
@@ -210,6 +210,17 @@ class Buffer {
 
 
 public:
+    Buffer() {
+        texts.push_back({
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+            "abcdefghijklmnopqrstuvwxyz\n"
+            "\n"
+            "\tlorep ipsum\n"
+            "`1234567890-=[]\\;',./\n"
+            "~!@#$%^&*()_+{}|:\"<>?\n"
+            "\n" });
+    }
+
     bool process(WPARAM key) {
         // [TODO] Open test file using <space-e>.
         // [TODO] Save test file using <space-s>.
@@ -227,14 +238,14 @@ public:
         // [TODO] Relative line numbers.
         // [TODO] Vertical scrolling.
         // [TODO] Clip lines to fit screen.
-        Line cursor_line(text, cursor);
+        Line cursor_line(texts.back(), cursor);
         Characters characters;
         characters.reserve(256);
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
         bool new_row = true;
-        for (auto& character : text) {
+        for (auto& character : texts.back()) {
             if (new_row) { push_line_number(characters, row, col, row); col += 5; new_row = false; }
             if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
             if (index == cursor) { push_cursor(characters, row, col); }
