@@ -64,13 +64,15 @@ class Buffer {
         "\n"
         "\tlorep ipsum\n"
         "`1234567890-=[]\\;',./\n"
-        "~!@#$%^&*()_+{}|:\"<>?\n" };
+        "~!@#$%^&*()_+{}|:\"<>?\n"
+        "\n" };
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
     Color text_color = Color::rgba(205, 226, 239, 255);
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
+    Color line_number_color = Color::rgba(75, 100, 121, 255);
 
     size_t cursor = 0;
 
@@ -172,6 +174,18 @@ class Buffer {
         return false;
     }
 
+    void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
+        characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
+    }
+
+    void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
+        line = std::min(line, 9999u); // [TODO] Support more?
+        if (line > 999) { push_digit(characters, row, col + 0, line / 1000); }
+        if (line > 99) { push_digit(characters, row, col + 1, line / 100); }
+        if (line > 9) { push_digit(characters, row, col + 2, line / 10); }
+        push_digit(characters, row, col + 3, line % 10);
+    }
+
     void push_cursor_line(Characters& characters, unsigned row, unsigned col, unsigned count) {
         for (unsigned i = 0; i < count; ++i) {
             characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, col + i);
@@ -210,8 +224,8 @@ public:
     }
 
     Characters cull() {
-        // [TODO] Display line numbers.
         // [TODO] Relative line numbers.
+        // [TODO] Vertical scrolling.
         // [TODO] Clip lines to fit screen.
         Line cursor_line(text, cursor);
         Characters characters;
@@ -219,10 +233,12 @@ public:
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
+        bool new_row = true;
         for (auto& character : text) {
+            if (new_row) { push_line_number(characters, row, col, row); col += 5; new_row = false; }
             if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
             if (index == cursor) { push_cursor(characters, row, col); }
-            if (character == '\n') { push_return(characters, row, col); row++; col = 0; }
+            if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
             else if (character == '\t') { push_tab(characters, row, col); col += 4; }
             else { push_char(characters, row, col, character, index == cursor && !insert_mode); col++; }
             index++;
