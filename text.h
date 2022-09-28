@@ -1,16 +1,5 @@
 #pragma once
 
-// [TODO] u.
-// [TODO] Open test file using <space-e>.
-// [TODO] Save test file using <space-s>.
-// [TODO] Unit tests.
-// [TODO] zz/zt/zb.
-// [TODO] gg/G.
-// [TODO] dd.
-// [TODO] Relative line numbers.
-// [TODO] Vertical scrolling.
-// [TODO] Clip lines to fit screen.
-
 enum Glyph {
     BS = 8,
     TAB = 9,
@@ -68,13 +57,48 @@ public:
     size_t end() const { return finish; }
 };
 
-struct State {
-    std::string text;
-    size_t cursor = 0;
+class Stack {
+    struct State {
+        std::string text;
+        size_t cursor = 0;
+    };
+
+    std::vector<State> states;
+    bool undo = false;
+
+public:
+    Stack() {
+        states.emplace_back(); // [TODO] Remove when file loading.
+        states.back().text = {
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+            "abcdefghijklmnopqrstuvwxyz\n"
+            "\n"
+            "\tlorep ipsum\n"
+            "`1234567890-=[]\\;',./\n"
+            "~!@#$%^&*()_+{}|:\"<>?\n"
+            "\n" };
+    }
+
+    std::string& get_text() { return states.back().text; }
+
+    size_t get_cursor() const { return states.back().cursor; }
+    void set_cursor(size_t u) { states.back().cursor = u; }
+
+    void set_undo() { undo = true; }
+
+    void push() {
+        if (states.size() > 100) { states.erase(states.begin()); }
+        if (states.size() > 0) { states.push_back(states.back()); }
+    }
+
+    void pop(bool modified) {
+        if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
+        if (undo && states.size() > 1) { states.pop_back(); undo = false; }
+    }
 };
 
 class Buffer {
-    std::vector<State> states;
+    Stack stack;
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
@@ -84,71 +108,66 @@ class Buffer {
     Color line_number_color = Color::rgba(75, 100, 121, 255);
 
     bool quit = false;
-    bool undo = false;
     bool space_mode = false;
     bool insert_mode = false;
 
-    std::string& get_text() { return states.back().text; }
-    size_t get_cursor() const { return states.back().cursor; }
-    void set_cursor(size_t u) { states.back().cursor = u; }
-
     void insert(std::string_view s) {
-        get_text().insert(get_cursor(), s);
-        set_cursor(std::min(get_cursor() + s.length(), get_text().size() - 1));
+        stack.get_text().insert(stack.get_cursor(), s);
+        stack.set_cursor(std::min(stack.get_cursor() + s.length(), stack.get_text().size() - 1));
     }
 
     void erase_back() {
-        if (get_cursor() > 0) {
-            get_text().erase(get_cursor() - 1, 1);
-            set_cursor(get_cursor() > 0 ? get_cursor() - 1 : get_cursor());
+        if (stack.get_cursor() > 0) {
+            stack.get_text().erase(stack.get_cursor() - 1, 1);
+            stack.set_cursor(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : stack.get_cursor());
         }
     }
 
     void erase() {
-        if (get_text().size() > 0) {
-            get_text().erase(get_cursor(), 1);
-            set_cursor(get_cursor() == get_text().size() ? get_cursor() - 1 : get_cursor());
+        if (stack.get_text().size() > 0) {
+            stack.get_text().erase(stack.get_cursor(), 1);
+            stack.set_cursor(stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
         }
     }
 
     void next_char() {
-        set_cursor(get_cursor() < get_text().size() - 1 ? get_cursor() + 1 : 0);
+        stack.set_cursor(stack.get_cursor() < stack.get_text().size() - 1 ? stack.get_cursor() + 1 : 0);
     }
 
     void prev_char() {
-        set_cursor(get_cursor() > 0 ? get_cursor() - 1 : get_text().size() - 1);
+        stack.set_cursor(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : stack.get_text().size() - 1);
     }
 
     void line_start() {
-        Line current(get_text(), get_cursor());
-        set_cursor(current.begin());
+        Line current(stack.get_text(), stack.get_cursor());
+        stack.set_cursor(current.begin());
     }
 
     void line_end() {
-        Line current(get_text(), get_cursor());
-        set_cursor(current.end());
+        Line current(stack.get_text(), stack.get_cursor());
+        stack.set_cursor(current.end());
     }
 
     void line_start_whitespace() {
-        Line current(get_text(), get_cursor());
-        set_cursor(current.begin());
-        while (get_cursor() <= current.end()) {
-            if (!is_whitespace(get_text()[get_cursor()]))
+        Line current(stack.get_text(), stack.get_cursor());
+        stack.set_cursor(current.begin());
+        while (stack.get_cursor() <= current.end()) {
+            if (!is_whitespace(stack.get_text()[stack.get_cursor()]))
                 break;
             next_char();
         }
     }
 
     void next_line() {
-        Line current(get_text(), get_cursor());
-        Line next(get_text(), current.end() < get_text().size() - 1 ? current.end() + 1 : 0);
-        set_cursor(next.to_absolute(current.to_relative(get_cursor())));
+        Line current(stack.get_text(), stack.get_cursor());
+        Line next(stack.get_text(), current.end() < stack.get_text().size() - 1 ? current.end() + 1 : 0);
+        stack.set_cursor(next.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
     void prev_line() {
-        Line current(get_text(), get_cursor());
-        Line prev(get_text(), current.begin() > 0 ? current.begin() - 1 : get_text().size() - 1);
-        set_cursor(prev.to_absolute(current.to_relative(get_cursor())));
+        Line current(stack.get_text(), stack.get_cursor());
+        Line prev(stack.get_text(), current.begin() > 0 ? current.begin() - 1 : stack.get_text().size() - 1);
+        stack.set_cursor(prev.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
     bool process_insert(WPARAM key) {
@@ -162,7 +181,7 @@ class Buffer {
 
     bool process_normal(WPARAM key) {
         if (key == ' ') { space_mode = true; return false; }
-        else if (key == 'u') { undo = true; return false; }
+        else if (key == 'u') { stack.set_undo(); return false; }
         else if (key == 'i') { insert_mode = true; return false; }
         else if (key == 'I') { line_start_whitespace(); insert_mode = true; return false; }
         else if (key == 'a') { next_char(); insert_mode = true; return false; }
@@ -222,45 +241,31 @@ class Buffer {
 
 
 public:
-    Buffer() {
-        states.emplace_back();
-        states.back().text = {
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
-            "abcdefghijklmnopqrstuvwxyz\n"
-            "\n"
-            "\tlorep ipsum\n"
-            "`1234567890-=[]\\;',./\n"
-            "~!@#$%^&*()_+{}|:\"<>?\n"
-            "\n" };
-    }
-
     bool process(WPARAM key) {
-        if (states.size() > 100) { states.erase(states.begin()); } // [TODO] State stack class.
-        if (states.size() > 0) { states.push_back(states.back()); }
+        stack.push();
         const bool modified = space_mode ? process_space(key) : 
             insert_mode ? process_insert(key) :
             process_normal(key);
-        if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
-        if (undo && states.size() > 1) { states.pop_back(); undo = false; }
-        verify(get_cursor() < get_text().size());
+        stack.pop(modified);
+        verify(stack.get_cursor() < stack.get_text().size());
         return quit;
     }
 
     Characters cull() {
-        Line cursor_line(get_text(), get_cursor());
+        Line cursor_line(stack.get_text(), stack.get_cursor());
         Characters characters;
         characters.reserve(256);
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
         bool new_row = true;
-        for (auto& character : get_text()) {
+        for (auto& character : stack.get_text()) {
             if (new_row) { push_line_number(characters, row, col, row); col += 5; new_row = false; }
             if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
-            if (index == get_cursor()) { push_cursor(characters, row, col); }
+            if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
             if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
             else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-            else { push_char(characters, row, col, character, index == get_cursor() && !insert_mode); col++; }
+            else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
             index++;
         }
         return characters;
