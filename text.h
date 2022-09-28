@@ -67,6 +67,7 @@ class Buffer {
         "~!@#$%^&*()_+{}|:\"<>?\n" };
 
     Color cursor_color = Color::rgba(255, 255, 0, 255);
+    Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
     Color text_color = Color::rgba(205, 226, 239, 255);
 
@@ -170,6 +171,29 @@ class Buffer {
         return false;
     }
 
+    void push_cursor_line(Characters& characters, unsigned row, unsigned col, unsigned count) {
+        for (unsigned i = 0; i < count; ++i) {
+            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, col + i);
+        }
+    };
+
+    void push_cursor(Characters& characters, unsigned row, unsigned col) {
+        characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
+    };
+
+    void push_return(Characters& characters, unsigned row, unsigned col) {
+        characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
+    };
+
+    void push_tab(Characters& characters, unsigned row, unsigned col) {
+        characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
+    };
+
+    void push_char(Characters& characters, unsigned row, unsigned col, char character) {
+        characters.emplace_back((uint8_t)character, text_color, row, col);
+    };
+
+
 public:
     bool process(WPARAM key) {
         // [TODO] Open test file using <space-e>.
@@ -185,36 +209,21 @@ public:
     }
 
     Characters cull() {
-        // [TODO] Display cursor line in transparent yellow.
         // [TODO] Clip lines to fit screen.
+        Line cursor_line(text, cursor);
         Characters characters;
         characters.reserve(256);
-
         unsigned index = 0;
         unsigned row = 0;
         unsigned col = 0;
-        for (auto& character : text)
-        {
-            if (index == cursor)
-                characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
-
-            if (character == '\n') {
-                characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
-                row++;
-                col = 0;
-            }
-            else if (character == '\t') {
-                characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
-                col += 4;
-            }
-            else
-            {
-                characters.emplace_back((uint8_t)character, text_color, row, col);
-                col++;
-            }
+        for (auto& character : text) {
+            if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
+            if (index == cursor) { push_cursor(characters, row, col); }
+            if (character == '\n') { push_return(characters, row, col); row++; col = 0; }
+            else if (character == '\t') { push_tab(characters, row, col); col += 4; }
+            else { push_char(characters, row, col, character); col++; }
             index++;
         }
-
         return characters;
     }
 };
