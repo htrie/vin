@@ -125,7 +125,6 @@ class Buffer {
         return number;
     }
 
-
     void insert(std::string_view s) {
         stack.get_text().insert(stack.get_cursor(), s);
         stack.set_cursor(std::min(stack.get_cursor() + s.length(), stack.get_text().size() - 1));
@@ -149,11 +148,13 @@ class Buffer {
     }
 
     void next_char() {
-        stack.set_cursor(stack.get_cursor() < stack.get_text().size() - 1 ? stack.get_cursor() + 1 : 0);
+        Line current(stack.get_text(), stack.get_cursor());
+        stack.set_cursor(std::clamp(stack.get_cursor() + 1, current.begin(), current.end()));
     }
 
     void prev_char() {
-        stack.set_cursor(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : stack.get_text().size() - 1);
+        Line current(stack.get_text(), stack.get_cursor());
+        stack.set_cursor(std::clamp(stack.get_cursor() - 1, current.begin(), current.end()));
     }
 
     void line_start() {
@@ -178,13 +179,13 @@ class Buffer {
 
     void next_line() {
         Line current(stack.get_text(), stack.get_cursor());
-        Line next(stack.get_text(), current.end() < stack.get_text().size() - 1 ? current.end() + 1 : 0);
+        Line next(stack.get_text(), current.end() < stack.get_text().size() - 1 ? current.end() + 1 : current.end());
         stack.set_cursor(next.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
     void prev_line() {
         Line current(stack.get_text(), stack.get_cursor());
-        Line prev(stack.get_text(), current.begin() > 0 ? current.begin() - 1 : stack.get_text().size() - 1);
+        Line prev(stack.get_text(), current.begin() > 0 ? current.begin() - 1 : 0);
         stack.set_cursor(prev.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
@@ -203,8 +204,8 @@ class Buffer {
         else if (key == 'I') { line_start_whitespace(); insert_mode = true; }
         else if (key == 'a') { next_char(); insert_mode = true; }
         else if (key == 'A') { line_end(); insert_mode = true; }
-        else if (key == 'o') { next_line(); line_start(); insert("\n"); prev_char(); insert_mode = true; }
-        else if (key == 'O') { line_start(); insert("\n"); prev_char(); insert_mode = true; }
+        else if (key == 'o') { line_end(); insert("\n"); insert_mode = true; }
+        else if (key == 'O') { line_start(); insert("\n"); prev_line(); insert_mode = true; }
         else if (key == 'x') { erase(); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
