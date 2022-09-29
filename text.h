@@ -26,7 +26,6 @@ struct Character {
 typedef std::vector<Character> Characters;
 
 class Line {
-    const std::string_view text;
     size_t start = 0;
     size_t finish = 0;
 
@@ -100,6 +99,8 @@ public:
 class Buffer {
     Stack stack;
 
+    Color status_line_color = Color::rgba(41, 62, 79, 255);
+    Color status_text_color = Color::rgba(215, 236, 249, 255);
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
@@ -110,6 +111,17 @@ class Buffer {
     bool quit = false;
     bool space_mode = false;
     bool insert_mode = false;
+
+    size_t find_line_number(std::string_view text, size_t cursor) const {
+        size_t number = 0;
+        size_t index = 0;
+        while (index < text.size() && index < cursor) {
+            if (text[index++] == '\n')
+                number++;
+        }
+        return number;
+    }
+
 
     void insert(std::string_view s) {
         stack.get_text().insert(stack.get_cursor(), s);
@@ -239,6 +251,48 @@ class Buffer {
         characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
     };
 
+    void push_text(Characters& characters) {
+        Line cursor_line(stack.get_text(), stack.get_cursor());
+        bool new_row = true;
+        unsigned index = 0;
+        unsigned row = 1;
+        unsigned col = 0;
+        for (auto& character : stack.get_text()) {
+            if (new_row) { push_line_number(characters, row, col, row - 1); col += 5; new_row = false; }
+            if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
+            if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
+            if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
+            else if (character == '\t') { push_tab(characters, row, col); col += 4; }
+            else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
+            index++;
+        }
+    }
+
+    void push_status_text(Characters& characters, const std::string_view text) {
+        unsigned col = 0;
+        for (auto& character : text) {
+            characters.emplace_back((uint8_t)character, status_text_color, 0, col++);
+        }
+    }
+
+    void push_status_line(Characters& characters) {
+        for (unsigned i = 0; i < 100; ++i) {
+            characters.emplace_back(Glyph::BLOCK, status_line_color, 0, i);
+        }
+    }
+
+    void push_status_bar(Characters& characters) {
+        push_status_line(characters);
+        push_status_text(characters, build_status_text());
+    }
+
+    std::string build_status_text() {
+        Line cursor_line(stack.get_text(), stack.get_cursor());
+        const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
+        const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
+        const auto cursor_row = std::string("row ") + std::to_string(find_line_number(stack.get_text(), stack.get_cursor()));
+        return std::string("test.cpp") + " [" + text_size + ", " + cursor_col + ", " + cursor_row +  "]";
+    }
 
 public:
     bool process(WPARAM key) {
@@ -252,22 +306,10 @@ public:
     }
 
     Characters cull() {
-        Line cursor_line(stack.get_text(), stack.get_cursor());
         Characters characters;
         characters.reserve(256);
-        unsigned index = 0;
-        unsigned row = 0;
-        unsigned col = 0;
-        bool new_row = true;
-        for (auto& character : stack.get_text()) {
-            if (new_row) { push_line_number(characters, row, col, row); col += 5; new_row = false; }
-            if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
-            if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
-            if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
-            else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-            else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
-            index++;
-        }
+        push_status_bar(characters);
+        push_text(characters);
         return characters;
     }
 };
