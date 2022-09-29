@@ -221,7 +221,11 @@ class Buffer {
         characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
     }
 
-    void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
+    void push_line_number(Characters& characters, unsigned cursor_row, unsigned row, unsigned col, unsigned line) {
+        col = line == cursor_row ? col : col + 1;
+        line = line == cursor_row ? line : 
+            line < cursor_row ? cursor_row - line :
+            line - cursor_row;
         line = std::min(line, 9999u); // [TODO] Support more?
         if (line > 999) { push_digit(characters, row, col + 0, line / 1000); }
         if (line > 99) { push_digit(characters, row, col + 1, line / 100); }
@@ -253,12 +257,13 @@ class Buffer {
 
     void push_text(Characters& characters) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         bool new_row = true;
         unsigned index = 0;
         unsigned row = 1;
         unsigned col = 0;
         for (auto& character : stack.get_text()) {
-            if (new_row) { push_line_number(characters, row, col, row - 1); col += 5; new_row = false; }
+            if (new_row) { push_line_number(characters, cursor_row, row, col, row - 1); col += 6; new_row = false; }
             if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
             if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
             if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
