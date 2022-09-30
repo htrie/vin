@@ -40,3 +40,24 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
 void destroy_window(HWND hWnd) {
     DestroyWindow(hWnd);
 }
+
+
+class Timer { 
+    LARGE_INTEGER frequency;
+
+public:
+    Timer() {
+        QueryPerformanceFrequency(&frequency);
+    }
+
+    uint64_t now() const {
+        LARGE_INTEGER counter;
+        QueryPerformanceCounter(&counter);
+        return 1000000 * counter.QuadPart / frequency.QuadPart;
+    }
+
+    float duration(uint64_t start) {
+        return (float)((double)(now() - start) * 0.001);
+    }
+};
+

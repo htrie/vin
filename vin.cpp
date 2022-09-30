@@ -22,8 +22,12 @@
 class App {
     Device device;
     Buffer buffer;
+    Timer timer;
 
     Color clear_color = Color::rgba(1, 22, 39, 255);
+
+    float redraw_time = 0.0f;
+    float process_time = 0.0f;
 
     bool minimized = false;
     bool dirty = true;
@@ -40,7 +44,9 @@ class App {
     void redraw() {
         if (!minimized && dirty) {
             dirty = false;
-            device.redraw(clear_color, buffer.cull());
+            const auto start = timer.now();
+            device.redraw(clear_color, buffer.cull(process_time, redraw_time));
+            redraw_time = timer.duration(start);
         }
         else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -48,8 +54,10 @@ class App {
     }
 
     void process(WPARAM key) {
+        const auto start = timer.now();
         if (buffer.process(key))
             PostQuitMessage(0);
+        process_time = timer.duration(start);
     }
 
     static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

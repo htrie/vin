@@ -230,10 +230,9 @@ class Buffer {
         line = line == cursor_row ? line : 
             line < cursor_row ? cursor_row - line :
             line - cursor_row;
-        line = std::min(line, 9999u); // [TODO] Support more?
-        if (line > 999) { push_digit(characters, row, col + 0, line / 1000); }
-        if (line > 99) { push_digit(characters, row, col + 1, line / 100); }
-        if (line > 9) { push_digit(characters, row, col + 2, line / 10); }
+        if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
+        if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
+        if (line > 9) { push_digit(characters, row, col + 2, (line % 100)  / 10); }
         push_digit(characters, row, col + 3, line % 10);
     }
 
@@ -290,17 +289,21 @@ class Buffer {
         }
     }
 
-    void push_status_bar(Characters& characters) {
+    void push_status_bar(Characters& characters, float process_time, float redraw_time) {
         push_status_line(characters);
-        push_status_text(characters, build_status_text());
+        push_status_text(characters, build_status_text(process_time, redraw_time));
     }
 
-    std::string build_status_text() {
+    std::string build_status_text(float process_time, float redraw_time) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
         const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
         const auto cursor_row = std::string("row ") + std::to_string(find_line_number(stack.get_text(), stack.get_cursor()));
-        return std::string("test.cpp") + " [" + text_size + ", " + cursor_col + ", " + cursor_row +  "]";
+        const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
+        const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
+        return std::string("test.cpp") + 
+            " [" + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
+            " (" + process_duration + ", " + redraw_duration + ")";
     }
 
 public:
@@ -314,10 +317,11 @@ public:
         return quit;
     }
 
-    Characters cull() {
+    Characters cull(float process_time, float redraw_time) {
+        // [TODO] Scrolling.
         Characters characters;
         characters.reserve(256);
-        push_status_bar(characters);
+        push_status_bar(characters, process_time, redraw_time);
         push_text(characters);
         return characters;
     }
