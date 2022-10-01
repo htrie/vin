@@ -45,7 +45,9 @@ class App {
         if (!minimized && dirty) {
             dirty = false;
             const auto start = timer.now();
-            device.redraw(clear_color, buffer.cull(process_time, redraw_time));
+            const auto viewport = device.viewport();
+            const auto text = buffer.cull(process_time, redraw_time, viewport.w, viewport.h);
+            device.redraw(clear_color, text);
             redraw_time = timer.duration(start);
         }
         else {
@@ -114,7 +116,7 @@ class App {
 
 public:
     App(HINSTANCE hInstance, int nCmdShow)
-        : device(proc, hInstance, nCmdShow, 640, 480) {
+        : device(proc, hInstance, nCmdShow, 480, 240) {
     }
 
     void run() {

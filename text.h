@@ -137,6 +137,8 @@ class Buffer {
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
     Color line_number_color = Color::rgba(75, 100, 121, 255);
 
+    unsigned begin_row = 0;
+
     bool quit = false;
     bool space_mode = false;
     bool insert_mode = false;
@@ -251,11 +253,7 @@ class Buffer {
         characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
     }
 
-    void push_line_number(Characters& characters, unsigned cursor_row, unsigned row, unsigned col, unsigned line) {
-        col = line == cursor_row ? col : col + 1;
-        line = line == cursor_row ? line : 
-            line < cursor_row ? cursor_row - line :
-            line - cursor_row;
+    void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
         if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
         if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
         if (line > 9) { push_digit(characters, row, col + 2, (line % 100)  / 10); }
@@ -284,20 +282,34 @@ class Buffer {
         characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
     };
 
-    void push_text(Characters& characters) {
+    void push_text(Characters& characters, unsigned row_count) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
-        bool new_row = true;
+        begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+        const unsigned end_row = begin_row + row_count;
+        unsigned absolute_row = 0;
         unsigned index = 0;
         unsigned row = 1;
         unsigned col = 0;
+        bool new_row = true;
         for (auto& character : stack.get_text()) {
-            if (new_row) { push_line_number(characters, cursor_row, row, col, row - 1); col += 6; new_row = false; }
-            if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
-            if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
-            if (character == '\n') { push_return(characters, row, col); row++; col = 0; new_row = true; }
-            else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-            else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
+            if (absolute_row >= begin_row && absolute_row <= end_row) {
+                if (new_row) { 
+                    unsigned line = absolute_row;
+                    unsigned column = line == cursor_row ? col : col + 1;
+                    line = line == cursor_row ? line :
+                        line < cursor_row ? cursor_row - line :
+                        line - cursor_row;
+                    push_line_number(characters, row, column, line); col += 6; new_row = false; }
+                if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
+                if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
+                if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
+                else if (character == '\t') { push_tab(characters, row, col); col += 4; }
+                else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
+            }
+            else {
+                if (character == '\n') { absolute_row++; }
+            }
             index++;
         }
     }
@@ -309,14 +321,14 @@ class Buffer {
         }
     }
 
-    void push_status_line(Characters& characters) {
-        for (unsigned i = 0; i < 100; ++i) {
+    void push_status_line(Characters& characters, unsigned col_count) {
+        for (unsigned i = 0; i < col_count; ++i) {
             characters.emplace_back(Glyph::BLOCK, status_line_color, 0, i);
         }
     }
 
-    void push_status_bar(Characters& characters, float process_time, float redraw_time) {
-        push_status_line(characters);
+    void push_status_bar(Characters& characters, float process_time, float redraw_time, unsigned col_count) {
+        push_status_line(characters, col_count);
         push_status_text(characters, build_status_text(process_time, redraw_time));
     }
 
@@ -343,12 +355,11 @@ public:
         return quit;
     }
 
-    Characters cull(float process_time, float redraw_time) {
-        // [TODO] Scrolling.
+    Characters cull(float process_time, float redraw_time, unsigned col_count, unsigned row_count) {
         Characters characters;
         characters.reserve(256);
-        push_status_bar(characters, process_time, redraw_time);
-        push_text(characters);
+        push_status_bar(characters, process_time, redraw_time, col_count);
+        push_text(characters, row_count);
         return characters;
     }
 };

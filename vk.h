@@ -832,6 +832,11 @@ struct Uniforms {
     Matrix view_proj;
 };
 
+struct Viewport {
+    unsigned w = 0;
+    unsigned h = 0;
+};
+
 class Device {
     HWND hWnd = NULL;
 
@@ -867,6 +872,10 @@ class Device {
     unsigned height = 0;
 
     unsigned fence_index = 0;
+
+    const float scale = 14.0f; // [TODO] Move to character.
+    const float char_width = scale * 0.5f;
+    const float char_height = scale * 1.05f;
 
 public:
     Device(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, unsigned width, unsigned height) {
@@ -950,9 +959,6 @@ public:
         bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
         for (auto& character : characters) {
-            const float scale = 14.0f; // [TODO] Move to character.
-            const float char_width = scale * 0.5f;
-            const float char_height = scale * 1.05f;
             const float trans_x = (1.0f + character.col) * char_width;
             const float trans_y = (1.0f + character.row) * char_height;
 
@@ -977,6 +983,14 @@ public:
 
         fence_index += 1;
         fence_index %= fences.size();
+    }
+
+    Viewport viewport() const {
+        return { 
+            (unsigned)((float)width / char_width),
+            (unsigned)((float)height / char_height) - 2 // Remove 1 line for status bar, and another 1 for half-lines.
+        };
+
     }
 };
 
