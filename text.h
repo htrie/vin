@@ -217,6 +217,12 @@ class Buffer {
         stack.set_cursor(prev.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    void buffer_end() {
+        Line current(stack.get_text(), stack.get_cursor());
+        Line last(stack.get_text(), stack.get_text().size() - 1);
+        stack.set_cursor(last.to_absolute(current.to_relative(stack.get_cursor())));
+    }
+
     void process_insert(WPARAM key) {
         if (key == Glyph::ESC) { insert_mode = false; }
         else if (key == Glyph::BS) { erase_back(); }
@@ -242,6 +248,7 @@ class Buffer {
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
+        else if (key == 'G') { buffer_end(); }
     }
 
     void process_space(WPARAM key) {
