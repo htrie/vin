@@ -274,11 +274,11 @@ class Buffer {
         push_digit(characters, row, col + 3, line % 10);
     }
 
-    void push_cursor_line(Characters& characters, unsigned row, unsigned col, unsigned count) {
-        for (unsigned i = 0; i < count; ++i) {
-            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, col + i);
+    void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
+        for (unsigned i = 0; i < col_count; ++i) {
+            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, i);
         }
-    };
+    }
 
     void push_cursor(Characters& characters, unsigned row, unsigned col) {
         characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
@@ -296,7 +296,7 @@ class Buffer {
         characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
     };
 
-    void push_text(Characters& characters, unsigned row_count) {
+    void push_text(Characters& characters, unsigned col_count, unsigned row_count) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
@@ -315,7 +315,7 @@ class Buffer {
                         line < cursor_row ? cursor_row - line :
                         line - cursor_row;
                     push_line_number(characters, row, column, line); col += 6; new_row = false; }
-                if (index >= cursor_line.begin() && index <= cursor_line.end()) { push_cursor_line(characters, row, col, character == '\t' ? 4 : 1); }
+                if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
@@ -373,7 +373,7 @@ public:
         Characters characters;
         characters.reserve(256);
         push_status_bar(characters, process_time, redraw_time, col_count);
-        push_text(characters, row_count);
+        push_text(characters, col_count, row_count);
         return characters;
     }
 };
