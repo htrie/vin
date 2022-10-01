@@ -26,6 +26,7 @@ class App {
 
     Color clear_color = Color::rgba(1, 22, 39, 255);
 
+    float cull_time = 0.0f;
     float redraw_time = 0.0f;
     float process_time = 0.0f;
 
@@ -44,11 +45,15 @@ class App {
     void redraw() {
         if (!minimized && dirty) {
             dirty = false;
-            const auto start = timer.now();
             const auto viewport = device.viewport();
-            const auto text = buffer.cull(process_time, redraw_time, viewport.w, viewport.h);
-            device.redraw(clear_color, text);
-            redraw_time = timer.duration(start);
+            const auto start = timer.now();
+            const auto text = buffer.cull(process_time, cull_time, redraw_time, viewport.w, viewport.h);
+            cull_time = timer.duration(start);
+            {
+                const auto start = timer.now();
+                device.redraw(clear_color, text);
+                redraw_time = timer.duration(start);
+            }
         }
         else {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -296,7 +296,7 @@ class Buffer {
         characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
     };
 
-    void push_text(Characters& characters, unsigned col_count, unsigned row_count) {
+    void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
@@ -341,21 +341,22 @@ class Buffer {
         }
     }
 
-    void push_status_bar(Characters& characters, float process_time, float redraw_time, unsigned col_count) {
+    void push_status_bar(Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
         push_status_line(characters, col_count);
-        push_status_text(characters, build_status_text(process_time, redraw_time));
+        push_status_text(characters, build_status_text(process_time, cull_time, redraw_time));
     }
 
-    std::string build_status_text(float process_time, float redraw_time) {
+    std::string build_status_text(float process_time, float cull_time, float redraw_time) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
         const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
         const auto cursor_row = std::string("row ") + std::to_string(find_line_number(stack.get_text(), stack.get_cursor()));
         const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
+        const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
         const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
         return std::string("test.cpp") + 
             " [" + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
-            " (" + process_duration + ", " + redraw_duration + ")";
+            " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
     }
 
 public:
@@ -369,10 +370,10 @@ public:
         return quit;
     }
 
-    Characters cull(float process_time, float redraw_time, unsigned col_count, unsigned row_count) {
+    Characters cull(float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
         Characters characters;
         characters.reserve(256);
-        push_status_bar(characters, process_time, redraw_time, col_count);
+        push_status_bar(characters, process_time, cull_time, redraw_time, col_count);
         push_text(characters, col_count, row_count);
         return characters;
     }
