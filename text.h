@@ -3,6 +3,7 @@
 enum class Mode {
     normal,
     insert,
+    replace,
     space
 };
 
@@ -14,6 +15,7 @@ enum Glyph {
     BLOCK = 128,
     LINE = 129,
     RETURN = 130,
+    BOTTOM_BLOCK = 131,
 };
 
 constexpr bool is_whitespace(char c) { return c == '\t' || c == ' '; }
@@ -224,6 +226,10 @@ class Buffer {
         stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    void process_replace(WPARAM key) {
+        erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal;
+    }
+
     void process_insert(WPARAM key) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
         else if (key == Glyph::BS) { erase_back(); }
@@ -232,7 +238,7 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key) { // [TODO] r, dd
+    void process_normal(WPARAM key) { // [TODO] dd
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'i') { mode = Mode::insert; }
@@ -241,6 +247,7 @@ class Buffer {
         else if (key == 'A') { line_end(); mode = Mode::insert; }
         else if (key == 'o') { line_end(); insert("\n"); mode = Mode::insert; }
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
+        else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'x') { erase(); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
@@ -278,7 +285,11 @@ class Buffer {
     }
 
     void push_cursor(Characters& characters, unsigned row, unsigned col) {
-        characters.emplace_back(mode == Mode::insert ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
+        characters.emplace_back(
+            mode == Mode::insert ? Glyph::LINE :
+            mode == Mode::replace ? Glyph::BOTTOM_BLOCK :
+            Glyph::BLOCK,
+            cursor_color, row, col);
     };
 
     void push_return(Characters& characters, unsigned row, unsigned col) {
@@ -290,7 +301,7 @@ class Buffer {
     };
 
     void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) {
-        characters.emplace_back((uint8_t)character, block_cursor ? text_cursor_color : text_color, row, col);
+        characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : text_color, row, col);
     };
 
     void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
@@ -316,7 +327,7 @@ class Buffer {
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-                else { push_char(characters, row, col, character, index == stack.get_cursor() && mode != Mode::insert); col++; }
+                else { push_char(characters, row, col, character, index == stack.get_cursor()); col++; }
             }
             else {
                 if (character == '\n') { absolute_row++; }
@@ -362,6 +373,7 @@ public:
         switch (mode) {
             case Mode::normal: process_normal(key); break;
             case Mode::insert: process_insert(key); break;
+            case Mode::replace: process_replace(key); break;
             case Mode::space: process_space(key); break;
         };
         stack.pop();

@@ -105,6 +105,7 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
     add_char(0x2588); // 128: block
     add_char(0x258F); // 129: left vertical line
     add_char(0x23CE); // 130: return
+    add_char(0x2581); // 131: bottom block
     total_vertex_count += 1; // EOV
 
     ttf_free(font);
