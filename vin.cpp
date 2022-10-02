@@ -125,7 +125,8 @@ public:
         : device(proc, hInstance, nCmdShow, 600, 400) {
     }
 
-    void run() {
+    void run(float init_time) {
+        buffer.run(init_time);
         MSG msg = {};
         while (GetMessage(&msg, nullptr, 0, 0)) {
             TranslateMessage(&msg);
@@ -135,8 +136,11 @@ public:
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+    Timer timer;
+    const auto start = timer.now();
     App app(hInstance, nCmdShow);
-    app.run();
+    const auto init_time = timer.duration(start);
+    app.run(init_time);
     return 0;
 }
 

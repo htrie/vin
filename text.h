@@ -112,8 +112,10 @@ class Buffer {
     Stack stack;
     Timer timer;
 
-    Color special_line_color = Color::rgba(41, 62, 79, 255);
-    Color special_text_color = Color::rgba(215, 236, 249, 255);
+    Color status_line_color = Color::rgba(1, 22, 39, 255);
+    Color status_text_color = Color::rgba(155, 155, 155, 255);
+    Color notification_line_color = Color::rgba(1, 22, 39, 255);
+    Color notification_text_color = Color::rgba(24, 112, 139, 255);
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
@@ -136,7 +138,7 @@ class Buffer {
             stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             stack.set_modified();
             const auto time = timer.duration(start);
-            notification = std::string("loaded todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            notification = std::string("load todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
         }
     }
 
@@ -145,7 +147,7 @@ class Buffer {
         if (auto out = std::ofstream("todo.diff")) {
             out << stack.get_text();
             const auto time = timer.duration(start);
-            notification = std::string("saved todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            notification = std::string("save todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
         }
     }
 
@@ -344,27 +346,27 @@ class Buffer {
         }
     }
 
-    void push_special_text(Characters& characters, unsigned row, const std::string_view text) {
+    void push_special_text(Characters& characters, unsigned row, const Color& color, const std::string_view text) {
         unsigned col = 0;
         for (auto& character : text) {
-            characters.emplace_back((uint8_t)character, special_text_color, row, col++);
+            characters.emplace_back((uint8_t)character, color, row, col++);
         }
     }
 
-    void push_special_line(Characters& characters, unsigned row, unsigned col_count) {
+    void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) {
         for (unsigned i = 0; i < col_count; ++i) {
-            characters.emplace_back(Glyph::BLOCK, special_line_color, row, i);
+            characters.emplace_back(Glyph::BLOCK, color, row, i);
         }
     }
 
     void push_status_bar(Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
-        push_special_line(characters, 0, col_count);
-        push_special_text(characters, 0, build_status_text(process_time, cull_time, redraw_time));
+        push_special_line(characters, 0, status_line_color, col_count);
+        push_special_text(characters, 0, status_text_color, build_status_text(process_time, cull_time, redraw_time));
     }
 
     void push_notification_bar(Characters& characters, unsigned col_count) {
-        push_special_line(characters, 1, col_count);
-        push_special_text(characters, 1, notification);
+        push_special_line(characters, 1, notification_line_color, col_count);
+        push_special_text(characters, 1, notification_text_color, notification);
     }
 
     std::string build_status_text(float process_time, float cull_time, float redraw_time) {
@@ -382,6 +384,10 @@ class Buffer {
     }
 
 public:
+    void run(float init_time) {
+        notification = std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us";
+    }
+
     bool process(WPARAM key) { // [TODO] Unit tests.
         stack.push();
         switch (mode) {
