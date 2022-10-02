@@ -318,11 +318,10 @@ class Buffer {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
-                    unsigned line = absolute_row;
-                    unsigned column = line == cursor_row ? col : col + 1;
-                    line = line == cursor_row ? line :
-                        line < cursor_row ? cursor_row - line :
-                        line - cursor_row;
+                    unsigned column = absolute_row == cursor_row ? col : col + 1;
+                    const unsigned line = absolute_row == cursor_row ? absolute_row :
+                        absolute_row < cursor_row ? cursor_row - absolute_row :
+                        absolute_row - cursor_row;
                     push_line_number(characters, row, column, line); col += 6; new_row = false; }
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
