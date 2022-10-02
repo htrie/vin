@@ -1,5 +1,11 @@
 #pragma once
 
+enum class Mode {
+    normal,
+    insert,
+    space
+};
+
 enum Glyph {
     BS = 8,
     TAB = 9,
@@ -114,9 +120,9 @@ class Buffer {
 
     unsigned begin_row = 0;
 
+    Mode mode = Mode::normal;
+
     bool quit = false;
-    bool space_mode = false;
-    bool insert_mode = false;
 
     void load() {
         if (auto in = std::ifstream("todo.diff")) {
@@ -219,7 +225,7 @@ class Buffer {
     }
 
     void process_insert(WPARAM key) {
-        if (key == Glyph::ESC) { insert_mode = false; }
+        if (key == Glyph::ESC) { mode = Mode::normal; }
         else if (key == Glyph::BS) { erase_back(); }
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
@@ -227,14 +233,14 @@ class Buffer {
     }
 
     void process_normal(WPARAM key) { // [TODO] r, dd
-        if (key == ' ') { space_mode = true; }
+        if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
-        else if (key == 'i') { insert_mode = true; }
-        else if (key == 'I') { line_start_whitespace(); insert_mode = true; }
-        else if (key == 'a') { next_char(); insert_mode = true; }
-        else if (key == 'A') { line_end(); insert_mode = true; }
-        else if (key == 'o') { line_end(); insert("\n"); insert_mode = true; }
-        else if (key == 'O') { line_start(); insert("\n"); prev_line(); insert_mode = true; }
+        else if (key == 'i') { mode = Mode::insert; }
+        else if (key == 'I') { line_start_whitespace(); mode = Mode::insert; }
+        else if (key == 'a') { next_char(); mode = Mode::insert; }
+        else if (key == 'A') { line_end(); mode = Mode::insert; }
+        else if (key == 'o') { line_end(); insert("\n"); mode = Mode::insert; }
+        else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'x') { erase(); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
@@ -249,9 +255,9 @@ class Buffer {
 
     void process_space(WPARAM key) {
         if (key == 'q') { quit = true; }
-        else if (key == 'e') { load(); space_mode = false; }
-        else if (key == 's') { save();  space_mode = false; }
-        else { space_mode = false; }
+        else if (key == 'e') { load(); mode = Mode::normal; }
+        else if (key == 's') { save();  mode = Mode::normal; }
+        else { mode = Mode::normal; }
     }
 
     void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
@@ -272,7 +278,7 @@ class Buffer {
     }
 
     void push_cursor(Characters& characters, unsigned row, unsigned col) {
-        characters.emplace_back(insert_mode ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
+        characters.emplace_back(mode == Mode::insert ? Glyph::LINE : Glyph::BLOCK, cursor_color, row, col);
     };
 
     void push_return(Characters& characters, unsigned row, unsigned col) {
@@ -310,7 +316,7 @@ class Buffer {
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-                else { push_char(characters, row, col, character, index == stack.get_cursor() && !insert_mode); col++; }
+                else { push_char(characters, row, col, character, index == stack.get_cursor() && mode != Mode::insert); col++; }
             }
             else {
                 if (character == '\n') { absolute_row++; }
@@ -353,9 +359,11 @@ class Buffer {
 public:
     bool process(WPARAM key) { // [TODO] Unit tests.
         stack.push();
-        if (space_mode) { process_space(key); }
-        else if (insert_mode) { process_insert(key); }
-        else { process_normal(key); }
+        switch (mode) {
+            case Mode::normal: process_normal(key); break;
+            case Mode::insert: process_insert(key); break;
+            case Mode::space: process_space(key); break;
+        };
         stack.pop();
         verify(stack.get_cursor() <= stack.get_text().size());
         return quit;
