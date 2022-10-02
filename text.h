@@ -68,41 +68,7 @@ class Stack {
 
 public:
     Stack() {
-        states.emplace_back(); // [TODO] Remove when file loading.
-        states.back().text = {
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
-            "abcdefghijklmnopqrstuvwxyz\n"
-            "\n"
-            "\tlorep ipsum\n"
-            "`1234567890-=[]\\;',./\n"
-            "~!@#$%^&*()_+{}|:\"<>?\n"
-            "abcdefghijklmnopqrstuvwxyz\n"
-            "abcdefghijklmnopqrstuvwxy\n"
-            "abcdefghijklmnopqrstuvwx\n"
-            "abcdefghijklmnopqrstuvw\n"
-            "abcdefghijklmnopqrstuv\n"
-            "abcdefghijklmnopqrstu\n"
-            "abcdefghijklmnopqrst\n"
-            "abcdefghijklmnopqrs\n"
-            "abcdefghijklmnopqr\n"
-            "abcdefghijklmnopq\n"
-            "abcdefghijklmnop\n"
-            "abcdefghijklmno\n"
-            "abcdefghijklmn\n"
-            "abcdefghijklm\n"
-            "abcdefghijkl\n"
-            "abcdefghijk\n"
-            "abcdefghij\n"
-            "abcdefghi\n"
-            "abcdefgh\n"
-            "abcdefg\n"
-            "abcdef\n"
-            "abcde\n"
-            "abcd\n"
-            "abc\n"
-            "ab\n"
-            "a\n"
-            "\n" };
+        states.emplace_back();
     }
 
     std::string& get_text() { return states.back().text; }
@@ -142,6 +108,18 @@ class Buffer {
     bool quit = false;
     bool space_mode = false;
     bool insert_mode = false;
+
+    void load() {
+        if (auto in = std::ifstream("todo.diff")) {
+            stack.set_cursor(0);
+            stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            stack.set_modified();
+        }
+    }
+
+    void save() {
+
+    }
 
     size_t find_line_number(std::string_view text, size_t cursor) const {
         size_t number = 0;
@@ -260,6 +238,8 @@ class Buffer {
 
     void process_space(WPARAM key) {
         if (key == 'q') { quit = true; }
+        else if (key == 'e') { load(); space_mode = false; }
+        else if (key == 's') { save();  space_mode = false; }
         else { space_mode = false; }
     }
 
@@ -308,6 +288,7 @@ class Buffer {
         bool new_row = true;
         for (auto& character : stack.get_text()) {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
+                if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
                     unsigned line = absolute_row;
                     unsigned column = line == cursor_row ? col : col + 1;
@@ -315,7 +296,6 @@ class Buffer {
                         line < cursor_row ? cursor_row - line :
                         line - cursor_row;
                     push_line_number(characters, row, column, line); col += 6; new_row = false; }
-                if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
@@ -366,7 +346,7 @@ public:
         else if (insert_mode) { process_insert(key); }
         else { process_normal(key); }
         stack.pop();
-        verify(stack.get_cursor() < stack.get_text().size());
+        verify(stack.get_cursor() <= stack.get_text().size());
         return quit;
     }
 

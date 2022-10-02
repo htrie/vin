@@ -7,6 +7,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string>
+#include <fstream>
 #include <thread>
 #include <vulkan/vulkan.hpp>
 #include <Windows.h>
