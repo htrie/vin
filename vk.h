@@ -988,7 +988,7 @@ public:
     Viewport viewport() const {
         return { 
             (unsigned)((float)width / char_width),
-            (unsigned)((float)height / char_height) - 2 // Remove 1 line for status bar, and another 1 for half-lines.
+            (unsigned)((float)height / char_height) - 3 // Remove 1 line for status bar, 1 for notification bar, and another 1 for half-lines.
         };
 
     }

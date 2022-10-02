@@ -14,10 +14,10 @@
 
 #include "resource.h"
 #include "util.h"
+#include "win.h"
 #include "matrix.h"
 #include "font.h"
 #include "text.h"
-#include "win.h"
 #include "vk.h"
 
 class App {
