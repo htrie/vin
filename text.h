@@ -179,7 +179,7 @@ class Buffer {
 
     void prev_char() {
         Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(std::clamp(stack.get_cursor() - 1, current.begin(), current.end()));
+        stack.set_cursor(std::clamp(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : 0, current.begin(), current.end()));
     }
 
     void line_start() {
