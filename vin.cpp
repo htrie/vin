@@ -122,7 +122,7 @@ class App {
 
 public:
     App(HINSTANCE hInstance, int nCmdShow)
-        : device(proc, hInstance, nCmdShow, 480, 240) {
+        : device(proc, hInstance, nCmdShow, 600, 400) {
     }
 
     void run() {

@@ -66,9 +66,17 @@ class Stack {
     bool modified = false;
     bool undo = false;
 
+    void fix_eof() {
+        const auto size = get_text().size();
+        if (size == 0 || (size > 0 && get_text()[size - 1] != '\n')) {
+            get_text() += '\n';
+        }
+    }
+
 public:
     Stack() {
         states.emplace_back();
+        fix_eof();
     }
 
     std::string& get_text() { return states.back().text; }
@@ -87,6 +95,7 @@ public:
     void pop() {
         if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
         if (undo && states.size() > 1) { states.pop_back(); undo = false; }
+        fix_eof();
         modified = false;
     }
 };
@@ -217,7 +226,7 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key) {
+    void process_normal(WPARAM key) { // [TODO] r, dd
         if (key == ' ') { space_mode = true; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'i') { insert_mode = true; }
@@ -257,8 +266,8 @@ class Buffer {
     }
 
     void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
-        for (unsigned i = 0; i < col_count; ++i) {
-            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, i);
+        for (unsigned i = 0; i < col_count - 6; ++i) {
+            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 6 + i);
         }
     }
 
@@ -342,7 +351,7 @@ class Buffer {
     }
 
 public:
-    bool process(WPARAM key) {
+    bool process(WPARAM key) { // [TODO] Unit tests.
         stack.push();
         if (space_mode) { process_space(key); }
         else if (insert_mode) { process_insert(key); }
