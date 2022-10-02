@@ -118,7 +118,9 @@ class Buffer {
     }
 
     void save() {
-
+        if (auto out = std::ofstream("todo.diff")) {
+            out << stack.get_text();
+        }
     }
 
     size_t find_line_number(std::string_view text, size_t cursor) const {
@@ -148,7 +150,7 @@ class Buffer {
     void erase() {
         if (stack.get_text().size() > 0) {
             stack.get_text().erase(stack.get_cursor(), 1);
-            stack.set_cursor(stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
+            stack.set_cursor(stack.get_text().size() > 0 && stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
             stack.set_modified();
         }
     }
