@@ -64,59 +64,6 @@ public:
     size_t end() const { return finish; }
 };
 
-struct Context { // [TODO] Make class.
-    const size_t cursor_line_begin = 0;
-    const unsigned cursor_row = 0;
-    const unsigned col_count = 0;
-    const unsigned row_count = 0;
-    unsigned absolute_row = 0;
-    unsigned index = 0;
-    unsigned row = 1;
-    unsigned col = 0;
-    unsigned begin_row = 0;
-    unsigned end_row = 0;
-    bool new_row = true;
-
-    unsigned clamp_begin_row(unsigned begin_row) const { 
-        return std::clamp(begin_row, 
-            cursor_row > row_count ? cursor_row - row_count : 0,
-            cursor_row);
-    }
-
-public:
-    Context(size_t cursor_line_begin, unsigned cursor_row, unsigned col_count, unsigned row_count, unsigned begin_row)
-        : cursor_line_begin(cursor_line_begin)
-        , cursor_row(cursor_row)
-        , col_count(col_count)
-        , row_count(row_count) {
-        begin_row = clamp_begin_row(begin_row);
-        end_row = begin_row + row_count;
-    }
-
-    void new_margin() { col += 6; new_row = false; }
-    void new_line() { absolute_row++; row++; col = 0; new_row = true; }
-    void new_tab() { col += 4; }
-    void new_char() { col++; }
-
-    unsigned get_col_count() const { return col_count; }
-    unsigned get_row_count() const { return row_count; }
-
-    unsigned get_row() const { return row; }
-    unsigned get_col() const { return col; }
-
-    unsigned get_begin_row() const { return begin_row; }
-    unsigned get_end_row() const { return end_row; }
-
-    bool is_visible() { return absolute_row >= begin_row && absolute_row <= end_row; }
-
-    unsigned get_margin_column() const { return absolute_row == cursor_row ? col : col + 1; }
-    unsigned get_margin_line() const { return 
-        absolute_row == cursor_row ? absolute_row :
-        absolute_row < cursor_row ? cursor_row - absolute_row :
-        absolute_row - cursor_row;
-    }
-};
-
 class Stack {
     struct State {
         std::string text;
@@ -291,7 +238,7 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key) { // [TODO] dd
+    void process_normal(WPARAM key) { // [TODO] dd, zz, zt, zb
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'i') { mode = Mode::insert; }
@@ -324,59 +271,67 @@ class Buffer {
         characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
     }
 
-    void push_line_number(Characters& characters, const Context& ctx) {
-        const unsigned col = ctx.get_margin_column();
-        const unsigned line = ctx.get_margin_line();
-        if (line > 999) { push_digit(characters, ctx.get_row(), col + 0, (line % 10000) / 1000); }
-        if (line > 99) { push_digit(characters, ctx.get_row(), col + 1, (line % 1000) / 100); }
-        if (line > 9) { push_digit(characters, ctx.get_row(), col + 2, (line % 100)  / 10); }
-        push_digit(characters, ctx.get_row(), col + 3, line % 10);
+    void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
+        if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
+        if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
+        if (line > 9) { push_digit(characters, row, col + 2, (line % 100)  / 10); }
+        push_digit(characters, row, col + 3, line % 10);
     }
 
-    void push_cursor_line(Characters& characters, const Context& ctx) {
-        for (unsigned i = 0; i < ctx.get_col_count() - 6; ++i) {
-            characters.emplace_back(Glyph::BLOCK, cursor_line_color, ctx.get_row(), 6 + i);
+    void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
+        for (unsigned i = 0; i < col_count - 6; ++i) {
+            characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 6 + i);
         }
     }
 
-    void push_cursor(Characters& characters, const Context& ctx) {
+    void push_cursor(Characters& characters, unsigned row, unsigned col) {
         characters.emplace_back(
             mode == Mode::insert ? Glyph::LINE :
             mode == Mode::replace ? Glyph::BOTTOM_BLOCK :
             Glyph::BLOCK,
-            cursor_color, ctx.get_row(), ctx.get_col());
+            cursor_color, row, col);
     };
 
-    void push_return(Characters& characters, const Context& ctx) {
-        characters.emplace_back(Glyph::RETURN, whitespace_color, ctx.get_row(), ctx.get_col());
+    void push_return(Characters& characters, unsigned row, unsigned col) {
+        characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
     };
 
-    void push_tab(Characters& characters, const Context& ctx) {
-        characters.emplace_back(Glyph::TAB, whitespace_color, ctx.get_row(), ctx.get_col());
+    void push_tab(Characters& characters, unsigned row, unsigned col) {
+        characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
     };
 
-    void push_character(Characters& characters, const Context& ctx, char character, bool block_cursor) {
-        characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : text_color, ctx.get_row(), ctx.get_col());
+    void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) {
+        characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : text_color, row, col);
     };
 
     void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
         Line cursor_line(stack.get_text(), stack.get_cursor());
-        const auto cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
-        Context ctx(cursor_line.begin(), cursor_row, col_count, row_count, begin_row);
-        begin_row = ctx.get_begin_row();
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+        const unsigned end_row = begin_row + row_count;
+        unsigned absolute_row = 0;
+        unsigned index = 0;
+        unsigned row = 1;
+        unsigned col = 0;
+        bool new_row = true;
         for (auto& character : stack.get_text()) {
-            if (ctx.is_visible()) {
-                if (ctx.index == ctx.cursor_line_begin) { push_cursor_line(characters, ctx); }
-                if (ctx.new_row) { push_line_number(characters, ctx); ctx.new_margin(); }
-                if (ctx.index == stack.get_cursor()) { push_cursor(characters, ctx); }
-                if (character == '\n') { push_return(characters, ctx); ctx.new_line(); }
-                else if (character == '\t') { push_tab(characters, ctx); ctx.new_tab(); }
-                else { push_character(characters, ctx, character, ctx.index == stack.get_cursor()); ctx.new_char(); }
+            if (absolute_row >= begin_row && absolute_row <= end_row) {
+                if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
+                if (new_row) { 
+                    unsigned column = absolute_row == cursor_row ? col : col + 1;
+                    const unsigned line = absolute_row == cursor_row ? absolute_row :
+                        absolute_row < cursor_row ? cursor_row - absolute_row :
+                        absolute_row - cursor_row;
+                    push_line_number(characters, row, column, line); col += 6; new_row = false; }
+                if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
+                if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
+                else if (character == '\t') { push_tab(characters, row, col); col += 4; }
+                else { push_char(characters, row, col, character, index == stack.get_cursor()); col++; }
             }
             else {
-                if (character == '\n') { ctx.absolute_row++; }
+                if (character == '\n') { absolute_row++; }
             }
-            ctx.index++;
+            index++;
         }
     }
 
