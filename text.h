@@ -356,6 +356,7 @@ class Buffer {
 
     std::string build_status_text(float process_time, float cull_time, float redraw_time) {
         Line cursor_line(stack.get_text(), stack.get_cursor());
+        const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
         const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
         const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
         const auto cursor_row = std::string("row ") + std::to_string(find_line_number(stack.get_text(), stack.get_cursor()));
@@ -363,7 +364,7 @@ class Buffer {
         const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
         const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
         return std::string("test.cpp") + 
-            " [" + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
+            " [" + text_perc + " " + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
             " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
     }
 
