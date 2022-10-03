@@ -249,6 +249,27 @@ class Buffer {
         stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    void window_top(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned top_row = begin_row;
+        const unsigned skip = cursor_row - top_row;
+        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+    }
+
+    void window_center(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned middle_row = begin_row + row_count / 2;
+        const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
+        for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
+    }
+
+    void window_bottom(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned bottom_row = begin_row + row_count;
+        const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
+        for (unsigned i = 0; i < skip; i++) { next_line(); }
+    }
+
     unsigned cursor_clamp(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
@@ -282,7 +303,7 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key) { // [TODO] dd, H, L
+    void process_normal(WPARAM key, unsigned row_count) { // [TODO] dd
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'z') { mode = Mode::normal_z; }
@@ -303,6 +324,9 @@ class Buffer {
         else if (key == 'l') { next_char(); }
         else if (key == 'g') { buffer_start(); }
         else if (key == 'G') { buffer_end(); }
+        else if (key == 'H') { window_top(row_count); }
+        else if (key == 'M') { window_center(row_count); }
+        else if (key == 'L') { window_bottom(row_count); }
     }
 
     void process_normal_z(WPARAM key, unsigned row_count) {
@@ -432,7 +456,7 @@ public:
     bool process(WPARAM key, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
         stack.push();
         switch (mode) {
-            case Mode::normal: process_normal(key); break;
+            case Mode::normal: process_normal(key, row_count); break;
             case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key); break;
             case Mode::replace: process_replace(key); break;
