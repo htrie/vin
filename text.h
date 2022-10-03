@@ -2,6 +2,7 @@
 
 enum class Mode {
     normal,
+    normal_d,
     normal_z,
     insert,
     replace,
@@ -22,6 +23,7 @@ enum Glyph {
 constexpr std::string_view mode_letter(Mode mode) {
     switch (mode) {
     case Mode::normal: return "N";
+    case Mode::normal_d: return "D";
     case Mode::normal_z: return "Z";
     case Mode::insert: return "I";
     case Mode::replace: return "R";
@@ -195,6 +197,14 @@ class Buffer {
         }
     }
 
+    void erase_line() {
+        if (stack.get_text().size() > 0) {
+            Line current(stack.get_text(), stack.get_cursor());
+            stack.get_text().erase(current.begin(), current.end() - current.begin());
+            stack.set_modified();
+        }
+    }
+
     void next_char() {
         Line current(stack.get_text(), stack.get_cursor());
         stack.set_cursor(std::clamp(stack.get_cursor() + 1, current.begin(), current.end()));
@@ -306,6 +316,7 @@ class Buffer {
     void process_normal(WPARAM key, unsigned row_count) { // [TODO] dd
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
+        else if (key == 'd') { mode = Mode::normal_d; }
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
         else if (key == 'I') { line_start_whitespace(); mode = Mode::insert; }
@@ -333,6 +344,11 @@ class Buffer {
         if (key == 'z') { cursor_center(row_count); mode = Mode::normal; }
         else if (key == 't') { cursor_top(row_count); mode = Mode::normal; }
         else if (key == 'b') { cursor_bottom(row_count); mode = Mode::normal; }
+        else { mode = Mode::normal; }
+    }
+
+    void process_normal_d(WPARAM key) {
+        if (key == 'd') { line_start(); erase_line(); erase(); mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
@@ -457,6 +473,7 @@ public:
         stack.push();
         switch (mode) {
             case Mode::normal: process_normal(key, row_count); break;
+            case Mode::normal_d: process_normal_d(key); break;
             case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key); break;
             case Mode::replace: process_replace(key); break;
