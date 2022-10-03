@@ -202,7 +202,8 @@ class Buffer {
     void erase_line() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
-            stack.get_text().erase(current.begin(), current.end() - current.begin());
+            stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
+            stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
             stack.set_modified();
         }
     }
@@ -364,7 +365,7 @@ class Buffer {
     }
 
     void process_normal_d(WPARAM key) {
-        if (key == 'd') { line_start(); erase_line(); erase(); mode = Mode::normal; }
+        if (key == 'd') { erase_line(); mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
