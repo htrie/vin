@@ -261,6 +261,20 @@ class Buffer {
         stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    void window_down(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned down_row = cursor_row + row_count / 2;
+        const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
+        for (unsigned i = 0; i < skip; i++) { next_line(); }
+    }
+
+    void window_up(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
+        const unsigned skip = cursor_row - up_row;
+        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+    }
+
     void window_top(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         const unsigned top_row = begin_row;
@@ -354,10 +368,13 @@ class Buffer {
         else { mode = Mode::normal; }
     }
 
-    void process_space(WPARAM key) {
+    void process_space(WPARAM key, bool released, unsigned row_count) {
         if (key == 'q') { quit = true; }
         else if (key == 'e') { load(); mode = Mode::normal; }
         else if (key == 's') { save();  mode = Mode::normal; }
+        else if (key == 'o') { window_up(row_count); }
+        else if (key == 'i') { window_down(row_count); }
+        else if (key == ' ') { if (released) { mode = Mode::normal; } }
         else { mode = Mode::normal; }
     }
 
@@ -470,7 +487,7 @@ public:
         notification = std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us";
     }
 
-    bool process(WPARAM key, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
+    bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
         stack.push();
         switch (mode) {
             case Mode::normal: process_normal(key, row_count); break;
@@ -478,7 +495,7 @@ public:
             case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key); break;
             case Mode::replace: process_replace(key); break;
-            case Mode::space: process_space(key); break;
+            case Mode::space: process_space(key, released, row_count); break;
         };
         stack.pop();
         verify(stack.get_cursor() <= stack.get_text().size());

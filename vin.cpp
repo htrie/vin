@@ -61,10 +61,10 @@ class App {
         }
     }
 
-    void process(WPARAM key) {
+    void process(WPARAM key, bool released) {
         const auto start = timer.now();
         const auto viewport = device.viewport();
-        if (buffer.process(key, viewport.w, viewport.h))
+        if (buffer.process(key, released, viewport.w, viewport.h))
             PostQuitMessage(0);
         process_time = timer.duration(start);
     }
@@ -107,9 +107,18 @@ class App {
                 }
                 break;
             }
+            case WM_KEYUP: {
+                if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+                    if (wParam == VK_SPACE) {
+                        app->process(' ', true);
+                        app->set_dirty(true);
+                    }
+                }
+                break;
+            }
             case WM_CHAR: {
                 if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-                    app->process(wParam);
+                    app->process(wParam, false);
                     app->set_dirty(true);
                 }
                 break;
