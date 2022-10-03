@@ -2,6 +2,7 @@
 
 enum class Mode {
     normal,
+    normal_z,
     insert,
     replace,
     space
@@ -17,6 +18,17 @@ enum Glyph {
     RETURN = 130,
     BOTTOM_BLOCK = 131,
 };
+
+constexpr std::string_view mode_letter(Mode mode) {
+    switch (mode) {
+    case Mode::normal: return "N";
+    case Mode::normal_z: return "Z";
+    case Mode::insert: return "I";
+    case Mode::replace: return "R";
+    case Mode::space: return " ";
+    }
+    return "";
+}
 
 constexpr bool is_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_eol(char c) { return c == '\n'; }
@@ -237,6 +249,27 @@ class Buffer {
         stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    unsigned cursor_clamp(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+        return cursor_row;
+    }
+
+    void cursor_center(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        begin_row = cursor_row - row_count / 2;
+    }
+
+    void cursor_top(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        begin_row = cursor_row;
+    }
+
+    void cursor_bottom(unsigned row_count) {
+        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
+    }
+
     void process_replace(WPARAM key) {
         erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal;
     }
@@ -249,9 +282,10 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key) { // [TODO] dd, zz, zt, zb
+    void process_normal(WPARAM key) { // [TODO] dd, H, L
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
+        else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
         else if (key == 'I') { line_start_whitespace(); mode = Mode::insert; }
         else if (key == 'a') { next_char(); mode = Mode::insert; }
@@ -269,6 +303,13 @@ class Buffer {
         else if (key == 'l') { next_char(); }
         else if (key == 'g') { buffer_start(); }
         else if (key == 'G') { buffer_end(); }
+    }
+
+    void process_normal_z(WPARAM key, unsigned row_count) {
+        if (key == 'z') { cursor_center(row_count); mode = Mode::normal; }
+        else if (key == 't') { cursor_top(row_count); mode = Mode::normal; }
+        else if (key == 'b') { cursor_bottom(row_count); mode = Mode::normal; }
+        else { mode = Mode::normal; }
     }
 
     void process_space(WPARAM key) {
@@ -317,8 +358,7 @@ class Buffer {
 
     void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
         Line cursor_line(stack.get_text(), stack.get_cursor());
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
-        begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+        const unsigned cursor_row = cursor_clamp(row_count);
         const unsigned end_row = begin_row + row_count;
         unsigned absolute_row = 0;
         unsigned index = 0;
@@ -378,7 +418,8 @@ class Buffer {
         const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
         const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
         const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-        return std::string("test.cpp") + 
+        return std::string(mode_letter(mode)) + " " + 
+            "test.cpp" + // [TODO] Display file name (path shorthand to first folder letter).
             " [" + text_perc + " " + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
             " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
     }
@@ -388,10 +429,11 @@ public:
         notification = std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us";
     }
 
-    bool process(WPARAM key) { // [TODO] Unit tests.
+    bool process(WPARAM key, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
         stack.push();
         switch (mode) {
             case Mode::normal: process_normal(key); break;
+            case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key); break;
             case Mode::replace: process_replace(key); break;
             case Mode::space: process_space(key); break;

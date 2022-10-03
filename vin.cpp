@@ -63,7 +63,8 @@ class App {
 
     void process(WPARAM key) {
         const auto start = timer.now();
-        if (buffer.process(key))
+        const auto viewport = device.viewport();
+        if (buffer.process(key, viewport.w, viewport.h))
             PostQuitMessage(0);
         process_time = timer.duration(start);
     }
