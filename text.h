@@ -137,6 +137,7 @@ class Buffer {
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
     Color line_number_color = Color::rgba(75, 100, 121, 255);
 
+    std::string filename;
     std::string notification;
 
     unsigned begin_row = 0;
@@ -147,21 +148,22 @@ class Buffer {
 
     void load() {
         const auto start = timer.now();
-        if (auto in = std::ifstream("todo.diff")) {
+        filename = "todo.diff"; // [TODO] File picker.
+        if (auto in = std::ifstream(filename)) {
             stack.set_cursor(0);
             stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
             stack.set_modified();
             const auto time = timer.duration(start);
-            notification = std::string("load todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
         }
     }
 
     void save() {
         const auto start = timer.now();
-        if (auto out = std::ofstream("todo.diff")) {
+        if (auto out = std::ofstream(filename)) {
             out << stack.get_text();
             const auto time = timer.duration(start);
-            notification = std::string("save todo.diff in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            notification = std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
         }
     }
 
@@ -313,7 +315,7 @@ class Buffer {
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key, unsigned row_count) { // [TODO] dd
+    void process_normal(WPARAM key, unsigned row_count) {
         if (key == ' ') { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'd') { mode = Mode::normal_d; }
@@ -458,8 +460,7 @@ class Buffer {
         const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
         const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
         const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-        return std::string(mode_letter(mode)) + " " + 
-            "test.cpp" + // [TODO] Display file name (path shorthand to first folder letter).
+        return std::string(mode_letter(mode)) + " " + filename + 
             " [" + text_perc + " " + text_size + ", " + cursor_col + ", " + cursor_row +  "]" +
             " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
     }
