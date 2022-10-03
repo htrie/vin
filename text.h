@@ -322,16 +322,17 @@ class Buffer {
         erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal;
     }
 
-    void process_insert(WPARAM key) {
+    void process_insert(WPARAM key, bool released) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
         else if (key == Glyph::BS) { erase_back(); }
         else if (key == Glyph::TAB) { insert("\t"); }
         else if (key == Glyph::CR) { insert("\n"); }
+        else if (key == ' ') { if (!released) { insert(std::string(1, (char)key)); } }
         else { insert(std::string(1, (char)key)); }
     }
 
-    void process_normal(WPARAM key, unsigned row_count) {
-        if (key == ' ') { mode = Mode::space; }
+    void process_normal(WPARAM key, bool released, unsigned row_count) {
+        if (key == ' ' && !released) { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
         else if (key == 'd') { mode = Mode::normal_d; }
         else if (key == 'z') { mode = Mode::normal_z; }
@@ -427,6 +428,7 @@ class Buffer {
         bool new_row = true;
         for (auto& character : stack.get_text()) {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
+                // [TODO] word wrap.
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
                     unsigned column = absolute_row == cursor_row ? col : col + 1;
@@ -491,10 +493,10 @@ public:
     bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
         stack.push();
         switch (mode) {
-            case Mode::normal: process_normal(key, row_count); break;
+            case Mode::normal: process_normal(key, released, row_count); break;
             case Mode::normal_d: process_normal_d(key); break;
             case Mode::normal_z: process_normal_z(key, row_count); break;
-            case Mode::insert: process_insert(key); break;
+            case Mode::insert: process_insert(key, released); break;
             case Mode::replace: process_replace(key); break;
             case Mode::space: process_space(key, released, row_count); break;
         };
