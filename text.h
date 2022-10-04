@@ -139,13 +139,13 @@ class Buffer {
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
     Color line_number_color = Color::rgba(75, 100, 121, 255);
 
-    std::string filename;
-    std::string notification;
-
     Mode mode = Mode::normal;
 
-    unsigned accu = 0;
+    std::string filename;
+    std::string notification;
+    std::string clipboard;
 
+    unsigned accu = 0;
     unsigned begin_row = 0;
 
     bool quit = false;
@@ -204,6 +204,7 @@ class Buffer {
 
     void erase() {
         if (stack.get_text().size() > 0) {
+            clipboard = stack.get_text().substr(stack.get_cursor(), 1);
             stack.get_text().erase(stack.get_cursor(), 1);
             stack.set_cursor(stack.get_text().size() > 0 && stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
             stack.set_modified();
@@ -213,6 +214,7 @@ class Buffer {
     void erase_line() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
+            clipboard = stack.get_text().substr(current.begin(), current.end() - current.begin() + 1);
             stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
             stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
             stack.set_modified();
@@ -364,8 +366,8 @@ class Buffer {
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'x') { erase(); }
-        else if (key == 'p') { } // [TODO] Paste after.
-        else if (key == 'P') { } // [TODO] Paste befofe.
+        else if (key == 'P') { insert(clipboard); }
+        else if (key == 'p') { next_char(); insert(clipboard); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
