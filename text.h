@@ -2,6 +2,7 @@
 
 enum class Mode {
     normal,
+    normal_number,
     normal_d,
     normal_z,
     insert,
@@ -23,6 +24,7 @@ enum Glyph {
 constexpr std::string_view mode_letter(Mode mode) {
     switch (mode) {
     case Mode::normal: return "N";
+    case Mode::normal_number: return "0";
     case Mode::normal_d: return "D";
     case Mode::normal_z: return "Z";
     case Mode::insert: return "I";
@@ -140,9 +142,11 @@ class Buffer {
     std::string filename;
     std::string notification;
 
-    unsigned begin_row = 0;
-
     Mode mode = Mode::normal;
+
+    unsigned accumulated_number = 0;
+
+    unsigned begin_row = 0;
 
     bool quit = false;
 
@@ -165,6 +169,13 @@ class Buffer {
             const auto time = timer.duration(start);
             notification = std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
         }
+    }
+
+    void accumulate_number(WPARAM key) {
+        verify(key >= '0' && key <= '9');
+        const auto digit = (unsigned)key - (unsigned)'0';
+        accumulated_number *= 10;
+        accumulated_number += digit;
     }
 
     size_t find_line_number(std::string_view text, size_t cursor) const {
@@ -262,6 +273,14 @@ class Buffer {
         stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
     }
 
+    void jump_down(unsigned skip) {
+        for (unsigned i = 0; i < skip; i++) { next_line(); }
+    }
+
+    void jump_up(unsigned skip) {
+        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+    }
+
     void window_down(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
         const unsigned down_row = cursor_row + row_count / 2;
@@ -334,6 +353,7 @@ class Buffer {
     void process_normal(WPARAM key, bool released, unsigned row_count) {
         if (key == ' ' && !released) { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
+        else if (key >= '0' && key <= '9') { accumulate_number(key); mode = Mode::normal_number; }
         else if (key == 'd') { mode = Mode::normal_d; }
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
@@ -344,6 +364,8 @@ class Buffer {
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'x') { erase(); }
+        else if (key == 'p') { } // [TODO] Paste after.
+        else if (key == 'P') { } // [TODO] Paste befofe.
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
@@ -356,6 +378,14 @@ class Buffer {
         else if (key == 'H') { window_top(row_count); }
         else if (key == 'M') { window_center(row_count); }
         else if (key == 'L') { window_bottom(row_count); }
+    }
+
+    void process_normal_number(WPARAM key) {
+        if (key >= '0' && key <= '9') { accumulate_number(key); }
+        else if (key == 'j') { jump_down(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
+        else if (key == 'k') { jump_up(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
+        else if (key == 'g') { buffer_start(); jump_down(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
+        else { accumulated_number = 0; mode = Mode::normal; }
     }
 
     void process_normal_z(WPARAM key, unsigned row_count) {
@@ -494,6 +524,7 @@ public:
         stack.push();
         switch (mode) {
             case Mode::normal: process_normal(key, released, row_count); break;
+            case Mode::normal_number: process_normal_number(key); break;
             case Mode::normal_d: process_normal_d(key); break;
             case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key, released); break;
