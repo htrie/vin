@@ -188,6 +188,11 @@ class Buffer {
         return number;
     }
 
+    void clip(const std::string& s) {
+        clipboard = s;
+        notification = std::string("clipboard: ") + s;
+    }
+
     void insert(std::string_view s) {
         stack.get_text().insert(stack.get_cursor(), s);
         stack.set_cursor(std::min(stack.get_cursor() + s.length(), stack.get_text().size() - 1));
@@ -204,7 +209,7 @@ class Buffer {
 
     void erase() {
         if (stack.get_text().size() > 0) {
-            clipboard = stack.get_text().substr(stack.get_cursor(), 1);
+            clip(stack.get_text().substr(stack.get_cursor(), 1));
             stack.get_text().erase(stack.get_cursor(), 1);
             stack.set_cursor(stack.get_text().size() > 0 && stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
             stack.set_modified();
@@ -214,9 +219,28 @@ class Buffer {
     void erase_line() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
-            clipboard = stack.get_text().substr(current.begin(), current.end() - current.begin() + 1);
+            clip(stack.get_text().substr(current.begin(), current.end() - current.begin() + 1));
             stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
             stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
+            stack.set_modified();
+        }
+    }
+
+    void erase_word() {
+        if (stack.get_text().size() > 0) {
+            Line current(stack.get_text(), stack.get_cursor());
+            const size_t begin = stack.get_cursor();
+            size_t end = begin;
+            while (end < current.end()) {
+                if (is_whitespace(stack.get_text()[end])) break;
+                end++;
+            }
+            while (end < current.end()) {
+                if (!is_whitespace(stack.get_text()[end])) break;
+                end++;
+            }
+            clip(stack.get_text().substr(begin, end - begin));
+            stack.get_text().erase(begin, end - begin);
             stack.set_modified();
         }
     }
@@ -361,6 +385,22 @@ class Buffer {
         begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
     }
 
+    void paste_before() {
+        if (clipboard.find('\n') != std::string::npos) {
+            insert(clipboard); prev_line();
+        } else {
+            insert(clipboard);
+        }
+    }
+
+    void paste_after() {
+        if (clipboard.find('\n') != std::string::npos) {
+            next_line(); insert(clipboard); prev_line();
+        } else {
+            next_char(); insert(clipboard);
+        }
+    }
+
     void process_replace(WPARAM key) {
         erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal;
     }
@@ -388,8 +428,8 @@ class Buffer {
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'x') { erase(); }
-        else if (key == 'P') { insert(clipboard); prev_line(); }
-        else if (key == 'p') { next_line(); insert(clipboard); prev_line(); }
+        else if (key == 'P') { paste_before(); }
+        else if (key == 'p') { paste_after(); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
@@ -404,6 +444,8 @@ class Buffer {
         else if (key == 'H') { window_top(row_count); }
         else if (key == 'M') { window_center(row_count); }
         else if (key == 'L') { window_bottom(row_count); }
+        else if (key == 'f') { } // [TODO] Find char.
+        else if (key == 'F') { } // [TODO] Reverse find char.
     }
 
     void process_normal_number(WPARAM key) {
@@ -423,6 +465,7 @@ class Buffer {
 
     void process_normal_d(WPARAM key) {
         if (key == 'd') { erase_line(); mode = Mode::normal; }
+        else if (key == 'w') { erase_word(); mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
