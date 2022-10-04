@@ -428,8 +428,8 @@ class Buffer {
         bool new_row = true;
         for (auto& character : stack.get_text()) {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
-                // [TODO] word wrap.
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
+                if (col == col_count) { row++; col = 0; new_row = true; }
                 if (new_row) { 
                     unsigned column = absolute_row == cursor_row ? col : col + 1;
                     const unsigned line = absolute_row == cursor_row ? absolute_row :
