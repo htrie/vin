@@ -34,8 +34,8 @@ constexpr std::string_view mode_letter(Mode mode) {
     return "";
 }
 
-constexpr bool is_whitespace(char c) { return c == '\t' || c == ' '; }
-constexpr bool is_eol(char c) { return c == '\n'; }
+constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
+constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 
 struct Character {
     uint8_t index;
@@ -245,9 +245,31 @@ class Buffer {
         Line current(stack.get_text(), stack.get_cursor());
         stack.set_cursor(current.begin());
         while (stack.get_cursor() <= current.end()) {
-            if (!is_whitespace(stack.get_text()[stack.get_cursor()]))
+            if (!is_line_whitespace(stack.get_text()[stack.get_cursor()]))
                 break;
             next_char();
+        }
+    }
+
+    void next_word() {
+        while (stack.get_cursor() < stack.get_text().size() - 1) {
+            if (is_whitespace(stack.get_text()[stack.get_cursor()])) break;
+            stack.set_cursor(stack.get_cursor() + 1);
+        }
+        while (stack.get_cursor() < stack.get_text().size() - 1) {
+            if (!is_whitespace(stack.get_text()[stack.get_cursor()])) break;
+            stack.set_cursor(stack.get_cursor() + 1);
+        }
+    }
+
+    void prev_word() {
+        while (stack.get_cursor() > 0) {
+            if (is_whitespace(stack.get_text()[stack.get_cursor()])) break;
+            stack.set_cursor(stack.get_cursor() - 1);
+        }
+        while (stack.get_cursor() > 0) {
+            if (!is_whitespace(stack.get_text()[stack.get_cursor()])) break;
+            stack.set_cursor(stack.get_cursor() - 1);
         }
     }
 
@@ -366,8 +388,8 @@ class Buffer {
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'x') { erase(); }
-        else if (key == 'P') { insert(clipboard); }
-        else if (key == 'p') { next_char(); insert(clipboard); }
+        else if (key == 'P') { insert(clipboard); prev_line(); }
+        else if (key == 'p') { next_line(); insert(clipboard); prev_line(); }
         else if (key == '0') { line_start(); }
         else if (key == '_') { line_start_whitespace(); }
         else if (key == '$') { line_end(); }
@@ -375,6 +397,8 @@ class Buffer {
         else if (key == 'j') { next_line(); }
         else if (key == 'k') { prev_line(); }
         else if (key == 'l') { next_char(); }
+        else if (key == 'b') { prev_word(); }
+        else if (key == 'w') { next_word(); }
         else if (key == 'g') { buffer_start(); }
         else if (key == 'G') { buffer_end(); }
         else if (key == 'H') { window_top(row_count); }
