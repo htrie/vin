@@ -7,6 +7,8 @@ enum class Mode {
     normal_z,
     insert,
     replace,
+    line_find,
+    line_rfind,
     space
 };
 
@@ -23,12 +25,14 @@ enum Glyph {
 
 constexpr std::string_view mode_letter(Mode mode) {
     switch (mode) {
-    case Mode::normal: return "N";
+    case Mode::normal: return "n";
     case Mode::normal_number: return "0";
-    case Mode::normal_d: return "D";
-    case Mode::normal_z: return "Z";
-    case Mode::insert: return "I";
-    case Mode::replace: return "R";
+    case Mode::normal_d: return "d";
+    case Mode::normal_z: return "z";
+    case Mode::insert: return "i";
+    case Mode::replace: return "r";
+    case Mode::line_find: return "f";
+    case Mode::line_rfind: return "F";
     case Mode::space: return " ";
     }
     return "";
@@ -245,6 +249,29 @@ class Buffer {
         }
     }
 
+    void line_find(WPARAM key) {
+        Line current(stack.get_text(), stack.get_cursor());
+        size_t pos = stack.get_text()[stack.get_cursor()] == key ? stack.get_cursor() + 1 : stack.get_cursor();
+        bool found = false;
+        while (pos < current.end()) {
+            if (stack.get_text()[pos] == key) { found = true; break; }
+            pos++;
+        }
+        if (found) { stack.set_cursor(pos); }
+    }
+
+    void line_rfind(WPARAM key) {
+        Line current(stack.get_text(), stack.get_cursor());
+        size_t pos = stack.get_text()[stack.get_cursor()] == key && stack.get_cursor() > current.begin() ? stack.get_cursor() - 1 : stack.get_cursor();
+        bool found = false;
+        while (pos >= current.begin()) {
+            if (stack.get_text()[pos] == key) { found = true; break; }
+            if (pos > current.begin()) { pos--; }
+            else { break; }
+        }
+        if (found) { stack.set_cursor(pos); }
+    }
+
     void next_char() {
         Line current(stack.get_text(), stack.get_cursor());
         stack.set_cursor(std::clamp(stack.get_cursor() + 1, current.begin(), current.end()));
@@ -402,7 +429,18 @@ class Buffer {
     }
 
     void process_replace(WPARAM key) {
-        erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal;
+        if (key == Glyph::ESC) { mode = Mode::normal; }
+        else { erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal; }
+    }
+
+    void process_line_find(WPARAM key) {
+        if (key == Glyph::ESC) { mode = Mode::normal; }
+        else { line_find(key); mode = Mode::normal; }
+    }
+
+    void process_line_rfind(WPARAM key) {
+        if (key == Glyph::ESC) { mode = Mode::normal; }
+        else { line_rfind(key); mode = Mode::normal; }
     }
 
     void process_insert(WPARAM key, bool released) {
@@ -419,6 +457,7 @@ class Buffer {
         else if (key == 'u') { stack.set_undo(); }
         else if (key >= '0' && key <= '9') { accumulate_number(key); mode = Mode::normal_number; }
         else if (key == 'd') { mode = Mode::normal_d; }
+        else if (key == 'c') { } // [TODO] change mode.
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
         else if (key == 'I') { line_start_whitespace(); mode = Mode::insert; }
@@ -427,7 +466,12 @@ class Buffer {
         else if (key == 'o') { line_end(); insert("\n"); mode = Mode::insert; }
         else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
+        else if (key == 'f') { mode = Mode::line_find; }
+        else if (key == 'F') { mode = Mode::line_rfind; }
         else if (key == 'x') { erase(); }
+        else if (key == 'C') { } // [TODO] Change rest of line.
+        else if (key == 's') { } // [TODO] Subsitute character for more.
+        else if (key == 'S') { } // [TODO] Subsitute line.
         else if (key == 'P') { paste_before(); }
         else if (key == 'p') { paste_after(); }
         else if (key == '0') { line_start(); }
@@ -444,8 +488,9 @@ class Buffer {
         else if (key == 'H') { window_top(row_count); }
         else if (key == 'M') { window_center(row_count); }
         else if (key == 'L') { window_bottom(row_count); }
-        else if (key == 'f') { } // [TODO] Find char.
-        else if (key == 'F') { } // [TODO] Reverse find char.
+        else if (key == ';') { } // [TODO] Re-find.
+        else if (key == '/') { } // [TODO] Find.
+        else if (key == '?') { } // [TODO] Reverse find.
     }
 
     void process_normal_number(WPARAM key) {
@@ -499,8 +544,8 @@ class Buffer {
     void push_cursor(Characters& characters, unsigned row, unsigned col) {
         characters.emplace_back(
             mode == Mode::insert ? Glyph::LINE :
-            mode == Mode::replace ? Glyph::BOTTOM_BLOCK :
-            Glyph::BLOCK,
+            mode == Mode::normal ? Glyph::BLOCK : 
+            Glyph::BOTTOM_BLOCK,
             cursor_color, row, col);
     };
 
@@ -597,6 +642,8 @@ public:
             case Mode::normal_z: process_normal_z(key, row_count); break;
             case Mode::insert: process_insert(key, released); break;
             case Mode::replace: process_replace(key); break;
+            case Mode::line_find: process_line_find(key); break;
+            case Mode::line_rfind: process_line_rfind(key); break;
             case Mode::space: process_space(key, released, row_count); break;
         };
         stack.pop();
