@@ -144,7 +144,7 @@ class Buffer {
 
     Mode mode = Mode::normal;
 
-    unsigned accumulated_number = 0;
+    unsigned accu = 0;
 
     unsigned begin_row = 0;
 
@@ -174,8 +174,8 @@ class Buffer {
     void accumulate_number(WPARAM key) {
         verify(key >= '0' && key <= '9');
         const auto digit = (unsigned)key - (unsigned)'0';
-        accumulated_number *= 10;
-        accumulated_number += digit;
+        accu *= 10;
+        accu += digit;
     }
 
     size_t find_line_number(std::string_view text, size_t cursor) const {
@@ -382,10 +382,10 @@ class Buffer {
 
     void process_normal_number(WPARAM key) {
         if (key >= '0' && key <= '9') { accumulate_number(key); }
-        else if (key == 'j') { jump_down(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
-        else if (key == 'k') { jump_up(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
-        else if (key == 'g') { buffer_start(); jump_down(accumulated_number); accumulated_number = 0; mode = Mode::normal; }
-        else { accumulated_number = 0; mode = Mode::normal; }
+        else if (key == 'j') { jump_down(accu); accu = 0; mode = Mode::normal; }
+        else if (key == 'k') { jump_up(accu); accu = 0; mode = Mode::normal; }
+        else if (key == 'g') { buffer_start(); jump_down(accu); accu = 0; mode = Mode::normal; }
+        else { accu = 0; mode = Mode::normal; }
     }
 
     void process_normal_z(WPARAM key, unsigned row_count) {
