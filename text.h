@@ -87,6 +87,7 @@ public:
 class State {
     std::string text;
     size_t cursor = 0;
+    unsigned begin_row = 0;
     bool modified = true;
 
 public:
@@ -95,6 +96,8 @@ public:
 
     size_t get_cursor() const { return cursor; }
     void set_cursor(size_t u) { cursor = u; }
+
+    unsigned get_begin_row() const { return begin_row; }
 
     bool is_modified() const { return modified; }
     void set_modified(bool b) { modified = b; };
@@ -236,44 +239,44 @@ public:
         for (unsigned i = 0; i < skip; i++) { prev_line(); }
     }
 
-    void window_top(unsigned begin_row, unsigned row_count) {
+    void window_top(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         const unsigned top_row = begin_row;
         const unsigned skip = cursor_row - top_row;
         for (unsigned i = 0; i < skip; i++) { prev_line(); }
     }
 
-    void window_center(unsigned begin_row, unsigned row_count) {
+    void window_center(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         const unsigned middle_row = begin_row + row_count / 2;
         const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
         for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
     }
 
-    void window_bottom(unsigned begin_row, unsigned row_count) {
+    void window_bottom(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         const unsigned bottom_row = begin_row + row_count;
         const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
         for (unsigned i = 0; i < skip; i++) { next_line(); }
     }
 
-    unsigned cursor_clamp(unsigned& begin_row, unsigned row_count) {
+    unsigned cursor_clamp(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
         return cursor_row;
     }
 
-    void cursor_center(unsigned& begin_row, unsigned row_count) {
+    void cursor_center(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         begin_row = cursor_row - row_count / 2;
     }
 
-    void cursor_top(unsigned& begin_row, unsigned row_count) {
+    void cursor_top(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         begin_row = cursor_row;
     }
 
-    void cursor_bottom(unsigned& begin_row, unsigned row_count) {
+    void cursor_bottom(unsigned row_count) {
         const unsigned cursor_row = (unsigned)find_line_number();
         begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
     }
@@ -446,7 +449,6 @@ class Buffer {
     std::string clipboard;
 
     unsigned accu = 0;
-    unsigned begin_row = 0;
 
     bool quit = false;
 
@@ -571,9 +573,9 @@ class Buffer {
         else if (key == 'w') { state().next_word(); }
         else if (key == 'g') { state().buffer_start(); }
         else if (key == 'G') { state().buffer_end(); }
-        else if (key == 'H') { state().window_top(begin_row, row_count); }
-        else if (key == 'M') { state().window_center(begin_row, row_count); }
-        else if (key == 'L') { state().window_bottom(begin_row, row_count); }
+        else if (key == 'H') { state().window_top(row_count); }
+        else if (key == 'M') { state().window_center(row_count); }
+        else if (key == 'L') { state().window_bottom(row_count); }
         else if (key == ';') { } // [TODO] Re-find.
         else if (key == '/') { } // [TODO] Find.
         else if (key == '?') { } // [TODO] Reverse find.
@@ -590,9 +592,9 @@ class Buffer {
     }
 
     void process_normal_z(WPARAM key, unsigned row_count) {
-        if (key == 'z') { state().cursor_center(begin_row, row_count); mode = Mode::normal; }
-        else if (key == 't') { state().cursor_top(begin_row, row_count); mode = Mode::normal; }
-        else if (key == 'b') { state().cursor_bottom(begin_row, row_count); mode = Mode::normal; }
+        if (key == 'z') { state().cursor_center(row_count); mode = Mode::normal; }
+        else if (key == 't') { state().cursor_top(row_count); mode = Mode::normal; }
+        else if (key == 'b') { state().cursor_bottom(row_count); mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
@@ -603,7 +605,7 @@ class Buffer {
         else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
         else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
         else if (key == 'j') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-        else if (key == 'k') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+        else if (key == 'k') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; } // [TODO] Erase up.
         else { mode = Mode::normal; }
     }
 
@@ -658,15 +660,15 @@ class Buffer {
     void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
         Color row_color = text_color;
         Line cursor_line(stack.get_text(), stack.get_cursor());
-        const unsigned cursor_row = state().cursor_clamp(begin_row, row_count);
-        const unsigned end_row = begin_row + row_count;
+        const unsigned cursor_row = state().cursor_clamp(row_count);
+        const unsigned end_row = state().get_begin_row() + row_count;
         unsigned absolute_row = 0;
         unsigned index = 0;
         unsigned row = 2;
         unsigned col = 0;
         bool new_row = true;
         for (auto& character : stack.get_text()) {
-            if (absolute_row >= begin_row && absolute_row <= end_row) {
+            if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
                     if (state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
