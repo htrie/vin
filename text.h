@@ -195,7 +195,7 @@ class Buffer {
         }
     }
 
-    void accumulate_number(WPARAM key) {
+    void accumulate(WPARAM key) {
         verify(key >= '0' && key <= '9');
         const auto digit = (unsigned)key - (unsigned)'0';
         accu *= 10;
@@ -212,9 +212,10 @@ class Buffer {
         return number;
     }
 
-    void clip(const std::string& s) {
+    std::string clip(const std::string& s) {
         clipboard = s;
         notification = std::string("clipboard: ") + s;
+        return s;
     }
 
     bool test(size_t index, const std::string_view s) {
@@ -263,17 +264,27 @@ class Buffer {
         }
     }
 
-    void erase_line() {
+    std::string erase_line() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
-            clip(stack.get_text().substr(current.begin(), current.end() - current.begin() + 1));
+            const auto s = clip(stack.get_text().substr(current.begin(), current.end() - current.begin() + 1));
             stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
             stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
             stack.set_modified();
+            return s;
         }
+        return {};
     }
 
-    void erase_word() {
+    void erase_lines(unsigned count) {
+        std::string s;
+        for (unsigned i = 0; i <= count; i++) {
+            s += erase_line();
+        }
+        clip(s);
+    }
+
+    std::string erase_word() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
             const size_t begin = stack.get_cursor();
@@ -286,16 +297,20 @@ class Buffer {
                 if (!is_whitespace(stack.get_text()[end])) break;
                 end++;
             }
-            clip(stack.get_text().substr(begin, end - begin));
+            const auto s = clip(stack.get_text().substr(begin, end - begin));
             stack.get_text().erase(begin, end - begin);
             stack.set_modified();
+            return s;
         }
+        return {};
     }
 
     void erase_words(unsigned count) {
+        std::string s;
         for (unsigned i = 0; i < count; i++) {
-            erase_word();
+            s += erase_word();
         }
+        clip(s);
     }
 
     void line_find(WPARAM key) {
@@ -504,7 +519,7 @@ class Buffer {
     void process_normal(WPARAM key, bool released, unsigned row_count) {
         if (key == ' ' && !released) { mode = Mode::space; }
         else if (key == 'u') { stack.set_undo(); }
-        else if (key >= '0' && key <= '9') { accumulate_number(key); mode = Mode::normal_number; }
+        else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
         else if (key == 'd') { mode = Mode::normal_d; }
         else if (key == 'c') { } // [TODO] change mode.
         else if (key == 'z') { mode = Mode::normal_z; }
@@ -545,7 +560,7 @@ class Buffer {
     }
 
     void process_normal_number(WPARAM key) {
-        if (key >= '0' && key <= '9') { accumulate_number(key); }
+        if (key >= '0' && key <= '9') { accumulate(key); }
         else if (key == 'j') { jump_down(accu); accu = 0; mode = Mode::normal; }
         else if (key == 'k') { jump_up(accu); accu = 0; mode = Mode::normal; }
         else if (key == 'g') { buffer_start(); jump_down(accu); accu = 0; mode = Mode::normal; }
@@ -560,13 +575,13 @@ class Buffer {
     }
 
     void process_normal_d(WPARAM key) {
-        if (key >= '0' && key <= '9') { accumulate_number(key); }
+        if (key >= '0' && key <= '9') { accumulate(key); }
         else if (key == 'd') { erase_line(); accu = 0; mode = Mode::normal; }
-        else if (key == 'w') { erase_words(accu); accu = 0; mode = Mode::normal; } // [TODO] Erase n words.
+        else if (key == 'w') { erase_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
         else if (key == 'g') { erase_all_up(); accu = 0; mode = Mode::normal; }
         else if (key == 'G') { erase_all_down(); accu = 0; mode = Mode::normal; }
-        else if (key == 'j') { accu = 0; mode = Mode::normal; } // [TODO] Erase n down.
-        else if (key == 'k') { accu = 0; mode = Mode::normal; } // [TODO] Erase n up.
+        else if (key == 'j') { erase_lines(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+        else if (key == 'k') { erase_lines(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
