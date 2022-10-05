@@ -273,11 +273,106 @@ public:
         begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
     }
 
+    void insert(std::string_view s) {
+        text.insert(cursor, s);
+        cursor = std::min(cursor + s.length(), text.size() - 1);
+        modified = true;
+    }
+
+    void erase_back() {
+        if (cursor > 0) {
+            text.erase(cursor - 1, 1);
+            cursor = cursor > 0 ? cursor - 1 : cursor;
+            modified = true;
+        }
+    }
+
+    std::string erase() {
+        if (text.size() > 0) {
+            const auto s = text.substr(cursor, 1);
+            text.erase(cursor, 1);
+            cursor = text.size() > 0 && cursor == text.size() ? cursor - 1 : cursor;
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
+    std::string erase_all_up() {
+        if (text.size() > 0) {
+            const auto s = text.substr(0, cursor);
+            text.erase(0, cursor);
+            cursor = 0;
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
+    std::string erase_all_down() {
+        if (text.size() > 0) {
+            const auto s = text.substr(cursor, text.size() - cursor);
+            text.erase(cursor, text.size() - cursor);
+            cursor = std::min(cursor, text.size() - 1);
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
+    std::string erase_line() {
+        if (text.size() > 0) {
+            Line current(text, cursor);
+            const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
+            text.erase(current.begin(), current.end() - current.begin() + 1);
+            cursor = std::min(current.begin(), text.size() - 1);
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
+    std::string erase_lines(unsigned count) {
+        std::string s;
+        for (unsigned i = 0; i <= count; i++) {
+            s += erase_line();
+        }
+        return s;
+    }
+
+    std::string erase_word() {
+        if (text.size() > 0) {
+            Line current(text, cursor);
+            const size_t begin = cursor;
+            size_t end = begin;
+            while (end < current.end()) {
+                if (is_whitespace(text[end])) break;
+                end++;
+            }
+            while (end < current.end()) {
+                if (!is_whitespace(text[end])) break;
+                end++;
+            }
+            const auto s = text.substr(begin, end - begin);
+            text.erase(begin, end - begin);
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
+    std::string erase_words(unsigned count) {
+        std::string s;
+        for (unsigned i = 0; i < count; i++) {
+            s += erase_word();
+        }
+        return s;
+    }
+
 };
 
 class Stack {
     std::vector<State> states;
-    bool modified = false;
     bool undo = false;
 
     void fix_eof() {
@@ -398,115 +493,25 @@ class Buffer {
         return s;
     }
 
-    void insert(std::string_view s) {
-        stack.get_text().insert(stack.get_cursor(), s);
-        stack.set_cursor(std::min(stack.get_cursor() + s.length(), stack.get_text().size() - 1));
-        stack.set_modified(true);
-    }
-
-    void erase_back() {
-        if (stack.get_cursor() > 0) {
-            stack.get_text().erase(stack.get_cursor() - 1, 1);
-            stack.set_cursor(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : stack.get_cursor());
-            stack.set_modified(true);
-        }
-    }
-
-    void erase() {
-        if (stack.get_text().size() > 0) {
-            clip(stack.get_text().substr(stack.get_cursor(), 1));
-            stack.get_text().erase(stack.get_cursor(), 1);
-            stack.set_cursor(stack.get_text().size() > 0 && stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
-            stack.set_modified(true);
-        }
-    }
-
-    void erase_all_up() {
-        if (stack.get_text().size() > 0) {
-            clip(stack.get_text().substr(0, stack.get_cursor()));
-            stack.get_text().erase(0, stack.get_cursor());
-            stack.set_cursor(0);
-            stack.set_modified(true);
-        }
-    }
-
-    void erase_all_down() {
-        if (stack.get_text().size() > 0) {
-            clip(stack.get_text().substr(stack.get_cursor(), stack.get_text().size() - stack.get_cursor()));
-            stack.get_text().erase(stack.get_cursor(), stack.get_text().size() - stack.get_cursor());
-            stack.set_cursor(std::min(stack.get_cursor(), stack.get_text().size() - 1));
-            stack.set_modified(true);
-        }
-    }
-
-    std::string erase_line() {
-        if (stack.get_text().size() > 0) {
-            Line current(stack.get_text(), stack.get_cursor());
-            const auto s = clip(stack.get_text().substr(current.begin(), current.end() - current.begin() + 1));
-            stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
-            stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
-            stack.set_modified(true);
-            return s;
-        }
-        return {};
-    }
-
-    void erase_lines(unsigned count) {
-        std::string s;
-        for (unsigned i = 0; i <= count; i++) {
-            s += erase_line();
-        }
-        clip(s);
-    }
-
-    std::string erase_word() {
-        if (stack.get_text().size() > 0) {
-            Line current(stack.get_text(), stack.get_cursor());
-            const size_t begin = stack.get_cursor();
-            size_t end = begin;
-            while (end < current.end()) {
-                if (is_whitespace(stack.get_text()[end])) break;
-                end++;
-            }
-            while (end < current.end()) {
-                if (!is_whitespace(stack.get_text()[end])) break;
-                end++;
-            }
-            const auto s = clip(stack.get_text().substr(begin, end - begin));
-            stack.get_text().erase(begin, end - begin);
-            stack.set_modified(true);
-            return s;
-        }
-        return {};
-    }
-
-    void erase_words(unsigned count) {
-        std::string s;
-        for (unsigned i = 0; i < count; i++) {
-            s += erase_word();
-        }
-        clip(s);
-    }
-
     void paste_before() {
         if (clipboard.find('\n') != std::string::npos) {
-            insert(clipboard); state().prev_line();
+            state().insert(clipboard); state().prev_line();
         } else {
-            insert(clipboard);
+            state().insert(clipboard);
         }
     }
 
     void paste_after() {
         if (clipboard.find('\n') != std::string::npos) {
-            state().next_line(); insert(clipboard); state().prev_line();
+            state().next_line(); state().insert(clipboard); state().prev_line();
         } else {
-            state().next_char(); insert(clipboard);
+            state().next_char(); state().insert(clipboard);
         }
     }
 
     void process_replace(WPARAM key) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
-        else { erase(); insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
+        else { clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
     }
 
     void process_line_find(WPARAM key) {
@@ -521,11 +526,11 @@ class Buffer {
 
     void process_insert(WPARAM key, bool released) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
-        else if (key == Glyph::BS) { erase_back(); }
-        else if (key == Glyph::TAB) { insert("\t"); }
-        else if (key == Glyph::CR) { insert("\n"); }
-        else if (key == ' ') { if (!released) { insert(std::string(1, (char)key)); } }
-        else { insert(std::string(1, (char)key)); }
+        else if (key == Glyph::BS) { state().erase_back(); }
+        else if (key == Glyph::TAB) { state().insert("\t"); }
+        else if (key == Glyph::CR) { state().insert("\n"); }
+        else if (key == ' ') { if (!released) { state().insert(std::string(1, (char)key)); } }
+        else { state().insert(std::string(1, (char)key)); }
     }
 
     void process_normal(WPARAM key, bool released, unsigned row_count) {
@@ -539,12 +544,12 @@ class Buffer {
         else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
         else if (key == 'a') { state().next_char(); mode = Mode::insert; }
         else if (key == 'A') { state().line_end(); mode = Mode::insert; }
-        else if (key == 'o') { state().line_end(); insert("\n"); mode = Mode::insert; }
-        else if (key == 'O') { state().line_start(); insert("\n"); state().prev_line(); mode = Mode::insert; }
+        else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
+        else if (key == 'O') { state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'f') { mode = Mode::line_find; }
         else if (key == 'F') { mode = Mode::line_rfind; }
-        else if (key == 'x') { erase(); }
+        else if (key == 'x') { clip(state().erase()); }
         else if (key == 'C') { } // [TODO] Change rest of line.
         else if (key == 's') { } // [TODO] Subsitute character for more.
         else if (key == 'S') { } // [TODO] Subsitute line.
@@ -588,12 +593,12 @@ class Buffer {
 
     void process_normal_d(WPARAM key) {
         if (key >= '0' && key <= '9') { accumulate(key); }
-        else if (key == 'd') { erase_line(); accu = 0; mode = Mode::normal; }
-        else if (key == 'w') { erase_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-        else if (key == 'g') { erase_all_up(); accu = 0; mode = Mode::normal; }
-        else if (key == 'G') { erase_all_down(); accu = 0; mode = Mode::normal; }
-        else if (key == 'j') { erase_lines(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-        else if (key == 'k') { erase_lines(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+        else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
+        else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+        else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
+        else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
+        else if (key == 'j') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+        else if (key == 'k') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
