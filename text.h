@@ -193,6 +193,11 @@ public:
         }
     }
 
+    bool is_first_line() {
+        Line current(text, cursor);
+        return current.begin() == 0;
+    }
+
     void next_line() {
         Line current(text, cursor);
         Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
@@ -340,10 +345,22 @@ public:
         return {};
     }
 
-    std::string erase_lines(unsigned count) {
+    std::string erase_lines_down(unsigned count) {
         std::string s;
         for (unsigned i = 0; i <= count; i++) {
             s += erase_line();
+        }
+        return s;
+    }
+
+    std::string erase_lines_up(unsigned count) {
+        std::string s;
+        bool first_line = false;
+        for (unsigned i = 0; i <= count; i++) {
+            if (first_line) break; // Don't erase twice.
+            first_line = is_first_line();
+            s.insert(0, erase_line());
+            prev_line();
         }
         return s;
     }
@@ -604,8 +621,8 @@ class Buffer {
         else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
         else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
         else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
-        else if (key == 'j') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-        else if (key == 'k') { clip(state().erase_lines(std::max(1u, accu))); accu = 0; mode = Mode::normal; } // [TODO] Erase up.
+        else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+        else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
         else { mode = Mode::normal; }
     }
 
