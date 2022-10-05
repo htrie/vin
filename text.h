@@ -88,7 +88,12 @@ struct State { // [TODO] Make class.
     std::string text;
     size_t cursor = 0;
 
+    bool modified = true;
+
 public:
+    bool is_modified() const { return modified; }
+    void set_modified(bool b) { modified = b; };
+
     bool test(size_t index, const std::string_view s) {
         if (index + s.size() <= text.size())
             return text.substr(index, s.size()) == s;
@@ -300,7 +305,7 @@ public:
     size_t get_cursor() const { return states.back().cursor; }
     void set_cursor(size_t u) { states.back().cursor = u; }
 
-    void set_modified() { modified = true; };
+    void set_modified(bool b) { states.back().set_modified(b); };
     void set_undo() { undo = true; }
 
     void push() {
@@ -309,10 +314,10 @@ public:
     }
 
     void pop() {
-        if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
+        if (!states.back().is_modified() && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
         if (undo && states.size() > 1) { states.pop_back(); undo = false; }
         fix_eof();
-        modified = false;
+        states.back().set_modified(false);
     }
 };
 
@@ -362,7 +367,7 @@ class Buffer {
             if (auto in = std::ifstream(filename)) {
                 stack.set_cursor(0);
                 stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-                stack.set_modified();
+                stack.set_modified(true);
                 const auto time = timer.duration(start);
                 notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
             }
@@ -396,14 +401,14 @@ class Buffer {
     void insert(std::string_view s) {
         stack.get_text().insert(stack.get_cursor(), s);
         stack.set_cursor(std::min(stack.get_cursor() + s.length(), stack.get_text().size() - 1));
-        stack.set_modified();
+        stack.set_modified(true);
     }
 
     void erase_back() {
         if (stack.get_cursor() > 0) {
             stack.get_text().erase(stack.get_cursor() - 1, 1);
             stack.set_cursor(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : stack.get_cursor());
-            stack.set_modified();
+            stack.set_modified(true);
         }
     }
 
@@ -412,7 +417,7 @@ class Buffer {
             clip(stack.get_text().substr(stack.get_cursor(), 1));
             stack.get_text().erase(stack.get_cursor(), 1);
             stack.set_cursor(stack.get_text().size() > 0 && stack.get_cursor() == stack.get_text().size() ? stack.get_cursor() - 1 : stack.get_cursor());
-            stack.set_modified();
+            stack.set_modified(true);
         }
     }
 
@@ -421,7 +426,7 @@ class Buffer {
             clip(stack.get_text().substr(0, stack.get_cursor()));
             stack.get_text().erase(0, stack.get_cursor());
             stack.set_cursor(0);
-            stack.set_modified();
+            stack.set_modified(true);
         }
     }
 
@@ -429,7 +434,8 @@ class Buffer {
         if (stack.get_text().size() > 0) {
             clip(stack.get_text().substr(stack.get_cursor(), stack.get_text().size() - stack.get_cursor()));
             stack.get_text().erase(stack.get_cursor(), stack.get_text().size() - stack.get_cursor());
-            stack.set_modified();
+            stack.set_cursor(std::min(stack.get_cursor(), stack.get_text().size() - 1));
+            stack.set_modified(true);
         }
     }
 
@@ -439,7 +445,7 @@ class Buffer {
             const auto s = clip(stack.get_text().substr(current.begin(), current.end() - current.begin() + 1));
             stack.get_text().erase(current.begin(), current.end() - current.begin() + 1);
             stack.set_cursor(std::min(current.begin(), stack.get_text().size() - 1));
-            stack.set_modified();
+            stack.set_modified(true);
             return s;
         }
         return {};
@@ -468,7 +474,7 @@ class Buffer {
             }
             const auto s = clip(stack.get_text().substr(begin, end - begin));
             stack.get_text().erase(begin, end - begin);
-            stack.set_modified();
+            stack.set_modified(true);
             return s;
         }
         return {};
