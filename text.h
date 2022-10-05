@@ -84,12 +84,53 @@ public:
     size_t end() const { return finish; }
 };
 
-class Stack {
-    struct State {
-        std::string text;
-        size_t cursor = 0;
-    };
+struct State { // [TODO] Make class.
+    std::string text;
+    size_t cursor = 0;
 
+public:
+    bool test(size_t index, const std::string_view s) {
+        if (index + s.size() <= text.size())
+            return text.substr(index, s.size()) == s;
+        return false;
+    }
+
+    size_t find_line_number() const {
+        size_t number = 0;
+        size_t index = 0;
+        while (index < text.size() && index < cursor) {
+            if (text[index++] == '\n')
+                number++;
+        }
+        return number;
+    }
+
+    void line_find(WPARAM key) {
+        Line current(text, cursor);
+        size_t pos = text[cursor] == key ? cursor + 1 : cursor;
+        bool found = false;
+        while (pos < current.end()) {
+            if (text[pos] == key) { found = true; break; }
+            pos++;
+        }
+        if (found) { cursor = pos; }
+    }
+
+    void line_rfind(WPARAM key) {
+        Line current(text, cursor);
+        size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
+        bool found = false;
+        while (pos >= current.begin()) {
+            if (text[pos] == key) { found = true; break; }
+            if (pos > current.begin()) { pos--; }
+            else { break; }
+        }
+        if (found) { cursor = pos; }
+    }
+
+};
+
+class Stack {
     std::vector<State> states;
     bool modified = false;
     bool undo = false;
@@ -111,6 +152,8 @@ public:
         states.emplace_back();
         fix_eof();
     }
+
+    State& get_state() { return states.back(); }
 
     std::string& get_text() { return states.back().text; }
 
@@ -162,6 +205,8 @@ class Buffer {
 
     bool quit = false;
 
+    State& state() { return stack.get_state(); }
+
     void close() {
         if (!filename.empty()) {
             stack.reset();
@@ -202,26 +247,10 @@ class Buffer {
         accu += digit;
     }
 
-    size_t find_line_number(std::string_view text, size_t cursor) const {
-        size_t number = 0;
-        size_t index = 0;
-        while (index < text.size() && index < cursor) {
-            if (text[index++] == '\n')
-                number++;
-        }
-        return number;
-    }
-
     std::string clip(const std::string& s) {
         clipboard = s;
         notification = std::string("clipboard: ") + s;
         return s;
-    }
-
-    bool test(size_t index, const std::string_view s) {
-        if (index + s.size() <= stack.get_text().size())
-            return stack.get_text().substr(index, s.size()) == s;
-        return false;
     }
 
     void insert(std::string_view s) {
@@ -313,29 +342,6 @@ class Buffer {
         clip(s);
     }
 
-    void line_find(WPARAM key) {
-        Line current(stack.get_text(), stack.get_cursor());
-        size_t pos = stack.get_text()[stack.get_cursor()] == key ? stack.get_cursor() + 1 : stack.get_cursor();
-        bool found = false;
-        while (pos < current.end()) {
-            if (stack.get_text()[pos] == key) { found = true; break; }
-            pos++;
-        }
-        if (found) { stack.set_cursor(pos); }
-    }
-
-    void line_rfind(WPARAM key) {
-        Line current(stack.get_text(), stack.get_cursor());
-        size_t pos = stack.get_text()[stack.get_cursor()] == key && stack.get_cursor() > current.begin() ? stack.get_cursor() - 1 : stack.get_cursor();
-        bool found = false;
-        while (pos >= current.begin()) {
-            if (stack.get_text()[pos] == key) { found = true; break; }
-            if (pos > current.begin()) { pos--; }
-            else { break; }
-        }
-        if (found) { stack.set_cursor(pos); }
-    }
-
     void next_char() {
         Line current(stack.get_text(), stack.get_cursor());
         stack.set_cursor(std::clamp(stack.get_cursor() + 1, current.begin(), current.end()));
@@ -421,58 +427,58 @@ class Buffer {
     }
 
     void window_down(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned down_row = cursor_row + row_count / 2;
         const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
         for (unsigned i = 0; i < skip; i++) { next_line(); }
     }
 
     void window_up(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
         const unsigned skip = cursor_row - up_row;
         for (unsigned i = 0; i < skip; i++) { prev_line(); }
     }
 
     void window_top(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned top_row = begin_row;
         const unsigned skip = cursor_row - top_row;
         for (unsigned i = 0; i < skip; i++) { prev_line(); }
     }
 
     void window_center(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned middle_row = begin_row + row_count / 2;
         const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
         for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
     }
 
     void window_bottom(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned bottom_row = begin_row + row_count;
         const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
         for (unsigned i = 0; i < skip; i++) { next_line(); }
     }
 
     unsigned cursor_clamp(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
         return cursor_row;
     }
 
     void cursor_center(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         begin_row = cursor_row - row_count / 2;
     }
 
     void cursor_top(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         begin_row = cursor_row;
     }
 
     void cursor_bottom(unsigned row_count) {
-        const unsigned cursor_row = (unsigned)find_line_number(stack.get_text(), stack.get_cursor());
+        const unsigned cursor_row = (unsigned)state().find_line_number();
         begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
     }
 
@@ -499,12 +505,12 @@ class Buffer {
 
     void process_line_find(WPARAM key) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
-        else { line_find(key); mode = Mode::normal; }
+        else { state().line_find(key); mode = Mode::normal; }
     }
 
     void process_line_rfind(WPARAM key) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
-        else { line_rfind(key); mode = Mode::normal; }
+        else { state().line_rfind(key); mode = Mode::normal; }
     }
 
     void process_insert(WPARAM key, bool released) {
@@ -647,7 +653,7 @@ class Buffer {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
-                    if (test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
+                    if (state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
                     else if (character == '+') { row_color = diff_add_color; }
                     else if (character == '-') { row_color = diff_remove_color; }
                     else { row_color = text_color; }
@@ -696,7 +702,7 @@ class Buffer {
         const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
         const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
         const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
-        const auto cursor_row = std::string("row ") + std::to_string(find_line_number(stack.get_text(), stack.get_cursor()));
+        const auto cursor_row = std::string("row ") + std::to_string(state().find_line_number());
         const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
         const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
         const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
