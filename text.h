@@ -128,6 +128,81 @@ public:
         if (found) { cursor = pos; }
     }
 
+    void next_char() {
+        Line current(text, cursor);
+        cursor = std::clamp(cursor + 1, current.begin(), current.end());
+    }
+
+    void prev_char() {
+        Line current(text, cursor);
+        cursor = std::clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
+    }
+
+    void line_start() {
+        Line current(text, cursor);
+        cursor = current.begin();
+    }
+
+    void line_end() {
+        Line current(text, cursor);
+        cursor = current.end();
+    }
+
+    void line_start_whitespace() {
+        Line current(text, cursor);
+        cursor = current.begin();
+        while (cursor <= current.end()) {
+            if (!is_line_whitespace(text[cursor]))
+                break;
+            next_char();
+        }
+    }
+
+    void next_word() {
+        while (cursor < text.size() - 1) {
+            if (is_whitespace(text[cursor])) break;
+            cursor = cursor + 1;
+        }
+        while (cursor < text.size() - 1) {
+            if (!is_whitespace(text[cursor])) break;
+            cursor = cursor + 1;
+        }
+    }
+
+    void prev_word() {
+        while (cursor > 0) {
+            if (is_whitespace(text[cursor])) break;
+            cursor = cursor - 1;
+        }
+        while (cursor > 0) {
+            if (!is_whitespace(text[cursor])) break;
+            cursor = cursor - 1;
+        }
+    }
+
+    void next_line() {
+        Line current(text, cursor);
+        Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+        cursor = next.to_absolute(current.to_relative(cursor));
+    }
+
+    void prev_line() {
+        Line current(text, cursor);
+        Line prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
+        cursor = prev.to_absolute(current.to_relative(cursor));
+    }
+
+    void buffer_end() {
+        Line current(text, cursor);
+        Line last(text, text.size() - 1);
+        cursor = last.to_absolute(current.to_relative(cursor));
+    }
+
+    void buffer_start() {
+        Line current(text, cursor);
+        Line first(text, 0);
+        cursor = first.to_absolute(current.to_relative(cursor));
+    }
 };
 
 class Stack {
@@ -342,123 +417,47 @@ class Buffer {
         clip(s);
     }
 
-    void next_char() {
-        Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(std::clamp(stack.get_cursor() + 1, current.begin(), current.end()));
-    }
-
-    void prev_char() {
-        Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(std::clamp(stack.get_cursor() > 0 ? stack.get_cursor() - 1 : 0, current.begin(), current.end()));
-    }
-
-    void line_start() {
-        Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(current.begin());
-    }
-
-    void line_end() {
-        Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(current.end());
-    }
-
-    void line_start_whitespace() {
-        Line current(stack.get_text(), stack.get_cursor());
-        stack.set_cursor(current.begin());
-        while (stack.get_cursor() <= current.end()) {
-            if (!is_line_whitespace(stack.get_text()[stack.get_cursor()]))
-                break;
-            next_char();
-        }
-    }
-
-    void next_word() {
-        while (stack.get_cursor() < stack.get_text().size() - 1) {
-            if (is_whitespace(stack.get_text()[stack.get_cursor()])) break;
-            stack.set_cursor(stack.get_cursor() + 1);
-        }
-        while (stack.get_cursor() < stack.get_text().size() - 1) {
-            if (!is_whitespace(stack.get_text()[stack.get_cursor()])) break;
-            stack.set_cursor(stack.get_cursor() + 1);
-        }
-    }
-
-    void prev_word() {
-        while (stack.get_cursor() > 0) {
-            if (is_whitespace(stack.get_text()[stack.get_cursor()])) break;
-            stack.set_cursor(stack.get_cursor() - 1);
-        }
-        while (stack.get_cursor() > 0) {
-            if (!is_whitespace(stack.get_text()[stack.get_cursor()])) break;
-            stack.set_cursor(stack.get_cursor() - 1);
-        }
-    }
-
-    void next_line() {
-        Line current(stack.get_text(), stack.get_cursor());
-        Line next(stack.get_text(), current.end() < stack.get_text().size() - 1 ? current.end() + 1 : current.end());
-        stack.set_cursor(next.to_absolute(current.to_relative(stack.get_cursor())));
-    }
-
-    void prev_line() {
-        Line current(stack.get_text(), stack.get_cursor());
-        Line prev(stack.get_text(), current.begin() > 0 ? current.begin() - 1 : 0);
-        stack.set_cursor(prev.to_absolute(current.to_relative(stack.get_cursor())));
-    }
-
-    void buffer_end() {
-        Line current(stack.get_text(), stack.get_cursor());
-        Line last(stack.get_text(), stack.get_text().size() - 1);
-        stack.set_cursor(last.to_absolute(current.to_relative(stack.get_cursor())));
-    }
-
-    void buffer_start() {
-        Line current(stack.get_text(), stack.get_cursor());
-        Line first(stack.get_text(), 0);
-        stack.set_cursor(first.to_absolute(current.to_relative(stack.get_cursor())));
-    }
-
     void jump_down(unsigned skip) {
-        for (unsigned i = 0; i < skip; i++) { next_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().next_line(); }
     }
 
     void jump_up(unsigned skip) {
-        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().prev_line(); }
     }
 
     void window_down(unsigned row_count) {
         const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned down_row = cursor_row + row_count / 2;
         const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
-        for (unsigned i = 0; i < skip; i++) { next_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().next_line(); }
     }
 
     void window_up(unsigned row_count) {
         const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
         const unsigned skip = cursor_row - up_row;
-        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().prev_line(); }
     }
 
     void window_top(unsigned row_count) {
         const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned top_row = begin_row;
         const unsigned skip = cursor_row - top_row;
-        for (unsigned i = 0; i < skip; i++) { prev_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().prev_line(); }
     }
 
     void window_center(unsigned row_count) {
         const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned middle_row = begin_row + row_count / 2;
         const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
-        for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
+        for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? state().next_line() : state().prev_line(); }
     }
 
     void window_bottom(unsigned row_count) {
         const unsigned cursor_row = (unsigned)state().find_line_number();
         const unsigned bottom_row = begin_row + row_count;
         const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
-        for (unsigned i = 0; i < skip; i++) { next_line(); }
+        for (unsigned i = 0; i < skip; i++) { state().next_line(); }
     }
 
     unsigned cursor_clamp(unsigned row_count) {
@@ -484,7 +483,7 @@ class Buffer {
 
     void paste_before() {
         if (clipboard.find('\n') != std::string::npos) {
-            insert(clipboard); prev_line();
+            insert(clipboard); state().prev_line();
         } else {
             insert(clipboard);
         }
@@ -492,15 +491,15 @@ class Buffer {
 
     void paste_after() {
         if (clipboard.find('\n') != std::string::npos) {
-            next_line(); insert(clipboard); prev_line();
+            state().next_line(); insert(clipboard); state().prev_line();
         } else {
-            next_char(); insert(clipboard);
+            state().next_char(); insert(clipboard);
         }
     }
 
     void process_replace(WPARAM key) {
         if (key == Glyph::ESC) { mode = Mode::normal; }
-        else { erase(); insert(std::string(1, (char)key)); prev_char(); mode = Mode::normal; }
+        else { erase(); insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
     }
 
     void process_line_find(WPARAM key) {
@@ -530,11 +529,11 @@ class Buffer {
         else if (key == 'c') { } // [TODO] change mode.
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
-        else if (key == 'I') { line_start_whitespace(); mode = Mode::insert; }
-        else if (key == 'a') { next_char(); mode = Mode::insert; }
-        else if (key == 'A') { line_end(); mode = Mode::insert; }
-        else if (key == 'o') { line_end(); insert("\n"); mode = Mode::insert; }
-        else if (key == 'O') { line_start(); insert("\n"); prev_line(); mode = Mode::insert; }
+        else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
+        else if (key == 'a') { state().next_char(); mode = Mode::insert; }
+        else if (key == 'A') { state().line_end(); mode = Mode::insert; }
+        else if (key == 'o') { state().line_end(); insert("\n"); mode = Mode::insert; }
+        else if (key == 'O') { state().line_start(); insert("\n"); state().prev_line(); mode = Mode::insert; }
         else if (key == 'r') { mode = Mode::replace; }
         else if (key == 'f') { mode = Mode::line_find; }
         else if (key == 'F') { mode = Mode::line_rfind; }
@@ -544,17 +543,17 @@ class Buffer {
         else if (key == 'S') { } // [TODO] Subsitute line.
         else if (key == 'P') { paste_before(); }
         else if (key == 'p') { paste_after(); }
-        else if (key == '0') { line_start(); }
-        else if (key == '_') { line_start_whitespace(); }
-        else if (key == '$') { line_end(); }
-        else if (key == 'h') { prev_char(); }
-        else if (key == 'j') { next_line(); }
-        else if (key == 'k') { prev_line(); }
-        else if (key == 'l') { next_char(); }
-        else if (key == 'b') { prev_word(); }
-        else if (key == 'w') { next_word(); }
-        else if (key == 'g') { buffer_start(); }
-        else if (key == 'G') { buffer_end(); }
+        else if (key == '0') { state().line_start(); }
+        else if (key == '_') { state().line_start_whitespace(); }
+        else if (key == '$') { state().line_end(); }
+        else if (key == 'h') { state().prev_char(); }
+        else if (key == 'j') { state().next_line(); }
+        else if (key == 'k') { state().prev_line(); }
+        else if (key == 'l') { state().next_char(); }
+        else if (key == 'b') { state().prev_word(); }
+        else if (key == 'w') { state().next_word(); }
+        else if (key == 'g') { state().buffer_start(); }
+        else if (key == 'G') { state().buffer_end(); }
         else if (key == 'H') { window_top(row_count); }
         else if (key == 'M') { window_center(row_count); }
         else if (key == 'L') { window_bottom(row_count); }
@@ -569,7 +568,7 @@ class Buffer {
         if (key >= '0' && key <= '9') { accumulate(key); }
         else if (key == 'j') { jump_down(accu); accu = 0; mode = Mode::normal; }
         else if (key == 'k') { jump_up(accu); accu = 0; mode = Mode::normal; }
-        else if (key == 'g') { buffer_start(); jump_down(accu); accu = 0; mode = Mode::normal; }
+        else if (key == 'g') { state().buffer_start(); jump_down(accu); accu = 0; mode = Mode::normal; }
         else { accu = 0; mode = Mode::normal; }
     }
 
