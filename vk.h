@@ -873,7 +873,7 @@ class Device {
 
     unsigned fence_index = 0;
 
-    const float scale = 14.0f; // [TODO] Move to character.
+    const float scale = 14.0f;
     const float char_width = scale * 0.5f;
     const float char_height = scale * 1.05f;
 

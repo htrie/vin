@@ -147,6 +147,9 @@ class Buffer {
     Color text_color = Color::rgba(205, 226, 239, 255);
     Color text_cursor_color = Color::rgba(5, 5, 5, 255);
     Color line_number_color = Color::rgba(75, 100, 121, 255);
+    Color diff_note_color = Color::rgba(255, 192, 0, 255);
+    Color diff_add_color = Color::rgba(0, 192, 0, 255);
+    Color diff_remove_color = Color::rgba(192, 0, 0, 255);
 
     Mode mode = Mode::normal;
 
@@ -212,6 +215,12 @@ class Buffer {
     void clip(const std::string& s) {
         clipboard = s;
         notification = std::string("clipboard: ") + s;
+    }
+
+    bool test(size_t index, const std::string_view s) {
+        if (index + s.size() <= stack.get_text().size())
+            return stack.get_text().substr(index, s.size()) == s;
+        return false;
     }
 
     void insert(std::string_view s) {
@@ -508,6 +517,7 @@ class Buffer {
         else if (key == ';') { } // [TODO] Re-find.
         else if (key == '/') { } // [TODO] Find.
         else if (key == '?') { } // [TODO] Reverse find.
+        else if (key == '.') { } // [TODO] Repeat command.
     }
 
     void process_normal_number(WPARAM key) {
@@ -575,11 +585,12 @@ class Buffer {
         characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
     };
 
-    void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) {
-        characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : text_color, row, col);
+    void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
+        characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : row_color, row, col);
     };
 
     void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+        Color row_color = text_color;
         Line cursor_line(stack.get_text(), stack.get_cursor());
         const unsigned cursor_row = cursor_clamp(row_count);
         const unsigned end_row = begin_row + row_count;
@@ -592,6 +603,10 @@ class Buffer {
             if (absolute_row >= begin_row && absolute_row <= end_row) {
                 if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
                 if (new_row) { 
+                    if (test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
+                    else if (character == '+') { row_color = diff_add_color; }
+                    else if (character == '-') { row_color = diff_remove_color; }
+                    else { row_color = text_color; }
                     unsigned column = absolute_row == cursor_row ? col : col + 1;
                     const unsigned line = absolute_row == cursor_row ? absolute_row :
                         absolute_row < cursor_row ? cursor_row - absolute_row :
@@ -600,7 +615,7 @@ class Buffer {
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-                else { push_char(characters, row, col, character, index == stack.get_cursor()); col++; }
+                else { push_char(characters, row, col, character, index == stack.get_cursor(), row_color); col++; }
             }
             else {
                 if (character == '\n') { absolute_row++; }
@@ -651,7 +666,7 @@ public:
         notification = std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us";
     }
 
-    bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) { // [TODO] Unit tests.
+    bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
         stack.push();
         switch (mode) {
             case Mode::normal: process_normal(key, released, row_count); break;
@@ -674,7 +689,7 @@ public:
         characters.reserve(256);
         push_status_bar(characters, process_time, cull_time, redraw_time, col_count);
         push_notification_bar(characters, col_count);
-        push_text(characters, col_count, row_count); // [TODO] Diff colors.
+        push_text(characters, col_count, row_count);
         return characters;
     }
 };

@@ -9,7 +9,7 @@
 +update mesh export to have a flag to ignore mesh optimizations
 +check with instance graph parameters in AV are not refresh when using Ctrl+E (fast shader reload)
 +sparse bundle index (only store file hash and bundle hash in master index)
-+build android
+-build android
 --- 2022-10-03
 +commit
     update with Rhys changes
