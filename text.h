@@ -292,6 +292,12 @@ class Buffer {
         }
     }
 
+    void erase_words(unsigned count) {
+        for (unsigned i = 0; i < count; i++) {
+            erase_word();
+        }
+    }
+
     void line_find(WPARAM key) {
         Line current(stack.get_text(), stack.get_cursor());
         size_t pos = stack.get_text()[stack.get_cursor()] == key ? stack.get_cursor() + 1 : stack.get_cursor();
@@ -534,6 +540,7 @@ class Buffer {
         else if (key == ';') { } // [TODO] Re-find.
         else if (key == '/') { } // [TODO] Find.
         else if (key == '?') { } // [TODO] Reverse find.
+        else if (key == '*') { } // [TODO] Find under cursor.
         else if (key == '.') { } // [TODO] Repeat command.
     }
 
@@ -553,12 +560,13 @@ class Buffer {
     }
 
     void process_normal_d(WPARAM key) {
-        if (key == 'd') { erase_line(); mode = Mode::normal; }
-        else if (key == 'w') { erase_word(); mode = Mode::normal; } // [TODO] Erase n words.
-        else if (key == 'g') { erase_all_up(); mode = Mode::normal; }
-        else if (key == 'G') { erase_all_down(); mode = Mode::normal; }
-        else if (key == 'j') { mode = Mode::normal; } // [TODO] Erase n down.
-        else if (key == 'k') { mode = Mode::normal; } // [TODO] Erase n up.
+        if (key >= '0' && key <= '9') { accumulate_number(key); }
+        else if (key == 'd') { erase_line(); accu = 0; mode = Mode::normal; }
+        else if (key == 'w') { erase_words(accu); accu = 0; mode = Mode::normal; } // [TODO] Erase n words.
+        else if (key == 'g') { erase_all_up(); accu = 0; mode = Mode::normal; }
+        else if (key == 'G') { erase_all_down(); accu = 0; mode = Mode::normal; }
+        else if (key == 'j') { accu = 0; mode = Mode::normal; } // [TODO] Erase n down.
+        else if (key == 'k') { accu = 0; mode = Mode::normal; } // [TODO] Erase n up.
         else { mode = Mode::normal; }
     }
 
