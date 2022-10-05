@@ -255,6 +255,14 @@ class Buffer {
         }
     }
 
+    void erase_all_down() {
+        if (stack.get_text().size() > 0) {
+            clip(stack.get_text().substr(stack.get_cursor(), stack.get_text().size() - stack.get_cursor()));
+            stack.get_text().erase(stack.get_cursor(), stack.get_text().size() - stack.get_cursor());
+            stack.set_modified();
+        }
+    }
+
     void erase_line() {
         if (stack.get_text().size() > 0) {
             Line current(stack.get_text(), stack.get_cursor());
@@ -548,7 +556,7 @@ class Buffer {
         if (key == 'd') { erase_line(); mode = Mode::normal; }
         else if (key == 'w') { erase_word(); mode = Mode::normal; } // [TODO] Erase n words.
         else if (key == 'g') { erase_all_up(); mode = Mode::normal; }
-        else if (key == 'G') { mode = Mode::normal; } // [TODO] Erase all down.
+        else if (key == 'G') { erase_all_down(); mode = Mode::normal; }
         else if (key == 'j') { mode = Mode::normal; } // [TODO] Erase n down.
         else if (key == 'k') { mode = Mode::normal; } // [TODO] Erase n up.
         else { mode = Mode::normal; }
