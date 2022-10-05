@@ -84,13 +84,18 @@ public:
     size_t end() const { return finish; }
 };
 
-struct State { // [TODO] Make class.
+class State {
     std::string text;
     size_t cursor = 0;
-
     bool modified = true;
 
 public:
+    const std::string& get_text() { return text; }
+    void set_text(const std::string& t) { text = t; }
+
+    size_t get_cursor() const { return cursor; }
+    void set_cursor(size_t u) { cursor = u; }
+
     bool is_modified() const { return modified; }
     void set_modified(bool b) { modified = b; };
 
@@ -369,18 +374,17 @@ public:
         return s;
     }
 
+    void fix_eof() {
+        const auto size = text.size();
+        if (size == 0 || (size > 0 && text[size - 1] != '\n')) {
+            text += '\n';
+        }
+    }
 };
 
 class Stack {
     std::vector<State> states;
     bool undo = false;
-
-    void fix_eof() {
-        const auto size = get_text().size();
-        if (size == 0 || (size > 0 && get_text()[size - 1] != '\n')) {
-            get_text() += '\n';
-        }
-    }
 
 public:
     Stack() {
@@ -390,15 +394,16 @@ public:
     void reset() {
         states.clear();
         states.emplace_back();
-        fix_eof();
+        states.back().fix_eof();
     }
 
     State& get_state() { return states.back(); }
 
-    std::string& get_text() { return states.back().text; }
+    const std::string& get_text() { return states.back().get_text(); }
+    void set_text(const std::string& t) { states.back().set_text(t); }
 
-    size_t get_cursor() const { return states.back().cursor; }
-    void set_cursor(size_t u) { states.back().cursor = u; }
+    size_t get_cursor() const { return states.back().get_cursor(); }
+    void set_cursor(size_t u) { states.back().set_cursor(u); }
 
     void set_modified(bool b) { states.back().set_modified(b); };
     void set_undo() { undo = true; }
@@ -411,7 +416,7 @@ public:
     void pop() {
         if (!states.back().is_modified() && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
         if (undo && states.size() > 1) { states.pop_back(); undo = false; }
-        fix_eof();
+        states.back().fix_eof();
         states.back().set_modified(false);
     }
 };
@@ -461,7 +466,7 @@ class Buffer {
             const auto start = timer.now();
             if (auto in = std::ifstream(filename)) {
                 stack.set_cursor(0);
-                stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                stack.set_text(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
                 stack.set_modified(true);
                 const auto time = timer.duration(start);
                 notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
