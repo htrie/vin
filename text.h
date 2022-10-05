@@ -103,6 +103,11 @@ class Stack {
 
 public:
     Stack() {
+        reset();
+    }
+
+    void reset() {
+        states.clear();
         states.emplace_back();
         fix_eof();
     }
@@ -154,24 +159,36 @@ class Buffer {
 
     bool quit = false;
 
+    void close() {
+        if (!filename.empty()) {
+            stack.reset();
+            notification = std::string("close ") + filename; 
+            filename.clear();
+        }
+    }
+
     void load() {
-        const auto start = timer.now();
         filename = "todo.diff"; // [TODO] File picker.
-        if (auto in = std::ifstream(filename)) {
-            stack.set_cursor(0);
-            stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-            stack.set_modified();
-            const auto time = timer.duration(start);
-            notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+        if (!filename.empty()) {
+            const auto start = timer.now();
+            if (auto in = std::ifstream(filename)) {
+                stack.set_cursor(0);
+                stack.get_text() = std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                stack.set_modified();
+                const auto time = timer.duration(start);
+                notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            }
         }
     }
 
     void save() {
-        const auto start = timer.now();
-        if (auto out = std::ofstream(filename)) {
-            out << stack.get_text();
-            const auto time = timer.duration(start);
-            notification = std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+        if (!filename.empty()) {
+            const auto start = timer.now();
+            if (auto out = std::ofstream(filename)) {
+                out << stack.get_text();
+                const auto time = timer.duration(start);
+                notification = std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+            }
         }
     }
 
@@ -516,6 +533,7 @@ class Buffer {
 
     void process_space(WPARAM key, bool released, unsigned row_count) {
         if (key == 'q') { quit = true; }
+        else if (key == 'w') { close(); mode = Mode::normal; }
         else if (key == 'e') { load(); mode = Mode::normal; }
         else if (key == 's') { save();  mode = Mode::normal; }
         else if (key == 'o') { window_up(row_count); }
@@ -656,7 +674,7 @@ public:
         characters.reserve(256);
         push_status_bar(characters, process_time, cull_time, redraw_time, col_count);
         push_notification_bar(characters, col_count);
-        push_text(characters, col_count, row_count);
+        push_text(characters, col_count, row_count); // [TODO] Diff colors.
         return characters;
     }
 };
