@@ -9,7 +9,7 @@
 +update mesh export to have a flag to ignore mesh optimizations
 +check with instance graph parameters in AV are not refresh when using Ctrl+E (fast shader reload)
 +sparse bundle index (only store file hash and bundle hash in master index)
--build android
++build android
 --- 2022-10-03
 +commit
     update with Rhys changes
@@ -38,7 +38,7 @@
 -remove InputFileSource
 -use std::wstring_view
 -check compilation
-+check iOS/Android/Console job ads
+-check iOS/Android/Console job ads
 --- 2022-09-29
 -check with ThomasD about bundle2 error (missing json file)
 -move file provifer and file database to storage system directly

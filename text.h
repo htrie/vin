@@ -537,7 +537,11 @@ class Buffer {
 
     void process_normal_d(WPARAM key) {
         if (key == 'd') { erase_line(); mode = Mode::normal; }
-        else if (key == 'w') { erase_word(); mode = Mode::normal; }
+        else if (key == 'w') { erase_word(); mode = Mode::normal; } // [TODO] Erase n words.
+        else if (key == 'g') { mode = Mode::normal; } // [TODO] Erase all up.
+        else if (key == 'G') { mode = Mode::normal; } // [TODO] Erase all down.
+        else if (key == 'j') { mode = Mode::normal; } // [TODO] Erase n down.
+        else if (key == 'k') { mode = Mode::normal; } // [TODO] Erase n up.
         else { mode = Mode::normal; }
     }
 
