@@ -717,13 +717,12 @@ class Buffer {
 
 	void process_space(WPARAM key, bool released, unsigned row_count) {
 		if (key == 'q') { quit = true; }
-		else if (key == 'w') { close(); mode = Mode::normal; }
-		else if (key == 'e') { load(); mode = Mode::normal; }
-		else if (key == 's') { save(); mode = Mode::normal; }
+		else if (key == 'w') { close(); }
+		else if (key == 'e') { load(); }
+		else if (key == 's') { save(); }
 		else if (key == 'o') { state().window_up(row_count); }
 		else if (key == 'i') { state().window_down(row_count); }
 		else if (key == ' ') { if (released) { mode = Mode::normal; } }
-		else { mode = Mode::normal; }
 	}
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
