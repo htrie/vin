@@ -636,7 +636,7 @@ class Buffer {
         else if (key == 'F') { mode = Mode::line_rfind; }
         else if (key == 'x') { clip(state().erase()); }
         else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
-        else if (key == 'D') { } // [TODO] Delete rest of line.
+        else if (key == 'D') { state().erase_to_line_end(); }
         else if (key == 's') { } // [TODO] Subsitute character for more.
         else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
         else if (key == 'P') { paste_before(); }
