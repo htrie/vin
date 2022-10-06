@@ -377,6 +377,18 @@ public:
         return {};
     }
 
+    std::string erase_line_contents() {
+        if (text.size() > 0) {
+            Line current(text, cursor);
+            const auto s = text.substr(current.begin(), current.end() - current.begin());
+            text.erase(current.begin(), current.end() - current.begin());
+            cursor = std::min(current.begin(), text.size() - 1);
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
     std::string erase_lines_down(unsigned count) {
         std::string s;
         for (unsigned i = 0; i <= count; i++) {
@@ -614,7 +626,7 @@ class Buffer {
         else if (key == 'C') { } // [TODO] Change rest of line.
         else if (key == 'D') { } // [TODO] Delete rest of line.
         else if (key == 's') { } // [TODO] Subsitute character for more.
-        else if (key == 'S') { } // [TODO] Subsitute line.
+        else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
         else if (key == 'P') { paste_before(); }
         else if (key == 'p') { paste_after(); }
         else if (key == '0') { state().line_start(); }
