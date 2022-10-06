@@ -389,6 +389,18 @@ public:
         return {};
     }
 
+    std::string erase_to_line_end() {
+        if (text.size() > 0) {
+            Line current(text, cursor);
+            const auto s = text.substr(cursor, current.end() - cursor);
+            text.erase(cursor, current.end() - cursor);
+            cursor = std::min(cursor, text.size() - 1);
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
     std::string erase_lines_down(unsigned count) {
         std::string s;
         for (unsigned i = 0; i <= count; i++) {
@@ -623,7 +635,7 @@ class Buffer {
         else if (key == 'f') { mode = Mode::line_find; }
         else if (key == 'F') { mode = Mode::line_rfind; }
         else if (key == 'x') { clip(state().erase()); }
-        else if (key == 'C') { } // [TODO] Change rest of line.
+        else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
         else if (key == 'D') { } // [TODO] Delete rest of line.
         else if (key == 's') { } // [TODO] Subsitute character for more.
         else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
