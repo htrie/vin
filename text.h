@@ -519,8 +519,8 @@ public:
 	}
 };
 
-class Buffer { // [TODO] Multi buffer.
-	Stack stack;
+class Buffer { // [TODO] Separate Manager from Buffer.
+	Stack stack; // [TODO] Move to Manager.
 	Timer timer;
 
 	Color mode_text_color = Color::rgba(255, 155, 155, 255);
@@ -540,7 +540,7 @@ class Buffer { // [TODO] Multi buffer.
 
 	Mode mode = Mode::normal;
 
-	std::string filename;
+	std::string filename; // [TODO] Move to Manager.
 	std::string notification;
 	std::string clipboard;
 
@@ -738,8 +738,8 @@ class Buffer { // [TODO] Multi buffer.
 	}
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
-		for (unsigned i = 0; i < col_count - 6; ++i) {
-			characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 6 + i);
+		for (unsigned i = 0; i < col_count - 5; ++i) {
+			characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 7 + i);
 		}
 	}
 
@@ -765,7 +765,6 @@ class Buffer { // [TODO] Multi buffer.
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
 		Color row_color = text_color;
-		Line cursor_line(stack.get_text(), stack.get_cursor());
 		const unsigned cursor_row = state().cursor_clamp(row_count);
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
@@ -775,8 +774,8 @@ class Buffer { // [TODO] Multi buffer.
 		bool new_row = true;
 		for (auto& character : stack.get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
-				if (index == cursor_line.begin()) { push_cursor_line(characters, row, col_count); }
 				if (new_row) {
+					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
 					else if (character == '+') { row_color = diff_add_color; }
 					else if (character == '-') { row_color = diff_remove_color; }
@@ -824,16 +823,13 @@ class Buffer { // [TODO] Multi buffer.
 	}
 
 	std::string build_status_text(float process_time, float cull_time, float redraw_time) {
-		Line cursor_line(stack.get_text(), stack.get_cursor());
 		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
 		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
-		const auto cursor_col = std::string("col ") + std::to_string(cursor_line.to_relative(stack.get_cursor()));
-		const auto cursor_row = std::string("row ") + std::to_string(state().find_line_number());
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
 		return filename +
-			" [" + text_perc + " " + text_size + ", " + cursor_col + ", " + cursor_row + "]" +
+			" [" + text_perc + " " + text_size + "]" +
 			" (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
 
