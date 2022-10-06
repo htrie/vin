@@ -171,25 +171,49 @@ public:
         }
     }
 
-    void next_word() {
-        while (cursor < text.size() - 1) {
-            if (is_whitespace(text[cursor])) break;
-            cursor = cursor + 1;
-        }
+    void skip_whitespace_forward() {
         while (cursor < text.size() - 1) {
             if (!is_whitespace(text[cursor])) break;
             cursor = cursor + 1;
         }
     }
 
-    void prev_word() { // [TODO] Go to word beginning.
+    void skip_non_whitespace_forward() {
+        while (cursor < text.size() - 1) {
+            if (is_whitespace(text[cursor])) break;
+            cursor = cursor + 1;
+        }
+    }
+
+    void skip_whitespace_backward() {
+        while (cursor > 0) {
+            if (!is_whitespace(text[cursor])) break;
+            cursor = cursor - 1;
+        }
+    }
+
+    void skip_non_whitespace_backward() {
         while (cursor > 0) {
             if (is_whitespace(text[cursor])) break;
             cursor = cursor - 1;
         }
-        while (cursor > 0) {
-            if (!is_whitespace(text[cursor])) break;
-            cursor = cursor - 1;
+    }
+
+    void next_word() {
+        if (is_whitespace(text[cursor])) {
+            skip_whitespace_forward();
+        } else {
+            skip_non_whitespace_forward();
+            skip_whitespace_forward();
+        }
+    }
+
+    void prev_word() {
+        if (is_whitespace(text[cursor])) {
+            skip_whitespace_backward();
+            skip_non_whitespace_backward();
+        } else {
+            skip_non_whitespace_backward();
         }
     }
 
@@ -445,10 +469,10 @@ class Buffer {
     Stack stack;
     Timer timer;
 
-    Color status_line_color = Color::rgba(1, 22, 39, 255); // [TODO] Whiter.
+    Color status_line_color = Color::rgba(1, 22, 39, 255);
     Color status_text_color = Color::rgba(155, 155, 155, 255);
-    Color notification_line_color = Color::rgba(1, 22, 39, 255); // [TODO] Whiter.
-    Color notification_text_color = Color::rgba(24, 112, 139, 255);
+    Color notification_line_color = Color::rgba(1, 22, 39, 255);
+    Color notification_text_color = Color::rgba(64, 152, 179, 255);
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
     Color whitespace_color = Color::rgba(75, 100, 93, 255);
