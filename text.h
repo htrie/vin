@@ -38,6 +38,14 @@ constexpr std::string_view mode_letter(Mode mode) {
     return "";
 }
 
+std::string timestamp() { 
+    const auto now = std::chrono::system_clock::now();
+    const auto start_of_day = std::chrono::floor<std::chrono::days>(now);
+    const auto time_since_start_of_day = std::chrono::round<std::chrono::seconds>(now - start_of_day);
+    const std::chrono::hh_mm_ss hms { time_since_start_of_day };
+    return std::format("{}", hms);
+}
+
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 
@@ -495,10 +503,14 @@ class Buffer {
 
     State& state() { return stack.get_state(); }
 
+    void notify(const std::string& s) {
+        notification = timestamp() + "  " + s;
+    }
+
     void close() {
         if (!filename.empty()) {
             stack.reset();
-            notification = std::string("close ") + filename; 
+            notify(std::string("close ") + filename);
             filename.clear();
         }
     }
@@ -512,7 +524,7 @@ class Buffer {
                 stack.set_text(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
                 stack.set_modified(true);
                 const auto time = timer.duration(start);
-                notification = std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+                notify(std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us");
             }
         }
     }
@@ -523,7 +535,7 @@ class Buffer {
             if (auto out = std::ofstream(filename)) {
                 out << stack.get_text();
                 const auto time = timer.duration(start);
-                notification = std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
+                notify(std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us");
             }
         }
     }
@@ -537,7 +549,7 @@ class Buffer {
 
     std::string clip(const std::string& s) {
         clipboard = s;
-        notification = std::string("clipboard: ") + s;
+        notify(std::string("clipboard: ") + s);
         return s;
     }
 
@@ -586,8 +598,8 @@ class Buffer {
         else if (key == 'u') { stack.set_undo(); }
         else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
         else if (key == 'd') { mode = Mode::normal_d; }
-        else if (key == 'c') { } // [TODO] Change mode.
-        else if (key == 'y') { } // [TODO] Yank mode.
+        else if (key == 'c') { } // [TODO] Change mode (cc, cw, cb, cNj/cNk).
+        else if (key == 'y') { } // [TODO] Yank mode (yy, yw, yb, yNj/yNk).
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
         else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
@@ -600,6 +612,7 @@ class Buffer {
         else if (key == 'F') { mode = Mode::line_rfind; }
         else if (key == 'x') { clip(state().erase()); }
         else if (key == 'C') { } // [TODO] Change rest of line.
+        else if (key == 'D') { } // [TODO] Delete rest of line.
         else if (key == 's') { } // [TODO] Subsitute character for more.
         else if (key == 'S') { } // [TODO] Subsitute line.
         else if (key == 'P') { paste_before(); }
@@ -724,7 +737,7 @@ class Buffer {
                     const unsigned line = absolute_row == cursor_row ? absolute_row :
                         absolute_row < cursor_row ? cursor_row - absolute_row :
                         absolute_row - cursor_row;
-                    push_line_number(characters, row, column, line); col += 6; new_row = false; }
+                    push_line_number(characters, row, column, line); col += 7; new_row = false; }
                 if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
                 if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
                 else if (character == '\t') { push_tab(characters, row, col); col += 4; }
@@ -757,7 +770,7 @@ class Buffer {
 
     void push_notification_bar(Characters& characters, unsigned col_count) {
         push_special_line(characters, 1, notification_line_color, col_count);
-        push_special_text(characters, 1, notification_text_color, notification); // [TODO] Timestamp.
+        push_special_text(characters, 1, notification_text_color, notification);
     }
 
     std::string build_status_text(float process_time, float cull_time, float redraw_time) {
@@ -776,7 +789,7 @@ class Buffer {
 
 public:
     void run(float init_time) {
-        notification = std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us";
+        notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
     }
 
     bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
