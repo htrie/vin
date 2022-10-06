@@ -343,6 +343,17 @@ public:
         return {};
     }
 
+    std::string erase_if(char c) {
+        if (text.size() > 0 && text[cursor] == c) {
+            const auto s = text.substr(cursor, 1);
+            text.erase(cursor, 1);
+            cursor = text.size() > 0 && cursor == text.size() ? cursor - 1 : cursor;
+            modified = true;
+            return s;
+        }
+        return {};
+    }
+
     std::string erase_all_up() {
         if (text.size() > 0) {
             const auto s = text.substr(0, cursor);
@@ -661,7 +672,7 @@ class Buffer {
         else if (key == '?') { } // [TODO] Reverse find.
         else if (key == '*') { } // [TODO] Find under cursor.
         else if (key == '.') { } // [TODO] Repeat command.
-        else if (key == '<') { } // [TODO] Indent left.
+        else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
         else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
     }
 
