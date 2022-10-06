@@ -12,16 +12,16 @@
 +build android
 --- 2022-10-03
 +commit
-    update with Rhys changes
-    test on next
-    careful about mobile and bundle in package
+	update with Rhys changes
+	test on next
+	careful about mobile and bundle in package
 +add SetPack engine setting
-    careful with bundle viewer and missing engine init
+	careful with bundle viewer and missing engine init
 +use storage system for bundle input file
 +check dependency-based activation on testing_next_bundled
-    check after build fix
-    errors where it can't find shaders
-    remove all _ special cases and only package patching table
+	check after build fix
+	errors where it can't find shaders
+	remove all _ special cases and only package patching table
 +plug sparse shaders on testing_next_bundled
 --- 2022-10-01
 +log/stat more which source is being accessed
@@ -1656,7 +1656,7 @@
 -use struct for RenderJob sub-classes
 -rename Render to Flush
 +test
-    minimap
+	minimap
 --- 2022-03-08
 -day off
 --- 2022-03-07
