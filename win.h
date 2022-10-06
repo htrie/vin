@@ -32,6 +32,8 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
         error("Cannot create a window in which to draw!\n", "CreateWindow Failure");
     }
 
+    // [TODO] Dark mode.
+
     ShowWindow(hWnd, nCmdShow);
 
     return hWnd;

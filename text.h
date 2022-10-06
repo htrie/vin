@@ -182,7 +182,7 @@ public:
         }
     }
 
-    void prev_word() {
+    void prev_word() { // [TODO] Go to word beginning.
         while (cursor > 0) {
             if (is_whitespace(text[cursor])) break;
             cursor = cursor - 1;
@@ -445,9 +445,9 @@ class Buffer {
     Stack stack;
     Timer timer;
 
-    Color status_line_color = Color::rgba(1, 22, 39, 255);
+    Color status_line_color = Color::rgba(1, 22, 39, 255); // [TODO] Whiter.
     Color status_text_color = Color::rgba(155, 155, 155, 255);
-    Color notification_line_color = Color::rgba(1, 22, 39, 255);
+    Color notification_line_color = Color::rgba(1, 22, 39, 255); // [TODO] Whiter.
     Color notification_text_color = Color::rgba(24, 112, 139, 255);
     Color cursor_color = Color::rgba(255, 255, 0, 255);
     Color cursor_line_color = Color::rgba(65, 80, 29, 255);
@@ -562,7 +562,8 @@ class Buffer {
         else if (key == 'u') { stack.set_undo(); }
         else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
         else if (key == 'd') { mode = Mode::normal_d; }
-        else if (key == 'c') { } // [TODO] change mode.
+        else if (key == 'c') { } // [TODO] Change mode.
+        else if (key == 'y') { } // [TODO] Yank mode.
         else if (key == 'z') { mode = Mode::normal_z; }
         else if (key == 'i') { mode = Mode::insert; }
         else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
@@ -593,11 +594,14 @@ class Buffer {
         else if (key == 'H') { state().window_top(row_count); }
         else if (key == 'M') { state().window_center(row_count); }
         else if (key == 'L') { state().window_bottom(row_count); }
+        else if (key == 'J') { } // [TODO] Merge lines.
         else if (key == ';') { } // [TODO] Re-find.
         else if (key == '/') { } // [TODO] Find.
         else if (key == '?') { } // [TODO] Reverse find.
         else if (key == '*') { } // [TODO] Find under cursor.
         else if (key == '.') { } // [TODO] Repeat command.
+        else if (key == '<') { } // [TODO] Indent left.
+        else if (key == '>') { } // [TODO] Indent right.
     }
 
     void process_normal_number(WPARAM key) {
@@ -729,7 +733,7 @@ class Buffer {
 
     void push_notification_bar(Characters& characters, unsigned col_count) {
         push_special_line(characters, 1, notification_line_color, col_count);
-        push_special_text(characters, 1, notification_text_color, notification);
+        push_special_text(characters, 1, notification_text_color, notification); // [TODO] Timestamp.
     }
 
     std::string build_status_text(float process_time, float cull_time, float redraw_time) {
