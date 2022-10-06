@@ -1,4 +1,4 @@
-const std::array<unsigned, 133> vertex_counts = {
+const std::array<unsigned, 134> vertex_counts = {
 	0,
 	0,
 	0,
@@ -131,5 +131,6 @@ const std::array<unsigned, 133> vertex_counts = {
 	6,
 	66,
 	6,
+	3,
 	0
 };

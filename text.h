@@ -21,6 +21,7 @@ enum Glyph {
     LINE = 129,
     RETURN = 130,
     BOTTOM_BLOCK = 131,
+    TABSIGN = 132,
 };
 
 constexpr std::string_view mode_letter(Mode mode) {
@@ -743,7 +744,7 @@ class Buffer {
     };
 
     void push_tab(Characters& characters, unsigned row, unsigned col) {
-        characters.emplace_back(Glyph::TAB, whitespace_color, row, col);
+        characters.emplace_back(Glyph::TABSIGN, whitespace_color, row, col);
     };
 
     void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {

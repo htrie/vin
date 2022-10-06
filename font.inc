@@ -1,4 +1,4 @@
-const vec2 vertices[6940] = vec2[6940](
+const vec2 vertices[6943] = vec2[6943](
 	vec2(0.370334, -0.118001),
 	vec2(0.403049, -0.09847),
 	vec2(0.354601, -0.074924),
@@ -6938,9 +6938,12 @@ const vec2 vertices[6940] = vec2[6940](
 	vec2(0, -0.176758),
 	vec2(0.5, -0.176758),
 	vec2(0, -0.0395508),
+	vec2(0.432617, 0.295898),
+	vec2(0.112305, 0.480469),
+	vec2(0.112305, 0.111328),
 	vec2(0.0, 0.0));
 
-const uint vertex_offsets[133] = uint[133](
+const uint vertex_offsets[134] = uint[134](
 	0,
 	0,
 	0,
@@ -7073,5 +7076,6 @@ const uint vertex_offsets[133] = uint[133](
 	6861,
 	6867,
 	6933,
+	6939,
 	0
 );
