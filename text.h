@@ -662,7 +662,7 @@ class Buffer {
         else if (key == '*') { } // [TODO] Find under cursor.
         else if (key == '.') { } // [TODO] Repeat command.
         else if (key == '<') { } // [TODO] Indent left.
-        else if (key == '>') { } // [TODO] Indent right.
+        else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
     }
 
     void process_normal_number(WPARAM key) {
