@@ -519,10 +519,11 @@ public:
 	}
 };
 
-class Buffer {
+class Buffer { // [TODO] Multi buffer.
 	Stack stack;
 	Timer timer;
 
+	Color mode_text_color = Color::rgba(255, 155, 155, 255);
 	Color status_line_color = Color::rgba(1, 22, 39, 255);
 	Color status_text_color = Color::rgba(155, 155, 155, 255);
 	Color notification_line_color = Color::rgba(1, 22, 39, 255);
@@ -798,10 +799,10 @@ class Buffer {
 		}
 	}
 
-	void push_special_text(Characters& characters, unsigned row, const Color& color, const std::string_view text) {
-		unsigned col = 0;
+	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) {
+		unsigned offset = 0;
 		for (auto& character : text) {
-			characters.emplace_back((uint8_t)character, color, row, col++);
+			characters.emplace_back((uint8_t)character, color, row, col + offset++);
 		}
 	}
 
@@ -813,12 +814,13 @@ class Buffer {
 
 	void push_status_bar(Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
 		push_special_line(characters, 0, status_line_color, col_count);
-		push_special_text(characters, 0, status_text_color, build_status_text(process_time, cull_time, redraw_time));
+		push_special_text(characters, 0, 0, mode_text_color, std::string(mode_letter(mode)) + " ");
+		push_special_text(characters, 0, 2, status_text_color, build_status_text(process_time, cull_time, redraw_time));
 	}
 
 	void push_notification_bar(Characters& characters, unsigned col_count) {
 		push_special_line(characters, 1, notification_line_color, col_count);
-		push_special_text(characters, 1, notification_text_color, notification);
+		push_special_text(characters, 1, 0, notification_text_color, notification);
 	}
 
 	std::string build_status_text(float process_time, float cull_time, float redraw_time) {
@@ -830,7 +832,7 @@ class Buffer {
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return std::string(mode_letter(mode)) + " " + filename +
+		return filename +
 			" [" + text_perc + " " + text_size + ", " + cursor_col + ", " + cursor_row + "]" +
 			" (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
