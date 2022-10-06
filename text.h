@@ -321,6 +321,14 @@ public:
 		begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
 	}
 
+	void remove_line_whitespace() {
+		if (text.size() > 0) {
+			while (is_line_whitespace(text[cursor])) {
+				text.erase(cursor, 1);
+			}
+		}
+	}
+
 	void insert(std::string_view s) {
 		text.insert(cursor, s);
 		cursor = std::min(cursor + s.length(), text.size() - 1);
@@ -671,14 +679,14 @@ class Buffer {
 		else if (key == 'H') { state().window_top(row_count); }
 		else if (key == 'M') { state().window_center(row_count); }
 		else if (key == 'L') { state().window_bottom(row_count); }
-		else if (key == 'J') {} // [TODO] Merge lines.
+		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
+		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
+		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == ';') {} // [TODO] Re-find.
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == '*') {} // [TODO] Find under cursor.
 		else if (key == '.') {} // [TODO] Repeat command.
-		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
-		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 	}
 
 	void process_normal_number(WPARAM key) {
