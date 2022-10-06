@@ -659,10 +659,10 @@ class Buffer {
 		else if (key == 'f') { mode = Mode::line_find; }
 		else if (key == 'F') { mode = Mode::line_rfind; }
 		else if (key == 'x') { clip(state().erase()); }
+		else if (key == 's') { state().erase(); mode = Mode::insert; }
+		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
 		else if (key == 'D') { state().erase_to_line_end(); }
-		else if (key == 's') {} // [TODO] Subsitute character for more.
-		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'P') { paste_before(); }
 		else if (key == 'p') { paste_after(); }
 		else if (key == '0') { state().line_start(); }
