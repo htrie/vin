@@ -495,7 +495,7 @@ public:
 		states.back().fix_eof();
 	}
 
-	State& get_state() { return states.back(); }
+	State& state() { return states.back(); }
 
 	const std::string& get_text() { return states.back().get_text(); }
 	void set_text(const std::string& t) { states.back().set_text(t); }
@@ -520,31 +520,12 @@ public:
 };
 
 class Buffer {
-
-};
-
-class Manager {
-	Stack stack; // [TODO] Move to Manager.
+	Stack stack;
 	Timer timer;
-
-	Color mode_text_color = Color::rgba(255, 155, 155, 255);
-	Color status_line_color = Color::rgba(1, 22, 39, 255);
-	Color status_text_color = Color::rgba(155, 155, 155, 255);
-	Color notification_line_color = Color::rgba(1, 22, 39, 255);
-	Color notification_text_color = Color::rgba(64, 152, 179, 255);
-	Color cursor_color = Color::rgba(255, 255, 0, 255);
-	Color cursor_line_color = Color::rgba(65, 80, 29, 255);
-	Color whitespace_color = Color::rgba(75, 100, 93, 255);
-	Color text_color = Color::rgba(205, 226, 239, 255);
-	Color text_cursor_color = Color::rgba(5, 5, 5, 255);
-	Color line_number_color = Color::rgba(75, 100, 121, 255);
-	Color diff_note_color = Color::rgba(255, 192, 0, 255);
-	Color diff_add_color = Color::rgba(0, 192, 0, 255);
-	Color diff_remove_color = Color::rgba(192, 0, 0, 255);
 
 	Mode mode = Mode::normal;
 
-	std::string filename; // [TODO] Move to Manager.
+	std::string filename;
 	std::string notification;
 	std::string clipboard;
 
@@ -552,22 +533,16 @@ class Manager {
 
 	bool quit = false;
 
-	State& state() { return stack.get_state(); }
-
-	void notify(const std::string& s) {
-		notification = timestamp() + "  " + s;
-	}
-
-	void close() {
+	std::string close() {
 		if (!filename.empty()) {
 			stack.reset();
-			notify(std::string("close ") + filename);
-			filename.clear();
+			const auto res = std::string("close ") + filename;
+			return res;
 		}
+		return {};
 	}
 
-	void load() {
-		filename = "todo.diff"; // [TODO] File picker.
+	std::string load() {
 		if (!filename.empty()) {
 			const auto start = timer.now();
 			if (auto in = std::ifstream(filename)) {
@@ -575,20 +550,22 @@ class Manager {
 				stack.set_text(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
 				stack.set_modified(true);
 				const auto time = timer.duration(start);
-				notify(std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us");
+				return std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
 			}
 		}
+		return {};
 	}
 
-	void save() {
+	std::string save() {
 		if (!filename.empty()) {
 			const auto start = timer.now();
 			if (auto out = std::ofstream(filename)) {
 				out << stack.get_text();
 				const auto time = timer.duration(start);
-				notify(std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us");
+				return std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
 			}
 		}
+		return {};
 	}
 
 	void accumulate(WPARAM key) {
@@ -717,18 +694,77 @@ class Manager {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'f') { } // [TODO] Delete until char.
+		else if (key == 't') { } // [TODO] Delete to char.
 		else { mode = Mode::normal; }
 	}
 
 	void process_space(WPARAM key, bool released, unsigned row_count) {
 		if (key == 'q') { quit = true; }
-		else if (key == 'w') { close(); }
-		else if (key == 'e') { load(); }
-		else if (key == 's') { save(); }
+		else if (key == 'w') { notify(close()); }
+		else if (key == 'e') { notify(load()); }
+		else if (key == 's') { notify(save()); }
 		else if (key == 'o') { state().window_up(row_count); }
 		else if (key == 'i') { state().window_down(row_count); }
 		else if (key == ' ') { if (released) { mode = Mode::normal; } }
 	}
+
+public:
+	Buffer(const std::string_view filename)
+		: filename(filename) {
+	}
+
+	bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
+		stack.push();
+		switch (mode) {
+		case Mode::normal: process_normal(key, released, row_count); break;
+		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_d: process_normal_d(key); break;
+		case Mode::normal_z: process_normal_z(key, row_count); break;
+		case Mode::insert: process_insert(key, released); break;
+		case Mode::replace: process_replace(key); break;
+		case Mode::line_find: process_line_find(key); break;
+		case Mode::line_rfind: process_line_rfind(key); break;
+		case Mode::space: process_space(key, released, row_count); break;
+		};
+		stack.pop();
+		verify(stack.get_cursor() <= stack.get_text().size());
+		return quit;
+	}
+
+	std::string build_status_text() {
+		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
+		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
+		return filename + " [" + text_perc + " " + text_size + "]";
+	}
+
+	void notify(const std::string& s) {
+		notification = timestamp() + "  " + s;
+	}
+
+	State& state() { return stack.state(); }
+
+	std::string_view get_notification() const { return notification; }
+	Mode get_mode() const { return mode; }
+};
+
+class Manager {
+	Buffer buffer;
+
+	Color mode_text_color = Color::rgba(255, 155, 155, 255);
+	Color status_line_color = Color::rgba(1, 22, 39, 255);
+	Color status_text_color = Color::rgba(155, 155, 155, 255);
+	Color notification_line_color = Color::rgba(1, 22, 39, 255);
+	Color notification_text_color = Color::rgba(64, 152, 179, 255);
+	Color cursor_color = Color::rgba(255, 255, 0, 255);
+	Color cursor_line_color = Color::rgba(65, 80, 29, 255);
+	Color whitespace_color = Color::rgba(75, 100, 93, 255);
+	Color text_color = Color::rgba(205, 226, 239, 255);
+	Color text_cursor_color = Color::rgba(5, 5, 5, 255);
+	Color line_number_color = Color::rgba(75, 100, 121, 255);
+	Color diff_note_color = Color::rgba(255, 192, 0, 255);
+	Color diff_add_color = Color::rgba(0, 192, 0, 255);
+	Color diff_remove_color = Color::rgba(192, 0, 0, 255);
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
 		characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
@@ -749,8 +785,8 @@ class Manager {
 
 	void push_cursor(Characters& characters, unsigned row, unsigned col) {
 		characters.emplace_back(
-			mode == Mode::insert ? Glyph::LINE :
-			mode == Mode::normal ? Glyph::BLOCK :
+			buffer.get_mode() == Mode::insert ? Glyph::LINE :
+			buffer.get_mode() == Mode::normal ? Glyph::BLOCK :
 			Glyph::BOTTOM_BLOCK,
 			cursor_color, row, col);
 	};
@@ -764,23 +800,23 @@ class Manager {
 	};
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
-		characters.emplace_back((uint8_t)character, block_cursor && mode == Mode::normal ? text_cursor_color : row_color, row, col);
+		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
 		Color row_color = text_color;
-		const unsigned cursor_row = state().cursor_clamp(row_count);
-		const unsigned end_row = state().get_begin_row() + row_count;
+		const unsigned cursor_row = buffer.state().cursor_clamp(row_count);
+		const unsigned end_row = buffer.state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
 		unsigned row = 2;
 		unsigned col = 0;
 		bool new_row = true;
-		for (auto& character : stack.get_text()) {
-			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
+		for (auto& character : buffer.state().get_text()) {
+			if (absolute_row >= buffer.state().get_begin_row() && absolute_row <= end_row) {
 				if (new_row) {
 					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
-					if (state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
+					if (buffer.state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
 					else if (character == '+') { row_color = diff_add_color; }
 					else if (character == '-') { row_color = diff_remove_color; }
 					else { row_color = text_color; }
@@ -790,10 +826,10 @@ class Manager {
 						absolute_row - cursor_row;
 					push_line_number(characters, row, column, line); col += 7; new_row = false;
 				}
-				if (index == stack.get_cursor()) { push_cursor(characters, row, col); }
+				if (index == buffer.state().get_cursor()) { push_cursor(characters, row, col); }
 				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
 				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-				else { push_char(characters, row, col, character, index == stack.get_cursor(), row_color); col++; }
+				else { push_char(characters, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
 			}
 			else {
 				if (character == '\n') { absolute_row++; }
@@ -817,47 +853,33 @@ class Manager {
 
 	void push_status_bar(Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
 		push_special_line(characters, 0, status_line_color, col_count);
-		push_special_text(characters, 0, 0, mode_text_color, std::string(mode_letter(mode)) + " ");
+		push_special_text(characters, 0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
 		push_special_text(characters, 0, 2, status_text_color, build_status_text(process_time, cull_time, redraw_time));
 	}
 
 	void push_notification_bar(Characters& characters, unsigned col_count) {
 		push_special_line(characters, 1, notification_line_color, col_count);
-		push_special_text(characters, 1, 0, notification_text_color, notification);
+		push_special_text(characters, 1, 0, notification_text_color, buffer.get_notification());
 	}
 
 	std::string build_status_text(float process_time, float cull_time, float redraw_time) {
-		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
-		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return filename +
-			" [" + text_perc + " " + text_size + "]" +
-			" (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+		return buffer.build_status_text() + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
 
 public:
+	Manager()
+		: buffer("todo.diff") { // [TODO] File picker.
+	}
+
 	void run(float init_time) {
-		notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
+		buffer.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
 	}
 
 	bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
-		stack.push();
-		switch (mode) {
-		case Mode::normal: process_normal(key, released, row_count); break;
-		case Mode::normal_number: process_normal_number(key); break;
-		case Mode::normal_d: process_normal_d(key); break;
-		case Mode::normal_z: process_normal_z(key, row_count); break;
-		case Mode::insert: process_insert(key, released); break;
-		case Mode::replace: process_replace(key); break;
-		case Mode::line_find: process_line_find(key); break;
-		case Mode::line_rfind: process_line_rfind(key); break;
-		case Mode::space: process_space(key, released, row_count); break;
-		};
-		stack.pop();
-		verify(stack.get_cursor() <= stack.get_text().size());
-		return quit;
+		return buffer.process(key, released, col_count, row_count);
 	}
 
 	Characters cull(float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
