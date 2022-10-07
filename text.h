@@ -4,11 +4,11 @@ enum class Mode {
 	normal,
 	normal_number,
 	normal_d,
+	normal_f,
+	normal_F,
+	normal_r,
 	normal_z,
 	insert,
-	replace,
-	line_find,
-	line_rfind,
 	space
 };
 
@@ -29,11 +29,11 @@ constexpr std::string_view mode_letter(Mode mode) {
 	case Mode::normal: return "n";
 	case Mode::normal_number: return "0";
 	case Mode::normal_d: return "d";
+	case Mode::normal_f: return "f";
+	case Mode::normal_F: return "F";
+	case Mode::normal_r: return "r";
 	case Mode::normal_z: return "z";
 	case Mode::insert: return "i";
-	case Mode::replace: return "r";
-	case Mode::line_find: return "f";
-	case Mode::line_rfind: return "F";
 	case Mode::space: return " ";
 	}
 	return "";
@@ -599,19 +599,9 @@ class Buffer {
 		}
 	}
 
-	void process_replace(WPARAM key) {
+	void process_normal_r(WPARAM key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else { clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
-	}
-
-	void process_line_find(WPARAM key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_find(key); mode = Mode::normal; }
-	}
-
-	void process_line_rfind(WPARAM key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_rfind(key); mode = Mode::normal; }
 	}
 
 	void process_insert(WPARAM key, bool released) {
@@ -637,9 +627,9 @@ class Buffer {
 		else if (key == 'A') { state().line_end(); mode = Mode::insert; }
 		else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
 		else if (key == 'O') { state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
-		else if (key == 'r') { mode = Mode::replace; }
-		else if (key == 'f') { mode = Mode::line_find; }
-		else if (key == 'F') { mode = Mode::line_rfind; }
+		else if (key == 'r') { mode = Mode::normal_r; }
+		else if (key == 'f') { mode = Mode::normal_f; }
+		else if (key == 'F') { mode = Mode::normal_F; }
 		else if (key == 'x') { clip(state().erase()); }
 		else if (key == 's') { state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
@@ -679,6 +669,16 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
+	void process_normal_f(WPARAM key) {
+		if (key == Glyph::ESC) { mode = Mode::normal; }
+		else { state().line_find(key); mode = Mode::normal; }
+	}
+
+	void process_normal_F(WPARAM key) {
+		if (key == Glyph::ESC) { mode = Mode::normal; }
+		else { state().line_rfind(key); mode = Mode::normal; }
+	}
+
 	void process_normal_z(WPARAM key, unsigned row_count) {
 		if (key == 'z') { state().cursor_center(row_count); mode = Mode::normal; }
 		else if (key == 't') { state().cursor_top(row_count); mode = Mode::normal; }
@@ -696,6 +696,8 @@ class Buffer {
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'f') { } // [TODO] Delete until char.
 		else if (key == 't') { } // [TODO] Delete to char.
+		else if (key == 'i') { } // [TODO] di mode.
+		else if (key == 'a') { } // [TODO] da mode.
 		else { mode = Mode::normal; }
 	}
 
@@ -720,11 +722,11 @@ public:
 		case Mode::normal: process_normal(key, released, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_d: process_normal_d(key); break;
+		case Mode::normal_f: process_normal_f(key); break;
+		case Mode::normal_F: process_normal_F(key); break;
+		case Mode::normal_r: process_normal_r(key); break;
 		case Mode::normal_z: process_normal_z(key, row_count); break;
 		case Mode::insert: process_insert(key, released); break;
-		case Mode::replace: process_replace(key); break;
-		case Mode::line_find: process_line_find(key); break;
-		case Mode::line_rfind: process_line_rfind(key); break;
 		case Mode::space: process_space(key, released, row_count); break;
 		};
 		stack.pop();
