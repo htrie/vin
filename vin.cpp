@@ -23,7 +23,7 @@
 
 class App {
 	Device device;
-	Buffer buffer;
+	Manager manager;
 	Timer timer;
 
 	Color clear_color = Color::rgba(1, 22, 39, 255);
@@ -49,7 +49,7 @@ class App {
 			dirty = false;
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
-			const auto text = buffer.cull(process_time, cull_time, redraw_time, viewport.w, viewport.h);
+			const auto text = manager.cull(process_time, cull_time, redraw_time, viewport.w, viewport.h);
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
@@ -65,7 +65,7 @@ class App {
 	void process(WPARAM key, bool released) {
 		const auto start = timer.now();
 		const auto viewport = device.viewport();
-		if (buffer.process(key, released, viewport.w, viewport.h))
+		if (manager.process(key, released, viewport.w, viewport.h))
 			PostQuitMessage(0);
 		process_time = timer.duration(start);
 	}
@@ -137,7 +137,7 @@ public:
 	}
 
 	void run(float init_time) {
-		buffer.run(init_time);
+		manager.run(init_time);
 		MSG msg = {};
 		while (GetMessage(&msg, nullptr, 0, 0)) {
 			TranslateMessage(&msg);

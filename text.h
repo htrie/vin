@@ -519,7 +519,11 @@ public:
 	}
 };
 
-class Buffer { // [TODO] Separate Manager from Buffer.
+class Buffer {
+
+};
+
+class Manager {
 	Stack stack; // [TODO] Move to Manager.
 	Timer timer;
 
