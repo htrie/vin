@@ -62,7 +62,7 @@ class App {
 		}
 	}
 
-	void process(WPARAM key, bool released) {
+	void process(unsigned key, bool released) {
 		const auto start = timer.now();
 		const auto viewport = device.viewport();
 		if (manager.process(key, released, viewport.w, viewport.h))
@@ -119,7 +119,7 @@ class App {
 		}
 		case WM_CHAR: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				app->process(wParam, false);
+				app->process((unsigned)wParam, false);
 				app->set_dirty(true);
 			}
 			break;

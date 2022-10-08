@@ -131,7 +131,7 @@ public:
 		return number;
 	}
 
-	void line_find(WPARAM key) {
+	void line_find(unsigned key) {
 		Line current(text, cursor);
 		size_t pos = text[cursor] == key ? cursor + 1 : cursor;
 		bool found = false;
@@ -142,7 +142,7 @@ public:
 		if (found) { cursor = pos; }
 	}
 
-	void line_rfind(WPARAM key) {
+	void line_rfind(unsigned key) {
 		Line current(text, cursor);
 		size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
 		bool found = false;
@@ -609,7 +609,7 @@ class Buffer {
 
 	unsigned accu = 0;
 
-	WPARAM f_key = 0;
+	unsigned f_key = 0;
 	bool f_is_forward = false;
 
 	bool quit = false;
@@ -649,7 +649,7 @@ class Buffer {
 		return {};
 	}
 
-	void accumulate(WPARAM key) {
+	void accumulate(unsigned key) {
 		verify(key >= '0' && key <= '9');
 		const auto digit = (unsigned)key - (unsigned)'0';
 		accu *= 10;
@@ -680,12 +680,7 @@ class Buffer {
 		}
 	}
 
-	void process_normal_r(WPARAM key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
-	}
-
-	void process_insert(WPARAM key, bool released) {
+	void process_insert(unsigned key, bool released) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
 		else if (key == Glyph::TAB) { state().insert("\t"); }
@@ -694,7 +689,7 @@ class Buffer {
 		else { state().insert(std::string(1, (char)key)); }
 	}
 
-	void process_normal(WPARAM key, bool released, unsigned row_count) {
+	void process_normal(unsigned key, bool released, unsigned row_count) {
 		if (key == ' ' && !released) { mode = Mode::space; }
 		else if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
@@ -743,7 +738,7 @@ class Buffer {
 		else if (key == '.') {} // [TODO] Repeat command.
 	}
 
-	void process_normal_number(WPARAM key) {
+	void process_normal_number(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'j') { state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
@@ -751,24 +746,29 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_f(WPARAM key) {
+	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else { state().line_find(key); f_key = key; f_is_forward = true; mode = Mode::normal; }
 	}
 
-	void process_normal_F(WPARAM key) {
+	void process_normal_F(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else { state().line_rfind(key); f_key = key; f_is_forward = false; mode = Mode::normal; }
 	}
 
-	void process_normal_z(WPARAM key, unsigned row_count) {
+	void process_normal_r(unsigned key) {
+		if (key == Glyph::ESC) { mode = Mode::normal; }
+		else { clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
+	}
+
+	void process_normal_z(unsigned key, unsigned row_count) {
 		if (key == 'z') { state().cursor_center(row_count); mode = Mode::normal; }
 		else if (key == 't') { state().cursor_top(row_count); mode = Mode::normal; }
 		else if (key == 'b') { state().cursor_bottom(row_count); mode = Mode::normal; }
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_y(WPARAM key) {
+	void process_normal_y(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'y') { clip(state().yank_line()); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { clip(state().yank_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
@@ -783,7 +783,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_c(WPARAM key) {
+	void process_normal_c(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'c') { clip(state().erase_line_contents()); accu = 0; mode = Mode::insert; }
 		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
@@ -798,7 +798,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_d(WPARAM key) {
+	void process_normal_d(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
@@ -813,7 +813,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_space(WPARAM key, bool released, unsigned row_count) {
+	void process_space(unsigned key, bool released, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(close()); }
 		else if (key == 'e') { notify(load()); }
@@ -828,7 +828,7 @@ public:
 		: filename(filename) {
 	}
 
-	bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
+	bool process(unsigned key, bool released, unsigned col_count, unsigned row_count) {
 		stack.push();
 		switch (mode) {
 		case Mode::normal: process_normal(key, released, row_count); break;
@@ -994,7 +994,7 @@ public:
 		buffer.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
 	}
 
-	bool process(WPARAM key, bool released, unsigned col_count, unsigned row_count) {
+	bool process(unsigned key, bool released, unsigned col_count, unsigned row_count) {
 		return buffer.process(key, released, col_count, row_count);
 	}
 
