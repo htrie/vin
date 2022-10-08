@@ -333,6 +333,80 @@ public:
 		}
 	}
 
+	std::string yank_line() {
+		if (text.size() > 0) {
+			Line current(text, cursor);
+			return text.substr(current.begin(), current.end() - current.begin() + 1);
+		}
+		return {};
+	}
+
+	std::string yank_all_up() {
+		if (text.size() > 0) {
+			return text.substr(0, cursor);
+		}
+		return {};
+	}
+
+	std::string yank_all_down() {
+		if (text.size() > 0) {
+			return text.substr(cursor, text.size() - cursor);
+		}
+		return {};
+	}
+
+	std::string yank_words(unsigned count) {
+		std::string s;
+		if (text.size() > 0) {
+			Line current(text, cursor);
+			const size_t begin = cursor;
+			size_t end = begin;
+			for (unsigned i = 0; i < count; i++) {
+				while (end < current.end()) {
+					if (is_whitespace(text[end])) break;
+					end++;
+				}
+				while (end < current.end()) {
+					if (!is_whitespace(text[end])) break;
+					end++;
+				}
+			}
+			s += text.substr(begin, end - begin);
+		}
+		return s;
+	}
+
+	std::string yank_lines_down(unsigned count) {
+		std::string s;
+		if (text.size() > 0) {
+			size_t begin = cursor;
+			for (unsigned i = 0; i <= count; i++) {
+				if (begin < text.size() - 1) {
+					Line current(text, begin);
+					s += text.substr(current.begin(), current.end() - current.begin() + 1);
+					begin = current.end() + 1;
+				}
+			}
+		}
+		return s;
+	}
+
+	std::string yank_lines_up(unsigned count) {
+		std::string s;
+		if (text.size() > 0) {
+			size_t begin = cursor;
+			for (unsigned i = 0; i <= count; i++) {
+				if (begin < text.size() - 1) {
+					Line current(text, begin);
+					s.insert(0, text.substr(current.begin(), current.end() - current.begin() + 1));
+					if (current.begin() == 0) break;
+					begin = current.begin() - 1;
+				}
+			}
+		}
+		return s;
+	}
+
 	void insert(std::string_view s) {
 		text.insert(cursor, s);
 		cursor = std::min(cursor + s.length(), text.size() - 1);
@@ -621,20 +695,20 @@ class Buffer {
 		if (key == ' ' && !released) { mode = Mode::space; }
 		else if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
+		else if (key == 'c') { mode = Mode::normal_c; }
 		else if (key == 'd') { mode = Mode::normal_d; }
-		else if (key == 'c') { mode = Mode::normal_c; } // [TODO] Change mode (cc, cw, cb, cNj/cNk).
-		else if (key == 'y') { mode = Mode::normal_y; } // [TODO] Yank mode (yy, yw, yb, yNj/yNk).
+		else if (key == 'r') { mode = Mode::normal_r; }
+		else if (key == 'f') { mode = Mode::normal_f; }
+		else if (key == 'F') { mode = Mode::normal_F; }
+		else if (key == 'y') { mode = Mode::normal_y; }
 		else if (key == 'z') { mode = Mode::normal_z; }
 		else if (key == 'i') { mode = Mode::insert; }
+		else if (key == 'x') { clip(state().erase()); }
 		else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
 		else if (key == 'a') { state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { state().line_end(); mode = Mode::insert; }
 		else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
 		else if (key == 'O') { state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
-		else if (key == 'r') { mode = Mode::normal_r; }
-		else if (key == 'f') { mode = Mode::normal_f; }
-		else if (key == 'F') { mode = Mode::normal_F; }
-		else if (key == 'x') { clip(state().erase()); }
 		else if (key == 's') { state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
@@ -658,7 +732,8 @@ class Buffer {
 		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
 		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
-		else if (key == ';') {} // [TODO] Re-find.
+		else if (key == ';') {} // [TODO] Next find line.
+		else if (key == ',') {} // [TODO] Prev find line.
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == '*') {} // [TODO] Find under cursor.
@@ -691,7 +766,18 @@ class Buffer {
 	}
 
 	void process_normal_y(WPARAM key) {
-		mode = Mode::normal;
+		if (key >= '0' && key <= '9') { accumulate(key); }
+		else if (key == 'y') { clip(state().yank_line()); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { clip(state().yank_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { clip(state().yank_all_up()); accu = 0; mode = Mode::normal; }
+		else if (key == 'G') { clip(state().yank_all_down()); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { clip(state().yank_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { clip(state().yank_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'f') { } // [TODO] yf
+		else if (key == 't') { } // [TODO] yt
+		else if (key == 'i') { } // [TODO] yi
+		else if (key == 'a') { } // [TODO] ya
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_c(WPARAM key) {
@@ -702,10 +788,10 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'f') { } // [TODO] Delete until char.
-		else if (key == 't') { } // [TODO] Delete to char.
-		else if (key == 'i') { } // [TODO] di mode.
-		else if (key == 'a') { } // [TODO] da mode.
+		else if (key == 'f') { } // [TODO] cf
+		else if (key == 't') { } // [TODO] ct
+		else if (key == 'i') { } // [TODO] ci
+		else if (key == 'a') { } // [TODO] da
 		else { mode = Mode::normal; }
 	}
 
@@ -717,10 +803,10 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { } // [TODO] Delete until char.
-		else if (key == 't') { } // [TODO] Delete to char.
-		else if (key == 'i') { } // [TODO] di mode.
-		else if (key == 'a') { } // [TODO] da mode.
+		else if (key == 'f') { } // [TODO] df
+		else if (key == 't') { } // [TODO] dt
+		else if (key == 'i') { } // [TODO] di
+		else if (key == 'a') { } // [TODO] da
 		else { mode = Mode::normal; }
 	}
 
