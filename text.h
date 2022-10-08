@@ -609,6 +609,9 @@ class Buffer {
 
 	unsigned accu = 0;
 
+	WPARAM f_key = 0;
+	bool f_is_forward = false;
+
 	bool quit = false;
 
 	std::string close() {
@@ -732,8 +735,8 @@ class Buffer {
 		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
 		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
-		else if (key == ';') {} // [TODO] Next find line.
-		else if (key == ',') {} // [TODO] Prev find line.
+		else if (key == ';') { if(f_is_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
+		else if (key == ',') { if(f_is_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == '*') {} // [TODO] Find under cursor.
@@ -750,12 +753,12 @@ class Buffer {
 
 	void process_normal_f(WPARAM key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_find(key); mode = Mode::normal; }
+		else { state().line_find(key); f_key = key; f_is_forward = true; mode = Mode::normal; }
 	}
 
 	void process_normal_F(WPARAM key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_rfind(key); mode = Mode::normal; }
+		else { state().line_rfind(key); f_key = key; f_is_forward = false; mode = Mode::normal; }
 	}
 
 	void process_normal_z(WPARAM key, unsigned row_count) {
