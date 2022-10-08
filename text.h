@@ -3,10 +3,12 @@
 enum class Mode {
 	normal,
 	normal_number,
+	normal_c,
 	normal_d,
 	normal_f,
 	normal_F,
 	normal_r,
+	normal_y,
 	normal_z,
 	insert,
 	space
@@ -28,10 +30,12 @@ constexpr std::string_view mode_letter(Mode mode) {
 	switch (mode) {
 	case Mode::normal: return "n";
 	case Mode::normal_number: return "0";
+	case Mode::normal_c: return "c";
 	case Mode::normal_d: return "d";
 	case Mode::normal_f: return "f";
 	case Mode::normal_F: return "F";
 	case Mode::normal_r: return "r";
+	case Mode::normal_y: return "y";
 	case Mode::normal_z: return "z";
 	case Mode::insert: return "i";
 	case Mode::space: return " ";
@@ -618,8 +622,8 @@ class Buffer {
 		else if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == 'd') { mode = Mode::normal_d; }
-		else if (key == 'c') {} // [TODO] Change mode (cc, cw, cb, cNj/cNk).
-		else if (key == 'y') {} // [TODO] Yank mode (yy, yw, yb, yNj/yNk).
+		else if (key == 'c') { mode = Mode::normal_c; } // [TODO] Change mode (cc, cw, cb, cNj/cNk).
+		else if (key == 'y') { mode = Mode::normal_y; } // [TODO] Yank mode (yy, yw, yb, yNj/yNk).
 		else if (key == 'z') { mode = Mode::normal_z; }
 		else if (key == 'i') { mode = Mode::insert; }
 		else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
@@ -686,6 +690,25 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
+	void process_normal_y(WPARAM key) {
+		mode = Mode::normal;
+	}
+
+	void process_normal_c(WPARAM key) {
+		if (key >= '0' && key <= '9') { accumulate(key); }
+		else if (key == 'c') { clip(state().erase_line_contents()); accu = 0; mode = Mode::insert; }
+		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::insert; }
+		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
+		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'f') { } // [TODO] Delete until char.
+		else if (key == 't') { } // [TODO] Delete to char.
+		else if (key == 'i') { } // [TODO] di mode.
+		else if (key == 'a') { } // [TODO] da mode.
+		else { mode = Mode::normal; }
+	}
+
 	void process_normal_d(WPARAM key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
@@ -721,10 +744,12 @@ public:
 		switch (mode) {
 		case Mode::normal: process_normal(key, released, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_d: process_normal_d(key); break;
 		case Mode::normal_f: process_normal_f(key); break;
 		case Mode::normal_F: process_normal_F(key); break;
 		case Mode::normal_r: process_normal_r(key); break;
+		case Mode::normal_y: process_normal_y(key); break;
 		case Mode::normal_z: process_normal_z(key, row_count); break;
 		case Mode::insert: process_insert(key, released); break;
 		case Mode::space: process_space(key, released, row_count); break;
