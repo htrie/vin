@@ -550,6 +550,24 @@ public:
 		return s;
 	}
 
+	void paste_before(const std::string_view s) {
+		if (s.find('\n') != std::string::npos) {
+			insert(s); prev_line();
+		}
+		else {
+			insert(s);
+		}
+	}
+
+	void paste_after(const std::string_view s) {
+		if (s.find('\n') != std::string::npos) {
+			next_line(); insert(s); prev_line();
+		}
+		else {
+			next_char(); insert(s);
+		}
+	}
+
 	void fix_eof() {
 		const auto size = text.size();
 		if (size == 0 || (size > 0 && text[size - 1] != '\n')) {
@@ -662,24 +680,6 @@ class Buffer {
 		return s;
 	}
 
-	void paste_before() {
-		if (clipboard.find('\n') != std::string::npos) {
-			state().insert(clipboard); state().prev_line();
-		}
-		else {
-			state().insert(clipboard);
-		}
-	}
-
-	void paste_after() {
-		if (clipboard.find('\n') != std::string::npos) {
-			state().next_line(); state().insert(clipboard); state().prev_line();
-		}
-		else {
-			state().next_char(); state().insert(clipboard);
-		}
-	}
-
 	void process_insert(unsigned key, bool released) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
@@ -711,8 +711,8 @@ class Buffer {
 		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
 		else if (key == 'D') { state().erase_to_line_end(); }
-		else if (key == 'P') { paste_before(); }
-		else if (key == 'p') { paste_after(); }
+		else if (key == 'P') { state().paste_before(clipboard); }
+		else if (key == 'p') { state().paste_after(clipboard); }
 		else if (key == '0') { state().line_start(); }
 		else if (key == '_') { state().line_start_whitespace(); }
 		else if (key == '$') { state().line_end(); }
