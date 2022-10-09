@@ -5,6 +5,8 @@ enum class Mode {
 	normal_number,
 	normal_c,
 	normal_d,
+	normal_df,
+	normal_dt,
 	normal_f,
 	normal_F,
 	normal_r,
@@ -31,7 +33,9 @@ constexpr std::string_view mode_letter(Mode mode) {
 	case Mode::normal: return "n";
 	case Mode::normal_number: return "0";
 	case Mode::normal_c: return "c";
-	case Mode::normal_d: return "d";
+	case Mode::normal_d:
+	case Mode::normal_df:
+	case Mode::normal_dt: return "d";
 	case Mode::normal_f: return "f";
 	case Mode::normal_F: return "F";
 	case Mode::normal_r: return "r";
@@ -465,6 +469,45 @@ public:
 		return {};
 	}
 
+	size_t find_char(unsigned key) {
+		if (text.size() > 0) {
+			Line current(text, cursor);
+			size_t pos = text[cursor] == key ? cursor + 1 : cursor;
+			bool found = false;
+			while (pos < current.end()) {
+				if (text[pos] == key) { found = true; break; }
+				pos++;
+			}
+			if (found)
+				return pos;
+		}
+		return std::string::npos;
+	}
+
+	std::string erase_to(unsigned key) {
+		if (text.size() > 0) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
+				const auto s = text.substr(cursor, pos - cursor + 1);
+				text.erase(cursor, pos - cursor + 1);
+				modified = true;
+				return s;
+			}
+		}
+		return {};
+	}
+
+	std::string erase_until(unsigned key) {
+		if (text.size() > 0) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
+				const auto s = text.substr(cursor, pos - cursor);
+				text.erase(cursor, pos - cursor);
+				modified = true;
+				return s;
+			}
+		}
+		return {};
+	}
+
 	std::string erase_line() {
 		if (text.size() > 0) {
 			Line current(text, cursor);
@@ -806,11 +849,19 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { } // [TODO] df
-		else if (key == 't') { } // [TODO] dt
+		else if (key == 'f') { mode = Mode::normal_df; }
+		else if (key == 't') { mode = Mode::normal_dt; }
 		else if (key == 'i') { } // [TODO] di
 		else if (key == 'a') { } // [TODO] da
 		else { mode = Mode::normal; }
+	}
+
+	void process_normal_df(unsigned key) {
+		clip(state().erase_to(key)); mode = Mode::normal;
+	}
+
+	void process_normal_dt(unsigned key) {
+		clip(state().erase_until(key)); mode = Mode::normal;
 	}
 
 	void process_space(unsigned key, bool released, unsigned row_count) {
@@ -835,6 +886,8 @@ public:
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_d: process_normal_d(key); break;
+		case Mode::normal_df: process_normal_df(key); break;
+		case Mode::normal_dt: process_normal_dt(key); break;
 		case Mode::normal_f: process_normal_f(key); break;
 		case Mode::normal_F: process_normal_F(key); break;
 		case Mode::normal_r: process_normal_r(key); break;
