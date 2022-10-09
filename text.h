@@ -6,13 +6,21 @@ enum class Mode {
 	normal_c,
 	normal_cf,
 	normal_ct,
+	normal_ci,
+	normal_ca,
 	normal_d,
 	normal_df,
 	normal_dt,
+	normal_di,
+	normal_da,
 	normal_f,
 	normal_F,
 	normal_r,
 	normal_y,
+	normal_yf,
+	normal_yt,
+	normal_yi,
+	normal_ya,
 	normal_z,
 	insert,
 	space
@@ -36,13 +44,21 @@ constexpr std::string_view mode_letter(Mode mode) {
 	case Mode::normal_number: return "0";
 	case Mode::normal_cf:
 	case Mode::normal_ct:
+	case Mode::normal_ci:
+	case Mode::normal_ca:
 	case Mode::normal_c: return "c";
 	case Mode::normal_df:
 	case Mode::normal_dt:
+	case Mode::normal_di:
+	case Mode::normal_da:
 	case Mode::normal_d: return "d";
 	case Mode::normal_f: return "f";
 	case Mode::normal_F: return "F";
 	case Mode::normal_r: return "r";
+	case Mode::normal_yf:
+	case Mode::normal_yt:
+	case Mode::normal_yi:
+	case Mode::normal_ya:
 	case Mode::normal_y: return "y";
 	case Mode::normal_z: return "z";
 	case Mode::insert: return "i";
@@ -357,6 +373,24 @@ public:
 				text.erase(cursor, 1);
 			}
 		}
+	}
+
+	std::string yank_to(unsigned key) {
+		if (text.size() > 0) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
+				return text.substr(cursor, pos - cursor + 1);
+			}
+		}
+		return {};
+	}
+
+	std::string yank_until(unsigned key) {
+		if (text.size() > 0) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
+				return text.substr(cursor, pos - cursor);
+			}
+		}
+		return {};
 	}
 
 	std::string yank_line() {
@@ -826,11 +860,27 @@ class Buffer {
 		else if (key == 'G') { clip(state().yank_all_down()); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { clip(state().yank_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { clip(state().yank_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { } // [TODO] yf
-		else if (key == 't') { } // [TODO] yt
-		else if (key == 'i') { } // [TODO] yi
-		else if (key == 'a') { } // [TODO] ya
+		else if (key == 'f') { accu = 0; mode = Mode::normal_yf; }
+		else if (key == 't') { accu = 0; mode = Mode::normal_yt; }
+		else if (key == 'i') { accu = 0; mode = Mode::normal_yi; }
+		else if (key == 'a') { accu = 0; mode = Mode::normal_ya; }
 		else { mode = Mode::normal; }
+	}
+
+	void process_normal_yf(unsigned key) {
+		clip(state().yank_to(key)); mode = Mode::normal;
+	}
+
+	void process_normal_yt(unsigned key) {
+		clip(state().yank_until(key)); mode = Mode::normal;
+	}
+
+	void process_normal_yi(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+	}
+
+	void process_normal_ya(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
 	void process_normal_c(unsigned key) {
@@ -841,10 +891,10 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'f') { mode = Mode::normal_cf; }
-		else if (key == 't') { mode = Mode::normal_ct; }
-		else if (key == 'i') { } // [TODO] ci
-		else if (key == 'a') { } // [TODO] da
+		else if (key == 'f') { accu = 0; mode = Mode::normal_cf; }
+		else if (key == 't') { accu = 0; mode = Mode::normal_ct; }
+		else if (key == 'i') { accu = 0; mode = Mode::normal_ci; }
+		else if (key == 'a') { accu = 0; mode = Mode::normal_ca; }
 		else { mode = Mode::normal; }
 	}
 
@@ -856,6 +906,14 @@ class Buffer {
 		clip(state().erase_until(key)); mode = Mode::insert;
 	}
 
+	void process_normal_ci(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+	}
+
+	void process_normal_ca(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+	}
+
 	void process_normal_d(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
@@ -864,10 +922,10 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { mode = Mode::normal_df; }
-		else if (key == 't') { mode = Mode::normal_dt; }
-		else if (key == 'i') { } // [TODO] di
-		else if (key == 'a') { } // [TODO] da
+		else if (key == 'f') { accu = 0; mode = Mode::normal_df; }
+		else if (key == 't') { accu = 0; mode = Mode::normal_dt; }
+		else if (key == 'i') { accu = 0; mode = Mode::normal_di; }
+		else if (key == 'a') { accu = 0; mode = Mode::normal_da; }
 		else { mode = Mode::normal; }
 	}
 
@@ -877,6 +935,14 @@ class Buffer {
 
 	void process_normal_dt(unsigned key) {
 		clip(state().erase_until(key)); mode = Mode::normal;
+	}
+
+	void process_normal_di(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+	}
+
+	void process_normal_da(unsigned key) {
+		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
 	void process_space(unsigned key, bool released, unsigned row_count) {
@@ -902,13 +968,21 @@ public:
 		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_cf: process_normal_cf(key); break;
 		case Mode::normal_ct: process_normal_ct(key); break;
+		case Mode::normal_ci: process_normal_ci(key); break;
+		case Mode::normal_ca: process_normal_ca(key); break;
 		case Mode::normal_d: process_normal_d(key); break;
 		case Mode::normal_df: process_normal_df(key); break;
 		case Mode::normal_dt: process_normal_dt(key); break;
+		case Mode::normal_di: process_normal_di(key); break;
+		case Mode::normal_da: process_normal_da(key); break;
 		case Mode::normal_f: process_normal_f(key); break;
 		case Mode::normal_F: process_normal_F(key); break;
 		case Mode::normal_r: process_normal_r(key); break;
 		case Mode::normal_y: process_normal_y(key); break;
+		case Mode::normal_yf: process_normal_yf(key); break;
+		case Mode::normal_yt: process_normal_yt(key); break;
+		case Mode::normal_yi: process_normal_yi(key); break;
+		case Mode::normal_ya: process_normal_ya(key); break;
 		case Mode::normal_z: process_normal_z(key, row_count); break;
 		case Mode::insert: process_insert(key, released); break;
 		case Mode::space: process_space(key, released, row_count); break;
