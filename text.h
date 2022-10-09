@@ -4,6 +4,8 @@ enum class Mode {
 	normal,
 	normal_number,
 	normal_c,
+	normal_cf,
+	normal_ct,
 	normal_d,
 	normal_df,
 	normal_dt,
@@ -32,10 +34,12 @@ constexpr std::string_view mode_letter(Mode mode) {
 	switch (mode) {
 	case Mode::normal: return "n";
 	case Mode::normal_number: return "0";
+	case Mode::normal_cf:
+	case Mode::normal_ct:
 	case Mode::normal_c: return "c";
-	case Mode::normal_d:
 	case Mode::normal_df:
-	case Mode::normal_dt: return "d";
+	case Mode::normal_dt:
+	case Mode::normal_d: return "d";
 	case Mode::normal_f: return "f";
 	case Mode::normal_F: return "F";
 	case Mode::normal_r: return "r";
@@ -834,11 +838,19 @@ class Buffer {
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
 		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
 		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'f') { } // [TODO] cf
-		else if (key == 't') { } // [TODO] ct
+		else if (key == 'f') { mode = Mode::normal_cf; }
+		else if (key == 't') { mode = Mode::normal_ct; }
 		else if (key == 'i') { } // [TODO] ci
 		else if (key == 'a') { } // [TODO] da
 		else { mode = Mode::normal; }
+	}
+
+	void process_normal_cf(unsigned key) {
+		clip(state().erase_to(key)); mode = Mode::insert;
+	}
+
+	void process_normal_ct(unsigned key) {
+		clip(state().erase_until(key)); mode = Mode::insert;
 	}
 
 	void process_normal_d(unsigned key) {
@@ -885,6 +897,8 @@ public:
 		case Mode::normal: process_normal(key, released, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_c: process_normal_c(key); break;
+		case Mode::normal_cf: process_normal_cf(key); break;
+		case Mode::normal_ct: process_normal_ct(key); break;
 		case Mode::normal_d: process_normal_d(key); break;
 		case Mode::normal_df: process_normal_df(key); break;
 		case Mode::normal_dt: process_normal_dt(key); break;
