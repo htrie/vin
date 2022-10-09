@@ -139,27 +139,45 @@ public:
 		return number;
 	}
 
-	void line_find(unsigned key) {
-		Line current(text, cursor);
-		size_t pos = text[cursor] == key ? cursor + 1 : cursor;
-		bool found = false;
-		while (pos < current.end()) {
-			if (text[pos] == key) { found = true; break; }
-			pos++;
+	size_t find_char(unsigned key) {
+		if (text.size() > 0) {
+			Line current(text, cursor);
+			size_t pos = text[cursor] == key ? cursor + 1 : cursor;
+			bool found = false;
+			while (pos < current.end()) {
+				if (text[pos] == key) { found = true; break; }
+				pos++;
+			}
+			if (found) return pos;
 		}
-		if (found) { cursor = pos; }
+		return std::string::npos;
+	}
+
+	size_t rfind_char(unsigned key) {
+		if (text.size() > 0) {
+			Line current(text, cursor);
+			size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
+			bool found = false;
+			while (pos >= current.begin()) {
+				if (text[pos] == key) { found = true; break; }
+				if (pos > current.begin()) { pos--; }
+				else { break; }
+			}
+			if (found) return pos;
+		}
+		return std::string::npos;
+	}
+
+	void line_find(unsigned key) {
+		if (const auto pos = find_char(key); pos != std::string::npos) {
+			cursor = pos;
+		}
 	}
 
 	void line_rfind(unsigned key) {
-		Line current(text, cursor);
-		size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
-		bool found = false;
-		while (pos >= current.begin()) {
-			if (text[pos] == key) { found = true; break; }
-			if (pos > current.begin()) { pos--; }
-			else { break; }
+		if (const auto pos = rfind_char(key); pos != std::string::npos) {
+			cursor = pos;
 		}
-		if (found) { cursor = pos; }
 	}
 
 	void next_char() {
@@ -471,21 +489,6 @@ public:
 			return s;
 		}
 		return {};
-	}
-
-	size_t find_char(unsigned key) {
-		if (text.size() > 0) {
-			Line current(text, cursor);
-			size_t pos = text[cursor] == key ? cursor + 1 : cursor;
-			bool found = false;
-			while (pos < current.end()) {
-				if (text[pos] == key) { found = true; break; }
-				pos++;
-			}
-			if (found)
-				return pos;
-		}
-		return std::string::npos;
 	}
 
 	std::string erase_to(unsigned key) {
