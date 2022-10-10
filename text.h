@@ -72,7 +72,7 @@ std::string timestamp() {
 	const auto start_of_day = std::chrono::floor<std::chrono::days>(now);
 	const auto time_since_start_of_day = std::chrono::round<std::chrono::seconds>(now - start_of_day);
 	const std::chrono::hh_mm_ss hms{ time_since_start_of_day };
-	return std::format("{}", hms);
+	return std::format("{:%r}", hms);
 }
 
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
