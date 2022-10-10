@@ -992,7 +992,7 @@ public:
 		return quit;
 	}
 
-	std::string build_status_text() const {
+	std::string status() const {
 		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
 		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
 		return filename + " [" + text_perc + " " + text_size + "]";
@@ -1025,6 +1025,9 @@ class Layout {
 	Color diff_note_color = Color::rgba(255, 192, 0, 255);
 	Color diff_add_color = Color::rgba(0, 192, 0, 255);
 	Color diff_remove_color = Color::rgba(192, 0, 0, 255);
+
+	unsigned col_count = 0;
+	unsigned row_count = 0;
 
 	void push_digit(unsigned row, unsigned col, unsigned digit) {
 		characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
@@ -1063,7 +1066,7 @@ class Layout {
 		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
 	};
 
-	void push_text(Buffer& buffer, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+	void push_text(Buffer& buffer) { // [TODO] Clean.
 		Color row_color = text_color;
 		const unsigned cursor_row = buffer.state().cursor_clamp(row_count);
 		const unsigned end_row = buffer.state().get_begin_row() + row_count;
@@ -1105,32 +1108,34 @@ class Layout {
 		}
 	}
 
-	void push_special_line(unsigned row, const Color& color, unsigned col_count) {
+	void push_special_line(unsigned row, const Color& color) {
 		for (unsigned i = 0; i < col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);
 		}
 	}
 
-	void push_status_bar(const Buffer& buffer, const std::string_view status, unsigned col_count) {
-		push_special_line(0, status_line_color, col_count);
+	void push_status_bar(const Buffer& buffer, const std::string_view status) {
+		push_special_line(0, status_line_color);
 		push_special_text(0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
 		push_special_text(0, 2, status_text_color, status);
 	}
 
-	void push_notification_bar(const Buffer& buffer, unsigned col_count) {
-		push_special_line(1, notification_line_color, col_count);
+	void push_notification_bar(const Buffer& buffer) {
+		push_special_line(1, notification_line_color);
 		push_special_text(1, 0, notification_text_color, buffer.get_notification());
 	}
 
 public:
-	Layout() {
+	Layout(unsigned col_count, unsigned row_count)
+		: col_count(col_count)
+		, row_count(row_count) {
 		characters.reserve(1024);
 	}
 
-	Characters cull(Buffer& buffer, const std::string_view status, unsigned col_count, unsigned row_count) {
-		push_status_bar(buffer, status, col_count);
-		push_notification_bar(buffer, col_count);
-		push_text(buffer, col_count, row_count);
+	Characters cull(Buffer& buffer, const std::string_view status) {
+		push_status_bar(buffer, status);
+		push_notification_bar(buffer);
+		push_text(buffer);
 		return characters;
 	}
 };

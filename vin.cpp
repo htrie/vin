@@ -39,11 +39,11 @@ class App {
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 
-	std::string build_status_text() {
+	std::string status() {
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return buffer.build_status_text() + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+		return buffer.status() + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -57,8 +57,8 @@ class App {
 			dirty = false;
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
-			Layout layout;
-			const auto text = layout.cull(buffer, build_status_text(), viewport.w, viewport.h);
+			Layout layout(viewport.w, viewport.h);
+			const auto text = layout.cull(buffer, status());
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
