@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+	#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+
 HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height) {
 	const char* name = "vin";
 	const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
@@ -32,10 +36,10 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
 		error("Cannot create a window in which to draw!\n", "CreateWindow Failure");
 	}
 
-	// [TODO] Dark mode.
+	BOOL value = TRUE;
+	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
 	ShowWindow(hWnd, nCmdShow);
-
 	return hWnd;
 }
 

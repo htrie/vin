@@ -11,6 +11,7 @@
 #include <fstream>
 #include <thread>
 #include <vulkan/vulkan.hpp>
+#include <dwmapi.h>
 #include <Windows.h>
 
 #include "resource.h"
