@@ -1111,10 +1111,10 @@ class Layout {
 		}
 	}
 
-	void push_status_bar(const Buffer& buffer, float process_time, float cull_time, float redraw_time, unsigned col_count) {
+	void push_status_bar(const Buffer& buffer, const std::string_view status, unsigned col_count) {
 		push_special_line(0, status_line_color, col_count);
 		push_special_text(0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
-		push_special_text(0, 2, status_text_color, build_status_text(buffer, process_time, cull_time, redraw_time));
+		push_special_text(0, 2, status_text_color, status);
 	}
 
 	void push_notification_bar(const Buffer& buffer, unsigned col_count) {
@@ -1122,20 +1122,13 @@ class Layout {
 		push_special_text(1, 0, notification_text_color, buffer.get_notification());
 	}
 
-	std::string build_status_text(const Buffer& buffer, float process_time, float cull_time, float redraw_time) {
-		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
-		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
-		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return buffer.build_status_text() + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
-	}
-
 public:
 	Layout() {
 		characters.reserve(1024);
 	}
 
-	Characters cull(Buffer& buffer, float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
-		push_status_bar(buffer, process_time, cull_time, redraw_time, col_count);
+	Characters cull(Buffer& buffer, const std::string_view status, unsigned col_count, unsigned row_count) {
+		push_status_bar(buffer, status, col_count);
 		push_notification_bar(buffer, col_count);
 		push_text(buffer, col_count, row_count);
 		return characters;
