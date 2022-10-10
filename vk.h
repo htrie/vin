@@ -868,8 +868,6 @@ class Device {
 	std::vector<vk::UniqueFramebuffer> framebuffers;
 	std::vector<vk::UniqueCommandBuffer> cmds;
 
-	Color clear_color = Color::rgba(1, 22, 39, 255);
-
 	unsigned width = 0;
 	unsigned height = 0;
 
@@ -952,7 +950,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), clear_color.rgba(), width, height);
+		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear.rgba(), width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);

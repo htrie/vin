@@ -1013,26 +1013,11 @@ public:
 class Layout {
 	Characters characters;
 
-	Color mode_text_color = Color::rgba(255, 155, 155, 255);
-	Color status_line_color = Color::rgba(1, 22, 39, 255);
-	Color status_text_color = Color::rgba(155, 155, 155, 255);
-	Color notification_line_color = Color::rgba(1, 22, 39, 255);
-	Color notification_text_color = Color::rgba(64, 152, 179, 255);
-	Color cursor_color = Color::rgba(255, 255, 0, 255);
-	Color cursor_line_color = Color::rgba(65, 80, 29, 255);
-	Color whitespace_color = Color::rgba(75, 100, 93, 255);
-	Color text_color = Color::rgba(205, 226, 239, 255);
-	Color text_cursor_color = Color::rgba(5, 5, 5, 255);
-	Color line_number_color = Color::rgba(75, 100, 121, 255);
-	Color diff_note_color = Color::rgba(255, 192, 0, 255);
-	Color diff_add_color = Color::rgba(0, 192, 0, 255);
-	Color diff_remove_color = Color::rgba(192, 0, 0, 255);
-
 	unsigned col_count = 0;
 	unsigned row_count = 0;
 
 	void push_digit(unsigned row, unsigned col, unsigned digit) {
-		characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
+		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
 	}
 
 	void push_line_number(unsigned row, unsigned col, unsigned line) {
@@ -1044,7 +1029,7 @@ class Layout {
 
 	void push_cursor_line(unsigned row, unsigned col_count) {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
-			characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 7 + i);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
 		}
 	}
 
@@ -1053,23 +1038,23 @@ class Layout {
 			buffer.get_mode() == Mode::insert ? Glyph::LINE :
 			buffer.get_mode() == Mode::normal ? Glyph::BLOCK :
 			Glyph::BOTTOM_BLOCK,
-			cursor_color, row, col);
+			colors().cursor, row, col);
 	};
 
 	void push_return(unsigned row, unsigned col) {
-		characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
+		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
 	};
 
 	void push_tab(unsigned row, unsigned col) {
-		characters.emplace_back(Glyph::TABSIGN, whitespace_color, row, col);
+		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
 	};
 
 	void push_char(const Buffer& buffer, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
-		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
+		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? colors().text_cursor : row_color, row, col);
 	};
 
 	void push_text(const Buffer& buffer) { // [TODO] Clean.
-		Color row_color = text_color;
+		Color row_color = colors().text;
 		const unsigned cursor_row = buffer.state().find_cursor_row();
 		const unsigned end_row = buffer.state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
@@ -1081,10 +1066,10 @@ class Layout {
 			if (absolute_row >= buffer.state().get_begin_row() && absolute_row <= end_row) {
 				if (new_row) {
 					if (absolute_row == cursor_row) { push_cursor_line(row, col_count); }
-					if (buffer.state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
-					else if (character == '+') { row_color = diff_add_color; }
-					else if (character == '-') { row_color = diff_remove_color; }
-					else { row_color = text_color; }
+					if (buffer.state().test(index, "---")) { row_color = colors().diff_note; } // [TODO] Better syntax highlighting.
+					else if (character == '+') { row_color = colors().diff_add; }
+					else if (character == '-') { row_color = colors().diff_remove; }
+					else { row_color = colors().text; }
 					unsigned column = absolute_row == cursor_row ? col : col + 1;
 					const unsigned line = absolute_row == cursor_row ? absolute_row :
 						absolute_row < cursor_row ? cursor_row - absolute_row :
@@ -1117,14 +1102,14 @@ class Layout {
 	}
 
 	void push_status_bar(const Buffer& buffer, const std::string_view status) {
-		push_special_line(0, status_line_color);
-		push_special_text(0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
-		push_special_text(0, 2, status_text_color, status);
+		push_special_line(0, colors().status_line);
+		push_special_text(0, 0, colors().mode_text, std::string(mode_letter(buffer.get_mode())) + " ");
+		push_special_text(0, 2, colors().status_text, status);
 	}
 
 	void push_notification_bar(const Buffer& buffer) {
-		push_special_line(1, notification_line_color);
-		push_special_text(1, 0, notification_text_color, buffer.get_notification());
+		push_special_line(1, colors().notification_line);
+		push_special_text(1, 0, colors().notification_text, buffer.get_notification());
 	}
 
 public:

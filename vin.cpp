@@ -19,6 +19,7 @@
 #include "win.h"
 #include "matrix.h"
 #include "font.h"
+#include "config.h"
 #include "text.h"
 #include "vk.h"
 
