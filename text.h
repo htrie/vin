@@ -139,14 +139,14 @@ public:
 	bool is_modified() const { return modified; }
 	void set_modified(bool b) { modified = b; };
 
-	bool test(size_t index, const std::string_view s) {
+	bool test(size_t index, const std::string_view s) const {
 		if (index + s.size() <= text.size())
 			return text.substr(index, s.size()) == s;
 		return false;
 	}
 
-	size_t find_line_number() const {
-		size_t number = 0;
+	unsigned find_cursor_row() const {
+		unsigned number = 0;
 		size_t index = 0;
 		while (index < text.size() && index < cursor) {
 			if (text[index++] == '\n')
@@ -312,58 +312,57 @@ public:
 	}
 
 	void window_down(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		const unsigned down_row = cursor_row + row_count / 2;
 		const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(); }
 	}
 
 	void window_up(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
 		const unsigned skip = cursor_row - up_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(); }
 	}
 
 	void window_top(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		const unsigned top_row = begin_row;
 		const unsigned skip = cursor_row - top_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(); }
 	}
 
 	void window_center(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		const unsigned middle_row = begin_row + row_count / 2;
 		const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
 		for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
 	}
 
 	void window_bottom(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		const unsigned bottom_row = begin_row + row_count;
 		const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(); }
 	}
 
-	unsigned cursor_clamp(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+	void cursor_clamp(unsigned row_count) {
+		const unsigned cursor_row = find_cursor_row();
 		begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
-		return cursor_row;
 	}
 
 	void cursor_center(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		begin_row = cursor_row - row_count / 2;
 	}
 
 	void cursor_top(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		begin_row = cursor_row;
 	}
 
 	void cursor_bottom(unsigned row_count) {
-		const unsigned cursor_row = (unsigned)find_line_number();
+		const unsigned cursor_row = find_cursor_row();
 		begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
 	}
 
@@ -676,6 +675,7 @@ public:
 	}
 
 	State& state() { return states.back(); }
+	const State& state() const { return states.back(); }
 
 	const std::string& get_text() const { return states.back().get_text(); }
 	void set_text(const std::string& t) { states.back().set_text(t); }
@@ -988,6 +988,7 @@ public:
 		case Mode::space: process_space(key, released, row_count); break;
 		};
 		stack.pop();
+		state().cursor_clamp(row_count);
 		verify(stack.get_cursor() <= stack.get_text().size());
 		return quit;
 	}
@@ -1003,6 +1004,7 @@ public:
 	}
 
 	State& state() { return stack.state(); }
+	const State& state() const { return stack.state(); }
 
 	std::string_view get_notification() const { return notification; }
 	Mode get_mode() const { return mode; }
@@ -1066,9 +1068,9 @@ class Layout {
 		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
 	};
 
-	void push_text(Buffer& buffer) { // [TODO] Clean.
+	void push_text(const Buffer& buffer) { // [TODO] Clean.
 		Color row_color = text_color;
-		const unsigned cursor_row = buffer.state().cursor_clamp(row_count);
+		const unsigned cursor_row = buffer.state().find_cursor_row();
 		const unsigned end_row = buffer.state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
@@ -1132,7 +1134,7 @@ public:
 		characters.reserve(1024);
 	}
 
-	Characters cull(Buffer& buffer, const std::string_view status) {
+	Characters cull(const Buffer& buffer, const std::string_view status) {
 		push_status_bar(buffer, status);
 		push_notification_bar(buffer);
 		push_text(buffer);
