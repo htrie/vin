@@ -1008,7 +1008,9 @@ public:
 	Mode get_mode() const { return mode; }
 };
 
-class Manager {
+class Layout {
+	Characters characters;
+
 	Color mode_text_color = Color::rgba(255, 155, 155, 255);
 	Color status_line_color = Color::rgba(1, 22, 39, 255);
 	Color status_text_color = Color::rgba(155, 155, 155, 255);
@@ -1024,24 +1026,24 @@ class Manager {
 	Color diff_add_color = Color::rgba(0, 192, 0, 255);
 	Color diff_remove_color = Color::rgba(192, 0, 0, 255);
 
-	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
+	void push_digit(unsigned row, unsigned col, unsigned digit) {
 		characters.emplace_back((uint8_t)(48 + digit), line_number_color, row, col);
 	}
 
-	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
-		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
-		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
-		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
-		push_digit(characters, row, col + 3, line % 10);
+	void push_line_number(unsigned row, unsigned col, unsigned line) {
+		if (line > 999) { push_digit(row, col + 0, (line % 10000) / 1000); }
+		if (line > 99) { push_digit(row, col + 1, (line % 1000) / 100); }
+		if (line > 9) { push_digit(row, col + 2, (line % 100) / 10); }
+		push_digit(row, col + 3, line % 10);
 	}
 
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
+	void push_cursor_line(unsigned row, unsigned col_count) {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
 			characters.emplace_back(Glyph::BLOCK, cursor_line_color, row, 7 + i);
 		}
 	}
 
-	void push_cursor(const Buffer& buffer, Characters& characters, unsigned row, unsigned col) {
+	void push_cursor(const Buffer& buffer, unsigned row, unsigned col) {
 		characters.emplace_back(
 			buffer.get_mode() == Mode::insert ? Glyph::LINE :
 			buffer.get_mode() == Mode::normal ? Glyph::BLOCK :
@@ -1049,19 +1051,19 @@ class Manager {
 			cursor_color, row, col);
 	};
 
-	void push_return(Characters& characters, unsigned row, unsigned col) {
+	void push_return(unsigned row, unsigned col) {
 		characters.emplace_back(Glyph::RETURN, whitespace_color, row, col);
 	};
 
-	void push_tab(Characters& characters, unsigned row, unsigned col) {
+	void push_tab(unsigned row, unsigned col) {
 		characters.emplace_back(Glyph::TABSIGN, whitespace_color, row, col);
 	};
 
-	void push_char(const Buffer& buffer, Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
+	void push_char(const Buffer& buffer, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
 		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
 	};
 
-	void push_text(Buffer& buffer, Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+	void push_text(Buffer& buffer, unsigned col_count, unsigned row_count) { // [TODO] Clean.
 		Color row_color = text_color;
 		const unsigned cursor_row = buffer.state().cursor_clamp(row_count);
 		const unsigned end_row = buffer.state().get_begin_row() + row_count;
@@ -1073,7 +1075,7 @@ class Manager {
 		for (auto& character : buffer.state().get_text()) {
 			if (absolute_row >= buffer.state().get_begin_row() && absolute_row <= end_row) {
 				if (new_row) {
-					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+					if (absolute_row == cursor_row) { push_cursor_line(row, col_count); }
 					if (buffer.state().test(index, "---")) { row_color = diff_note_color; } // [TODO] Better syntax highlighting.
 					else if (character == '+') { row_color = diff_add_color; }
 					else if (character == '-') { row_color = diff_remove_color; }
@@ -1082,12 +1084,12 @@ class Manager {
 					const unsigned line = absolute_row == cursor_row ? absolute_row :
 						absolute_row < cursor_row ? cursor_row - absolute_row :
 						absolute_row - cursor_row;
-					push_line_number(characters, row, column, line); col += 7; new_row = false;
+					push_line_number(row, column, line); col += 7; new_row = false;
 				}
-				if (index == buffer.state().get_cursor()) { push_cursor(buffer, characters, row, col); }
-				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
-				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-				else { push_char(buffer, characters, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
+				if (index == buffer.state().get_cursor()) { push_cursor(buffer, row, col); }
+				if (character == '\n') { push_return(row, col); absolute_row++; row++; col = 0; new_row = true; }
+				else if (character == '\t') { push_tab(row, col); col += 4; }
+				else { push_char(buffer, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
 			}
 			else {
 				if (character == '\n') { absolute_row++; }
@@ -1096,28 +1098,28 @@ class Manager {
 		}
 	}
 
-	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) {
+	void push_special_text(unsigned row, unsigned col, const Color& color, const std::string_view text) {
 		unsigned offset = 0;
 		for (auto& character : text) {
 			characters.emplace_back((uint8_t)character, color, row, col + offset++);
 		}
 	}
 
-	void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) {
+	void push_special_line(unsigned row, const Color& color, unsigned col_count) {
 		for (unsigned i = 0; i < col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);
 		}
 	}
 
-	void push_status_bar(const Buffer& buffer, Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
-		push_special_line(characters, 0, status_line_color, col_count);
-		push_special_text(characters, 0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
-		push_special_text(characters, 0, 2, status_text_color, build_status_text(buffer, process_time, cull_time, redraw_time));
+	void push_status_bar(const Buffer& buffer, float process_time, float cull_time, float redraw_time, unsigned col_count) {
+		push_special_line(0, status_line_color, col_count);
+		push_special_text(0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
+		push_special_text(0, 2, status_text_color, build_status_text(buffer, process_time, cull_time, redraw_time));
 	}
 
-	void push_notification_bar(const Buffer& buffer, Characters& characters, unsigned col_count) {
-		push_special_line(characters, 1, notification_line_color, col_count);
-		push_special_text(characters, 1, 0, notification_text_color, buffer.get_notification());
+	void push_notification_bar(const Buffer& buffer, unsigned col_count) {
+		push_special_line(1, notification_line_color, col_count);
+		push_special_text(1, 0, notification_text_color, buffer.get_notification());
 	}
 
 	std::string build_status_text(const Buffer& buffer, float process_time, float cull_time, float redraw_time) {
@@ -1128,12 +1130,14 @@ class Manager {
 	}
 
 public:
+	Layout() {
+		characters.reserve(1024);
+	}
+
 	Characters cull(Buffer& buffer, float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
-		Characters characters;
-		characters.reserve(256);
-		push_status_bar(buffer, characters, process_time, cull_time, redraw_time, col_count);
-		push_notification_bar(buffer, characters, col_count);
-		push_text(buffer, characters, col_count, row_count);
+		push_status_bar(buffer, process_time, cull_time, redraw_time, col_count);
+		push_notification_bar(buffer, col_count);
+		push_text(buffer, col_count, row_count);
 		return characters;
 	}
 };

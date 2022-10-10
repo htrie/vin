@@ -25,7 +25,6 @@
 class App {
 	Device device;
 	Buffer buffer;
-	Manager manager; // [TODO] Rename to Layout and make transient.
 	Timer timer;
 
 	Color clear_color = Color::rgba(1, 22, 39, 255);
@@ -51,7 +50,8 @@ class App {
 			dirty = false;
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
-			const auto text = manager.cull(buffer, process_time, cull_time, redraw_time, viewport.w, viewport.h);
+			Layout layout;
+			const auto text = layout.cull(buffer, process_time, cull_time, redraw_time, viewport.w, viewport.h);
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
