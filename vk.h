@@ -868,6 +868,8 @@ class Device {
 	std::vector<vk::UniqueFramebuffer> framebuffers;
 	std::vector<vk::UniqueCommandBuffer> cmds;
 
+	Color clear_color = Color::rgba(1, 22, 39, 255);
+
 	unsigned width = 0;
 	unsigned height = 0;
 
@@ -944,7 +946,7 @@ public:
 		}
 	}
 
-	void redraw(const Color& clear_color, const Characters& characters) {
+	void redraw(const Characters& characters) {
 		wait(device.get(), fences[fence_index].get());
 		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
 		const auto& cmd = cmds[frame_index].get();

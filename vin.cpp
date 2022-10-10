@@ -27,8 +27,6 @@ class App {
 	Buffer buffer;
 	Timer timer;
 
-	Color clear_color = Color::rgba(1, 22, 39, 255);
-
 	float cull_time = 0.0f;
 	float redraw_time = 0.0f;
 	float process_time = 0.0f;
@@ -62,7 +60,7 @@ class App {
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
-				device.redraw(clear_color, text);
+				device.redraw(text);
 				redraw_time = timer.duration(start);
 			}
 		}

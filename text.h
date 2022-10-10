@@ -764,7 +764,7 @@ class Buffer {
 		return s;
 	}
 
-	void process_insert(unsigned key, bool released) {
+	void process_insert(unsigned key, bool released) { // [TODO] Undo whole insert sequences.
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
 		else if (key == Glyph::TAB) { state().insert("\t"); }
