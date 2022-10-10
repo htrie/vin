@@ -24,7 +24,8 @@
 
 class App {
 	Device device;
-	Manager manager;
+	Buffer buffer;
+	Manager manager; // [TODO] Rename to Layout and make transient.
 	Timer timer;
 
 	Color clear_color = Color::rgba(1, 22, 39, 255);
@@ -50,7 +51,7 @@ class App {
 			dirty = false;
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
-			const auto text = manager.cull(process_time, cull_time, redraw_time, viewport.w, viewport.h);
+			const auto text = manager.cull(buffer, process_time, cull_time, redraw_time, viewport.w, viewport.h);
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
@@ -66,7 +67,7 @@ class App {
 	void process(unsigned key, bool released) {
 		const auto start = timer.now();
 		const auto viewport = device.viewport();
-		if (manager.process(key, released, viewport.w, viewport.h))
+		if (buffer.process(key, released, viewport.w, viewport.h))
 			PostQuitMessage(0);
 		process_time = timer.duration(start);
 	}
@@ -134,11 +135,12 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, nCmdShow, 600, 400) {
-	}
+		: device(proc, hInstance, nCmdShow, 600, 400)
+		, buffer("todo.diff") // [TODO] File picker.
+	{}
 
 	void run(float init_time) {
-		manager.run(init_time);
+		buffer.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
 		MSG msg = {};
 		while (GetMessage(&msg, nullptr, 0, 0)) {
 			TranslateMessage(&msg);

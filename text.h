@@ -128,7 +128,7 @@ class State {
 	bool modified = true;
 
 public:
-	const std::string& get_text() { return text; }
+	const std::string& get_text() const { return text; }
 	void set_text(const std::string& t) { text = t; }
 
 	size_t get_cursor() const { return cursor; }
@@ -677,7 +677,7 @@ public:
 
 	State& state() { return states.back(); }
 
-	const std::string& get_text() { return states.back().get_text(); }
+	const std::string& get_text() const { return states.back().get_text(); }
 	void set_text(const std::string& t) { states.back().set_text(t); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
@@ -992,7 +992,7 @@ public:
 		return quit;
 	}
 
-	std::string build_status_text() {
+	std::string build_status_text() const {
 		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
 		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
 		return filename + " [" + text_perc + " " + text_size + "]";
@@ -1009,8 +1009,6 @@ public:
 };
 
 class Manager {
-	Buffer buffer;
-
 	Color mode_text_color = Color::rgba(255, 155, 155, 255);
 	Color status_line_color = Color::rgba(1, 22, 39, 255);
 	Color status_text_color = Color::rgba(155, 155, 155, 255);
@@ -1043,7 +1041,7 @@ class Manager {
 		}
 	}
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col) {
+	void push_cursor(const Buffer& buffer, Characters& characters, unsigned row, unsigned col) {
 		characters.emplace_back(
 			buffer.get_mode() == Mode::insert ? Glyph::LINE :
 			buffer.get_mode() == Mode::normal ? Glyph::BLOCK :
@@ -1059,11 +1057,11 @@ class Manager {
 		characters.emplace_back(Glyph::TABSIGN, whitespace_color, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
+	void push_char(const Buffer& buffer, Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
 		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? text_cursor_color : row_color, row, col);
 	};
 
-	void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+	void push_text(Buffer& buffer, Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
 		Color row_color = text_color;
 		const unsigned cursor_row = buffer.state().cursor_clamp(row_count);
 		const unsigned end_row = buffer.state().get_begin_row() + row_count;
@@ -1086,10 +1084,10 @@ class Manager {
 						absolute_row - cursor_row;
 					push_line_number(characters, row, column, line); col += 7; new_row = false;
 				}
-				if (index == buffer.state().get_cursor()) { push_cursor(characters, row, col); }
+				if (index == buffer.state().get_cursor()) { push_cursor(buffer, characters, row, col); }
 				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
 				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-				else { push_char(characters, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
+				else { push_char(buffer, characters, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
 			}
 			else {
 				if (character == '\n') { absolute_row++; }
@@ -1111,18 +1109,18 @@ class Manager {
 		}
 	}
 
-	void push_status_bar(Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
+	void push_status_bar(const Buffer& buffer, Characters& characters, float process_time, float cull_time, float redraw_time, unsigned col_count) {
 		push_special_line(characters, 0, status_line_color, col_count);
 		push_special_text(characters, 0, 0, mode_text_color, std::string(mode_letter(buffer.get_mode())) + " ");
-		push_special_text(characters, 0, 2, status_text_color, build_status_text(process_time, cull_time, redraw_time));
+		push_special_text(characters, 0, 2, status_text_color, build_status_text(buffer, process_time, cull_time, redraw_time));
 	}
 
-	void push_notification_bar(Characters& characters, unsigned col_count) {
+	void push_notification_bar(const Buffer& buffer, Characters& characters, unsigned col_count) {
 		push_special_line(characters, 1, notification_line_color, col_count);
 		push_special_text(characters, 1, 0, notification_text_color, buffer.get_notification());
 	}
 
-	std::string build_status_text(float process_time, float cull_time, float redraw_time) {
+	std::string build_status_text(const Buffer& buffer, float process_time, float cull_time, float redraw_time) {
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
@@ -1130,24 +1128,12 @@ class Manager {
 	}
 
 public:
-	Manager()
-		: buffer("todo.diff") { // [TODO] File picker.
-	}
-
-	void run(float init_time) {
-		buffer.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
-	}
-
-	bool process(unsigned key, bool released, unsigned col_count, unsigned row_count) {
-		return buffer.process(key, released, col_count, row_count);
-	}
-
-	Characters cull(float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
+	Characters cull(Buffer& buffer, float process_time, float cull_time, float redraw_time, unsigned col_count, unsigned row_count) {
 		Characters characters;
 		characters.reserve(256);
-		push_status_bar(characters, process_time, cull_time, redraw_time, col_count);
-		push_notification_bar(characters, col_count);
-		push_text(characters, col_count, row_count);
+		push_status_bar(buffer, characters, process_time, cull_time, redraw_time, col_count);
+		push_notification_bar(buffer, characters, col_count);
+		push_text(buffer, characters, col_count, row_count);
 		return characters;
 	}
 };
