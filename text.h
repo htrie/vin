@@ -792,9 +792,9 @@ class Buffer {
 		else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
 		else if (key == 'O') { state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
 		else if (key == 's') { state().erase(); mode = Mode::insert; }
-		else if (key == 'S') { state().erase_line_contents(); mode = Mode::insert; }
-		else if (key == 'C') { state().erase_to_line_end(); mode = Mode::insert; }
-		else if (key == 'D') { state().erase_to_line_end(); }
+		else if (key == 'S') { clip(state().erase_line_contents()); mode = Mode::insert; }
+		else if (key == 'C') { clip(state().erase_to_line_end()); mode = Mode::insert; }
+		else if (key == 'D') { clip(state().erase_to_line_end()); }
 		else if (key == 'P') { state().paste_before(clipboard); }
 		else if (key == 'p') { state().paste_after(clipboard); }
 		else if (key == '0') { state().line_start(); }
@@ -945,7 +945,7 @@ class Buffer {
 		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
-	void process_space(unsigned key, bool released, unsigned row_count) {
+	void process_space(unsigned key, bool released, unsigned row_count) { // [TODO] Move to App.
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(close()); }
 		else if (key == 'e') { notify(load()); }

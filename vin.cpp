@@ -142,7 +142,7 @@ class App {
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, nCmdShow, 600, 400)
-		, buffer("todo.diff") // [TODO] File picker.
+		, buffer("todo.diff") // [TODO] File picker. // [TODO] Start with empty buffer and welcome screen.
 	{}
 
 	void run(float init_time) {
