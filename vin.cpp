@@ -25,24 +25,56 @@
 
 class App {
 	Device device;
-	Buffer buffer;
 	Timer timer;
+
+	std::unique_ptr<Buffer> buffer;
+
+	std::string notification;
 
 	float cull_time = 0.0f;
 	float redraw_time = 0.0f;
 	float process_time = 0.0f;
 
+	bool space_mode = false;
 	bool minimized = false;
 	bool dirty = true;
+	bool quit = false;
 
+	void set_space_mode(bool b) { space_mode = b; }
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
+
+	void load(const std::string_view filename) {
+		const auto start = timer.now();
+		buffer = std::make_unique<Buffer>(filename);
+		const auto time = timer.duration(start);
+		notify(std::string("load ") + std::string(filename) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+	}
+
+	void save() {
+		if (buffer) {
+			const auto start = timer.now();
+			buffer->save();
+			const auto time = timer.duration(start);
+			notify(std::string("save ") + std::string(buffer->get_filename()) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+		}
+	}
+
+	void close() {
+		if (buffer) {
+			const auto start = timer.now();
+			const auto filename = std::string(buffer->get_filename());
+			buffer.reset();
+			const auto time = timer.duration(start);
+			notify(std::string("close ") + filename + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+		}
+	}
 
 	std::string status() {
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return buffer.status() + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+		return (buffer ? buffer->status() : "") + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -57,7 +89,7 @@ class App {
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
 			Layout layout(viewport.w, viewport.h);
-			const auto text = layout.cull(buffer, status());
+			const auto text = layout.cull(buffer.get(), status(), notification);
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
@@ -70,11 +102,25 @@ class App {
 		}
 	}
 
-	void process(unsigned key, bool released) {
+	void process_space(unsigned key, unsigned row_count) {
+		if (key == 'q') { quit = true; }
+		else if (key == 'w') { close(); }
+		else if (key == 'e') { load("todo.diff"); } // [TODO] File picker.
+		else if (key == 's') { save(); }
+		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
+		else if (key == 'i') { if (buffer) { buffer->state().window_down(row_count); } }
+	}
+
+	void process(unsigned key) {
 		const auto start = timer.now();
 		const auto viewport = device.viewport();
-		if (buffer.process(key, released, viewport.w, viewport.h))
-			PostQuitMessage(0);
+		if (space_mode && (!buffer || buffer->is_normal())) {
+			process_space(key, viewport.h);
+		}
+		else {
+			if (buffer) { buffer->process(key, viewport.w, viewport.h); }
+		}
+		if (buffer) { buffer->state().cursor_clamp(viewport.h); }
 		process_time = timer.duration(start);
 	}
 
@@ -116,10 +162,19 @@ class App {
 			}
 			break;
 		}
+		case WM_KEYDOWN: {
+			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+				if (wParam == VK_SPACE) {
+					app->set_space_mode(true);
+					app->set_dirty(true);
+				}
+			}
+			break;
+		}
 		case WM_KEYUP: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
-					app->process(' ', true);
+					app->set_space_mode(false);
 					app->set_dirty(true);
 				}
 			}
@@ -127,7 +182,7 @@ class App {
 		}
 		case WM_CHAR: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				app->process((unsigned)wParam, false);
+				app->process((unsigned)wParam);
 				app->set_dirty(true);
 			}
 			break;
@@ -142,13 +197,15 @@ class App {
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, nCmdShow, 600, 400)
-		, buffer("todo.diff") // [TODO] File picker. // [TODO] Start with empty buffer and welcome screen.
 	{}
 
-	void run(float init_time) {
-		buffer.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
+	void notify(const std::string& s) {
+		notification = timestamp() + "  " + s;
+	}
+
+	void run() {
 		MSG msg = {};
-		while (GetMessage(&msg, nullptr, 0, 0)) {
+		while (!quit && GetMessage(&msg, nullptr, 0, 0)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
@@ -160,7 +217,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	const auto start = timer.now();
 	App app(hInstance, nCmdShow);
 	const auto init_time = timer.duration(start);
-	app.run(init_time);
+	app.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
+	app.run();
 	return 0;
 }
 

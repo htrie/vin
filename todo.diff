@@ -1,21 +1,12 @@
 --- LATER
 +plug dynamic resolution factor into iOS dyn res
 +defer patching after engine init and during video
-+download UI during video
-+move engine init before any loading
-+full and partial download (whitelists used by file system)
-+add Disk_Save/Disk_Temp/Disk_Immutable (Disk is a mask of the 2)
-+debug system before post-process (3D only, depth buffer, alpha blend, line witdth later)
-+update mesh export to have a flag to ignore mesh optimizations
-+check with instance graph parameters in AV are not refresh when using Ctrl+E (fast shader reload)
-+sparse bundle index (only store file hash and bundle hash in master index)
-+build android
 --- 2022-10-03
 +commit
 	update with Rhys changes
 	test on next
 	careful about mobile and bundle in package
-+add SetPack engine setting
+f+add SetPack engine setting
 	careful with bundle viewer and missing engine init
 +use storage system for bundle input file
 +check dependency-based activation on testing_next_bundled

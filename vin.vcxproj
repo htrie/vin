@@ -154,6 +154,7 @@
     <ClCompile Include="vin.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="config.h" />
     <ClInclude Include="matrix.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="text.h" />

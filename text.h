@@ -23,7 +23,6 @@ enum class Mode {
 	normal_ya,
 	normal_z,
 	insert,
-	space
 };
 
 enum Glyph {
@@ -37,43 +36,6 @@ enum Glyph {
 	BOTTOM_BLOCK = 131,
 	TABSIGN = 132,
 };
-
-constexpr std::string_view mode_letter(Mode mode) {
-	switch (mode) {
-	case Mode::normal: return "n";
-	case Mode::normal_number: return "0";
-	case Mode::normal_cf:
-	case Mode::normal_ct:
-	case Mode::normal_ci:
-	case Mode::normal_ca:
-	case Mode::normal_c: return "c";
-	case Mode::normal_df:
-	case Mode::normal_dt:
-	case Mode::normal_di:
-	case Mode::normal_da:
-	case Mode::normal_d: return "d";
-	case Mode::normal_f: return "f";
-	case Mode::normal_F: return "F";
-	case Mode::normal_r: return "r";
-	case Mode::normal_yf:
-	case Mode::normal_yt:
-	case Mode::normal_yi:
-	case Mode::normal_ya:
-	case Mode::normal_y: return "y";
-	case Mode::normal_z: return "z";
-	case Mode::insert: return "i";
-	case Mode::space: return " ";
-	}
-	return "";
-}
-
-std::string timestamp() {
-	const auto now = std::chrono::zoned_time{std::chrono::current_zone(), std::chrono::system_clock::now()}.get_local_time();
-	const auto start_of_day = std::chrono::floor<std::chrono::days>(now);
-	const auto time_since_start_of_day = std::chrono::round<std::chrono::seconds>(now - start_of_day);
-	const std::chrono::hh_mm_ss hms{ time_since_start_of_day };
-	return std::format("{:%r}", hms);
-}
 
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
@@ -701,55 +663,16 @@ public:
 
 class Buffer {
 	Stack stack;
-	Timer timer;
 
 	Mode mode = Mode::normal;
 
 	std::string filename;
-	std::string notification;
 	std::string clipboard;
 
 	unsigned accu = 0;
 
 	unsigned f_key = 0;
 	bool f_is_forward = false;
-
-	bool quit = false;
-
-	std::string close() {
-		if (!filename.empty()) {
-			stack.reset();
-			const auto res = std::string("close ") + filename;
-			return res;
-		}
-		return {};
-	}
-
-	std::string load() {
-		if (!filename.empty()) {
-			const auto start = timer.now();
-			if (auto in = std::ifstream(filename)) {
-				stack.set_cursor(0);
-				stack.set_text(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
-				stack.set_modified(true);
-				const auto time = timer.duration(start);
-				return std::string("load " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
-			}
-		}
-		return {};
-	}
-
-	std::string save() {
-		if (!filename.empty()) {
-			const auto start = timer.now();
-			if (auto out = std::ofstream(filename)) {
-				out << stack.get_text();
-				const auto time = timer.duration(start);
-				return std::string("save " + filename + " in ") + std::to_string((unsigned)(time * 1000.0f)) + "us";
-			}
-		}
-		return {};
-	}
 
 	void accumulate(unsigned key) {
 		verify(key >= '0' && key <= '9');
@@ -760,22 +683,19 @@ class Buffer {
 
 	std::string clip(const std::string& s) {
 		clipboard = s;
-		notify(std::string("clipboard: ") + s);
 		return s;
 	}
 
-	void process_insert(unsigned key, bool released) { // [TODO] Undo whole insert sequences.
+	void process_insert(unsigned key) { // [TODO] Undo whole insert sequences.
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
 		else if (key == Glyph::TAB) { state().insert("\t"); }
 		else if (key == Glyph::CR) { state().insert("\n"); }
-		else if (key == ' ') { if (!released) { state().insert(std::string(1, (char)key)); } }
 		else { state().insert(std::string(1, (char)key)); }
 	}
 
-	void process_normal(unsigned key, bool released, unsigned row_count) {
-		if (key == ' ' && !released) { mode = Mode::space; }
-		else if (key == 'u') { stack.set_undo(); }
+	void process_normal(unsigned key, unsigned row_count) {
+		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == 'c') { mode = Mode::normal_c; }
 		else if (key == 'd') { mode = Mode::normal_d; }
@@ -945,25 +865,39 @@ class Buffer {
 		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
-	void process_space(unsigned key, bool released, unsigned row_count) { // [TODO] Move to App.
-		if (key == 'q') { quit = true; }
-		else if (key == 'w') { notify(close()); }
-		else if (key == 'e') { notify(load()); }
-		else if (key == 's') { notify(save()); }
-		else if (key == 'o') { state().window_up(row_count); }
-		else if (key == 'i') { state().window_down(row_count); }
-		else if (key == ' ') { if (released) { mode = Mode::normal; } }
+	void init(const std::string& text) {
+		stack.set_cursor(0);
+		stack.set_text(text);
+		stack.set_modified(true);
+	}
+
+	std::string load() {
+		if (!filename.empty()) {
+			if (auto in = std::ifstream(filename)) {
+				return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			}
+		}
+		return {};
 	}
 
 public:
 	Buffer(const std::string_view filename)
 		: filename(filename) {
+		init(load());
 	}
 
-	bool process(unsigned key, bool released, unsigned col_count, unsigned row_count) {
+	void save() {
+		if (!filename.empty()) {
+			if (auto out = std::ofstream(filename)) {
+				out << stack.get_text();
+			}
+		}
+	}
+
+	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		stack.push();
 		switch (mode) {
-		case Mode::normal: process_normal(key, released, row_count); break;
+		case Mode::normal: process_normal(key, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_cf: process_normal_cf(key); break;
@@ -984,13 +918,9 @@ public:
 		case Mode::normal_yi: process_normal_yi(key); break;
 		case Mode::normal_ya: process_normal_ya(key); break;
 		case Mode::normal_z: process_normal_z(key, row_count); break;
-		case Mode::insert: process_insert(key, released); break;
-		case Mode::space: process_space(key, released, row_count); break;
+		case Mode::insert: process_insert(key); break;
 		};
 		stack.pop();
-		state().cursor_clamp(row_count);
-		verify(stack.get_cursor() <= stack.get_text().size());
-		return quit;
 	}
 
 	std::string status() const {
@@ -999,15 +929,14 @@ public:
 		return filename + " [" + text_perc + " " + text_size + "]";
 	}
 
-	void notify(const std::string& s) {
-		notification = timestamp() + "  " + s;
-	}
-
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
 
-	std::string_view get_notification() const { return notification; }
+	const std::string_view get_filename() const { return filename; }
+
 	Mode get_mode() const { return mode; }
+
+	bool is_normal() const { return mode == Mode::normal; }
 };
 
 class Layout {
@@ -1101,15 +1030,14 @@ class Layout {
 		}
 	}
 
-	void push_status_bar(const Buffer& buffer, const std::string_view status) {
+	void push_status_bar(const std::string_view status) {
 		push_special_line(0, colors().status_line);
-		push_special_text(0, 0, colors().mode_text, std::string(mode_letter(buffer.get_mode())) + " ");
-		push_special_text(0, 2, colors().status_text, status);
+		push_special_text(0, 0, colors().status_text, status);
 	}
 
-	void push_notification_bar(const Buffer& buffer) {
+	void push_notification_bar(const std::string_view notification) {
 		push_special_line(1, colors().notification_line);
-		push_special_text(1, 0, colors().notification_text, buffer.get_notification());
+		push_special_text(1, 0, colors().notification_text, notification);
 	}
 
 public:
@@ -1119,10 +1047,12 @@ public:
 		characters.reserve(1024);
 	}
 
-	Characters cull(const Buffer& buffer, const std::string_view status) {
-		push_status_bar(buffer, status);
-		push_notification_bar(buffer);
-		push_text(buffer);
+	Characters cull(Buffer* buffer, const std::string_view status, const std::string_view notification) {
+		push_status_bar(status);
+		push_notification_bar(notification);
+		if (buffer) {
+			push_text(*buffer);
+		}
 		return characters;
 	}
 };

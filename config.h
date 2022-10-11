@@ -2,7 +2,6 @@
 
 struct Colors {
 	Color clear = Color::rgba(1, 22, 39, 255);
-	Color mode_text = Color::rgba(255, 155, 155, 255);
 	Color status_line = Color::rgba(1, 22, 39, 255);
 	Color status_text = Color::rgba(155, 155, 155, 255);
 	Color notification_line = Color::rgba(1, 22, 39, 255);
@@ -18,7 +17,7 @@ struct Colors {
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
 };
 
-static const Colors colors() {
+const Colors colors() {
 	static Colors colors;
 	return colors;
 }
