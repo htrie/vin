@@ -635,7 +635,7 @@ public:
 
 	void paste_before(const std::string_view s) {
 		if (s.find('\n') != std::string::npos) {
-			insert(s); prev_line();
+			line_start(); insert(s); prev_line();
 		}
 		else {
 			insert(s);
@@ -644,7 +644,7 @@ public:
 
 	void paste_after(const std::string_view s) {
 		if (s.find('\n') != std::string::npos) {
-			next_line(); insert(s); prev_line();
+			next_line(); line_start(); insert(s); prev_line();
 		}
 		else {
 			next_char(); insert(s);
