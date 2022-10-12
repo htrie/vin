@@ -23,11 +23,15 @@
 #include "text.h"
 #include "vk.h"
 
+class Picker {
+
+};
+
 class App {
 	Device device;
 	Timer timer;
 	Bar bar;
-	// [TODO] Picker.
+	Picker picker;
 
 	std::unique_ptr<Buffer> buffer;
 
