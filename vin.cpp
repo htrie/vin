@@ -23,10 +23,34 @@
 #include "text.h"
 #include "vk.h"
 
+enum class Menu {
+	space,
+	normal,
+	picker,
+};
+
 class Picker {
+	void push_char(Characters& characters, unsigned row, unsigned col, char character) {
+		characters.emplace_back((uint8_t)character, colors().text, row, col);
+	};
+
+	void push_filename(Characters& characters, unsigned row, const std::string_view filename) {
+		unsigned col = 0;
+		for (auto& character : filename) {
+			push_char(characters, row, col++, character);
+		}
+	}
+
 public:
 	std::string select() {
 		return "todo.diff"; // [TODO] File picker.
+	}
+
+	void process(unsigned key, unsigned col_count, unsigned row_count) {
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
+		push_filename(characters, 2, select());
 	}
 };
 
@@ -35,24 +59,20 @@ class App {
 	Bar bar;
 	Picker picker;
 
+	Menu menu = Menu::normal;
+
 	std::unique_ptr<Buffer> buffer;
 
 	std::string cull_duration;
 	std::string redraw_duration;
 	std::string process_duration;
 
-	bool space_mode = false; // [TODO] Replace with Menu (similar to Mode) for Space and FilePick.
 	bool minimized = false;
 	bool dirty = true;
 	bool quit = false;
 
-	void set_space_mode(bool b) { space_mode = b; }
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
-
-	void pick() {
-		load(picker.select());
-	}
 
 	void load(const std::string_view filename) {
 		const Timer timer;
@@ -106,8 +126,10 @@ class App {
 			Characters characters;
 			characters.reserve(1024);
 			bar.cull(characters, status(), viewport.w, viewport.h);
-			if (buffer) {
-				buffer->cull(characters, viewport.w, viewport.h);
+			switch (menu) {
+			case Menu::space: // pass-through.
+			case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
+			case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
 			}
 			cull_duration = timer.us();
 			{
@@ -124,24 +146,42 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { pick(); }
+		else if (key == 'e') { menu = Menu::picker; }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
 		else if (key == 'i') { if (buffer) { buffer->state().window_down(row_count); } }
 	}
 
+	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
+		if (buffer) {
+			buffer->process(key, col_count, row_count);
+		}
+	}
+
+	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { load(picker.select()); menu = Menu::normal; }
+		else { picker.process(key, col_count, row_count); }
+	}
+
 	void process(unsigned key) {
 		const Timer timer;
 		const auto viewport = device.viewport();
-		if (space_mode && (!buffer || buffer->is_normal())) {
-			process_space(key, viewport.h);
-		}
-		else {
-			if (buffer) { buffer->process(key, viewport.w, viewport.h); }
+		switch (menu) {
+		case Menu::space: process_space(key, viewport.h); break;
+		case Menu::normal: process_normal(key, viewport.w, viewport.h); break;
+		case Menu::picker: process_picker(key, viewport.w, viewport.h); break;
 		}
 		if (buffer) { buffer->state().cursor_clamp(viewport.h); }
 		process_duration = timer.us();
+	}
+
+	void update(bool space_down) {
+		switch (menu) {
+		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
+		case Menu::normal: if (space_down && (!buffer || buffer->is_normal())) { menu = Menu::space; } break;
+		case Menu::picker: break;
+		}
 	}
 
 	static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -185,7 +225,7 @@ class App {
 		case WM_KEYDOWN: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
-					app->set_space_mode(true);
+					app->update(true);
 					app->set_dirty(true);
 				}
 			}
@@ -194,7 +234,7 @@ class App {
 		case WM_KEYUP: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
-					app->set_space_mode(false);
+					app->update(false);
 					app->set_dirty(true);
 				}
 			}
