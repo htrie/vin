@@ -24,20 +24,22 @@
 #include "vk.h"
 
 class Picker {
-
+public:
+	std::string select() {
+		return "todo.diff"; // [TODO] File picker.
+	}
 };
 
 class App {
 	Device device;
-	Timer timer;
 	Bar bar;
 	Picker picker;
 
 	std::unique_ptr<Buffer> buffer;
 
-	float cull_time = 0.0f;
-	float redraw_time = 0.0f;
-	float process_time = 0.0f;
+	std::string cull_duration;
+	std::string redraw_duration;
+	std::string process_duration;
 
 	bool space_mode = false; // [TODO] Replace with Menu (similar to Mode) for Space and FilePick.
 	bool minimized = false;
@@ -49,49 +51,45 @@ class App {
 	void set_dirty(bool b) { dirty = b; }
 
 	void pick() {
-		load("todo.diff");
+		load(picker.select());
 	}
 
 	void load(const std::string_view filename) {
-		const auto start = timer.now();
+		const Timer timer;
 		buffer = std::make_unique<Buffer>(filename);
-		const auto time = timer.duration(start);
-		notify(std::string("load ") + std::string(filename) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+		notify(std::string("load ") + std::string(filename) + " in " + timer.us());
 	}
 
 	void reload() {
 		if (buffer) {
-			const auto start = timer.now();
+			const Timer timer;
 			buffer->reload();
-			const auto time = timer.duration(start);
-			notify(std::string("reload ") + std::string(buffer->get_filename()) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+			notify(std::string("reload ") + std::string(buffer->get_filename()) + " in " + timer.us());
 		}
 	}
 
 	void save() {
 		if (buffer) {
-			const auto start = timer.now();
+			const Timer timer;
 			buffer->save();
-			const auto time = timer.duration(start);
-			notify(std::string("save ") + std::string(buffer->get_filename()) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+			notify(std::string("save ") + std::string(buffer->get_filename()) + " in " + timer.us());
 		}
 	}
 
 	void close() {
 		if (buffer) {
-			const auto start = timer.now();
+			const Timer timer;
 			const auto filename = std::string(buffer->get_filename());
 			buffer.reset();
-			const auto time = timer.duration(start);
-			notify(std::string("close ") + filename + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+			notify(std::string("close ") + filename + " in " + timer.us());
 		}
 	}
 
 	std::string status() {
-		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
-		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
-		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return std::string(buffer ? buffer->get_filename() : "") + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+		return std::string(buffer ? buffer->get_filename() : "") + 
+			" (proc: " + process_duration + 
+			", cull: " + cull_duration + 
+			", draw: " + redraw_duration + ")";
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -104,18 +102,18 @@ class App {
 		if (!minimized && dirty) {
 			dirty = false;
 			const auto viewport = device.viewport();
-			const auto start = timer.now();
+			const Timer timer;
 			Characters characters;
 			characters.reserve(1024);
 			bar.cull(characters, status(), viewport.w, viewport.h);
 			if (buffer) {
 				buffer->cull(characters, viewport.w, viewport.h);
 			}
-			cull_time = timer.duration(start);
+			cull_duration = timer.us();
 			{
-				const auto start = timer.now();
+				const Timer timer;
 				device.redraw(characters);
-				redraw_time = timer.duration(start);
+				redraw_duration = timer.us();
 			}
 		}
 		else {
@@ -134,7 +132,7 @@ class App {
 	}
 
 	void process(unsigned key) {
-		const auto start = timer.now();
+		const Timer timer;
 		const auto viewport = device.viewport();
 		if (space_mode && (!buffer || buffer->is_normal())) {
 			process_space(key, viewport.h);
@@ -143,7 +141,7 @@ class App {
 			if (buffer) { buffer->process(key, viewport.w, viewport.h); }
 		}
 		if (buffer) { buffer->state().cursor_clamp(viewport.h); }
-		process_time = timer.duration(start);
+		process_duration = timer.us();
 	}
 
 	static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -235,11 +233,9 @@ public:
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	Timer timer;
-	const auto start = timer.now();
+	const Timer timer;
 	App app(hInstance, nCmdShow);
-	const auto init_time = timer.duration(start);
-	app.notify(std::string("init in ") + std::to_string((unsigned)(init_time * 1000.0f)) + "us");
+	app.notify(std::string("init in ") + timer.us());
 	app.run();
 	return 0;
 }

@@ -50,11 +50,7 @@ void destroy_window(HWND hWnd) {
 
 class Timer {
 	LARGE_INTEGER frequency;
-
-public:
-	Timer() {
-		QueryPerformanceFrequency(&frequency);
-	}
+	uint64_t start = 0;
 
 	uint64_t now() const {
 		LARGE_INTEGER counter;
@@ -62,8 +58,18 @@ public:
 		return 1000000 * counter.QuadPart / frequency.QuadPart;
 	}
 
-	float duration(uint64_t start) {
+	float duration() const {
 		return (float)((double)(now() - start) * 0.001);
+	}
+
+public:
+	Timer() {
+		QueryPerformanceFrequency(&frequency);
+		start = now();
+	}
+
+	std::string us() const {
+		return std::to_string((unsigned)(duration() * 1000.0f)) + "us";
 	}
 };
 
