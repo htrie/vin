@@ -6,8 +6,6 @@
 	update with Rhys changes
 	test on next
 	careful about mobile and bundle in package
-+add SetPack engine setting
-	careful with bundle viewer and missing engine init
 +use storage system for bundle input file
 +check dependency-based activation on testing_next_bundled
 	check after build fix

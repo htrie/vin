@@ -42,6 +42,10 @@ class Picker {
 		}
 	}
 
+	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
+	};
+
 public:
 	void reset() {
 		filename.clear();
@@ -53,6 +57,9 @@ public:
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == Glyph::CR) { return; }
+		else if (key == Glyph::ESC) { return; }
+		else if (key == Glyph::TAB) { return; }
+		else if (key == Glyph::BS) { filename.pop_back(); }
 		else { filename += (char)key; }
 	}
 
@@ -60,6 +67,7 @@ public:
 		unsigned col = 0;
 		push_string(characters, 2, col, "open: ");
 		push_string(characters, 2, col, filename);
+		push_cursor(characters, 2, col);
 	}
 };
 
