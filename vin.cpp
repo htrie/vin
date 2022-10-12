@@ -48,6 +48,10 @@ class App {
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 
+	void pick() {
+		load("todo.diff");
+	}
+
 	void load(const std::string_view filename) {
 		const auto start = timer.now();
 		buffer = std::make_unique<Buffer>(filename);
@@ -122,7 +126,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { load("todo.diff"); } // [TODO] pick() calling load.
+		else if (key == 'e') { pick(); }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
