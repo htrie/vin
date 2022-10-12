@@ -26,10 +26,10 @@
 class App {
 	Device device;
 	Timer timer;
+	Bar bar;
+	// [TODO] Picker.
 
 	std::unique_ptr<Buffer> buffer;
-
-	std::string notification;
 
 	float cull_time = 0.0f;
 	float redraw_time = 0.0f;
@@ -86,34 +86,6 @@ class App {
 		return std::string(buffer ? buffer->get_filename() : "") + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
 	}
 
-	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) {
-		unsigned offset = 0;
-		for (auto& character : text) {
-			characters.emplace_back((uint8_t)character, color, row, col + offset++);
-		}
-	}
-
-	void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) {
-		for (unsigned i = 0; i < col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, color, row, i);
-		}
-	}
-
-	void push_status_bar(Characters& characters, const std::string_view status, unsigned col_count) {
-		push_special_line(characters, 0, colors().status_line, col_count);
-		push_special_text(characters, 0, 0, colors().status_text, status);
-	}
-
-	void push_notification_bar(Characters& characters, const std::string_view notification, unsigned col_count) {
-		push_special_line(characters, 1, colors().notification_line, col_count);
-		push_special_text(characters, 1, 0, colors().notification_text, notification);
-	}
-
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
-		push_status_bar(characters, status(), col_count);
-		push_notification_bar(characters, notification, col_count);
-	}
-
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
 			device.resize(w, h);
@@ -127,7 +99,7 @@ class App {
 			const auto start = timer.now();
 			Characters characters;
 			characters.reserve(1024);
-			cull(characters, viewport.w, viewport.h);
+			bar.cull(characters, status(), viewport.w, viewport.h);
 			if (buffer) {
 				buffer->cull(characters, viewport.w, viewport.h);
 			}
@@ -146,7 +118,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { load("todo.diff"); } // [TODO] pick() calling load (with cull() that returns characters).
+		else if (key == 'e') { load("todo.diff"); } // [TODO] pick() calling load.
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
@@ -242,7 +214,7 @@ public:
 	{}
 
 	void notify(const std::string& s) {
-		notification = timestamp() + "  " + s;
+		bar.notify(s);
 	}
 
 	void run() {
