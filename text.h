@@ -886,6 +886,10 @@ public:
 		init(load());
 	}
 
+	void reload() {
+		init(load());
+	}
+
 	void save() {
 		if (!filename.empty()) {
 			if (auto out = std::ofstream(filename)) {

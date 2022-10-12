@@ -51,6 +51,15 @@ class App {
 		notify(std::string("load ") + std::string(filename) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
 	}
 
+	void reload() {
+		if (buffer) {
+			const auto start = timer.now();
+			buffer->reload();
+			const auto time = timer.duration(start);
+			notify(std::string("reload ") + std::string(buffer->get_filename()) + " in " + std::to_string((unsigned)(time * 1000.0f)) + "us");
+		}
+	}
+
 	void save() {
 		if (buffer) {
 			const auto start = timer.now();
@@ -106,7 +115,7 @@ class App {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
 		else if (key == 'e') { load("todo.diff"); } // [TODO] File picker (with cull() that returns characters).
-		else if (key == 'r') { } // [TODO] Reload.
+		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
 		else if (key == 'i') { if (buffer) { buffer->state().window_down(row_count); } }
