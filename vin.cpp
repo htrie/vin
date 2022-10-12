@@ -35,7 +35,7 @@ class App {
 	float redraw_time = 0.0f;
 	float process_time = 0.0f;
 
-	bool space_mode = false;
+	bool space_mode = false; // [TODO] Replace with Menu (similar to Mode) for Space and FilePick.
 	bool minimized = false;
 	bool dirty = true;
 	bool quit = false;
@@ -105,7 +105,8 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { load("todo.diff"); } // [TODO] File picker.
+		else if (key == 'e') { load("todo.diff"); } // [TODO] File picker (with cull() that returns characters).
+		else if (key == 'r') { } // [TODO] Reload.
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
 		else if (key == 'i') { if (buffer) { buffer->state().window_down(row_count); } }

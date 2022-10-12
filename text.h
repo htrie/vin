@@ -1048,10 +1048,10 @@ public:
 	}
 
 	Characters cull(Buffer* buffer, const std::string_view status, const std::string_view notification) {
-		push_status_bar(status);
-		push_notification_bar(notification);
+		push_status_bar(status); // [TODO] Move to App.
+		push_notification_bar(notification); // [TODO] Move to App.
 		if (buffer) {
-			push_text(*buffer);
+			push_text(*buffer); // [TODO] Move to Buffer.
 		}
 		return characters;
 	}
