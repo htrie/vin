@@ -83,7 +83,35 @@ class App {
 		const auto process_duration = std::string("proc ") + std::to_string((unsigned)(process_time * 1000.0f)) + "us";
 		const auto cull_duration = std::string("cull ") + std::to_string((unsigned)(cull_time * 1000.0f)) + "us";
 		const auto redraw_duration = std::string("draw ") + std::to_string((unsigned)(redraw_time * 1000.0f)) + "us";
-		return (buffer ? buffer->status() : "") + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+		return std::string(buffer ? buffer->get_filename() : "") + " (" + process_duration + ", " + cull_duration + ", " + redraw_duration + ")";
+	}
+
+	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) {
+		unsigned offset = 0;
+		for (auto& character : text) {
+			characters.emplace_back((uint8_t)character, color, row, col + offset++);
+		}
+	}
+
+	void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) {
+		for (unsigned i = 0; i < col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, color, row, i);
+		}
+	}
+
+	void push_status_bar(Characters& characters, const std::string_view status, unsigned col_count) {
+		push_special_line(characters, 0, colors().status_line, col_count);
+		push_special_text(characters, 0, 0, colors().status_text, status);
+	}
+
+	void push_notification_bar(Characters& characters, const std::string_view notification, unsigned col_count) {
+		push_special_line(characters, 1, colors().notification_line, col_count);
+		push_special_text(characters, 1, 0, colors().notification_text, notification);
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
+		push_status_bar(characters, status(), col_count);
+		push_notification_bar(characters, notification, col_count);
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -97,12 +125,16 @@ class App {
 			dirty = false;
 			const auto viewport = device.viewport();
 			const auto start = timer.now();
-			Layout layout(viewport.w, viewport.h);
-			const auto text = layout.cull(buffer.get(), status(), notification);
+			Characters characters;
+			characters.reserve(1024);
+			cull(characters, viewport.w, viewport.h);
+			if (buffer) {
+				buffer->cull(characters, viewport.w, viewport.h);
+			}
 			cull_time = timer.duration(start);
 			{
 				const auto start = timer.now();
-				device.redraw(text);
+				device.redraw(characters);
 				redraw_time = timer.duration(start);
 			}
 		}
@@ -114,7 +146,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { load("todo.diff"); } // [TODO] File picker (with cull() that returns characters).
+		else if (key == 'e') { load("todo.diff"); } // [TODO] pick() calling load (with cull() that returns characters).
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }

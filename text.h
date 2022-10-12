@@ -865,6 +865,78 @@ class Buffer {
 		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
+	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
+		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
+	}
+
+	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
+		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
+		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
+		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
+		push_digit(characters, row, col + 3, line % 10);
+	}
+
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
+		for (unsigned i = 0; i < col_count - 5; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
+		}
+	}
+
+	void push_cursor(Characters& characters, unsigned row, unsigned col) {
+		characters.emplace_back(
+			get_mode() == Mode::insert ? Glyph::LINE :
+			get_mode() == Mode::normal ? Glyph::BLOCK :
+			Glyph::BOTTOM_BLOCK,
+			colors().cursor, row, col);
+	};
+
+	void push_return(Characters& characters, unsigned row, unsigned col) {
+		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
+	};
+
+	void push_tab(Characters& characters, unsigned row, unsigned col) {
+		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
+	};
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
+		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : row_color, row, col);
+	};
+
+	void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+		Color row_color = colors().text;
+		const unsigned cursor_row = state().find_cursor_row();
+		const unsigned end_row = state().get_begin_row() + row_count;
+		unsigned absolute_row = 0;
+		unsigned index = 0;
+		unsigned row = 2;
+		unsigned col = 0;
+		bool new_row = true;
+		for (auto& character : state().get_text()) {
+			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
+				if (new_row) {
+					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+					if (state().test(index, "---")) { row_color = colors().diff_note; } // [TODO] Better syntax highlighting.
+					else if (character == '+') { row_color = colors().diff_add; }
+					else if (character == '-') { row_color = colors().diff_remove; }
+					else { row_color = colors().text; }
+					unsigned column = absolute_row == cursor_row ? col : col + 1;
+					const unsigned line = absolute_row == cursor_row ? absolute_row :
+						absolute_row < cursor_row ? cursor_row - absolute_row :
+						absolute_row - cursor_row;
+					push_line_number(characters, row, column, line); col += 7; new_row = false;
+				}
+				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
+				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
+				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
+				else { push_char(characters, row, col, character, index == state().get_cursor(), row_color); col++; }
+			}
+			else {
+				if (character == '\n') { absolute_row++; }
+			}
+			index++;
+		}
+	}
+
 	void init(const std::string& text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
@@ -927,10 +999,8 @@ public:
 		stack.pop();
 	}
 
-	std::string status() const {
-		const auto text_perc = std::to_string(1 + unsigned(stack.get_cursor() * 100 / stack.get_text().size())) + "%";
-		const auto text_size = std::to_string(stack.get_text().size()) + " bytes";
-		return filename + " [" + text_perc + " " + text_size + "]";
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
+		push_text(characters, col_count, row_count);
 	}
 
 	State& state() { return stack.state(); }
@@ -941,123 +1011,5 @@ public:
 	Mode get_mode() const { return mode; }
 
 	bool is_normal() const { return mode == Mode::normal; }
-};
-
-class Layout {
-	Characters characters;
-
-	unsigned col_count = 0;
-	unsigned row_count = 0;
-
-	void push_digit(unsigned row, unsigned col, unsigned digit) {
-		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
-	}
-
-	void push_line_number(unsigned row, unsigned col, unsigned line) {
-		if (line > 999) { push_digit(row, col + 0, (line % 10000) / 1000); }
-		if (line > 99) { push_digit(row, col + 1, (line % 1000) / 100); }
-		if (line > 9) { push_digit(row, col + 2, (line % 100) / 10); }
-		push_digit(row, col + 3, line % 10);
-	}
-
-	void push_cursor_line(unsigned row, unsigned col_count) {
-		for (unsigned i = 0; i < col_count - 5; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
-		}
-	}
-
-	void push_cursor(const Buffer& buffer, unsigned row, unsigned col) {
-		characters.emplace_back(
-			buffer.get_mode() == Mode::insert ? Glyph::LINE :
-			buffer.get_mode() == Mode::normal ? Glyph::BLOCK :
-			Glyph::BOTTOM_BLOCK,
-			colors().cursor, row, col);
-	};
-
-	void push_return(unsigned row, unsigned col) {
-		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
-	};
-
-	void push_tab(unsigned row, unsigned col) {
-		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
-	};
-
-	void push_char(const Buffer& buffer, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
-		characters.emplace_back((uint8_t)character, block_cursor && buffer.get_mode() == Mode::normal ? colors().text_cursor : row_color, row, col);
-	};
-
-	void push_text(const Buffer& buffer) { // [TODO] Clean.
-		Color row_color = colors().text;
-		const unsigned cursor_row = buffer.state().find_cursor_row();
-		const unsigned end_row = buffer.state().get_begin_row() + row_count;
-		unsigned absolute_row = 0;
-		unsigned index = 0;
-		unsigned row = 2;
-		unsigned col = 0;
-		bool new_row = true;
-		for (auto& character : buffer.state().get_text()) {
-			if (absolute_row >= buffer.state().get_begin_row() && absolute_row <= end_row) {
-				if (new_row) {
-					if (absolute_row == cursor_row) { push_cursor_line(row, col_count); }
-					if (buffer.state().test(index, "---")) { row_color = colors().diff_note; } // [TODO] Better syntax highlighting.
-					else if (character == '+') { row_color = colors().diff_add; }
-					else if (character == '-') { row_color = colors().diff_remove; }
-					else { row_color = colors().text; }
-					unsigned column = absolute_row == cursor_row ? col : col + 1;
-					const unsigned line = absolute_row == cursor_row ? absolute_row :
-						absolute_row < cursor_row ? cursor_row - absolute_row :
-						absolute_row - cursor_row;
-					push_line_number(row, column, line); col += 7; new_row = false;
-				}
-				if (index == buffer.state().get_cursor()) { push_cursor(buffer, row, col); }
-				if (character == '\n') { push_return(row, col); absolute_row++; row++; col = 0; new_row = true; }
-				else if (character == '\t') { push_tab(row, col); col += 4; }
-				else { push_char(buffer, row, col, character, index == buffer.state().get_cursor(), row_color); col++; }
-			}
-			else {
-				if (character == '\n') { absolute_row++; }
-			}
-			index++;
-		}
-	}
-
-	void push_special_text(unsigned row, unsigned col, const Color& color, const std::string_view text) {
-		unsigned offset = 0;
-		for (auto& character : text) {
-			characters.emplace_back((uint8_t)character, color, row, col + offset++);
-		}
-	}
-
-	void push_special_line(unsigned row, const Color& color) {
-		for (unsigned i = 0; i < col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, color, row, i);
-		}
-	}
-
-	void push_status_bar(const std::string_view status) {
-		push_special_line(0, colors().status_line);
-		push_special_text(0, 0, colors().status_text, status);
-	}
-
-	void push_notification_bar(const std::string_view notification) {
-		push_special_line(1, colors().notification_line);
-		push_special_text(1, 0, colors().notification_text, notification);
-	}
-
-public:
-	Layout(unsigned col_count, unsigned row_count)
-		: col_count(col_count)
-		, row_count(row_count) {
-		characters.reserve(1024);
-	}
-
-	Characters cull(Buffer* buffer, const std::string_view status, const std::string_view notification) {
-		push_status_bar(status); // [TODO] Move to App.
-		push_notification_bar(notification); // [TODO] Move to App.
-		if (buffer) {
-			push_text(*buffer); // [TODO] Move to Buffer.
-		}
-		return characters;
-	}
 };
 
