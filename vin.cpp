@@ -9,6 +9,7 @@
 #include <string>
 #include <chrono>
 #include <fstream>
+#include <filesystem>
 #include <thread>
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
@@ -30,7 +31,24 @@ enum class Menu {
 };
 
 class Picker {
+	std::vector<std::string> paths;
 	std::string filename;
+
+	void populate_directory(const std::filesystem::path& dir) {
+		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
+			if (path.is_directory()) {
+				auto dirname = path.path().generic_string();
+				if (dirname.size() > 0 && (dirname.substr(0, 3) != "./.")) { // Skip hidden directories.
+					//populate_directory(path); // [TODO] Recursion seems to crash on large folders.
+				}
+			} else if (path.is_regular_file()) {
+				auto filename = path.path().generic_string();
+				if (filename.size() > 0 && (filename.substr(0, 3) != "./.")) { // Skip hidden files.
+					paths.push_back(path.path().generic_string());
+				}
+			}
+		}
+	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
 		characters.emplace_back((uint8_t)character, colors().text, row, col);
@@ -48,26 +66,39 @@ class Picker {
 
 public:
 	void reset() {
+		paths.clear();
 		filename.clear();
 	}
 
-	std::string select() { // [TODO] File list.
+	void populate() {
+		populate_directory(".");
+	}
+
+	std::string selection() {
 		return filename;
 	}
 
-	void process(unsigned key, unsigned col_count, unsigned row_count) {
+	void process(unsigned key, unsigned col_count, unsigned row_count) { // [TODO] Select with arrows.
 		if (key == Glyph::CR) { return; }
 		else if (key == Glyph::ESC) { return; }
-		else if (key == Glyph::TAB) { return; }
-		else if (key == Glyph::BS) { filename.pop_back(); }
+		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
+		else if (key == Glyph::BS) { if (filename.size() > 0) { filename.pop_back(); } }
 		else { filename += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Display cursor line.
 		unsigned col = 0;
-		push_string(characters, 2, col, "open: ");
-		push_string(characters, 2, col, filename);
-		push_cursor(characters, 2, col);
+		unsigned row = 2;
+		push_string(characters, row, col, "open: ");
+		push_string(characters, row, col, filename);
+		push_cursor(characters, row++, col);
+		for (auto& path : paths) {
+			if (row == row_count + 3) { break; }
+			col = 0;
+			if( path.find(filename) != std::string::npos) {
+				push_string(characters, row++, col, path);
+			}
+		}
 	}
 };
 
@@ -123,7 +154,7 @@ class App {
 	}
 
 	std::string status() const {
-		return std::string(buffer ? buffer->get_filename() : "") + 
+		return std::string(buffer ? buffer->get_filename() : "<empty>") + 
 			" (proc: " + process_duration + 
 			", cull: " + cull_duration + 
 			", draw: " + redraw_duration + ")";
@@ -133,7 +164,7 @@ class App {
 		const auto viewport = device.viewport();
 		Characters characters;
 		characters.reserve(1024);
-		bar.cull(characters, status(), viewport.w, viewport.h);
+		bar.cull(characters, status(), viewport.w, viewport.h); // [TODO] Move status to window title bar.
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
@@ -168,7 +199,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { picker.reset(); menu = Menu::picker; }
+		else if (key == 'e') { picker.populate(); menu = Menu::picker; }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
@@ -182,7 +213,8 @@ class App {
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { load(picker.select()); menu = Menu::normal; }
+		if (key == Glyph::CR) { load(picker.selection()); picker.reset(); menu = Menu::normal; }
+		else if (key == Glyph::ESC) { picker.reset(); menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); }
 	}
 

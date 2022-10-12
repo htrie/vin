@@ -216,7 +216,7 @@ public:
 		}
 	}
 
-	void next_word() {
+	void next_word() { // [TODO] Better word detection (like Line).
 		if (is_whitespace(text[cursor])) {
 			skip_whitespace_forward();
 		}
