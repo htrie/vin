@@ -1016,31 +1016,31 @@ public:
 class Bar {
 	std::string notification;
 
-	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) {
+	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) const {
 		unsigned offset = 0;
 		for (auto& character : text) {
 			characters.emplace_back((uint8_t)character, color, row, col + offset++);
 		}
 	}
 
-	void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) {
+	void push_special_line(Characters& characters, unsigned row, const Color& color, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);
 		}
 	}
 
-	void push_status_bar(Characters& characters, const std::string_view status, unsigned col_count) {
+	void push_status_bar(Characters& characters, const std::string_view status, unsigned col_count) const {
 		push_special_line(characters, 0, colors().status_line, col_count);
 		push_special_text(characters, 0, 0, colors().status_text, status);
 	}
 
-	void push_notification_bar(Characters& characters, const std::string_view notification, unsigned col_count) {
+	void push_notification_bar(Characters& characters, const std::string_view notification, unsigned col_count) const {
 		push_special_line(characters, 1, colors().notification_line, col_count);
 		push_special_text(characters, 1, 0, colors().notification_text, notification);
 	}
 
 public:
-	void cull(Characters& characters, const std::string_view status, unsigned col_count, unsigned row_count) {
+	void cull(Characters& characters, const std::string_view status, unsigned col_count, unsigned row_count) const {
 		push_status_bar(characters, status, col_count);
 		push_notification_bar(characters, notification, col_count);
 	}

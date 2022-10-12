@@ -30,27 +30,36 @@ enum class Menu {
 };
 
 class Picker {
-	void push_char(Characters& characters, unsigned row, unsigned col, char character) {
+	std::string filename;
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
 		characters.emplace_back((uint8_t)character, colors().text, row, col);
 	};
 
-	void push_filename(Characters& characters, unsigned row, const std::string_view filename) {
-		unsigned col = 0;
-		for (auto& character : filename) {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+		for (auto& character : s) {
 			push_char(characters, row, col++, character);
 		}
 	}
 
 public:
-	std::string select() {
-		return "todo.diff"; // [TODO] File picker.
+	void reset() {
+		filename.clear();
+	}
+
+	std::string select() { // [TODO] File list.
+		return filename;
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { return; }
+		else { filename += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
-		push_filename(characters, 2, select());
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		unsigned col = 0;
+		push_string(characters, 2, col, "open: ");
+		push_string(characters, 2, col, filename);
 	}
 };
 
@@ -61,7 +70,7 @@ class App {
 
 	Menu menu = Menu::normal;
 
-	std::unique_ptr<Buffer> buffer;
+	std::unique_ptr<Buffer> buffer; // [TODO] Buffer switcher.
 
 	std::string cull_duration;
 	std::string redraw_duration;
@@ -105,11 +114,24 @@ class App {
 		}
 	}
 
-	std::string status() {
+	std::string status() const {
 		return std::string(buffer ? buffer->get_filename() : "") + 
 			" (proc: " + process_duration + 
 			", cull: " + cull_duration + 
 			", draw: " + redraw_duration + ")";
+	}
+
+	Characters cull() const {
+		const auto viewport = device.viewport();
+		Characters characters;
+		characters.reserve(1024);
+		bar.cull(characters, status(), viewport.w, viewport.h);
+		switch (menu) {
+		case Menu::space: // pass-through.
+		case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
+		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
+		}
+		return characters;
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -121,16 +143,8 @@ class App {
 	void redraw() {
 		if (!minimized && dirty) {
 			dirty = false;
-			const auto viewport = device.viewport();
 			const Timer timer;
-			Characters characters;
-			characters.reserve(1024);
-			bar.cull(characters, status(), viewport.w, viewport.h);
-			switch (menu) {
-			case Menu::space: // pass-through.
-			case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
-			case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
-			}
+			const auto characters = cull();
 			cull_duration = timer.us();
 			{
 				const Timer timer;
@@ -146,7 +160,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { menu = Menu::picker; }
+		else if (key == 'e') { picker.reset(); menu = Menu::picker; }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
