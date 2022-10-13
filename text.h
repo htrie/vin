@@ -865,24 +865,24 @@ class Buffer {
 		mode = Mode::normal; // [TODO] w, [, {, (, ", '
 	}
 
-	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) {
+	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
 		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
 	}
 
-	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) {
+	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
 		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
 		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
 		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
 		push_digit(characters, row, col + 3, line % 10);
 	}
 
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) {
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
 		}
 	}
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col) {
+	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(
 			get_mode() == Mode::insert ? Glyph::LINE :
 			get_mode() == Mode::normal ? Glyph::BLOCK :
@@ -890,19 +890,19 @@ class Buffer {
 			colors().cursor, row, col);
 	};
 
-	void push_return(Characters& characters, unsigned row, unsigned col) {
+	void push_return(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
 	};
 
-	void push_tab(Characters& characters, unsigned row, unsigned col) {
+	void push_tab(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) {
+	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) const {
 		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : row_color, row, col);
 	};
 
-	void push_text(Characters& characters, unsigned col_count, unsigned row_count) { // [TODO] Clean.
+	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Clean.
 		Color row_color = colors().text;
 		const unsigned cursor_row = state().find_cursor_row();
 		const unsigned end_row = state().get_begin_row() + row_count;
@@ -999,7 +999,7 @@ public:
 		stack.pop();
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_text(characters, col_count, row_count);
 	}
 

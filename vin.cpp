@@ -34,6 +34,8 @@ class Picker {
 	std::vector<std::string> paths;
 	std::string filename;
 
+	unsigned selected = 0;
+
 	void populate_directory(const std::filesystem::path& dir) {
 		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
 			if (path.is_directory()) {
@@ -60,6 +62,12 @@ class Picker {
 		}
 	}
 
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+		for (unsigned i = 0; i < col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+		}
+	}
+
 	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
 	};
@@ -83,20 +91,27 @@ public:
 		else if (key == Glyph::ESC) { return; }
 		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
 		else if (key == Glyph::BS) { if (filename.size() > 0) { filename.pop_back(); } }
+		else if (key == '<') { selected++; }
+		else if (key == '>') { if (selected > 0) selected--; }
 		else { filename += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Display cursor line.
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 1;
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, filename);
 		push_cursor(characters, row++, col);
+
+		unsigned displayed = 0;
 		for (auto& path : paths) {
 			if (row == row_count + 2) { break; }
 			col = 0;
 			if( path.find(filename) != std::string::npos) {
+				if (selected == displayed)
+					push_cursor_line(characters, row, col_count);
 				push_string(characters, row++, col, path);
+				displayed++;
 			}
 		}
 	}
