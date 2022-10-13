@@ -944,7 +944,7 @@ public:
 		}
 	}
 
-	void redraw(const Characters& characters) {
+	void redraw(const Characters& characters, const std::string_view status) {
 		wait(device.get(), fences[fence_index].get());
 		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
 		const auto& cmd = cmds[frame_index].get();
@@ -983,14 +983,15 @@ public:
 
 		fence_index += 1;
 		fence_index %= fences.size();
+
+		SetWindowTextA(hWnd, status.data());
 	}
 
 	Viewport viewport() const {
 		return {
 			(unsigned)((float)width / char_width),
-			(unsigned)((float)height / char_height) - 3 // Remove 1 line for status bar, 1 for notification bar, and another 1 for half-lines.
+			(unsigned)((float)height / char_height) - 2 // Remove 1 line for notification bar, and another 1 for half-lines.
 		};
-
 	}
 };
 

@@ -88,12 +88,12 @@ public:
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Display cursor line.
 		unsigned col = 0;
-		unsigned row = 2;
+		unsigned row = 1;
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, filename);
 		push_cursor(characters, row++, col);
 		for (auto& path : paths) {
-			if (row == row_count + 3) { break; }
+			if (row == row_count + 2) { break; }
 			col = 0;
 			if( path.find(filename) != std::string::npos) {
 				push_string(characters, row++, col, path);
@@ -154,17 +154,18 @@ class App {
 	}
 
 	std::string status() const {
-		return std::string(buffer ? buffer->get_filename() : "<empty>") + 
-			" (proc: " + process_duration + 
-			", cull: " + cull_duration + 
-			", draw: " + redraw_duration + ")";
+		return std::string("Vin v0.1  ") +
+			std::string(buffer ? buffer->get_filename() : "<empty>") + "   " +
+			"   proc " + process_duration +
+			"   cull " + cull_duration +
+			"   draw " + redraw_duration;
 	}
 
 	Characters cull() const {
 		const auto viewport = device.viewport();
 		Characters characters;
 		characters.reserve(1024);
-		bar.cull(characters, status(), viewport.w, viewport.h); // [TODO] Move status to window title bar.
+		bar.cull(characters, viewport.w, viewport.h);
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
@@ -187,7 +188,7 @@ class App {
 			cull_duration = timer.us();
 			{
 				const Timer timer;
-				device.redraw(characters);
+				device.redraw(characters, status());
 				redraw_duration = timer.us();
 			}
 		}

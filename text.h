@@ -908,7 +908,7 @@ class Buffer {
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
-		unsigned row = 2;
+		unsigned row = 1;
 		unsigned col = 0;
 		bool new_row = true;
 		for (auto& character : state().get_text()) {
@@ -1029,19 +1029,13 @@ class Bar {
 		}
 	}
 
-	void push_status_bar(Characters& characters, const std::string_view status, unsigned col_count) const {
-		push_special_line(characters, 0, colors().status_line, col_count);
-		push_special_text(characters, 0, 0, colors().status_text, status);
-	}
-
 	void push_notification_bar(Characters& characters, const std::string_view notification, unsigned col_count) const {
-		push_special_line(characters, 1, colors().notification_line, col_count);
-		push_special_text(characters, 1, 0, colors().notification_text, notification);
+		push_special_line(characters, 0, colors().notification_line, col_count);
+		push_special_text(characters, 0, 0, colors().notification_text, notification);
 	}
 
 public:
-	void cull(Characters& characters, const std::string_view status, unsigned col_count, unsigned row_count) const {
-		push_status_bar(characters, status, col_count);
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_notification_bar(characters, notification, col_count);
 	}
 
