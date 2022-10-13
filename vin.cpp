@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string>
 #include <chrono>
+#include <map>
 #include <fstream>
 #include <filesystem>
 #include <thread>
@@ -28,16 +29,16 @@ enum class Menu {
 	space,
 	normal,
 	picker,
+	switcher,
 };
 
 class App {
 	Device device;
 	Bar bar;
 	Picker picker;
+	Switcher switcher;
 
 	Menu menu = Menu::normal;
-
-	std::unique_ptr<Buffer> buffer; // [TODO] Buffer switcher.
 
 	std::string cull_duration;
 	std::string redraw_duration;
@@ -50,54 +51,24 @@ class App {
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 
-	void load(const std::string_view filename) {
-		const Timer timer;
-		buffer = std::make_unique<Buffer>(filename);
-		notify(std::string("load ") + std::string(filename) + " in " + timer.us());
-	}
-
-	void reload() {
-		if (buffer) {
-			const Timer timer;
-			buffer->reload();
-			notify(std::string("reload ") + std::string(buffer->get_filename()) + " in " + timer.us());
-		}
-	}
-
-	void save() {
-		if (buffer) {
-			const Timer timer;
-			buffer->save();
-			notify(std::string("save ") + std::string(buffer->get_filename()) + " in " + timer.us());
-		}
-	}
-
-	void close() {
-		if (buffer) {
-			const Timer timer;
-			const auto filename = std::string(buffer->get_filename());
-			buffer.reset();
-			notify(std::string("close ") + filename + " in " + timer.us());
-		}
-	}
-
-	std::string status() const {
+	std::string status() {
 		return std::string("Vin v0.1  ") +
-			std::string(buffer ? buffer->get_filename() : "<empty>") + "   " +
+			std::string(switcher.current() ? switcher.current()->get_filename() : "<empty>") + "   " +
 			"   proc " + process_duration +
 			"   cull " + cull_duration +
 			"   draw " + redraw_duration;
 	}
 
-	Characters cull() const {
+	Characters cull() {
 		const auto viewport = device.viewport();
 		Characters characters;
 		characters.reserve(1024);
 		bar.cull(characters, viewport.w, viewport.h);
 		switch (menu) {
 		case Menu::space: // pass-through.
-		case Menu::normal: if (buffer) { buffer->cull(characters, viewport.w, viewport.h); } break;
+		case Menu::normal: if (auto* buffer = switcher.current()) { buffer->cull(characters, viewport.w, viewport.h); } break;
 		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
+		case Menu::switcher: switcher.cull(characters, viewport.w, viewport.h); break;
 		}
 		return characters;
 	}
@@ -127,24 +98,30 @@ class App {
 
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
-		else if (key == 'w') { close(); }
+		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'e') { picker.populate(); picker.filter(row_count); menu = Menu::picker; }
-		else if (key == 'r') { reload(); }
-		else if (key == 's') { save(); }
-		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
-		else if (key == 'i') { if (buffer) { buffer->state().window_down(row_count); } }
+		else if (key == 'r') { notify(switcher.reload()); }
+		else if (key == 's') { notify(switcher.save()); }
+		else if (key == 'o') { if (auto* buffer = switcher.current()) { buffer->state().window_up(row_count); } }
+		else if (key == 'i') { if (auto* buffer = switcher.current()) { buffer->state().window_down(row_count); } }
+		else if (key == 'j') { menu = Menu::switcher; }
+		else if (key == 'k') { menu = Menu::switcher; }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		if (buffer) {
+		if (auto* buffer = switcher.current()) {
 			buffer->process(key, col_count, row_count);
 		}
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { load(picker.selection()); picker.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); picker.reset(); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { picker.reset(); menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); picker.filter(row_count); }
+	}
+
+	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
+		 switcher.process(key, col_count, row_count);
 	}
 
 	void process(unsigned key) {
@@ -154,16 +131,18 @@ class App {
 		case Menu::space: process_space(key, viewport.h); break;
 		case Menu::normal: process_normal(key, viewport.w, viewport.h); break;
 		case Menu::picker: process_picker(key, viewport.w, viewport.h); break;
+		case Menu::switcher: process_switcher(key, viewport.w, viewport.h); break;
 		}
-		if (buffer) { buffer->state().cursor_clamp(viewport.h); }
+		if (auto* buffer = switcher.current()) { buffer->state().cursor_clamp(viewport.h); }
 		process_duration = timer.us();
 	}
 
 	void update(bool space_down) {
 		switch (menu) {
 		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
-		case Menu::normal: if (space_down && (!buffer || buffer->is_normal())) { menu = Menu::space; } break;
+		case Menu::normal: if (space_down && (!switcher.current() || switcher.current()->is_normal())) { menu = Menu::space; } break;
 		case Menu::picker: break;
+		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		}
 	}
 

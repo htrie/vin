@@ -953,6 +953,7 @@ class Buffer {
 	}
 
 public:
+	Buffer() {}
 	Buffer(const std::string_view filename)
 		: filename(filename) {
 		init(load());
@@ -1140,6 +1141,122 @@ public:
 				push_cursor_line(characters, row, col_count);
 			push_string(characters, row++, col, path);
 			displayed++;
+		}
+	}
+};
+
+class Switcher {
+	std::map<std::string, Buffer> buffers;
+	std::string active;
+
+	void select_previous() {
+		if (!active.empty()) {
+			if (auto found = buffers.find(active); found != buffers.end()) {
+				if (auto prev = --found; prev != buffers.end()) {
+					active = buffers.at((*prev).first).get_filename();
+				}
+			} else {
+				active.clear();
+			}
+		} else {
+			if (auto found = buffers.begin(); found != buffers.end()) {
+				active = buffers.at((*found).first).get_filename();
+			}
+		}
+	}
+
+	void select_next() {
+		if (!active.empty()) {
+			if (auto found = buffers.find(active); found != buffers.end()) {
+				if (auto next = ++found; next != buffers.end()) {
+					active = buffers.at((*next).first).get_filename();
+				}
+			} else {
+				active.clear();
+			}
+		} else {
+			if (auto found = buffers.begin(); found != buffers.end()) {
+				active = buffers.at((*found).first).get_filename();
+			}
+		}
+	}
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
+		characters.emplace_back((uint8_t)character, colors().text, row, col);
+	};
+
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+		for (auto& character : s) {
+			push_char(characters, row, col++, character);
+		}
+	}
+
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+		for (unsigned i = 0; i < col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+		}
+	}
+
+public:
+	std::string load(const std::string_view filename) {
+		if (buffers.find(std::string(filename)) == buffers.end()) {
+			const Timer timer;
+			buffers.emplace(filename, filename);
+			active = filename;
+			return std::string("load ") + std::string(filename) + " in " + timer.us();
+		}
+		return {};
+	}
+
+	std::string reload() {
+		if (auto* buffer = current()) {
+			const Timer timer;
+			buffer->reload();
+			return std::string("reload ") + std::string(buffer->get_filename()) + " in " + timer.us();
+		}
+		return {};
+	}
+
+	std::string save() {
+		if (auto* buffer = current()) {
+			const Timer timer;
+			buffer->save();
+			return std::string("save ") + std::string(buffer->get_filename()) + " in " + timer.us();
+		}
+		return {};
+	}
+
+	std::string close() {
+		if (auto* buffer = current()) {
+			const Timer timer;
+			const auto filename = std::string(buffer->get_filename());
+			buffers.erase(filename);
+			active.clear();
+			select_previous();
+			return std::string("close ") + filename + " in " + timer.us();
+		}
+		return {};
+	}
+
+	Buffer* current() {
+		if (!active.empty())
+			return &buffers[active];
+		return nullptr;
+	}
+
+	void process(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == 'j') { select_next(); }
+		else if (key == 'k') { select_previous(); }
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		unsigned col = 0;
+		unsigned row = 1;
+		for (auto& it : buffers) {
+			col = 0;
+			if (active == it.second.get_filename())
+				push_cursor_line(characters, row, col_count);
+			push_string(characters, row++, col, it.second.get_filename()); // [TODO] Display if need save.
 		}
 	}
 };
