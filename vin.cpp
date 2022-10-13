@@ -30,93 +30,6 @@ enum class Menu {
 	picker,
 };
 
-class Picker {
-	std::vector<std::string> paths;
-	std::string filename;
-
-	unsigned selected = 0;
-
-	void populate_directory(const std::filesystem::path& dir) {
-		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
-			if (path.is_directory()) {
-				auto dirname = path.path().generic_string();
-				if (dirname.size() > 0 && (dirname.substr(0, 3) != "./.")) { // Skip hidden directories.
-					//populate_directory(path); // [TODO] Recursion seems to crash on large folders.
-				}
-			} else if (path.is_regular_file()) {
-				auto filename = path.path().generic_string();
-				if (filename.size() > 0 && (filename.substr(0, 3) != "./.")) { // Skip hidden files.
-					paths.push_back(path.path().generic_string());
-				}
-			}
-		}
-	}
-
-	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
-		characters.emplace_back((uint8_t)character, colors().text, row, col);
-	};
-
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
-		for (auto& character : s) {
-			push_char(characters, row, col++, character);
-		}
-	}
-
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
-		for (unsigned i = 0; i < col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
-		}
-	}
-
-	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
-	};
-
-public:
-	void reset() {
-		paths.clear();
-		filename.clear();
-	}
-
-	void populate() {
-		populate_directory(".");
-	}
-
-	std::string selection() {
-		return filename;
-	}
-
-	void process(unsigned key, unsigned col_count, unsigned row_count) { // [TODO] Select with arrows.
-		if (key == Glyph::CR) { return; }
-		else if (key == Glyph::ESC) { return; }
-		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
-		else if (key == Glyph::BS) { if (filename.size() > 0) { filename.pop_back(); } }
-		else if (key == '<') { selected++; }
-		else if (key == '>') { if (selected > 0) selected--; }
-		else { filename += (char)key; }
-	}
-
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		unsigned col = 0;
-		unsigned row = 1;
-		push_string(characters, row, col, "open: ");
-		push_string(characters, row, col, filename);
-		push_cursor(characters, row++, col);
-
-		unsigned displayed = 0;
-		for (auto& path : paths) {
-			if (row == row_count + 2) { break; }
-			col = 0;
-			if( path.find(filename) != std::string::npos) {
-				if (selected == displayed)
-					push_cursor_line(characters, row, col_count);
-				push_string(characters, row++, col, path);
-				displayed++;
-			}
-		}
-	}
-};
-
 class App {
 	Device device;
 	Bar bar;
@@ -215,7 +128,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { close(); }
-		else if (key == 'e') { picker.populate(); menu = Menu::picker; }
+		else if (key == 'e') { picker.populate(); picker.filter(row_count); menu = Menu::picker; }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'o') { if (buffer) { buffer->state().window_up(row_count); } }
@@ -231,7 +144,7 @@ class App {
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == Glyph::CR) { load(picker.selection()); picker.reset(); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { picker.reset(); menu = Menu::normal; }
-		else { picker.process(key, col_count, row_count); }
+		else { picker.process(key, col_count, row_count); picker.filter(row_count); }
 	}
 
 	void process(unsigned key) {

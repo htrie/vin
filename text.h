@@ -1044,3 +1044,103 @@ public:
 	}
 };
 
+class Picker {
+	std::vector<std::string> paths;
+	std::string filename;
+
+	std::vector<std::string> filtered;
+	unsigned selected = 0;
+
+	void populate_directory(const std::filesystem::path& dir) {
+		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
+			if (path.is_directory()) {
+				auto dirname = path.path().generic_string();
+				if (dirname.size() > 0 && (dirname.substr(0, 3) != "./.")) { // Skip hidden directories.
+					//populate_directory(path); // [TODO] Recursion seems to crash on large folders.
+				}
+			} else if (path.is_regular_file()) {
+				auto filename = path.path().generic_string();
+				if (filename.size() > 0 && (filename.substr(0, 3) != "./.")) { // Skip hidden files.
+					paths.push_back(path.path().generic_string());
+				}
+			}
+		}
+	}
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
+		characters.emplace_back((uint8_t)character, colors().text, row, col);
+	};
+
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+		for (auto& character : s) {
+			push_char(characters, row, col++, character);
+		}
+	}
+
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+		for (unsigned i = 0; i < col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+		}
+	}
+
+	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
+	};
+
+public:
+	void reset() {
+		paths.clear();
+		filename.clear();
+		filtered.clear();
+		selected = 0;
+	}
+
+	void populate() {
+		populate_directory(".");
+	}
+
+	void filter(unsigned row_count) {
+		filtered.clear();
+		for (auto& path : paths) {
+			if (filtered.size() > row_count - 2) { break; }
+			if( path.find(filename) != std::string::npos) {
+				filtered.push_back(path);
+			}
+		}
+		selected = std::min(selected, (unsigned)filtered.size() - 1);
+	}
+
+	std::string selection() {
+		if (selected < filtered.size())
+			return filtered[selected];
+		return filename;
+	}
+
+	void process(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { return; }
+		else if (key == Glyph::ESC) { return; }
+		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
+		else if (key == Glyph::BS) { if (filename.size() > 0) { filename.pop_back(); } }
+		else if (key == '<') { selected++; }
+		else if (key == '>') { if (selected > 0) selected--; }
+		else { filename += (char)key; }
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		unsigned col = 0;
+		unsigned row = 1;
+		push_string(characters, row, col, "open: ");
+		push_string(characters, row, col, filename);
+		push_cursor(characters, row++, col);
+
+		unsigned displayed = 0;
+		for (auto& path : filtered) {
+			col = 0;
+			if (selected == displayed)
+				push_cursor_line(characters, row, col_count);
+			push_string(characters, row++, col, path);
+			displayed++;
+		}
+	}
+};
+
