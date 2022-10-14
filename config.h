@@ -20,15 +20,3 @@ const Colors colors() {
 	return colors;
 }
 
-const char* welcome_text = {
-	"                                         \n"
-	"                                         \n"
-	"                                         \n"
-	"              ---------------            \n"
-	"              -     Vin     -            \n"
-	"              - Version 0.1 -            \n"
-	"              ---------------            \n"
-	"                                         \n"
-	"                                         \n"
-	"                                         \n"
-};

@@ -54,7 +54,7 @@ class App {
 
 	std::string status() {
 		return std::string("Vin v0.1 - ") +
-			std::string(switcher.current()->get_filename()) + " - " +
+			std::string(switcher.current().get_filename()) + " - " +
 			"proc " + process_duration +
 			", cull " + cull_duration +
 			", draw " + redraw_duration + 
@@ -67,7 +67,7 @@ class App {
 		characters.reserve(1024);
 		switch (menu) {
 		case Menu::space: // pass-through.
-		case Menu::normal: if (auto* buffer = switcher.current()) { buffer->cull(characters, viewport.w, viewport.h); } break;
+		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
 		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
 		case Menu::switcher: switcher.cull(characters, viewport.w, viewport.h); break;
 		}
@@ -103,16 +103,14 @@ class App {
 		else if (key == 'e') { picker.populate(); picker.filter(row_count); menu = Menu::picker; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'o') { if (auto* buffer = switcher.current()) { buffer->state().window_up(row_count); } }
-		else if (key == 'i') { if (auto* buffer = switcher.current()) { buffer->state().window_down(row_count); } }
+		else if (key == 'o') { switcher.current().state().window_up(row_count); }
+		else if (key == 'i') { switcher.current().state().window_down(row_count); }
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		if (auto* buffer = switcher.current()) {
-			buffer->process(key, col_count, row_count);
-		}
+		switcher.current().process(key, col_count, row_count);
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
@@ -134,14 +132,14 @@ class App {
 		case Menu::picker: process_picker(key, viewport.w, viewport.h); break;
 		case Menu::switcher: process_switcher(key, viewport.w, viewport.h); break;
 		}
-		if (auto* buffer = switcher.current()) { buffer->state().cursor_clamp(viewport.h); }
+		switcher.current().state().cursor_clamp(viewport.h);
 		process_duration = timer.us();
 	}
 
 	void update(bool space_down) {
 		switch (menu) {
 		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
-		case Menu::normal: if (space_down && (!switcher.current() || switcher.current()->is_normal())) { menu = Menu::space; } break;
+		case Menu::normal: if (space_down && switcher.current().is_normal()) { menu = Menu::space; } break;
 		case Menu::picker: break;
 		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		}

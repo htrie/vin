@@ -908,7 +908,7 @@ class Buffer {
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
-		unsigned row = 1;
+		unsigned row = 0;
 		unsigned col = 0;
 		bool new_row = true;
 		for (auto& character : state().get_text()) {
@@ -937,6 +937,12 @@ class Buffer {
 		}
 	}
 
+	void init(const std::string& text) {
+		stack.set_cursor(0);
+		stack.set_text(text);
+		stack.set_modified(true);
+	}
+
 	std::string load() {
 		if (!filename.empty()) {
 			if (auto in = std::ifstream(filename)) {
@@ -951,12 +957,6 @@ public:
 	Buffer(const std::string_view filename)
 		: filename(filename) {
 		init(load());
-	}
-
-	void init(const std::string& text) {
-		stack.set_cursor(0);
-		stack.set_text(text);
-		stack.set_modified(true);
 	}
 
 	void reload() {
@@ -1096,9 +1096,9 @@ public:
 		else { filename += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Use centered overlay window.
 		unsigned col = 0;
-		unsigned row = 1;
+		unsigned row = 0;
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, filename);
 		push_cursor(characters, row++, col);
@@ -1115,7 +1115,7 @@ public:
 };
 
 class Switcher {
-	Buffer default_buffer;
+	Buffer empty_buffer;
 	std::map<std::string, Buffer> buffers;
 	std::string active;
 
@@ -1168,10 +1168,6 @@ class Switcher {
 	}
 
 public:
-	Switcher() {
-		default_buffer.init(welcome_text);
-	}
-
 	std::string load(const std::string_view filename) {
 		if (buffers.find(std::string(filename)) == buffers.end()) {
 			const Timer timer;
@@ -1183,27 +1179,27 @@ public:
 	}
 
 	std::string reload() {
-		if (auto* buffer = current()) {
+		if (!active.empty()) {
 			const Timer timer;
-			buffer->reload();
-			return std::string("reload ") + std::string(buffer->get_filename()) + " in " + timer.us();
+			buffers[active].reload();
+			return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
 		}
 		return {};
 	}
 
 	std::string save() {
-		if (auto* buffer = current()) {
+		if (!active.empty()) {
 			const Timer timer;
-			buffer->save();
-			return std::string("save ") + std::string(buffer->get_filename()) + " in " + timer.us();
+			buffers[active].save();
+			return std::string("save ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
 		}
 		return {};
 	}
 
 	std::string close() {
-		if (auto* buffer = current()) {
+		if (!active.empty()) {
 			const Timer timer;
-			const auto filename = std::string(buffer->get_filename());
+			const auto filename = std::string(buffers[active].get_filename());
 			buffers.erase(filename);
 			active.clear();
 			select_previous();
@@ -1212,10 +1208,10 @@ public:
 		return {};
 	}
 
-	Buffer* current() {
+	Buffer& current() {
 		if (!active.empty())
-			return &buffers[active];
-		return &default_buffer;
+			return buffers[active];
+		return empty_buffer;
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
@@ -1225,7 +1221,7 @@ public:
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Use smaller centered overlay window.
 		unsigned col = 0;
-		unsigned row = 1;
+		unsigned row = 0;
 		for (auto& it : buffers) {
 			col = 0;
 			if (active == it.second.get_filename())

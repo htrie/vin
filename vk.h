@@ -990,7 +990,7 @@ public:
 	Viewport viewport() const {
 		return {
 			(unsigned)((float)width / char_width),
-			(unsigned)((float)height / char_height) - 2 // Remove 1 line for notification bar, and another 1 for half-lines.
+			(unsigned)((float)height / char_height) - 1 // Remove 1 line for half-lines.
 		};
 	}
 };
