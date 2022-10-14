@@ -54,7 +54,9 @@ class App {
 
 	std::string status() {
 		return std::string("Vin v0.1 - ") +
-			std::string(switcher.current().get_filename()) + " - " +
+			std::string(switcher.current().get_filename()) + 
+			(switcher.current().is_dirty() ? "*" : "") +
+			" - " +
 			"proc " + process_duration +
 			", cull " + cull_duration +
 			", draw " + redraw_duration + 

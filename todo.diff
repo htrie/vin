@@ -1,12 +1,10 @@
 --- LATER
-+plug dynamic resolution factor into iOS dyn res
 +defer patching after engine init and during video
 --- 2022-10-03
 +commit
 	update with Rhys changes
 	test on next
 	careful about mobile and bundle in package
-+use storage system for bundle input file
 +check dependency-based activation on testing_next_bundled
 	check after build fix
 	errors where it can't find shaders

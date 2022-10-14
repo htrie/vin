@@ -87,7 +87,7 @@ class State {
 	std::string text;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
-	bool modified = true;
+	bool modified = false;
 
 public:
 	const std::string& get_text() const { return text; }
@@ -653,11 +653,13 @@ public:
 		if (states.size() > 0) { states.push_back(states.back()); }
 	}
 
-	void pop() {
-		if (!states.back().is_modified() && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
+	bool pop() {
+		const bool modified = states.back().is_modified();
+		if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
 		if (undo && states.size() > 1) { states.pop_back(); undo = false; }
 		states.back().fix_eof();
 		states.back().set_modified(false);
+		return modified;
 	}
 };
 
@@ -673,6 +675,8 @@ class Buffer {
 
 	unsigned f_key = 0;
 	bool f_is_forward = false;
+
+	bool needs_save = false;
 
 	void accumulate(unsigned key) {
 		verify(key >= '0' && key <= '9');
@@ -940,7 +944,6 @@ class Buffer {
 	void init(const std::string& text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
-		stack.set_modified(true);
 	}
 
 	std::string load() {
@@ -967,6 +970,7 @@ public:
 		if (!filename.empty()) {
 			if (auto out = std::ofstream(filename)) {
 				out << stack.get_text();
+				needs_save = false;
 			}
 		}
 	}
@@ -997,7 +1001,7 @@ public:
 		case Mode::normal_z: process_normal_z(key, row_count); break;
 		case Mode::insert: process_insert(key); break;
 		};
-		stack.pop();
+		needs_save = stack.pop() || needs_save;
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1012,6 +1016,7 @@ public:
 	Mode get_mode() const { return mode; }
 
 	bool is_normal() const { return mode == Mode::normal; }
+	bool is_dirty() const { return needs_save; }
 };
 
 class Picker {
@@ -1163,10 +1168,9 @@ class Switcher {
 		characters.emplace_back((uint8_t)character, colors().text, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned col, const std::string_view s) const {
-		unsigned offset = 0;
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
 		for (auto& character : s) {
-			push_char(characters, row, col + offset++, character);
+			push_char(characters, row, col++, character);
 		}
 	}
 
@@ -1250,7 +1254,10 @@ public:
 			push_background_line(characters, row, left_col, right_col);
 			if (active == it.second.get_filename())
 				push_cursor_line(characters, row, left_col, right_col);
-			push_string(characters, row++, col, it.second.get_filename()); // [TODO] Display if need save. // [TODO] Use short paths.
+			push_string(characters, row, col, it.second.get_filename()); // [TODO] Use short paths.
+			if (it.second.is_dirty()) 
+				push_string(characters, row, col, "*");
+			row++;
 		}
 	}
 };
