@@ -977,32 +977,48 @@ class Buffer {
 		}
 	}
 
-	static inline const std::vector<const char*> cpp_keywords = {
-		"alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto",
-		"bitand", "bitor", "bool", "break",
-		"case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue",
-		"decltype", "default", "delete", "do", "double", "dynamic_cast",
-		"else", "enum", "explicit", "export", "extern",
-		"false", "float", "for", "friend",
-		"goto",
-		"if", "inline", "int", "int32_t", "int64_t", 
-		"long",
-		"mutable", "namespace",
-		"new", "noexcept", "not", "not_eq", "nullptr",
-		"operator", "or", "or_eq",
-		"private", "protected", "public",
-		"reflexpr", "register", "reinterpret_cast", "requires", "return",
-		"short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
-		"template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename",
-		"union", "unsigned", "using", "uint32_t", "uint64_t",
-		"virtual", "void", "volatile",
-		"wchar_t", "while",
-		"xor", "xor_eq"
+	static inline const std::vector<std::vector<const char*>> cpp_keywords = {
+		{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
+		{ "bitand", "bitor", "bool", "break" },
+		{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
+		{ "decltype", "default", "delete", "do", "double", "dynamic_cast" },
+		{ "else", "enum", "explicit", "export", "extern" },
+		{ "false", "float", "for", "friend" },
+		{ "goto" },
+		{ },
+		{ "if", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
+		{ },
+		{ },
+		{ "long" },
+		{ "mutable", "namespace" },
+		{ "new", "noexcept", "not", "not_eq", "nullptr" },
+		{ "operator", "or", "or_eq" },
+		{ "private", "protected", "public" },
+		{ },
+		{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
+		{ "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
+		{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
+		{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
+		{ "virtual", "void", "volatile" },
+		{ "wchar_t", "while" },
+		{ "xor", "xor_eq" },
+		{ },
+		{ }
 	};
 
 	static bool is_cpp_digit(const Character& character) {
 		const uint8_t c = character.index;
 		return c >= '0' && c <= '9';
+	}
+
+	static bool is_cpp_lowercase_letter(const Character& character) {
+		const uint8_t c = character.index;
+		return (c >= 'a' && c <= 'z');
+	}
+
+	static bool is_cpp_uppercase_letter(const Character& character) {
+		const uint8_t c = character.index;
+		return (c >= 'A' && c <= 'Z');
 	}
 
 	static bool is_cpp_whitespace(const Character& character) {
@@ -1019,6 +1035,12 @@ class Buffer {
 			c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
 	}
 
+	static unsigned compute_cpp_letter_index(const Character& character) {
+		const uint8_t c = character.index;
+		if (c >= 'a' && c <= 'z') return c - 'a';
+		return (unsigned)-1;
+	}
+
 	static bool test_cpp_comment(Characters& characters, size_t index) {
 		if (index + 1 < characters.size()) {
 			if (characters[index + 0].index == '/' &&
@@ -1029,16 +1051,19 @@ class Buffer {
 	}
 
 	static size_t test_cpp_keyword(Characters& characters, size_t index) { // [TODO] bug when cursor inside keyword.
-		for (const auto& keyword : cpp_keywords) {
-			if (test(characters, index, keyword)) {
-				const auto length = strlen(keyword);
-				if (index + length < characters.size()) {
-					const auto& character = characters[index + length];
-					if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-						return length;
-					continue;
+		if (const auto letter_index = compute_cpp_letter_index(characters[index]); letter_index != (unsigned)-1) {
+			const auto& keywords = cpp_keywords[letter_index];
+			for (const auto& keyword : keywords) {
+				if (test(characters, index, keyword)) {
+					const auto length = strlen(keyword);
+					if (index + length < characters.size()) {
+						const auto& character = characters[index + length];
+						if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
+							return length;
+						continue;
+					}
+					return length; // EOF success.
 				}
-				return length; // EOF success.
 			}
 		}
 		return 0;
@@ -1048,6 +1073,21 @@ class Buffer {
 		const auto& character = characters[index];
 		if (is_cpp_digit(character))
 			return 1; // [TODO] Handle 3.4f.
+		return 0;
+	}
+
+	static size_t test_cpp_class(Characters& characters, size_t index) {
+		const auto& character = characters[index];
+		if (is_cpp_uppercase_letter(character)) {
+			size_t length = 0;
+			while (index + length < characters.size()) {
+				const auto& character = characters[index + length];
+				if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
+					return length;
+				length++;
+			}
+			return length; // EOF success.
+		}
 		return 0;
 	}
 
@@ -1067,17 +1107,17 @@ class Buffer {
 			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment); }
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
 			else if (characters[index].color != colors().text) { index++; }
-			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
-			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
-			else { skip_cpp_word(characters, index); }
-			// [TODO] classes 'Xxx'.
-			// [TODO] functions 'xxx('.
-			// [TODO] namespaces 'xxx::'.
 			// [TODO] macros 'XXX'.
 			// [TODO] strings '"xxx"'.
 			// [TODO] chars ''xx''.
 			// [TODO] defines '#xxx'.
 			// [TODO] templates '<xxx>'.
+			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
+			// [TODO] functions 'xxx('.
+			else if (const auto size = test_cpp_class(characters, index)) { change_token_color(characters, index, size, colors().cpp_class); }
+			// [TODO] namespaces 'xxx::'.
+			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
+			else { skip_cpp_word(characters, index); }
 		}
 	}
 
