@@ -1096,7 +1096,7 @@ public:
 		else { filename += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Use centered overlay window.
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
 		push_string(characters, row, col, "open: ");
@@ -1118,6 +1118,14 @@ class Switcher {
 	Buffer empty_buffer;
 	std::map<std::string, Buffer> buffers;
 	std::string active;
+
+	unsigned longest_filename() const {
+		unsigned longest = 0;
+		for (auto& it : buffers) {
+			longest = std::max(longest, (unsigned)it.second.get_filename().size());
+		}
+		return longest;
+	}
 
 	void select_previous() {
 		if (!active.empty()) {
@@ -1155,14 +1163,21 @@ class Switcher {
 		characters.emplace_back((uint8_t)character, colors().text, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+	void push_string(Characters& characters, unsigned row, unsigned col, const std::string_view s) const {
+		unsigned offset = 0;
 		for (auto& character : s) {
-			push_char(characters, row, col++, character);
+			push_char(characters, row, col + offset++, character);
 		}
 	}
 
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
-		for (unsigned i = 0; i < col_count; ++i) {
+	void push_background_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
+		for (unsigned i = col_begin; i < col_end; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().overlay, row, i);
+		}
+	}
+
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
+		for (unsigned i = col_begin; i < col_end; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
 		}
 	}
@@ -1219,13 +1234,22 @@ public:
 		else if (key == 'k') { select_previous(); }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Use smaller centered overlay window.
-		unsigned col = 0;
-		unsigned row = 0;
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		unsigned width = std::min(longest_filename(), col_count);
+		unsigned height = std::min((unsigned)buffers.size(), row_count);
+
+		unsigned left_col = (col_count - width) / 2;
+		unsigned right_col = left_col + width;
+		unsigned top_row = (row_count - height) / 2;
+		unsigned bottom_row = top_row + height;
+
+		unsigned col = left_col;
+		unsigned row = top_row;
 		for (auto& it : buffers) {
-			col = 0;
+			col = left_col;
+			push_background_line(characters, row, left_col, right_col);
 			if (active == it.second.get_filename())
-				push_cursor_line(characters, row, col_count);
+				push_cursor_line(characters, row, left_col, right_col);
 			push_string(characters, row++, col, it.second.get_filename()); // [TODO] Display if need save. // [TODO] Use short paths.
 		}
 	}

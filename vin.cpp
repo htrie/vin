@@ -69,7 +69,7 @@ class App {
 		case Menu::space: // pass-through.
 		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
 		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
-		case Menu::switcher: switcher.cull(characters, viewport.w, viewport.h); break;
+		case Menu::switcher: switcher.current().cull(characters, viewport.w, viewport.h); switcher.cull(characters, viewport.w, viewport.h); break;
 		}
 		return characters;
 	}

@@ -969,7 +969,7 @@ public:
 				{ 0.0f, 0.0f, scale, 0.0f },
 				{ trans_x, trans_y, 0.0f, 1.0f } };
 			constants.color = character.color.rgba();
-			constants.char_index = character.index;
+			constants.char_index = character.index; // [TODO] Use bitmap font.
 
 			push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 			draw(cmd, vertex_counts[character.index]);

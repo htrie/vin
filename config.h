@@ -2,6 +2,7 @@
 
 struct Colors {
 	Color clear = Color::rgba(1, 22, 39, 255);
+	Color overlay = Color::rgba(31, 52, 69, 255);
 	Color notification_line = Color::rgba(1, 22, 39, 255);
 	Color notification_text = Color::rgba(64, 152, 179, 255);
 	Color cursor = Color::rgba(255, 255, 0, 255);
