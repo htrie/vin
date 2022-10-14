@@ -7,7 +7,7 @@ struct Colors {
 	Color notification_text = Color::rgba(64, 152, 179, 255);
 	Color cursor = Color::rgba(255, 255, 0, 255);
 	Color cursor_line = Color::rgba(65, 80, 29, 255);
-	Color whitespace = Color::rgba(75, 100, 93, 255);
+	Color whitespace = Color::rgba(35, 60, 53, 255);
 	Color text = Color::rgba(205, 226, 239, 255);
 	Color text_cursor = Color::rgba(5, 5, 5, 255);
 	Color line_number = Color::rgba(75, 100, 121, 255);
