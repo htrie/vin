@@ -34,7 +34,6 @@ enum class Menu {
 
 class App {
 	Device device;
-	Bar bar;
 	Picker picker;
 	Switcher switcher;
 
@@ -44,6 +43,8 @@ class App {
 	std::string redraw_duration;
 	std::string process_duration;
 
+	std::string notification;
+
 	bool minimized = false;
 	bool dirty = true;
 	bool quit = false;
@@ -52,18 +53,18 @@ class App {
 	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
-		return std::string("Vin v0.1  ") +
-			std::string(switcher.current() ? switcher.current()->get_filename() : "<empty>") + "   " +
-			"   proc " + process_duration +
-			"   cull " + cull_duration +
-			"   draw " + redraw_duration;
+		return std::string("Vin v0.1 - ") +
+			std::string(switcher.current()->get_filename()) + " - " +
+			"proc " + process_duration +
+			", cull " + cull_duration +
+			", draw " + redraw_duration + 
+			" - " + notification;
 	}
 
 	Characters cull() {
 		const auto viewport = device.viewport();
 		Characters characters;
 		characters.reserve(1024);
-		bar.cull(characters, viewport.w, viewport.h);
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: if (auto* buffer = switcher.current()) { buffer->cull(characters, viewport.w, viewport.h); } break;
@@ -218,11 +219,11 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, nCmdShow, 600, 400) // [TODO] larger window to display all notification.
+		: device(proc, hInstance, nCmdShow, 800, 600)
 	{}
 
 	void notify(const std::string& s) {
-		bar.notify(s);
+		notification = timestamp() + "  " + s;
 	}
 
 	void run() {
