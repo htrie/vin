@@ -14,6 +14,7 @@ struct Colors {
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
+	Color cpp_keyword = Color::rgba(199, 146, 234, 255);
 };
 
 const Colors colors() {

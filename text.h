@@ -751,6 +751,8 @@ class Buffer {
 		else if (key == 'j') { state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { mode = Mode::normal; } // [TODO] nw.
+		else if (key == 'b') { mode = Mode::normal; } // [TODO] nw.
 		else { accu = 0; mode = Mode::normal; }
 	}
 
@@ -910,8 +912,8 @@ class Buffer {
 		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) const {
-		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool block_cursor) const {
+		characters.emplace_back((uint8_t)c, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -921,19 +923,81 @@ class Buffer {
 		unsigned index = 0;
 		unsigned row = 0;
 		unsigned col = 0;
-		for (auto& character : state().get_text()) {
+		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
-				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
-				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-				else { push_char(characters, row, col, character, index == state().get_cursor()); col++; }
+				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
+				else if (c == '\t') { push_tab(characters, row, col); col += 4; }
+				else { push_char(characters, row, col, c, index == state().get_cursor()); col++; }
 			} else {
-				if (character == '\n') { absolute_row++; }
+				if (c == '\n') { absolute_row++; }
 			}
 			index++;
 		}
+	}
+
+	bool test(const Characters& characters, size_t index, const std::string_view s) const {
+		if (index + s.size() <= characters.size()) {
+			for (unsigned i = 0; i < s.size(); ++i) {
+				if (characters[index + i].index != s[i])
+					return false;
+			}
+			return true;
+		}
+		return false;
+	}
+
+	void change_line_color(Characters& characters, size_t& index, const Color& color) const {
+		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
+			characters[index].color = color;
+			index++;
+		}
+	}
+
+	void change_token_color(Characters& characters, size_t& index, size_t count, const Color& color) const {
+		size_t offset = 1;
+		while (index < characters.size() && offset < count) {
+			characters[index].color = color;
+			index++;
+			offset++;
+		}
+	}
+
+	void colorize_diff(Characters& characters) const {
+		size_t index = 0;
+		while (index < characters.size()) {
+			if (test(characters, index, "---")) { change_line_color(characters, index, colors().diff_note); }
+			else if (test(characters, index, "+")) { change_line_color(characters, index, colors().diff_add); }
+			else if (test(characters, index, "-")) { change_line_color(characters, index, colors().diff_remove); }
+			else { index++; }
+		}
+	}
+
+	void colorize_cpp(Characters& characters) const {
+		size_t index = 0;
+		while (index < characters.size()) {
+			// [TODO] Support 'const|' where \ is any whitespace.
+			if (test(characters, index, "const ")) { change_token_color(characters, index, sizeof("const "), colors().cpp_keyword); } // [TODO] Factorize string.
+			// [TODO] Use array of keywords.
+			// [TODO] keywords.
+			// [TODO] punctuation (, . < > {} [] () - + * / = & | % ^ ! ~).
+			// [TODO] numbers '324 45435.99'.
+			// [TODO] strings '"xxx"'.
+			// [TODO] chars ''xx''.
+			// [TODO] functions 'xxx('.
+			// [TODO] namespaces 'xxx::'.
+			// [TODO] Line comments '//xxx'.
+			// [TODO] templates '<xxx>'.
+			else { index++; }
+		}
+	}
+
+	void colorize(Characters& characters) const {
+		if (filename.ends_with("diff")) { colorize_diff(characters); }
+		else if (filename.ends_with("cpp")) { colorize_cpp(characters); }
+		else if (filename.ends_with("h")) { colorize_cpp(characters); }
 	}
 
 	void init(const std::string& text) {
@@ -999,10 +1063,6 @@ public:
 		needs_save = stack.pop() || needs_save;
 	}
 
-	void colorize(Characters& characters) const {
-		// [TODO] Parse tokens with text color and colorize according to file type.
-	}
-
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_text(characters, col_count, row_count);
 		colorize(characters);
@@ -1042,13 +1102,13 @@ class Picker {
 		}
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
-		characters.emplace_back((uint8_t)character, colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
+		characters.emplace_back((uint8_t)c, colors().text, row, col);
 	};
 
 	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
-		for (auto& character : s) {
-			push_char(characters, row, col++, character);
+		for (auto& c : s) {
+			push_char(characters, row, col++, c);
 		}
 	}
 
@@ -1164,13 +1224,13 @@ class Switcher {
 		}
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character) const {
-		characters.emplace_back((uint8_t)character, colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
+		characters.emplace_back((uint8_t)c, colors().text, row, col);
 	};
 
 	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
-		for (auto& character : s) {
-			push_char(characters, row, col++, character);
+		for (auto& c : s) {
+			push_char(characters, row, col++, c);
 		}
 	}
 
