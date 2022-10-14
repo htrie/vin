@@ -836,7 +836,7 @@ class Buffer {
 
 	void process_normal_d(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
+		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; } // [TODO] Bug where first dd needs one more key press.
 		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
@@ -937,12 +937,6 @@ class Buffer {
 		}
 	}
 
-	void init(const std::string& text) {
-		stack.set_cursor(0);
-		stack.set_text(text);
-		stack.set_modified(true);
-	}
-
 	std::string load() {
 		if (!filename.empty()) {
 			if (auto in = std::ifstream(filename)) {
@@ -957,6 +951,12 @@ public:
 	Buffer(const std::string_view filename)
 		: filename(filename) {
 		init(load());
+	}
+
+	void init(const std::string& text) {
+		stack.set_cursor(0);
+		stack.set_text(text);
+		stack.set_modified(true);
 	}
 
 	void reload() {
@@ -1014,7 +1014,7 @@ public:
 	bool is_normal() const { return mode == Mode::normal; }
 };
 
-class Bar {
+class Bar { // [TODO] Remove and move notification to title bar.
 	std::string notification;
 
 	void push_special_text(Characters& characters, unsigned row, unsigned col, const Color& color, const std::string_view text) const {
@@ -1146,6 +1146,7 @@ public:
 };
 
 class Switcher {
+	Buffer default_buffer;
 	std::map<std::string, Buffer> buffers;
 	std::string active;
 
@@ -1198,6 +1199,10 @@ class Switcher {
 	}
 
 public:
+	Switcher() {
+		default_buffer.init(welcome_text);
+	}
+
 	std::string load(const std::string_view filename) {
 		if (buffers.find(std::string(filename)) == buffers.end()) {
 			const Timer timer;
@@ -1241,7 +1246,7 @@ public:
 	Buffer* current() {
 		if (!active.empty())
 			return &buffers[active];
-		return nullptr;
+		return &default_buffer;
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
@@ -1249,14 +1254,14 @@ public:
 		else if (key == 'k') { select_previous(); }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Use smaller centered overlay window.
 		unsigned col = 0;
 		unsigned row = 1;
 		for (auto& it : buffers) {
 			col = 0;
 			if (active == it.second.get_filename())
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row++, col, it.second.get_filename()); // [TODO] Display if need save.
+			push_string(characters, row++, col, it.second.get_filename()); // [TODO] Display if need save. // [TODO] Use short paths.
 		}
 	}
 };

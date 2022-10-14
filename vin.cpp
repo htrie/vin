@@ -218,7 +218,7 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, nCmdShow, 600, 400)
+		: device(proc, hInstance, nCmdShow, 600, 400) // [TODO] larger window to display all notification.
 	{}
 
 	void notify(const std::string& s) {
