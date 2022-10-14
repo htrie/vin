@@ -16,6 +16,9 @@ struct Colors {
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
 	Color cpp_keyword = Color::rgba(199, 146, 234, 255);
 	Color cpp_punctuation = Color::rgba(127, 219, 202, 255);
+	Color cpp_number = Color::rgba(247, 140, 108, 255);
+	Color cpp_class = Color::rgba(255, 203, 105, 255);
+	Color cpp_function = Color::rgba(130, 170, 255, 255);
 };
 
 const Colors colors() {

@@ -985,7 +985,7 @@ class Buffer {
 		"else", "enum", "explicit", "export", "extern",
 		"false", "float", "for", "friend",
 		"goto",
-		"if", "inline", "int",
+		"if", "inline", "int", "int32_t", "int64_t", 
 		"long",
 		"mutable", "namespace",
 		"new", "noexcept", "not", "not_eq", "nullptr",
@@ -994,11 +994,16 @@ class Buffer {
 		"reflexpr", "register", "reinterpret_cast", "requires", "return",
 		"short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized",
 		"template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename",
-		"union", "unsigned", "using",
+		"union", "unsigned", "using", "uint32_t", "uint64_t",
 		"virtual", "void", "volatile",
 		"wchar_t", "while",
 		"xor", "xor_eq"
 	};
+
+	static bool is_cpp_digit(const Character& character) {
+		const uint8_t c = character.index;
+		return c >= '0' && c <= '9';
+	}
 
 	static bool is_cpp_whitespace(const Character& character) {
 		const uint8_t c = character.index;
@@ -1014,7 +1019,7 @@ class Buffer {
 			c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
 	}
 
-	static size_t test_cpp_keyword(Characters& characters, size_t index) {
+	static size_t test_cpp_keyword(Characters& characters, size_t index) { // [TODO] bug when cursor inside keyword.
 		for (const auto& keyword : cpp_keywords) {
 			if (test(characters, index, keyword)) {
 				const auto length = strlen(keyword);
@@ -1027,6 +1032,13 @@ class Buffer {
 				return length; // EOF success.
 			}
 		}
+		return 0;
+	}
+
+	static size_t test_cpp_number(Characters& characters, size_t index) {
+		const auto& character = characters[index];
+		if (is_cpp_digit(character))
+			return 1; // [TODO] Handle 3.4f.
 		return 0;
 	}
 
@@ -1046,15 +1058,14 @@ class Buffer {
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
 			else if (characters[index].color != colors().text) { index++; }
 			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
-			// [TODO] bug when cursor inside keyword.
-			// [TODO] numbers '324 45435.99'.
-			// [TODO] strings '"xxx"'.
-			// [TODO] chars ''xx''.
+			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
+			// [TODO] comments '//xxx'.
 			// [TODO] classes ''.
 			// [TODO] functions 'xxx('.
 			// [TODO] namespaces 'xxx::'.
+			// [TODO] strings '"xxx"'.
+			// [TODO] chars ''xx''.
 			// [TODO] defines '#xxx'.
-			// [TODO] comments '//xxx'.
 			// [TODO] templates '<xxx>'.
 			else { skip_cpp_word(characters, index); }
 		}
