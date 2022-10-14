@@ -1,6 +1,6 @@
 #pragma once
 
-struct Colors {
+struct Colors { // [TODO] Try e-ink color scheme.
 	Color clear = Color::rgba(1, 22, 39, 255);
 	Color overlay = Color::rgba(31, 52, 69, 255);
 	Color notification_line = Color::rgba(1, 22, 39, 255);
@@ -14,6 +14,7 @@ struct Colors {
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
+	Color cpp_comment = Color::rgba(255, 255, 0, 255);
 	Color cpp_keyword = Color::rgba(199, 146, 234, 255);
 	Color cpp_punctuation = Color::rgba(127, 219, 202, 255);
 	Color cpp_number = Color::rgba(247, 140, 108, 255);

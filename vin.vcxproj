@@ -159,7 +159,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="text.h" />
     <ClInclude Include="util.h" />
-    <ClInclude Include="vk.h" />
+    <ClInclude Include="gpu.h" />
     <ClInclude Include="win.h" />
   </ItemGroup>
   <ItemGroup>

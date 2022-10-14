@@ -1019,6 +1019,15 @@ class Buffer {
 			c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
 	}
 
+	static bool test_cpp_comment(Characters& characters, size_t index) {
+		if (index + 1 < characters.size()) {
+			if (characters[index + 0].index == '/' &&
+				characters[index + 1].index == '/')
+				return true;
+		}
+		return false;
+	}
+
 	static size_t test_cpp_keyword(Characters& characters, size_t index) { // [TODO] bug when cursor inside keyword.
 		for (const auto& keyword : cpp_keywords) {
 			if (test(characters, index, keyword)) {
@@ -1055,19 +1064,20 @@ class Buffer {
 		size_t index = 0;
 		while (index < characters.size()) {
 			if (is_cpp_whitespace(characters[index])) { index++; }
+			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment); }
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
 			else if (characters[index].color != colors().text) { index++; }
 			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
 			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
-			// [TODO] comments '//xxx'.
-			// [TODO] classes ''.
+			else { skip_cpp_word(characters, index); }
+			// [TODO] classes 'Xxx'.
 			// [TODO] functions 'xxx('.
 			// [TODO] namespaces 'xxx::'.
+			// [TODO] macros 'XXX'.
 			// [TODO] strings '"xxx"'.
 			// [TODO] chars ''xx''.
 			// [TODO] defines '#xxx'.
 			// [TODO] templates '<xxx>'.
-			else { skip_cpp_word(characters, index); }
 		}
 	}
 

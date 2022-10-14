@@ -23,7 +23,7 @@
 #include "font.h"
 #include "config.h"
 #include "text.h"
-#include "vk.h"
+#include "gpu.h"
 
 enum class Menu {
 	space,
@@ -109,6 +109,8 @@ class App {
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
+		else if (key == 'c') { } // [TODO] Copy to clipboard.
+		else if (key == 'v') { } // [TODO] Paste from clipboard.
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
