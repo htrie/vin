@@ -873,11 +873,19 @@ class Buffer {
 		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
 	}
 
-	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
+	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
 		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
 		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
 		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
 		push_digit(characters, row, col + 3, line % 10);
+	}
+
+	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned absolute_row, unsigned cursor_row) const {
+		unsigned column = absolute_row == cursor_row ? col : col + 1;
+		const unsigned line = absolute_row == cursor_row ? absolute_row :
+			absolute_row < cursor_row ? cursor_row - absolute_row :
+			absolute_row - cursor_row;
+		push_number(characters, row, column, line);
 	}
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
@@ -906,30 +914,22 @@ class Buffer {
 		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
 	};
 
-	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Clean.
+	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
 		const unsigned cursor_row = state().find_cursor_row();
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
 		unsigned row = 0;
 		unsigned col = 0;
-		bool new_row = true;
 		for (auto& character : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
-				if (new_row) {
-					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
-					unsigned column = absolute_row == cursor_row ? col : col + 1;
-					const unsigned line = absolute_row == cursor_row ? absolute_row :
-						absolute_row < cursor_row ? cursor_row - absolute_row :
-						absolute_row - cursor_row;
-					push_line_number(characters, row, column, line); col += 7; new_row = false;
-				}
+				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
-				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
+				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
 				else { push_char(characters, row, col, character, index == state().get_cursor()); col++; }
-			}
-			else {
+			} else {
 				if (character == '\n') { absolute_row++; }
 			}
 			index++;
@@ -999,8 +999,13 @@ public:
 		needs_save = stack.pop() || needs_save;
 	}
 
+	void colorize(Characters& characters) const {
+		// [TODO] Parse tokens with text color and colorize according to file type.
+	}
+
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_text(characters, col_count, row_count);
+		colorize(characters);
 	}
 
 	State& state() { return stack.state(); }
