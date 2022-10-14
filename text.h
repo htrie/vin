@@ -902,12 +902,11 @@ class Buffer {
 		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor, const Color& row_color) const {
-		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : row_color, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char character, bool block_cursor) const {
+		characters.emplace_back((uint8_t)character, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const { // [TODO] Clean.
-		Color row_color = colors().text;
 		const unsigned cursor_row = state().find_cursor_row();
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
@@ -919,10 +918,6 @@ class Buffer {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (new_row) {
 					if (absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
-					if (state().test(index, "---")) { row_color = colors().diff_note; } // [TODO] Better syntax highlighting.
-					else if (character == '+') { row_color = colors().diff_add; }
-					else if (character == '-') { row_color = colors().diff_remove; }
-					else { row_color = colors().text; }
 					unsigned column = absolute_row == cursor_row ? col : col + 1;
 					const unsigned line = absolute_row == cursor_row ? absolute_row :
 						absolute_row < cursor_row ? cursor_row - absolute_row :
@@ -932,7 +927,7 @@ class Buffer {
 				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 				if (character == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; new_row = true; }
 				else if (character == '\t') { push_tab(characters, row, col); col += 4; }
-				else { push_char(characters, row, col, character, index == state().get_cursor(), row_color); col++; }
+				else { push_char(characters, row, col, character, index == state().get_cursor()); col++; }
 			}
 			else {
 				if (character == '\n') { absolute_row++; }
