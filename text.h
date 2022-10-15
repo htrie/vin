@@ -1119,6 +1119,20 @@ class Buffer {
 		return 0;
 	}
 
+	static size_t test_cpp_define(Characters& characters, size_t index) {
+		const auto& character = characters[index];
+		if (character.index == '#') {
+			size_t length = 1;
+			while (index + length < characters.size()) {
+				const auto& character = characters[index + length];
+				if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
+					return length;
+				length++;
+			}
+		}
+		return 0;
+	}
+
 	static size_t test_cpp_namespace(Characters& characters, size_t index) {
 		size_t length = 0;
 		while (index + length < characters.size()) {
@@ -1191,8 +1205,8 @@ class Buffer {
 			else if (characters[index].color != colors().text) { index++; }
 			else if (const auto size = test_cpp_string(characters, index)) { change_token_color(characters, index, size, colors().cpp_string); }
 			else if (const auto size = test_cpp_char(characters, index)) { change_token_color(characters, index, size, colors().cpp_string); }
+			else if (const auto size = test_cpp_define(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
 			// [TODO] macros 'XXX'.
-			// [TODO] defines '#xxx'.
 			// [TODO] templates '<xxx>'.
 			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
 			else if (const auto size = test_cpp_class(characters, index)) { change_token_color(characters, index, size, colors().cpp_class); }
@@ -1301,7 +1315,7 @@ class Picker {
 			if (path.is_directory()) {
 				auto dirname = path.path().generic_string();
 				if (dirname.size() > 0 && (dirname.substr(0, 3) != "./.")) { // Skip hidden directories.
-					//populate_directory(path); // [TODO] Recursion seems to crash on large folders.
+					populate_directory(path);
 				}
 			} else if (path.is_regular_file()) {
 				auto filename = path.path().generic_string();
