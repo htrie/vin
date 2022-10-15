@@ -752,7 +752,7 @@ class Buffer {
 		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { mode = Mode::normal; } // [TODO] nw.
-		else if (key == 'b') { mode = Mode::normal; } // [TODO] nw.
+		else if (key == 'b') { mode = Mode::normal; } // [TODO] nb.
 		else { accu = 0; mode = Mode::normal; }
 	}
 
@@ -842,7 +842,7 @@ class Buffer {
 
 	void process_normal_d(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; } // [TODO] Bug where first dd needs one more key press.
+		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
@@ -1366,7 +1366,6 @@ class Picker {
 
 public:
 	void reset() {
-		paths.clear();
 		filename.clear();
 		filtered.clear();
 		selected = 0;
