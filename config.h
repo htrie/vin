@@ -1,13 +1,13 @@
 #pragma once
 
-struct Colors { // [TODO] Try e-ink color scheme.
+struct Colors {
 	Color clear = Color::rgba(1, 22, 39, 255);
 	Color overlay = Color::rgba(31, 52, 69, 255);
 	Color notification_line = Color::rgba(1, 22, 39, 255);
 	Color notification_text = Color::rgba(64, 152, 179, 255);
 	Color cursor = Color::rgba(255, 255, 0, 255);
 	Color cursor_line = Color::rgba(65, 80, 29, 255);
-	Color whitespace = Color::rgba(35, 60, 53, 255);
+	Color whitespace = Color::rgba(15, 40, 33, 255);
 	Color text = Color::rgba(205, 226, 239, 255);
 	Color text_cursor = Color::rgba(5, 5, 5, 255);
 	Color line_number = Color::rgba(75, 100, 121, 255);
@@ -20,6 +20,8 @@ struct Colors { // [TODO] Try e-ink color scheme.
 	Color cpp_number = Color::rgba(247, 140, 108, 255);
 	Color cpp_class = Color::rgba(255, 203, 105, 255);
 	Color cpp_function = Color::rgba(130, 170, 255, 255);
+	Color cpp_namespace = Color::rgba(199, 146, 234, 255);
+	Color cpp_string = Color::rgba(247, 140, 108, 255);
 };
 
 const Colors colors() {
