@@ -996,7 +996,7 @@ class Buffer {
 		{ "private", "protected", "public" },
 		{ },
 		{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
-		{ "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
+		{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
 		{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
 		{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
 		{ "virtual", "void", "volatile" },
@@ -1076,6 +1076,19 @@ class Buffer {
 		return 0;
 	}
 
+	static size_t test_cpp_function(Characters& characters, size_t index) {
+		size_t length = 0;
+		while (index + length < characters.size()) {
+			const auto& character = characters[index + length];
+			if (is_cpp_whitespace(character))
+				return 0;
+			if (character.index == '(')
+				return length;
+			length++;
+		}
+		return 0;
+	}
+
 	static size_t test_cpp_class(Characters& characters, size_t index) {
 		const auto& character = characters[index];
 		if (is_cpp_uppercase_letter(character)) {
@@ -1113,8 +1126,8 @@ class Buffer {
 			// [TODO] defines '#xxx'.
 			// [TODO] templates '<xxx>'.
 			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
-			// [TODO] functions 'xxx('.
 			else if (const auto size = test_cpp_class(characters, index)) { change_token_color(characters, index, size, colors().cpp_class); }
+			else if (const auto size = test_cpp_function(characters, index)) { change_token_color(characters, index, size, colors().cpp_function); }
 			// [TODO] namespaces 'xxx::'.
 			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
 			else { skip_cpp_word(characters, index); }
