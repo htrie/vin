@@ -990,8 +990,8 @@ class Buffer {
 		{ },
 		{ },
 		{ "long" },
-		{ "mutable", "namespace" },
-		{ "new", "noexcept", "not", "not_eq", "nullptr" },
+		{ "mutable" },
+		{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
 		{ "operator", "or", "or_eq" },
 		{ "private", "protected", "public" },
 		{ },
@@ -1308,19 +1308,37 @@ class Picker {
 	std::string filename;
 
 	std::vector<std::string> filtered;
-	unsigned selected = 0;
+	unsigned selected = 0; 
+
+	std::string tolower(std::string s) {
+		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
+		return s;
+	}
+
+	bool allowed_extension(const std::string_view ext) {
+		if (ext == ".cpp") return true;
+		else if (ext == ".c") return true;
+		else if (ext == ".h") return true;
+		else if (ext == ".cpp") return true;
+		else if (ext == ".hpp") return true;
+		else if (ext == ".inc") return true;
+		else if (ext == ".frag") return true;
+		else if (ext == ".vert") return true;
+		return false;
+	}
 
 	void populate_directory(const std::filesystem::path& dir) {
 		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
 			if (path.is_directory()) {
-				auto dirname = path.path().generic_string();
-				if (dirname.size() > 0 && (dirname.substr(0, 3) != "./.")) { // Skip hidden directories.
+				const auto dirname = path.path().generic_string();
+				if (dirname.size() > 0 && (dirname.find("/.") == std::string::npos)) { // Skip hidden directories.
 					populate_directory(path);
 				}
 			} else if (path.is_regular_file()) {
-				auto filename = path.path().generic_string();
-				if (filename.size() > 0 && (filename.substr(0, 3) != "./.")) { // Skip hidden files.
-					paths.push_back(path.path().generic_string());
+				const auto filename = path.path().generic_string();
+				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
+					if (allowed_extension(path.path().extension().generic_string()))
+						paths.push_back(path.path().generic_string());
 				}
 			}
 		}
@@ -1354,15 +1372,17 @@ public:
 		selected = 0;
 	}
 
-	void populate() {
+	std::string populate() {
+		const Timer timer;
 		populate_directory(".");
+		return std::string("populate in " + timer.us());
 	}
 
 	void filter(unsigned row_count) {
 		filtered.clear();
 		for (auto& path : paths) {
 			if (filtered.size() > row_count - 2) { break; }
-			if( path.find(filename) != std::string::npos) {
+			if (tolower(path).find(filename) != std::string::npos) {
 				filtered.push_back(path);
 			}
 		}
