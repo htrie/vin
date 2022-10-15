@@ -1091,6 +1091,20 @@ class Buffer {
 		return 0;
 	}
 
+	static size_t test_cpp_string(Characters& characters, size_t index) {
+		const auto& character = characters[index];
+		if (character.index == '"') {
+			size_t length = 1;
+			while (index + length < characters.size()) {
+				const auto& character = characters[index + length];
+				length++;
+				if (character.index == Glyph::RETURN || character.index == '"')
+					return length;
+			}
+		}
+		return 0;
+	}
+
 	static size_t test_cpp_namespace(Characters& characters, size_t index) {
 		size_t length = 0;
 		while (index + length < characters.size()) {
@@ -1161,8 +1175,8 @@ class Buffer {
 			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment); }
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
 			else if (characters[index].color != colors().text) { index++; }
+			else if (const auto size = test_cpp_string(characters, index)) { change_token_color(characters, index, size, colors().cpp_string); }
 			// [TODO] macros 'XXX'.
-			// [TODO] strings '"xxx"'.
 			// [TODO] chars ''xx''.
 			// [TODO] defines '#xxx'.
 			// [TODO] templates '<xxx>'.
