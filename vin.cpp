@@ -110,6 +110,9 @@ class App {
 		else if (key == 'p') { notify(picker.populate()); }
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
+		else if (key == 'n') { } // [TODO] No highlight.
+		else if (key == 'g') { } // [TODO] Go back location.
+		else if (key == 'h') { } // [TODO] Go forward location.
 		else if (key == 'c') { } // [TODO] Copy to clipboard.
 		else if (key == 'v') { } // [TODO] Paste from clipboard.
 	}

@@ -11,6 +11,7 @@ struct Colors {
 	Color text = Color::rgba(205, 226, 239, 255);
 	Color text_cursor = Color::rgba(5, 5, 5, 255);
 	Color line_number = Color::rgba(75, 100, 121, 255);
+	Color highlight = Color::rgba(255, 0, 255, 255);
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
@@ -20,7 +21,7 @@ struct Colors {
 	Color cpp_number = Color::rgba(247, 140, 108, 255);
 	Color cpp_class = Color::rgba(255, 203, 105, 255);
 	Color cpp_function = Color::rgba(130, 170, 255, 255);
-	Color cpp_namespace = Color::rgba(199, 146, 234, 255);
+	Color cpp_namespace = Color::rgba(255, 170, 100, 255);
 	Color cpp_string = Color::rgba(247, 140, 108, 255);
 };
 

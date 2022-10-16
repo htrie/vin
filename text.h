@@ -161,6 +161,12 @@ public:
 	bool is_modified() const { return modified; }
 	void set_modified(bool b) { modified = b; };
 
+	Word incr(const Word& w) { return Word(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
+	Word decr(const Word& w) { return Word(text, w.begin() > 0 ? w.begin() - 1 : 0); }
+
+	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
+	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
+
 	bool test(size_t index, const std::string_view s) const {
 		if (index + s.size() <= text.size())
 			return text.substr(index, s.size()) == s;
@@ -250,42 +256,27 @@ public:
 
 	void word_end() {
 		const Word current(text, cursor);
-		if (is_whitespace(text[current.begin()])) {
-			const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
-			cursor = next.end();
-		} else if (cursor == current.end()) {
-			const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
-			if (is_whitespace(text[next.begin()])) {
-				const Word next2(text, next.end() < text.size() - 1 ? next.end() + 1 : next.end());
-				cursor = next2.end();
-			} else {
-				cursor = next.end();
-			}
-		} else {
-			cursor = current.end();
+		if (is_whitespace(text[current.begin()])) { cursor = incr(current).end(); }
+		else if (cursor == current.end()) {
+			const Word next = incr(current);
+			if (is_whitespace(text[next.begin()])) { cursor = incr(next).end(); }
+			else { cursor = next.end(); }
 		}
+		else { cursor = current.end(); }
 	}
 
 	void next_word() {
 		const Word current(text, cursor);
-		const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
-		if (is_whitespace(text[next.begin()])) {
-			const Word next2(text, next.end() < text.size() - 1 ? next.end() + 1 : next.end());
-			cursor = next2.begin();
-		} else {
-			cursor = next.begin();
-		}
+		const Word next = incr(current);
+		if (is_whitespace(text[next.begin()])) { cursor = incr(next).begin(); }
+		else { cursor = next.begin(); }
 	}
 
 	void prev_word() {
 		const Word current(text, cursor);
-		const Word prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
-		if (is_whitespace(text[prev.begin()])) {
-			const Word prev2(text, prev.begin() > 0 ? prev.begin() - 1 : 0);
-			cursor = prev2.begin();
-		} else {
-			cursor = prev.begin();
-		}
+		const Word prev = decr(current);
+		if (is_whitespace(text[prev.begin()])) { cursor = decr(prev).begin(); }
+		else { cursor = prev.begin(); }
 	}
 
 	bool is_first_line() {
@@ -295,13 +286,13 @@ public:
 
 	void next_line() {
 		const Line current(text, cursor);
-		const Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+		const Line next = incr(current);
 		cursor = next.to_absolute(current.to_relative(cursor));
 	}
 
 	void prev_line() {
 		const Line current(text, cursor);
-		const Line prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
+		const Line prev = decr(current);
 		cursor = prev.to_absolute(current.to_relative(cursor));
 	}
 
@@ -722,6 +713,7 @@ class Buffer {
 
 	std::string filename;
 	std::string clipboard;
+	std::string highlight;
 
 	unsigned accu = 0;
 
@@ -796,6 +788,8 @@ class Buffer {
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == '*') {} // [TODO] Find under cursor.
+		else if (key == 'n') {} // [TODO] Go to next find location.
+		else if (key == 'N') {} // [TODO] Go to previous find location.
 		else if (key == '.') {} // [TODO] Repeat command.
 	}
 
@@ -804,8 +798,8 @@ class Buffer {
 		else if (key == 'j') { state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { mode = Mode::normal; } // [TODO] nw.
-		else if (key == 'b') { mode = Mode::normal; } // [TODO] nb.
+		else if (key == 'w') { mode = Mode::normal; } // [TODO] Nw.
+		else if (key == 'b') { mode = Mode::normal; } // [TODO] Nb.
 		else { accu = 0; mode = Mode::normal; }
 	}
 
@@ -943,6 +937,12 @@ class Buffer {
 		push_number(characters, row, column, line);
 	}
 
+	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
+		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i);
+		}
+	};
+
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
@@ -980,6 +980,7 @@ class Buffer {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
+				if (state().test(index, highlight)) { push_highlight(characters, row, col); }
 				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 				else if (c == '\t') { push_tab(characters, row, col); col += 4; }
@@ -1296,6 +1297,7 @@ public:
 	Buffer(const std::string_view filename)
 		: filename(filename) {
 		init(load());
+		highlight = "Color"; // TEST
 	}
 
 	void reload() {
@@ -1369,7 +1371,8 @@ class Picker {
 	}
 
 	bool allowed_extension(const std::string_view ext) {
-		if (ext == ".cpp") return true;
+		if (ext == ".diff") return true;
+		else if (ext == ".cpp") return true;
 		else if (ext == ".c") return true;
 		else if (ext == ".h") return true;
 		else if (ext == ".cpp") return true;
