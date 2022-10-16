@@ -37,8 +37,16 @@ enum Glyph {
 	TABSIGN = 132,
 };
 
+constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
+constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
+constexpr bool is_punctuation(char c) { return 
+	c == '-' || c == '+' || c == '*' || c == '/' ||
+	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
+	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
+	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
+}
 
 struct Character {
 	uint8_t index;
@@ -51,6 +59,58 @@ struct Character {
 };
 
 typedef std::vector<Character> Characters;
+
+class Word {
+	size_t start = 0;
+	size_t finish = 0;
+
+	bool test_letter_or_number(std::string_view text, size_t pos) {
+		if (pos < text.size()) {
+			return is_number(text[pos]) || is_letter(text[pos]);
+		}
+		return false;
+	}
+
+	bool test_whitespace(std::string_view text, size_t pos) {
+		if (pos < text.size()) {
+			return is_whitespace(text[pos]);
+		}
+		return false;
+	}
+
+	bool test_punctuation(std::string_view text, size_t pos) {
+		if (pos < text.size()) {
+			return is_punctuation(text[pos]);
+		}
+		return false;
+	}
+
+public:
+	Word(std::string_view text, size_t pos) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			start = pos;
+			finish = pos;
+			const auto c = text[pos];
+			if (is_number(c) || is_letter(c)) {
+				while(test_letter_or_number(text, finish + 1)) { finish++; }
+				while(test_letter_or_number(text, start - 1)) { start--; }
+			}
+			else if (is_whitespace(c)) {
+				while(test_whitespace(text, finish + 1)) { finish++; }
+				while(test_whitespace(text, start - 1)) { start--; }
+			}
+			else if (is_punctuation(c)) {
+				while(test_punctuation(text, finish + 1)) { finish++; }
+				while(test_punctuation(text, start - 1)) { start--; }
+			}
+			verify(start <= finish);
+		}
+	}
+
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+};
 
 class Line {
 	size_t start = 0;
@@ -119,7 +179,7 @@ public:
 
 	size_t find_char(unsigned key) {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			size_t pos = text[cursor] == key ? cursor + 1 : cursor;
 			bool found = false;
 			while (pos < current.end()) {
@@ -133,7 +193,7 @@ public:
 
 	size_t rfind_char(unsigned key) {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
 			bool found = false;
 			while (pos >= current.begin()) {
@@ -159,27 +219,27 @@ public:
 	}
 
 	void next_char() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		cursor = std::clamp(cursor + 1, current.begin(), current.end());
 	}
 
 	void prev_char() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		cursor = std::clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
 	}
 
 	void line_start() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		cursor = current.begin();
 	}
 
 	void line_end() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		cursor = current.end();
 	}
 
 	void line_start_whitespace() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		cursor = current.begin();
 		while (cursor <= current.end()) {
 			if (!is_line_whitespace(text[cursor]))
@@ -188,80 +248,72 @@ public:
 		}
 	}
 
-	void skip_whitespace_forward() {
-		while (cursor < text.size() - 1) {
-			if (!is_whitespace(text[cursor])) break;
-			cursor = cursor + 1;
+	void word_end() {
+		const Word current(text, cursor);
+		if (is_whitespace(text[current.begin()])) {
+			const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+			cursor = next.end();
+		} else if (cursor == current.end()) {
+			const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+			if (is_whitespace(text[next.begin()])) {
+				const Word next2(text, next.end() < text.size() - 1 ? next.end() + 1 : next.end());
+				cursor = next2.end();
+			} else {
+				cursor = next.end();
+			}
+		} else {
+			cursor = current.end();
 		}
 	}
 
-	void skip_non_whitespace_forward() {
-		while (cursor < text.size() - 1) {
-			if (is_whitespace(text[cursor])) break;
-			cursor = cursor + 1;
-		}
-	}
-
-	void skip_whitespace_backward() {
-		while (cursor > 0) {
-			if (!is_whitespace(text[cursor])) break;
-			cursor = cursor - 1;
-		}
-	}
-
-	void skip_non_whitespace_backward() {
-		while (cursor > 0) {
-			if (is_whitespace(text[cursor])) break;
-			cursor = cursor - 1;
-		}
-	}
-
-	void next_word() { // [TODO] Better word detection (like Line).
-		if (is_whitespace(text[cursor])) {
-			skip_whitespace_forward();
-		}
-		else {
-			skip_non_whitespace_forward();
-			skip_whitespace_forward();
+	void next_word() {
+		const Word current(text, cursor);
+		const Word next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+		if (is_whitespace(text[next.begin()])) {
+			const Word next2(text, next.end() < text.size() - 1 ? next.end() + 1 : next.end());
+			cursor = next2.begin();
+		} else {
+			cursor = next.begin();
 		}
 	}
 
 	void prev_word() {
-		if (is_whitespace(text[cursor])) {
-			skip_whitespace_backward();
-			skip_non_whitespace_backward();
-		}
-		else {
-			skip_non_whitespace_backward();
+		const Word current(text, cursor);
+		const Word prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
+		if (is_whitespace(text[prev.begin()])) {
+			const Word prev2(text, prev.begin() > 0 ? prev.begin() - 1 : 0);
+			cursor = prev2.begin();
+		} else {
+			cursor = prev.begin();
 		}
 	}
 
 	bool is_first_line() {
-		Line current(text, cursor);
+		const Line current(text, cursor);
 		return current.begin() == 0;
 	}
 
 	void next_line() {
-		Line current(text, cursor);
-		Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
+		const Line current(text, cursor);
+		const Line next(text, current.end() < text.size() - 1 ? current.end() + 1 : current.end());
 		cursor = next.to_absolute(current.to_relative(cursor));
 	}
 
 	void prev_line() {
-		Line current(text, cursor);
-		Line prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
+		const Line current(text, cursor);
+		const Line prev(text, current.begin() > 0 ? current.begin() - 1 : 0);
 		cursor = prev.to_absolute(current.to_relative(cursor));
 	}
 
 	void buffer_end() {
-		Line current(text, cursor);
-		Line last(text, text.size() - 1);
+		const Line current(text, cursor);
+		const Line last(text, text.size() - 1);
 		cursor = last.to_absolute(current.to_relative(cursor));
 	}
 
 	void buffer_start() {
-		Line current(text, cursor);
-		Line first(text, 0);
+		const Line current(text, cursor);
+		const Line first(text, 0);
 		cursor = first.to_absolute(current.to_relative(cursor));
 	}
 
@@ -356,7 +408,7 @@ public:
 
 	std::string yank_line() {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
 		}
 		return {};
@@ -379,7 +431,7 @@ public:
 	std::string yank_words(unsigned count) {
 		std::string s;
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			const size_t begin = cursor;
 			size_t end = begin;
 			for (unsigned i = 0; i < count; i++) {
@@ -403,7 +455,7 @@ public:
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
 				if (begin < text.size() - 1) {
-					Line current(text, begin);
+					const Line current(text, begin);
 					s += text.substr(current.begin(), current.end() - current.begin() + 1);
 					begin = current.end() + 1;
 				}
@@ -418,7 +470,7 @@ public:
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
 				if (begin < text.size() - 1) {
-					Line current(text, begin);
+					const Line current(text, begin);
 					s.insert(0, text.substr(current.begin(), current.end() - current.begin() + 1));
 					if (current.begin() == 0) break;
 					begin = current.begin() - 1;
@@ -512,7 +564,7 @@ public:
 
 	std::string erase_line() {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
 			text.erase(current.begin(), current.end() - current.begin() + 1);
 			cursor = std::min(current.begin(), text.size() - 1);
@@ -524,7 +576,7 @@ public:
 
 	std::string erase_line_contents() {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
 			text.erase(current.begin(), current.end() - current.begin());
 			cursor = std::min(current.begin(), text.size() - 1);
@@ -536,7 +588,7 @@ public:
 
 	std::string erase_to_line_end() {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			const auto s = text.substr(cursor, current.end() - cursor);
 			text.erase(cursor, current.end() - cursor);
 			cursor = std::min(cursor, text.size() - 1);
@@ -568,7 +620,7 @@ public:
 
 	std::string erase_word() {
 		if (text.size() > 0) {
-			Line current(text, cursor);
+			const Line current(text, cursor);
 			const size_t begin = cursor;
 			size_t end = begin;
 			while (end < current.end()) {
@@ -730,6 +782,7 @@ class Buffer {
 		else if (key == 'l') { state().next_char(); }
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
+		else if (key == 'e') { state().word_end(); }
 		else if (key == 'g') { state().buffer_start(); }
 		else if (key == 'G') { state().buffer_end(); }
 		else if (key == 'H') { state().window_top(row_count); }
