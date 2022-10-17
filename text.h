@@ -224,6 +224,28 @@ public:
 		}
 	}
 
+	void word_find(const std::string_view s) {
+		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
+			if (pos == cursor && (cursor + 1 < text.size())) {
+				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) {
+					cursor = pos;
+				}
+			}
+			else { cursor = pos; }
+		}
+	}
+
+	void word_rfind(const std::string_view s) {
+		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
+			if (pos == cursor && cursor > 0) {
+				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) {
+					cursor = pos;
+				}
+			}
+			else { cursor = pos; }
+		}
+	}
+
 	void next_char() {
 		const Line current(text, cursor);
 		cursor = std::clamp(cursor + 1, current.begin(), current.end());
@@ -252,6 +274,16 @@ public:
 				break;
 			next_char();
 		}
+	}
+
+	std::string current_word() {
+		const Word current(text, cursor);
+		if (is_whitespace(text[current.begin()])) {
+			const Word next = incr(current);
+			cursor = next.begin();
+			return text.substr(next.begin(), next.end() - next.begin() + 1);
+		}
+		return text.substr(current.begin(), current.end() - current.begin() + 1);
 	}
 
 	void word_end() {
@@ -609,7 +641,7 @@ public:
 		return s;
 	}
 
-	std::string erase_word() {
+	std::string erase_word() { // [TODO] Use Word.
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const size_t begin = cursor;
@@ -785,11 +817,11 @@ class Buffer {
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == ';') { if(f_is_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
 		else if (key == ',') { if(f_is_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
+		else if (key == '*') { highlight = state().current_word(); }
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
-		else if (key == '*') {} // [TODO] Find under cursor.
-		else if (key == 'n') {} // [TODO] Go to next find location.
-		else if (key == 'N') {} // [TODO] Go to previous find location.
+		else if (key == 'n') { state().word_find(highlight); }
+		else if (key == 'N') { state().word_rfind(highlight); }
 		else if (key == '.') {} // [TODO] Repeat command.
 	}
 
@@ -1312,6 +1344,8 @@ public:
 			}
 		}
 	}
+
+	void clear_highlight() { highlight.clear(); }
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		stack.push();
