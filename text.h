@@ -73,7 +73,7 @@ class Word {
 
 	bool test_whitespace(std::string_view text, size_t pos) {
 		if (pos < text.size()) {
-			return is_whitespace(text[pos]);
+			return is_line_whitespace(text[pos]);
 		}
 		return false;
 	}
@@ -454,20 +454,15 @@ public:
 	std::string yank_words(unsigned count) {
 		std::string s;
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			Word current(text, cursor);
 			const size_t begin = cursor;
 			size_t end = begin;
 			for (unsigned i = 0; i < count; i++) {
-				while (end < current.end()) {
-					if (is_whitespace(text[end])) break;
-					end++;
-				}
-				while (end < current.end()) {
-					if (!is_whitespace(text[end])) break;
-					end++;
-				}
+				end = current.end();
+				current = incr(current);
 			}
-			s += text.substr(begin, end - begin);
+			const auto count = std::min(end + 1, text.size() - 1) - begin;
+			s += text.substr(begin, count);
 		}
 		return s;
 	}
@@ -641,21 +636,12 @@ public:
 		return s;
 	}
 
-	std::string erase_word() { // [TODO] Use Word.
-		if (text.size() > 0) {
-			const Line current(text, cursor);
-			const size_t begin = cursor;
-			size_t end = begin;
-			while (end < current.end()) {
-				if (is_whitespace(text[end])) break;
-				end++;
-			}
-			while (end < current.end()) {
-				if (!is_whitespace(text[end])) break;
-				end++;
-			}
-			const auto s = text.substr(begin, end - begin);
-			text.erase(begin, end - begin);
+	std::string erase_word() {
+		if (text.size() > 0 && cursor < text.size()) {
+			const Word current(text, cursor);
+			const auto count = std::min(current.end() + 1, text.size() - 1) - current.begin();
+			const auto s = text.substr(current.begin(), count);
+			text.erase(current.begin(), count);
 			modified = true;
 			return s;
 		}
@@ -817,7 +803,7 @@ class Buffer {
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == ';') { if(f_is_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
 		else if (key == ',') { if(f_is_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
-		else if (key == '*') { highlight = state().current_word(); }
+		else if (key == '*') { highlight = state().current_word(); } // [TODO] Exact match. // [TODO] Find first immediately.
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == 'n') { state().word_find(highlight); }
@@ -1046,7 +1032,7 @@ class Buffer {
 		}
 	}
 
-	static void change_line_color(Characters& characters, size_t& index, const Color& color) {
+	static void change_line_color(Characters& characters, size_t& index, const Color& color) { // [TODO] Do not change cursor color.
 		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
 			characters[index].color = color;
 			index++;
@@ -1329,7 +1315,6 @@ public:
 	Buffer(const std::string_view filename)
 		: filename(filename) {
 		init(load());
-		highlight = "Color"; // TEST
 	}
 
 	void reload() {

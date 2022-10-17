@@ -107,7 +107,7 @@ class App {
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
-		else if (key == 'p') { notify(picker.populate()); }
+		else if (key == 'p') { notify(picker.populate()); } // [TODO] Remove and do async when space-e.
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
