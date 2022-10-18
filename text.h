@@ -638,12 +638,13 @@ public:
 		return s;
 	}
 
-	std::string erase_word() {
+	std::string erase_word(bool from_cursor) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Word current(text, cursor);
-			const auto count = std::min(current.end() + 1, text.size() - 1) - current.begin();
-			const auto s = text.substr(current.begin(), count);
-			text.erase(current.begin(), count);
+			const auto begin = from_cursor ? cursor : current.begin();
+			const auto count = std::min(current.end() + 1, text.size() - 1) - begin;
+			const auto s = text.substr(begin, count);
+			text.erase(begin, count);
 			modified = true;
 			return s;
 		}
@@ -653,7 +654,7 @@ public:
 	std::string erase_words(unsigned count) {
 		std::string s;
 		for (unsigned i = 0; i < count; i++) {
-			s += erase_word();
+			s += erase_word(i == 0);
 		}
 		return s;
 	}
@@ -1080,7 +1081,9 @@ class Buffer {
 	static void change_token_color(Characters& characters, size_t& index, size_t count, const Color& color) {
 		size_t offset = 0;
 		while (index < characters.size() && offset < count) {
-			characters[index].color = color;
+			if (characters[index].color != colors().cursor) {
+				characters[index].color = color;
+			}
 			index++;
 			offset++;
 		}
@@ -1349,6 +1352,8 @@ class Buffer {
 	void colorize(Characters& characters) const {
 		if (filename.ends_with("diff")) { colorize_diff(characters); }
 		else if (filename.ends_with("cpp")) { colorize_cpp(characters); }
+		else if (filename.ends_with("hpp")) { colorize_cpp(characters); }
+		else if (filename.ends_with("c")) { colorize_cpp(characters); }
 		else if (filename.ends_with("h")) { colorize_cpp(characters); }
 	}
 
@@ -1437,8 +1442,11 @@ public:
 
 class Picker {
 	std::vector<std::string> paths;
-	std::string filename;
+	std::mutex paths_mutex;
+	std::atomic_bool populating;
+	std::future<void> paths_future;
 
+	std::string pattern;
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
@@ -1470,11 +1478,22 @@ class Picker {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (allowed_extension(path.path().extension().generic_string()))
+					if (allowed_extension(path.path().extension().generic_string())) {
+						std::unique_lock lock(paths_mutex);
 						paths.push_back(path.path().generic_string());
+					}
 				}
 			}
 		}
+	}
+
+	void populate() {
+		paths.clear();
+		populating = true;
+		paths_future = std::async(std::launch::async, [&]() {
+			populate_directory(".");
+			populating = false;
+		});
 	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
@@ -1498,23 +1517,23 @@ class Picker {
 	};
 
 public:
+	Picker() {
+		populate();
+	}
+
 	void reset() {
-		filename.clear();
+		if (paths_future.valid()) { paths_future.wait(); }
+		pattern.clear();
 		filtered.clear();
 		selected = 0;
 	}
 
-	std::string populate() {
-		const Timer timer;
-		populate_directory(".");
-		return std::string("populate in " + timer.us());
-	}
-
-	void filter(unsigned row_count) {
+	void filter(unsigned row_count) { // [TODO] Fuzzy search.
 		filtered.clear();
+		std::unique_lock lock(paths_mutex);
 		for (auto& path : paths) {
 			if (filtered.size() > row_count - 2) { break; }
-			if (tolower(path).find(filename) != std::string::npos) {
+			if (tolower(path).find(pattern) != std::string::npos) {
 				filtered.push_back(path);
 			}
 		}
@@ -1524,25 +1543,27 @@ public:
 	std::string selection() {
 		if (selected < filtered.size())
 			return filtered[selected];
-		return filename;
+		return {};
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == Glyph::CR) { return; }
 		else if (key == Glyph::ESC) { return; }
 		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
-		else if (key == Glyph::BS) { if (filename.size() > 0) { filename.pop_back(); } }
+		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); } }
 		else if (key == '<') { selected++; }
 		else if (key == '>') { if (selected > 0) selected--; }
-		else { filename += (char)key; }
+		else { pattern += (char)key; }
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
 		push_string(characters, row, col, "open: ");
-		push_string(characters, row, col, filename);
-		push_cursor(characters, row++, col);
+		push_string(characters, row, col, pattern);
+		push_cursor(characters, row, col);
+		push_string(characters, row, col, populating ? " ..." : "");
+		row++;
 
 		unsigned displayed = 0;
 		for (auto& path : filtered) {
@@ -1624,7 +1645,7 @@ class Switcher {
 
 public:
 	std::string load(const std::string_view filename) {
-		if (buffers.find(std::string(filename)) == buffers.end()) {
+		if (!filename.empty() && buffers.find(std::string(filename)) == buffers.end()) {
 			const Timer timer;
 			buffers.emplace(filename, filename);
 			active = filename;

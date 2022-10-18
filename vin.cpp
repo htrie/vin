@@ -11,6 +11,7 @@
 #include <map>
 #include <fstream>
 #include <filesystem>
+#include <future>
 #include <thread>
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
@@ -107,10 +108,10 @@ class App {
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
-		else if (key == 'p') { notify(picker.populate()); } // [TODO] Remove and do async when space-e.
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
+		else if (key == 'f') { } // [TODO] Global symbol Finder (async indexing when app starts).
 		else if (key == 'g') { } // [TODO] Go back location.
 		else if (key == 'h') { } // [TODO] Go forward location.
 		else if (key == 'c') { } // [TODO] Copy to clipboard.
