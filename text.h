@@ -803,7 +803,7 @@ class Buffer {
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == ';') { if(f_is_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
 		else if (key == ',') { if(f_is_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
-		else if (key == '*') { highlight = state().current_word(); } // [TODO] Exact match. // [TODO] Find first immediately.
+		else if (key == '*') { highlight = state().current_word(); } // [TODO] Exact match. // [TODO] Find first immediately. // [TODO] Center cursor like zz.
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
 		else if (key == 'n') { state().word_find(highlight); }
@@ -1032,9 +1032,11 @@ class Buffer {
 		}
 	}
 
-	static void change_line_color(Characters& characters, size_t& index, const Color& color) { // [TODO] Do not change cursor color.
+	static void change_line_color(Characters& characters, size_t& index, const Color& color) {
 		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
-			characters[index].color = color;
+			if (characters[index].color != colors().cursor) {
+				characters[index].color = color;
+			}
 			index++;
 		}
 	}
