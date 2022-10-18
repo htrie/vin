@@ -3,6 +3,8 @@
 enum class Mode {
 	normal,
 	normal_number,
+	normal_slash,
+	normal_question,
 	normal_c,
 	normal_cf,
 	normal_ct,
@@ -754,6 +756,44 @@ class Buffer {
 		return s;
 	}
 
+	void line_find() {
+		if(char_forward) { state().line_find(f_key); }
+		else { state().line_rfind(f_key); }
+		mode = Mode::normal;
+	}
+
+	void line_rfind() {
+		if(char_forward) { state().line_rfind(f_key); }
+		else { state().line_find(f_key); }
+		mode = Mode::normal;
+	}
+
+	void word_find_under_cursor(unsigned row_count) {
+		highlight = state().current_word();
+		word_forward = true;
+		state().word_find(highlight);
+		state().cursor_center(row_count);
+	}
+
+	void word_rfind_under_cursor(unsigned row_count) {
+		highlight = state().current_word();
+		word_forward = false;
+		state().word_rfind(highlight);
+		state().cursor_center(row_count);
+	}
+
+	void word_find(unsigned row_count) {
+		if (word_forward) { state().word_find(highlight); }
+		else { state().word_rfind(highlight); }
+		state().cursor_center(row_count);
+	}
+
+	void word_rfind(unsigned row_count) {
+		if (word_forward) { state().word_rfind(highlight); }
+		else { state().word_find(highlight); }
+		state().cursor_center(row_count);
+	}
+
 	void process_insert(unsigned key) { // [TODO] Undo whole insert sequences.
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
@@ -803,14 +843,14 @@ class Buffer {
 		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
 		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
-		else if (key == ';') { if(char_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
-		else if (key == ',') { if(char_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
-		else if (key == '*') { highlight = state().current_word(); state().word_find(highlight); word_forward = true; } // [TODO] Exact match. // [TODO] Center cursor like zz.
-		else if (key == '#') { highlight = state().current_word(); state().word_rfind(highlight); word_forward = false; } // [TODO] Exact match. // [TODO] Center cursor like zz.
-		else if (key == '/') {} // [TODO] Find.
-		else if (key == '?') {} // [TODO] Reverse find.
-		else if (key == 'n') { if (word_forward) { state().word_find(highlight); } else { state().word_rfind(highlight); } }
-		else if (key == 'N') { if (word_forward) { state().word_rfind(highlight); } else { state().word_find(highlight); } }
+		else if (key == ';') { line_find(); }
+		else if (key == ',') { line_rfind(); }
+		else if (key == '*') { word_find_under_cursor(row_count); }
+		else if (key == '#') { word_rfind_under_cursor(row_count); }
+		else if (key == '/') { highlight.clear(); mode = Mode::normal_slash; }
+		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
+		else if (key == 'n') { word_find(row_count); }
+		else if (key == 'N') { word_rfind(row_count); }
 		else if (key == '.') {} // [TODO] Repeat command.
 	}
 
@@ -824,6 +864,17 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
+	void process_normal_slash(unsigned key, unsigned row_count) {
+		if (key == Glyph::ESC) { mode = Mode::normal; }
+		else if (key == Glyph::CR) { state().word_find(highlight); word_forward = true; state().cursor_center(row_count); mode = Mode::normal; }
+		else { highlight += key; }
+	}
+
+	void process_normal_question(unsigned key, unsigned row_count) {
+		if (key == Glyph::ESC) { mode = Mode::normal; }
+		else if (key == Glyph::CR) { state().word_rfind(highlight); word_forward = false; state().cursor_center(row_count); mode = Mode::normal; }
+		else { highlight += key; }
+	}
 	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else { state().line_find(key); f_key = key; char_forward = true; mode = Mode::normal; }
@@ -1342,6 +1393,8 @@ public:
 		switch (mode) {
 		case Mode::normal: process_normal(key, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_slash: process_normal_slash(key, row_count); break;
+		case Mode::normal_question: process_normal_question(key, row_count); break;
 		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_cf: process_normal_cf(key); break;
 		case Mode::normal_ct: process_normal_ct(key); break;
