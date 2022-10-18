@@ -736,7 +736,9 @@ class Buffer {
 	unsigned accu = 0;
 
 	unsigned f_key = 0;
-	bool f_is_forward = false;
+
+	bool char_forward = false;
+	bool word_forward = false;
 
 	bool needs_save = false;
 
@@ -801,13 +803,14 @@ class Buffer {
 		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
 		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
 		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
-		else if (key == ';') { if(f_is_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
-		else if (key == ',') { if(f_is_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
-		else if (key == '*') { highlight = state().current_word(); } // [TODO] Exact match. // [TODO] Find first immediately. // [TODO] Center cursor like zz.
+		else if (key == ';') { if(char_forward) { state().line_find(f_key); } else { state().line_rfind(f_key); } mode = Mode::normal; }
+		else if (key == ',') { if(char_forward) { state().line_rfind(f_key); } else { state().line_find(f_key); } mode = Mode::normal; }
+		else if (key == '*') { highlight = state().current_word(); state().word_find(highlight); word_forward = true; } // [TODO] Exact match. // [TODO] Center cursor like zz.
+		else if (key == '#') { highlight = state().current_word(); state().word_rfind(highlight); word_forward = false; } // [TODO] Exact match. // [TODO] Center cursor like zz.
 		else if (key == '/') {} // [TODO] Find.
 		else if (key == '?') {} // [TODO] Reverse find.
-		else if (key == 'n') { state().word_find(highlight); }
-		else if (key == 'N') { state().word_rfind(highlight); }
+		else if (key == 'n') { if (word_forward) { state().word_find(highlight); } else { state().word_rfind(highlight); } }
+		else if (key == 'N') { if (word_forward) { state().word_rfind(highlight); } else { state().word_find(highlight); } }
 		else if (key == '.') {} // [TODO] Repeat command.
 	}
 
@@ -823,12 +826,12 @@ class Buffer {
 
 	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_find(key); f_key = key; f_is_forward = true; mode = Mode::normal; }
+		else { state().line_find(key); f_key = key; char_forward = true; mode = Mode::normal; }
 	}
 
 	void process_normal_F(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { state().line_rfind(key); f_key = key; f_is_forward = false; mode = Mode::normal; }
+		else { state().line_rfind(key); f_key = key; char_forward = false; mode = Mode::normal; }
 	}
 
 	void process_normal_r(unsigned key) {
