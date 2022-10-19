@@ -114,6 +114,28 @@ public:
 	size_t end() const { return finish; }
 };
 
+class Enclosure {
+	size_t start = 0;
+	size_t finish = 0;
+
+public:
+	Enclosure(std::string_view text, size_t pos, uint8_t left, uint8_t right, bool inclusive) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			const auto prev = text.rfind(left, pos);
+			const auto next = text.find(right, pos);
+			start = prev != std::string::npos ? prev : pos;
+			finish = next != std::string::npos ? next : pos;
+			verify(start <= finish);
+		}
+	}
+
+	bool valid() const { return start < finish; }
+
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+};
+
 class Line {
 	size_t start = 0;
 	size_t finish = 0;
@@ -668,6 +690,22 @@ public:
 		return s;
 	}
 
+	std::string erase_enclosure(uint8_t left, uint8_t right, bool inclusive) {
+		if (text.size() > 0 && cursor < text.size()) {
+			const Enclosure current(text, cursor, left, right, inclusive);
+			if (current.valid()) {
+				const auto begin = inclusive ? current.begin() : current.begin() + 1;
+				const auto end = inclusive ? current.end() : current.end() - 1;
+				const auto s = text.substr(begin, end - begin + 1);
+				text.erase(begin, end - begin + 1);
+				cursor = begin;
+				modified = true;
+				return s;
+			}
+		}
+		return {};
+	}
+
 	void paste_before(const std::string_view s) {
 		if (s.find('\n') != std::string::npos) {
 			line_start(); insert(s); prev_line();
@@ -998,6 +1036,8 @@ class Buffer {
 
 	void process_normal_di(unsigned key) {
 		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::normal; }
+		else if (key == '(') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
+		else if (key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
 		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
 	}
 
