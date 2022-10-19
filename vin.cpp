@@ -23,6 +23,7 @@
 #include "matrix.h"
 #include "font.h"
 #include "config.h"
+#include "index.h"
 #include "text.h"
 #include "gpu.h"
 

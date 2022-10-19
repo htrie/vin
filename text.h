@@ -853,6 +853,8 @@ class Buffer {
 		else if (key == 'n') { word_find(row_count); }
 		else if (key == 'N') { word_rfind(row_count); }
 		else if (key == '.') {} // [TODO] Repeat command.
+		else if (key == '[') {} // [TODO] Next block.
+		else if (key == ']') {} // [TODO] Previous block.
 	}
 
 	void process_normal_number(unsigned key) {
@@ -1441,10 +1443,7 @@ public:
 };
 
 class Picker {
-	std::vector<std::string> paths;
-	std::mutex paths_mutex;
-	std::atomic_bool populating;
-	std::future<void> paths_future;
+	Index index; // [TODO] Move outside.
 
 	std::string pattern;
 	std::vector<std::string> filtered;
@@ -1453,47 +1452,6 @@ class Picker {
 	std::string tolower(std::string s) {
 		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
 		return s;
-	}
-
-	bool allowed_extension(const std::string_view ext) {
-		if (ext == ".diff") return true;
-		else if (ext == ".cpp") return true;
-		else if (ext == ".c") return true;
-		else if (ext == ".h") return true;
-		else if (ext == ".cpp") return true;
-		else if (ext == ".hpp") return true;
-		else if (ext == ".inc") return true;
-		else if (ext == ".frag") return true;
-		else if (ext == ".vert") return true;
-		return false;
-	}
-
-	void populate_directory(const std::filesystem::path& dir) {
-		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
-			if (path.is_directory()) {
-				const auto dirname = path.path().generic_string();
-				if (dirname.size() > 0 && (dirname.find("/.") == std::string::npos)) { // Skip hidden directories.
-					populate_directory(path);
-				}
-			} else if (path.is_regular_file()) {
-				const auto filename = path.path().generic_string();
-				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (allowed_extension(path.path().extension().generic_string())) {
-						std::unique_lock lock(paths_mutex);
-						paths.push_back(path.path().generic_string());
-					}
-				}
-			}
-		}
-	}
-
-	void populate() {
-		paths.clear();
-		populating = true;
-		paths_future = std::async(std::launch::async, [&]() {
-			populate_directory(".");
-			populating = false;
-		});
 	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
@@ -1517,12 +1475,8 @@ class Picker {
 	};
 
 public:
-	Picker() {
-		populate();
-	}
-
 	void reset() {
-		if (paths_future.valid()) { paths_future.wait(); }
+		index.reset();
 		pattern.clear();
 		filtered.clear();
 		selected = 0;
@@ -1530,13 +1484,13 @@ public:
 
 	void filter(unsigned row_count) { // [TODO] Fuzzy search.
 		filtered.clear();
-		std::unique_lock lock(paths_mutex);
-		for (auto& path : paths) {
-			if (filtered.size() > row_count - 2) { break; }
-			if (tolower(path).find(pattern) != std::string::npos) {
+		index.process([&](auto& path) {
+			if (filtered.size() > row_count - 2)
+				return false;
+			if (tolower(path).find(pattern) != std::string::npos)
 				filtered.push_back(path);
-			}
-		}
+			return true;
+		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
@@ -1562,7 +1516,7 @@ public:
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, pattern);
 		push_cursor(characters, row, col);
-		push_string(characters, row, col, populating ? " ..." : "");
+		push_string(characters, row, col, index.is_populating() ? " ..." : "");
 		row++;
 
 		unsigned displayed = 0;
