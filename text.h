@@ -118,14 +118,42 @@ class Enclosure {
 	size_t start = 0;
 	size_t finish = 0;
 
+	size_t find_prev(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
+		unsigned count = 1;
+		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
+		while (index < text.size() && count > 0) {
+			if (text[index] == right) count++;
+			if (text[index] == left) count--;
+			if (count > 0)
+				index--;
+		}
+		return count == 0 ? index : std::string::npos;
+	}
+
+	size_t find_next(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
+		unsigned count = 1;
+		size_t index = text[pos] == left ? pos + 1 : pos;
+		while (index < text.size() && count > 0) {
+			if (text[index] == left) count++;
+			if (text[index] == right) count--;
+			if (count > 0)
+				index++;
+		}
+		return count == 0 ? index : std::string::npos;
+	}
+
 public:
-	Enclosure(std::string_view text, size_t pos, uint8_t left, uint8_t right, bool inclusive) {
+	Enclosure(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
-			const auto prev = text.rfind(left, pos);
-			const auto next = text.find(right, pos);
-			start = prev != std::string::npos ? prev : pos;
-			finish = next != std::string::npos ? next : pos;
+			start = pos;
+			finish = pos;
+			const auto prev = find_prev(text, pos, left, right);
+			const auto next = find_next(text, pos, left, right);
+			if (prev != std::string::npos && next != std::string::npos) {
+				start = prev != std::string::npos ? prev : pos;
+				finish = next != std::string::npos ? next : pos;
+			}
 			verify(start <= finish);
 		}
 	}
@@ -499,6 +527,18 @@ public:
 		return s;
 	}
 
+	std::string yank_enclosure(uint8_t left, uint8_t right, bool inclusive) {
+		if (text.size() > 0 && cursor < text.size()) {
+			const Enclosure current(text, cursor, left, right);
+			if (current.valid()) {
+				const auto begin = inclusive ? current.begin() : current.begin() + 1;
+				const auto end = inclusive ? current.end() : current.end() - 1;
+				return text.substr(begin, end - begin + 1);
+			}
+		}
+		return {};
+	}
+
 	std::string yank_lines_down(unsigned count) {
 		std::string s;
 		if (text.size() > 0) {
@@ -692,7 +732,7 @@ public:
 
 	std::string erase_enclosure(uint8_t left, uint8_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
-			const Enclosure current(text, cursor, left, right, inclusive);
+			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
 				const auto begin = inclusive ? current.begin() : current.begin() + 1;
 				const auto end = inclusive ? current.end() : current.end() - 1;
@@ -917,13 +957,13 @@ class Buffer {
 	void process_normal_slash(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::CR) { state().word_find(highlight); word_forward = true; state().cursor_center(row_count); mode = Mode::normal; }
-		else { highlight += key; }
+		else { highlight += key; } // [TODO] Find first.
 	}
 
 	void process_normal_question(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::CR) { state().word_rfind(highlight); word_forward = false; state().cursor_center(row_count); mode = Mode::normal; }
-		else { highlight += key; }
+		else { highlight += key; } // [TODO] Find first.
 	}
 	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
@@ -972,11 +1012,17 @@ class Buffer {
 
 	void process_normal_yi(unsigned key) {
 		if (key == 'w') { clip(state().yank_word()); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
+		else if (key == '(' || key == ')') { clip(state().yank_enclosure('(', ')', false)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { clip(state().yank_enclosure('{', '}', false)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { clip(state().yank_enclosure('[', ']', false)); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_ya(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == '(' || key == ')') { clip(state().yank_enclosure('(', ')', true)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { clip(state().yank_enclosure('{', '}', true)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { clip(state().yank_enclosure('[', ']', true)); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO]  w " '
 	}
 
 	void process_normal_c(unsigned key) {
@@ -1004,11 +1050,17 @@ class Buffer {
 
 	void process_normal_ci(unsigned key) {
 		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::insert; }
-		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
+		else if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::insert; }
+		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', false)); mode = Mode::insert; }
+		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', false)); mode = Mode::insert; }
+		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_ca(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', true)); mode = Mode::insert; }
+		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', true)); mode = Mode::insert; }
+		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', true)); mode = Mode::insert; }
+		else { mode = Mode::normal; } // [TODO] w " '
 	}
 
 	void process_normal_d(unsigned key) {
@@ -1036,13 +1088,17 @@ class Buffer {
 
 	void process_normal_di(unsigned key) {
 		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::normal; }
-		else if (key == '(') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
-		else if (key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
+		else if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', false)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', false)); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_da(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', true)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', true)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', true)); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO] w " '
 	}
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
