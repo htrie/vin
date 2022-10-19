@@ -645,6 +645,7 @@ public:
 			const auto count = std::min(current.end() + 1, text.size() - 1) - begin;
 			const auto s = text.substr(begin, count);
 			text.erase(begin, count);
+			cursor = begin;
 			modified = true;
 			return s;
 		}
@@ -955,7 +956,8 @@ class Buffer {
 	}
 
 	void process_normal_ci(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::insert; }
+		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
 	}
 
 	void process_normal_ca(unsigned key) {
@@ -986,7 +988,8 @@ class Buffer {
 	}
 
 	void process_normal_di(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
 	}
 
 	void process_normal_da(unsigned key) {
