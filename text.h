@@ -453,6 +453,14 @@ public:
 		return {};
 	}
 
+	std::string yank_word() {
+		if (text.size() > 0) {
+			Word current(text, cursor);
+			return text.substr(current.begin(), current.end() - current.begin() + 1);
+		}
+		return {};
+	}
+
 	std::string yank_words(unsigned count) {
 		std::string s;
 		if (text.size() > 0) {
@@ -925,7 +933,8 @@ class Buffer {
 	}
 
 	void process_normal_yi(unsigned key) {
-		mode = Mode::normal; // [TODO] w, [, {, (, ", '
+		if (key == 'w') { clip(state().yank_word()); mode = Mode::normal; }
+		else { mode = Mode::normal; } // [TODO]  [, {, (, ", '
 	}
 
 	void process_normal_ya(unsigned key) {
