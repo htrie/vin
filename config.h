@@ -4,7 +4,7 @@ struct Colors {
 	Color clear = Color::rgba(247, 247, 247, 255);
 	Color overlay = Color::rgba(227, 227, 227, 255);
 	Color cursor = Color::rgba(0, 0, 0, 255);
-	Color cursor_line = Color::rgba(196, 196, 196, 255);
+	Color cursor_line = Color::rgba(166, 166, 166, 255);
 	Color whitespace = Color::rgba(220, 220, 220, 255);
 	Color text = Color::rgba(50, 50, 50, 255);
 	Color text_cursor = Color::rgba(220, 220, 220, 255);
