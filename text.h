@@ -37,6 +37,7 @@ enum Glyph {
 	RETURN = 130,
 	BOTTOM_BLOCK = 131,
 	TABSIGN = 132,
+	SPACESIGN = 133,
 };
 
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
@@ -958,6 +959,7 @@ class Buffer {
 		else if (key == '.') {} // [TODO] Repeat command.
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
+		else if (key == '~') {} // [TODO] Change case.
 	}
 
 	void process_normal_number(unsigned key) {
@@ -1166,6 +1168,10 @@ class Buffer {
 		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
 	};
 
+	void push_space(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
+	};
+
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool block_cursor) const {
 		characters.emplace_back((uint8_t)c, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
 	};
@@ -1185,6 +1191,7 @@ class Buffer {
 				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 				else if (c == '\t') { push_tab(characters, row, col); col += 4; }
+				else if (c == ' ') { push_space(characters, row, col); col++; }
 				else { push_char(characters, row, col, c, index == state().get_cursor()); col++; }
 			} else {
 				if (c == '\n') { absolute_row++; }
@@ -1207,7 +1214,7 @@ class Buffer {
 	static void change_token_color(Characters& characters, size_t& index, size_t count, const Color& color) {
 		size_t offset = 0;
 		while (index < characters.size() && offset < count) {
-			if (characters[index].color != colors().cursor) {
+			if (characters[index].color == colors().text) {
 				characters[index].color = color;
 			}
 			index++;
@@ -1217,7 +1224,7 @@ class Buffer {
 
 	static void change_line_color(Characters& characters, size_t& index, const Color& color) {
 		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
-			if (characters[index].color != colors().cursor) {
+			if (characters[index].color == colors().text) {
 				characters[index].color = color;
 			}
 			index++;
@@ -1234,34 +1241,10 @@ class Buffer {
 		}
 	}
 
-	static inline const std::vector<std::vector<const char*>> cpp_keywords = {
-		{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
-		{ "bitand", "bitor", "bool", "break" },
-		{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
-		{ "decltype", "default", "delete", "do", "double", "dynamic_cast" },
-		{ "else", "enum", "explicit", "export", "extern" },
-		{ "false", "float", "for", "friend" },
-		{ "goto" },
-		{ },
-		{ "if", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
-		{ },
-		{ },
-		{ "long" },
-		{ "mutable" },
-		{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
-		{ "operator", "or", "or_eq" },
-		{ "private", "protected", "public" },
-		{ },
-		{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
-		{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
-		{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
-		{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
-		{ "virtual", "void", "volatile" },
-		{ "wchar_t", "while" },
-		{ "xor", "xor_eq" },
-		{ },
-		{ }
-	};
+	static bool is_cpp_quote(const Character& character) {
+		const uint8_t c = character.index;
+		return c == '\'' || c == '"';
+	}
 
 	static bool is_cpp_digit(const Character& character) {
 		const uint8_t c = character.index;
@@ -1286,16 +1269,10 @@ class Buffer {
 	static bool is_cpp_punctuation(const Character& character) {
 		const uint8_t c = character.index;
 		return
-			c == '-' || c == '+' || c == '*' || c == '/' ||
+			c == '-' || c == '+' || c == '*' || c == '/' || c == '=' ||
 			c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 			c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 			c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
-	}
-
-	static unsigned compute_cpp_letter_index(const Character& character) {
-		const uint8_t c = character.index;
-		if (c >= 'a' && c <= 'z') return c - 'a';
-		return (unsigned)-1;
 	}
 
 	static bool test_cpp_comment(Characters& characters, size_t index) {
@@ -1307,98 +1284,14 @@ class Buffer {
 		return false;
 	}
 
-	static size_t test_cpp_keyword(Characters& characters, size_t index) { // [TODO] bug when cursor inside keyword.
-		if (const auto letter_index = compute_cpp_letter_index(characters[index]); letter_index != (unsigned)-1) {
-			const auto& keywords = cpp_keywords[letter_index];
-			for (const auto& keyword : keywords) {
-				if (test(characters, index, keyword)) {
-					const auto length = strlen(keyword);
-					if (index + length < characters.size()) {
-						const auto& character = characters[index + length];
-						if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-							return length;
-						continue;
-					}
-					return length; // EOF success.
-				}
-			}
-		}
-		return 0;
-	}
-
-	static size_t test_cpp_number(Characters& characters, size_t index) {
-		const auto& character = characters[index];
-		if (is_cpp_digit(character))
-			return 1; // [TODO] Handle 3.4f.
-		return 0;
-	}
-
-	static size_t test_cpp_string(Characters& characters, size_t index) {
-		const auto& character = characters[index];
-		if (character.index == '"') {
-			size_t length = 1;
-			while (index + length < characters.size()) {
-				const auto& character = characters[index + length];
-				length++;
-				if (character.index == Glyph::RETURN || character.index == '"')
-					return length;
-			}
-		}
-		return 0;
-	}
-
-	static size_t test_cpp_char(Characters& characters, size_t index) {
-		const auto& character = characters[index];
-		if (character.index == '\'') {
-			size_t length = 1;
-			while (index + length < characters.size()) {
-				const auto& character = characters[index + length];
-				length++;
-				if (character.index == Glyph::RETURN || character.index == '\'')
-					return length;
-			}
-		}
-		return 0;
-	}
-
-	static size_t test_cpp_define(Characters& characters, size_t index) {
-		const auto& character = characters[index];
-		if (character.index == '#') {
-			size_t length = 1;
-			while (index + length < characters.size()) {
-				const auto& character = characters[index + length];
-				if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-					return length;
-				length++;
-			}
-		}
-		return 0;
-	}
-
-	static void skip_cpp_word(Characters& characters, size_t& index) {
-		while (index < characters.size()) {
-			const auto& character = characters[index];
-			if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-				return;
-			index++;
-		}
-	}
-
 	static void colorize_cpp(Characters& characters) {
 		size_t index = 0;
 		while (index < characters.size()) {
-			if (is_cpp_whitespace(characters[index])) { index++; }
+			if (characters[index].color != colors().text) { index++; }
 			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment); }
+			else if (is_cpp_quote(characters[index])) { characters[index].color = colors().cpp_quote; index++; }
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
-			else if (characters[index].color != colors().text) { index++; }
-			else if (const auto size = test_cpp_string(characters, index)) { change_token_color(characters, index, size, colors().cpp_string); }
-			else if (const auto size = test_cpp_char(characters, index)) { change_token_color(characters, index, size, colors().cpp_string); }
-			else if (const auto size = test_cpp_define(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
-			// [TODO] macros 'XXX'.
-			// [TODO] templates '<xxx>'.
-			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
-			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
-			else { skip_cpp_word(characters, index); }
+			else { index++; }
 		}
 	}
 
