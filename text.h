@@ -1567,8 +1567,6 @@ public:
 };
 
 class Picker {
-	Index index; // [TODO] Move outside.
-
 	std::string pattern;
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
@@ -1600,15 +1598,14 @@ class Picker {
 
 public:
 	void reset() {
-		index.reset();
 		pattern.clear();
 		filtered.clear();
 		selected = 0;
 	}
 
-	void filter(unsigned row_count) { // [TODO] Fuzzy search.
+	void filter(Index& index, unsigned row_count) { // [TODO] Fuzzy search.
 		filtered.clear();
-		index.process([&](auto& path) {
+		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 2)
 				return false;
 			if (tolower(path).find(pattern) != std::string::npos)
@@ -1634,13 +1631,13 @@ public:
 		else { pattern += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count, bool is_populating) const {
 		unsigned col = 0;
 		unsigned row = 0;
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, pattern);
 		push_cursor(characters, row, col);
-		push_string(characters, row, col, index.is_populating() ? " ..." : "");
+		push_string(characters, row, col, is_populating ? " ..." : "");
 		row++;
 
 		unsigned displayed = 0;

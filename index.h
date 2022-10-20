@@ -52,7 +52,7 @@ public:
 		populate();
 	}
 
-	void reset() {
+	void wait() {
 		if (paths_future.valid()) {
 			paths_future.wait();
 		}
@@ -63,7 +63,7 @@ public:
 	template <typename F>
 	void process(F func) {
 		std::unique_lock lock(paths_mutex);
-		for (auto& path : paths) {
+		for (const auto& path : paths) {
 			if (!func(path))
 				break;
 		}
