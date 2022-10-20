@@ -48,10 +48,12 @@ class App {
 
 	std::string notification;
 
+	bool maximized = false;
 	bool minimized = false;
 	bool dirty = true;
 	bool quit = false;
 
+	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 
@@ -93,7 +95,8 @@ class App {
 			cull_duration = timer.us();
 			{
 				const Timer timer;
-				device.redraw(characters, status());
+				device.redraw(characters);
+				SetWindowTextA(device.get_hwnd(), status().data());
 				redraw_duration = timer.us();
 			}
 		}
@@ -113,6 +116,7 @@ class App {
 		else if (key == 'j') { menu = Menu::switcher; }
 		else if (key == 'k') { menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
+		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
 		else if (key == 'f') { } // [TODO] Global symbol Finder (async indexing when app starts).
 		else if (key == 'g') { } // [TODO] Go back location.
 		else if (key == 'h') { } // [TODO] Go forward location.
@@ -186,6 +190,7 @@ class App {
 		}
 		case WM_SIZE: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+				app->set_maximized(wParam == SIZE_MAXIMIZED);
 				app->set_minimized(wParam == SIZE_MINIMIZED);
 				const unsigned width = lParam & 0xffff;
 				const unsigned height = (lParam & 0xffff0000) >> 16;

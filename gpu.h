@@ -944,7 +944,7 @@ public:
 		}
 	}
 
-	void redraw(const Characters& characters, const std::string_view status) {
+	void redraw(const Characters& characters) {
 		wait(device.get(), fences[fence_index].get());
 		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
 		const auto& cmd = cmds[frame_index].get();
@@ -983,8 +983,6 @@ public:
 
 		fence_index += 1;
 		fence_index %= fences.size();
-
-		SetWindowTextA(hWnd, status.data());
 	}
 
 	Viewport viewport() const {
@@ -993,5 +991,7 @@ public:
 			(unsigned)((float)height / char_height) - 1 // Remove 1 line for half-lines.
 		};
 	}
+
+	HWND get_hwnd() const { return hWnd; }
 };
 
