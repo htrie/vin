@@ -870,13 +870,29 @@ class Buffer {
 		state().cursor_center(row_count);
 	}
 
-	void word_find(unsigned row_count) {
+	void word_find_partial(unsigned row_count) {
+		word_forward = true;
+		if (!state().current_word().starts_with(highlight)) {
+			state().word_find(highlight);
+			state().cursor_center(row_count);
+		}
+	}
+
+	void word_rfind_partial(unsigned row_count) {
+		word_forward = false;
+		if (!state().current_word().starts_with(highlight)) {
+			state().word_rfind(highlight);
+			state().cursor_center(row_count);
+		}
+	}
+
+	void word_find_again(unsigned row_count) {
 		if (word_forward) { state().word_find(highlight); }
 		else { state().word_rfind(highlight); }
 		state().cursor_center(row_count);
 	}
 
-	void word_rfind(unsigned row_count) {
+	void word_rfind_again(unsigned row_count) {
 		if (word_forward) { state().word_rfind(highlight); }
 		else { state().word_find(highlight); }
 		state().cursor_center(row_count);
@@ -937,8 +953,8 @@ class Buffer {
 		else if (key == '#') { word_rfind_under_cursor(row_count); }
 		else if (key == '/') { highlight.clear(); mode = Mode::normal_slash; }
 		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
-		else if (key == 'n') { word_find(row_count); }
-		else if (key == 'N') { word_rfind(row_count); }
+		else if (key == 'n') { word_find_again(row_count); }
+		else if (key == 'N') { word_rfind_again(row_count); }
 		else if (key == '.') {} // [TODO] Repeat command.
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
@@ -956,14 +972,16 @@ class Buffer {
 
 	void process_normal_slash(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else if (key == Glyph::CR) { state().word_find(highlight); word_forward = true; state().cursor_center(row_count); mode = Mode::normal; }
-		else { highlight += key; } // [TODO] Find first.
+		else if (key == Glyph::CR) { word_find_partial(row_count); mode = Mode::normal; }
+		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
+		else { highlight += key; word_find_partial(row_count); }
 	}
 
 	void process_normal_question(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else if (key == Glyph::CR) { state().word_rfind(highlight); word_forward = false; state().cursor_center(row_count); mode = Mode::normal; }
-		else { highlight += key; } // [TODO] Find first.
+		else if (key == Glyph::CR) { word_rfind_partial(row_count); mode = Mode::normal; }
+		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
+		else { highlight += key; word_rfind_partial(row_count); }
 	}
 	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
@@ -1176,8 +1194,6 @@ class Buffer {
 	}
 
 	static bool test(const Characters& characters, size_t index, const std::string_view s) {
-		if (s == "struct")
-			OutputDebugStringA("TEST");
 		if (index + s.size() <= characters.size()) {
 			for (unsigned i = 0; i < s.size(); ++i) {
 				if (characters[index + i].index != s[i])
