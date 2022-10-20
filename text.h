@@ -1333,21 +1333,6 @@ class Buffer {
 		return 0;
 	}
 
-	static size_t test_cpp_function(Characters& characters, size_t index) {
-		size_t length = 0;
-		while (index + length < characters.size()) {
-			const auto& character = characters[index + length];
-			if (is_cpp_whitespace(character))
-				return 0;
-			if (character.index == '(')
-				return length;
-			if (is_cpp_punctuation(character))
-				return 0;
-			length++;
-		}
-		return 0;
-	}
-
 	static size_t test_cpp_string(Characters& characters, size_t index) {
 		const auto& character = characters[index];
 		if (character.index == '"') {
@@ -1390,60 +1375,6 @@ class Buffer {
 		return 0;
 	}
 
-	static size_t test_cpp_namespace(Characters& characters, size_t index) {
-		size_t length = 0;
-		while (index + length < characters.size()) {
-			const auto& character = characters[index + length];
-			if (is_cpp_whitespace(character))
-				return 0;
-			if (character.index == ':') {
-				if (index + length + 1 < characters.size()) {
-					const auto& character = characters[index + length + 1];
-					if (character.index == ':')
-						return length;
-				}
-				return 0;
-			}
-			length++;
-		}
-		return 0;
-	}
-
-	static size_t test_cpp_namespace_class(Characters& characters, size_t index) {
-		if (index > 1) {
-			const auto& character = characters[index - 2];
-			if (character.index == ':') {
-				const auto& character = characters[index - 1];
-				if (character.index == ':') {
-					size_t length = 0;
-					while (index + length < characters.size()) {
-						const auto& character = characters[index + length];
-						if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-							return length;
-						length++;
-					}
-					return length;
-				}
-			}
-		}
-		return 0;
-	}
-
-	static size_t test_cpp_class(Characters& characters, size_t index) {
-		const auto& character = characters[index];
-		if (is_cpp_uppercase_letter(character)) {
-			size_t length = 0;
-			while (index + length < characters.size()) {
-				const auto& character = characters[index + length];
-				if (is_cpp_whitespace(character) || is_cpp_punctuation(character))
-					return length;
-				length++;
-			}
-			return length; // EOF success.
-		}
-		return 0;
-	}
-
 	static void skip_cpp_word(Characters& characters, size_t& index) {
 		while (index < characters.size()) {
 			const auto& character = characters[index];
@@ -1466,10 +1397,6 @@ class Buffer {
 			// [TODO] macros 'XXX'.
 			// [TODO] templates '<xxx>'.
 			else if (const auto size = test_cpp_number(characters, index)) { change_token_color(characters, index, size, colors().cpp_number); }
-			else if (const auto size = test_cpp_class(characters, index)) { change_token_color(characters, index, size, colors().cpp_class); }
-			else if (const auto size = test_cpp_function(characters, index)) { change_token_color(characters, index, size, colors().cpp_function); }
-			else if (const auto size = test_cpp_namespace(characters, index)) { change_token_color(characters, index, size, colors().cpp_namespace); }
-			else if (const auto size = test_cpp_namespace_class(characters, index)) { change_token_color(characters, index, size, colors().cpp_class); }
 			else if (const auto size = test_cpp_keyword(characters, index)) { change_token_color(characters, index, size, colors().cpp_keyword); }
 			else { skip_cpp_word(characters, index); }
 		}

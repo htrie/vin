@@ -3,8 +3,6 @@
 struct Colors {
 	Color clear = Color::rgba(1, 22, 39, 255);
 	Color overlay = Color::rgba(31, 52, 69, 255);
-	Color notification_line = Color::rgba(1, 22, 39, 255);
-	Color notification_text = Color::rgba(64, 152, 179, 255);
 	Color cursor = Color::rgba(255, 255, 0, 255);
 	Color cursor_line = Color::rgba(65, 80, 29, 255);
 	Color whitespace = Color::rgba(15, 40, 33, 255);
@@ -19,9 +17,6 @@ struct Colors {
 	Color cpp_keyword = Color::rgba(199, 146, 234, 255);
 	Color cpp_punctuation = Color::rgba(127, 219, 202, 255);
 	Color cpp_number = Color::rgba(247, 140, 108, 255);
-	Color cpp_class = Color::rgba(255, 203, 105, 255);
-	Color cpp_function = Color::rgba(130, 170, 255, 255);
-	Color cpp_namespace = Color::rgba(255, 170, 100, 255);
 	Color cpp_string = Color::rgba(247, 140, 108, 255);
 };
 
