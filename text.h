@@ -956,6 +956,7 @@ class Buffer {
 		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
 		else if (key == 'n') { word_find_again(row_count); }
 		else if (key == 'N') { word_rfind_again(row_count); }
+		else if (key == '~') {} // [TODO] Tilda.
 		else if (key == '.') {} // [TODO] Repeat command.
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
