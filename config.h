@@ -14,8 +14,8 @@ struct Colors {
 	Color diff_add = Color::gray(0);
 	Color diff_remove = Color::gray(166);
 	Color cpp_comment = Color::gray(166);
-	Color cpp_punctuation = Color::gray(148);
-	Color cpp_quote = Color::gray(200);
+	Color cpp_punctuation = Color::gray(158);
+	Color cpp_quote = Color::gray(178);
 	Color cpp_string = Color::gray(80);
 };
 

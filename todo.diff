@@ -1,8 +1,14 @@
-+tilda support
-+location list
 +dot support
-+bitmap font
-+full insert undo
-+fuzzy file search
-+symbols search
++symbols index
++fuzzy search
++build support
 +git support
++location list
+--- 2022-10-24
++bitmap font
+--- 2022-10-22
++tilda support
++full insert undo
+--- 2022-10-21
+-e-ink color scheme
+-space whitespace mark
