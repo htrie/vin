@@ -1336,7 +1336,10 @@ public:
 	void clear_highlight() { highlight.clear(); }
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
-		stack.push();
+		if (mode != Mode::insert) {
+			stack.push();
+		}
+
 		switch (mode) {
 		case Mode::normal: process_normal(key, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
@@ -1363,7 +1366,10 @@ public:
 		case Mode::normal_z: process_normal_z(key, row_count); break;
 		case Mode::insert: process_insert(key); break;
 		};
-		needs_save = stack.pop() || needs_save;
+
+		if (mode != Mode::insert) {
+			needs_save = stack.pop() || needs_save;
+		}
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
