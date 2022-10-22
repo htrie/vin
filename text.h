@@ -818,6 +818,7 @@ class Buffer {
 
 	std::vector<unsigned> record;
 	std::vector<unsigned> temp_record;
+	bool repeat = false;
 
 	std::string filename;
 	std::string clipboard;
@@ -846,8 +847,10 @@ class Buffer {
 		record = std::move(temp_record);
 	}
 
-	void replay() {
-		// [TODO]
+	void replay(unsigned col_count, unsigned row_count) {
+		for (const auto& c : record) {
+			process_key(c, col_count, row_count);
+		}
 	}
 
 	void accumulate(unsigned key) {
@@ -916,7 +919,44 @@ class Buffer {
 		state().cursor_center(row_count);
 	}
 
-	void process_insert(unsigned key) { // [TODO] Undo whole insert sequences.
+	void process_key(unsigned key, unsigned col_count, unsigned row_count) {
+		if (mode != Mode::insert) {
+			stack.push();
+		}
+
+		switch (mode) {
+		case Mode::normal: process_normal(key, row_count); break;
+		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_slash: process_normal_slash(key, row_count); break;
+		case Mode::normal_question: process_normal_question(key, row_count); break;
+		case Mode::normal_c: process_normal_c(key); break;
+		case Mode::normal_cf: process_normal_cf(key); break;
+		case Mode::normal_ct: process_normal_ct(key); break;
+		case Mode::normal_ci: process_normal_ci(key); break;
+		case Mode::normal_ca: process_normal_ca(key); break;
+		case Mode::normal_d: process_normal_d(key); break;
+		case Mode::normal_df: process_normal_df(key); break;
+		case Mode::normal_dt: process_normal_dt(key); break;
+		case Mode::normal_di: process_normal_di(key); break;
+		case Mode::normal_da: process_normal_da(key); break;
+		case Mode::normal_f: process_normal_f(key); break;
+		case Mode::normal_F: process_normal_F(key); break;
+		case Mode::normal_r: process_normal_r(key); break;
+		case Mode::normal_y: process_normal_y(key); break;
+		case Mode::normal_yf: process_normal_yf(key); break;
+		case Mode::normal_yt: process_normal_yt(key); break;
+		case Mode::normal_yi: process_normal_yi(key); break;
+		case Mode::normal_ya: process_normal_ya(key); break;
+		case Mode::normal_z: process_normal_z(key, row_count); break;
+		case Mode::insert: process_insert(key); break;
+		};
+
+		if (mode != Mode::insert) {
+			needs_save = stack.pop() || needs_save;
+		}
+	}
+
+	void process_insert(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else if (key == Glyph::BS) { state().erase_back(); }
 		else if (key == Glyph::TAB) { state().insert("\t"); }
@@ -973,7 +1013,7 @@ class Buffer {
 		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
 		else if (key == 'n') { word_find_again(row_count); }
 		else if (key == 'N') { word_rfind_again(row_count); }
-		else if (key == '.') {} // [TODO] Repeat command.
+		else if (key == '.') { repeat = true; }
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
 		else if (key == '~') { state().change_case(); }
@@ -1357,40 +1397,8 @@ public:
 	void clear_highlight() { highlight.clear(); }
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
-		if (mode != Mode::insert) {
-			stack.push();
-		}
-
-		switch (mode) {
-		case Mode::normal: process_normal(key, row_count); break;
-		case Mode::normal_number: process_normal_number(key); break;
-		case Mode::normal_slash: process_normal_slash(key, row_count); break;
-		case Mode::normal_question: process_normal_question(key, row_count); break;
-		case Mode::normal_c: process_normal_c(key); break;
-		case Mode::normal_cf: process_normal_cf(key); break;
-		case Mode::normal_ct: process_normal_ct(key); break;
-		case Mode::normal_ci: process_normal_ci(key); break;
-		case Mode::normal_ca: process_normal_ca(key); break;
-		case Mode::normal_d: process_normal_d(key); break;
-		case Mode::normal_df: process_normal_df(key); break;
-		case Mode::normal_dt: process_normal_dt(key); break;
-		case Mode::normal_di: process_normal_di(key); break;
-		case Mode::normal_da: process_normal_da(key); break;
-		case Mode::normal_f: process_normal_f(key); break;
-		case Mode::normal_F: process_normal_F(key); break;
-		case Mode::normal_r: process_normal_r(key); break;
-		case Mode::normal_y: process_normal_y(key); break;
-		case Mode::normal_yf: process_normal_yf(key); break;
-		case Mode::normal_yt: process_normal_yt(key); break;
-		case Mode::normal_yi: process_normal_yi(key); break;
-		case Mode::normal_ya: process_normal_ya(key); break;
-		case Mode::normal_z: process_normal_z(key, row_count); break;
-		case Mode::insert: process_insert(key); break;
-		};
-
-		if (mode != Mode::insert) {
-			needs_save = stack.pop() || needs_save;
-		}
+		process_key(key, col_count, row_count);
+		if (repeat) { repeat = false; replay(col_count, row_count); }
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
