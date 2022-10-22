@@ -957,26 +957,26 @@ class Buffer {
 	}
 
 	void process_insert(unsigned key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else if (key == Glyph::BS) { state().erase_back(); }
-		else if (key == Glyph::TAB) { state().insert("\t"); }
-		else if (key == Glyph::CR) { state().insert("\n"); }
-		else { state().insert(std::string(1, (char)key)); }
+		if (key == Glyph::ESC) { end_record(key); mode = Mode::normal; }
+		else if (key == Glyph::BS) { append_record(key); state().erase_back(); }
+		else if (key == Glyph::TAB) { append_record(key); state().insert("\t"); }
+		else if (key == Glyph::CR) { append_record(key); state().insert("\n"); }
+		else { append_record(key); state().insert(std::string(1, (char)key)); }
 	}
 
 	void process_normal(unsigned key, unsigned row_count) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
-		else if (key == 'c') { mode = Mode::normal_c; }
+		else if (key == 'c') { begin_record(key); mode = Mode::normal_c; }
 		else if (key == 'd') { begin_record(key); mode = Mode::normal_d; }
 		else if (key == 'r') { mode = Mode::normal_r; }
 		else if (key == 'f') { mode = Mode::normal_f; }
 		else if (key == 'F') { mode = Mode::normal_F; }
 		else if (key == 'y') { mode = Mode::normal_y; }
 		else if (key == 'z') { mode = Mode::normal_z; }
-		else if (key == 'i') { mode = Mode::insert; }
+		else if (key == 'i') { begin_record(key); mode = Mode::insert; }
 		else if (key == 'x') { clip(state().erase()); }
-		else if (key == 'I') { state().line_start_whitespace(); mode = Mode::insert; }
+		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
 		else if (key == 'a') { state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { state().line_end(); mode = Mode::insert; }
 		else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
@@ -1103,40 +1103,40 @@ class Buffer {
 	}
 
 	void process_normal_c(unsigned key) {
-		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'c') { clip(state().erase_line_contents()); accu = 0; mode = Mode::insert; }
-		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::insert; }
-		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
-		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
-		else if (key == 'f') { accu = 0; mode = Mode::normal_cf; }
-		else if (key == 't') { accu = 0; mode = Mode::normal_ct; }
-		else if (key == 'i') { accu = 0; mode = Mode::normal_ci; }
-		else if (key == 'a') { accu = 0; mode = Mode::normal_ca; }
+		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
+		else if (key == 'c') { append_record(key); clip(state().erase_line_contents()); accu = 0; mode = Mode::insert; }
+		else if (key == 'w') { append_record(key); clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'g') { append_record(key); clip(state().erase_all_up()); accu = 0; mode = Mode::insert; }
+		else if (key == 'G') { append_record(key); clip(state().erase_all_down()); accu = 0; mode = Mode::insert; }
+		else if (key == 'j') { append_record(key); clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'k') { append_record(key); clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::insert; }
+		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_cf; }
+		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_ct; }
+		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_ci; }
+		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_ca; }
 		else { mode = Mode::normal; }
 	}
 
 	void process_normal_cf(unsigned key) {
-		clip(state().erase_to(key)); mode = Mode::insert;
+		append_record(key); clip(state().erase_to(key)); mode = Mode::insert;
 	}
 
 	void process_normal_ct(unsigned key) {
-		clip(state().erase_until(key)); mode = Mode::insert;
+		append_record(key); clip(state().erase_until(key)); mode = Mode::insert;
 	}
 
 	void process_normal_ci(unsigned key) {
-		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::insert; }
-		else if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::insert; }
-		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', false)); mode = Mode::insert; }
-		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', false)); mode = Mode::insert; }
+		if (key == 'w') { append_record(key); clip(state().erase_word(false)); mode = Mode::insert; }
+		else if (key == '(' || key == ')') { append_record(key); clip(state().erase_enclosure('(', ')', false)); mode = Mode::insert; }
+		else if (key == '{' || key == '}') { append_record(key); clip(state().erase_enclosure('{', '}', false)); mode = Mode::insert; }
+		else if (key == '[' || key == ']') { append_record(key); clip(state().erase_enclosure('[', ']', false)); mode = Mode::insert; }
 		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_ca(unsigned key) {
-		if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', true)); mode = Mode::insert; }
-		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', true)); mode = Mode::insert; }
-		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', true)); mode = Mode::insert; }
+		if (key == '(' || key == ')') { append_record(key); clip(state().erase_enclosure('(', ')', true)); mode = Mode::insert; }
+		else if (key == '{' || key == '}') { append_record(key); clip(state().erase_enclosure('{', '}', true)); mode = Mode::insert; }
+		else if (key == '[' || key == ']') { append_record(key); clip(state().erase_enclosure('[', ']', true)); mode = Mode::insert; }
 		else { mode = Mode::normal; } // [TODO] w " '
 	}
 
