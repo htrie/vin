@@ -847,6 +847,11 @@ class Buffer {
 		record = std::move(temp_record);
 	}
 
+	void begin_end_record(unsigned key) {
+		temp_record.clear();
+		end_record(key);
+	}
+
 	void replay(unsigned col_count, unsigned row_count) {
 		for (const auto& c : record) {
 			process_key(c, col_count, row_count);
@@ -975,16 +980,16 @@ class Buffer {
 		else if (key == 'y') { mode = Mode::normal_y; }
 		else if (key == 'z') { mode = Mode::normal_z; }
 		else if (key == 'i') { begin_record(key); mode = Mode::insert; }
-		else if (key == 'x') { clip(state().erase()); }
 		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
-		else if (key == 'a') { state().next_char(); mode = Mode::insert; }
-		else if (key == 'A') { state().line_end(); mode = Mode::insert; }
-		else if (key == 'o') { state().line_end(); state().insert("\n"); mode = Mode::insert; }
-		else if (key == 'O') { state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
-		else if (key == 's') { state().erase(); mode = Mode::insert; }
-		else if (key == 'S') { clip(state().erase_line_contents()); mode = Mode::insert; }
-		else if (key == 'C') { clip(state().erase_to_line_end()); mode = Mode::insert; }
-		else if (key == 'D') { clip(state().erase_to_line_end()); }
+		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
+		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
+		else if (key == 'o') { begin_record(key); state().line_end(); state().insert("\n"); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
+		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
+		else if (key == 'S') { begin_record(key); clip(state().erase_line_contents()); mode = Mode::insert; }
+		else if (key == 'C') { begin_record(key); clip(state().erase_to_line_end()); mode = Mode::insert; }
+		else if (key == 'x') { begin_end_record(key); clip(state().erase()); }
+		else if (key == 'D') { begin_end_record(key); clip(state().erase_to_line_end()); }
 		else if (key == 'P') { state().paste_before(clipboard); }
 		else if (key == 'p') { state().paste_after(clipboard); }
 		else if (key == '0') { state().line_start(); }
