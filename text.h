@@ -974,10 +974,10 @@ class Buffer {
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == 'c') { begin_record(key); mode = Mode::normal_c; }
 		else if (key == 'd') { begin_record(key); mode = Mode::normal_d; }
+		else if (key == 'y') { begin_record(key); mode = Mode::normal_y; }
 		else if (key == 'r') { begin_record(key); mode = Mode::normal_r; }
 		else if (key == 'f') { mode = Mode::normal_f; }
 		else if (key == 'F') { mode = Mode::normal_F; }
-		else if (key == 'y') { mode = Mode::normal_y; }
 		else if (key == 'z') { mode = Mode::normal_z; }
 		else if (key == 'i') { begin_record(key); mode = Mode::insert; }
 		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
@@ -990,6 +990,10 @@ class Buffer {
 		else if (key == 'C') { begin_record(key); clip(state().erase_to_line_end()); mode = Mode::insert; }
 		else if (key == 'x') { begin_end_record(key); clip(state().erase()); }
 		else if (key == 'D') { begin_end_record(key); clip(state().erase_to_line_end()); }
+		else if (key == 'J') { begin_end_record(key); state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
+		else if (key == '<') { begin_end_record(key); state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
+		else if (key == '>') { begin_end_record(key); state().line_start_whitespace(); state().insert("\t"); }
+		else if (key == '~') { begin_end_record(key); state().change_case(); }
 		else if (key == 'P') { state().paste_before(clipboard); }
 		else if (key == 'p') { state().paste_after(clipboard); }
 		else if (key == '0') { state().line_start(); }
@@ -1007,9 +1011,6 @@ class Buffer {
 		else if (key == 'H') { state().window_top(row_count); }
 		else if (key == 'M') { state().window_center(row_count); }
 		else if (key == 'L') { state().window_bottom(row_count); }
-		else if (key == 'J') { state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
-		else if (key == '<') { state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
-		else if (key == '>') { state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == ';') { line_find(); }
 		else if (key == ',') { line_rfind(); }
 		else if (key == '*') { word_find_under_cursor(row_count); }
@@ -1021,7 +1022,6 @@ class Buffer {
 		else if (key == '.') { repeat = true; }
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
-		else if (key == '~') { state().change_case(); }
 	}
 
 	void process_normal_number(unsigned key) {
@@ -1070,40 +1070,40 @@ class Buffer {
 	}
 
 	void process_normal_y(unsigned key) {
-		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'y') { clip(state().yank_line()); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { clip(state().yank_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { clip(state().yank_all_up()); accu = 0; mode = Mode::normal; }
-		else if (key == 'G') { clip(state().yank_all_down()); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { clip(state().yank_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { clip(state().yank_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { accu = 0; mode = Mode::normal_yf; }
-		else if (key == 't') { accu = 0; mode = Mode::normal_yt; }
-		else if (key == 'i') { accu = 0; mode = Mode::normal_yi; }
-		else if (key == 'a') { accu = 0; mode = Mode::normal_ya; }
+		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
+		else if (key == 'y') { end_record(key); clip(state().yank_line()); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { end_record(key); clip(state().yank_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { end_record(key); clip(state().yank_all_up()); accu = 0; mode = Mode::normal; }
+		else if (key == 'G') { end_record(key); clip(state().yank_all_down()); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); clip(state().yank_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clip(state().yank_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_yf; }
+		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_yt; }
+		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_yi; }
+		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_ya; }
 		else { mode = Mode::normal; }
 	}
 
 	void process_normal_yf(unsigned key) {
-		clip(state().yank_to(key)); mode = Mode::normal;
+		end_record(key); clip(state().yank_to(key)); mode = Mode::normal;
 	}
 
 	void process_normal_yt(unsigned key) {
-		clip(state().yank_until(key)); mode = Mode::normal;
+		end_record(key); clip(state().yank_until(key)); mode = Mode::normal;
 	}
 
 	void process_normal_yi(unsigned key) {
-		if (key == 'w') { clip(state().yank_word()); mode = Mode::normal; }
-		else if (key == '(' || key == ')') { clip(state().yank_enclosure('(', ')', false)); mode = Mode::normal; }
-		else if (key == '{' || key == '}') { clip(state().yank_enclosure('{', '}', false)); mode = Mode::normal; }
-		else if (key == '[' || key == ']') { clip(state().yank_enclosure('[', ']', false)); mode = Mode::normal; }
+		if (key == 'w') { end_record(key); clip(state().yank_word()); mode = Mode::normal; }
+		else if (key == '(' || key == ')') { end_record(key); clip(state().yank_enclosure('(', ')', false)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { end_record(key); clip(state().yank_enclosure('{', '}', false)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { end_record(key); clip(state().yank_enclosure('[', ']', false)); mode = Mode::normal; }
 		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_ya(unsigned key) {
-		if (key == '(' || key == ')') { clip(state().yank_enclosure('(', ')', true)); mode = Mode::normal; }
-		else if (key == '{' || key == '}') { clip(state().yank_enclosure('{', '}', true)); mode = Mode::normal; }
-		else if (key == '[' || key == ']') { clip(state().yank_enclosure('[', ']', true)); mode = Mode::normal; }
+		if (key == '(' || key == ')') { end_record(key); clip(state().yank_enclosure('(', ')', true)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { end_record(key); clip(state().yank_enclosure('{', '}', true)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { end_record(key); clip(state().yank_enclosure('[', ']', true)); mode = Mode::normal; }
 		else { mode = Mode::normal; } // [TODO]  w " '
 	}
 
