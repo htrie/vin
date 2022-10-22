@@ -200,7 +200,6 @@ class State {
 	std::string text;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
-	bool modified = false;
 
 public:
 	const std::string& get_text() const { return text; }
@@ -210,9 +209,6 @@ public:
 	void set_cursor(size_t u) { cursor = u; }
 
 	unsigned get_begin_row() const { return begin_row; }
-
-	bool is_modified() const { return modified; }
-	void set_modified(bool b) { modified = b; };
 
 	Word incr(const Word& w) { return Word(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Word decr(const Word& w) { return Word(text, w.begin() > 0 ? w.begin() - 1 : 0); }
@@ -335,7 +331,6 @@ public:
 		if (std::islower(c)) { res = std::toupper(c);
 		} else { res = std::tolower(c); }
 		if (res != c) {
-			modified = true;
 			text[cursor] = res;
 		}
 	}
@@ -585,14 +580,12 @@ public:
 	void insert(std::string_view s) {
 		text.insert(cursor, s);
 		cursor = std::min(cursor + s.length(), text.size() - 1);
-		modified = true;
 	}
 
 	void erase_back() {
 		if (cursor > 0) {
 			text.erase(cursor - 1, 1);
 			cursor = cursor > 0 ? cursor - 1 : cursor;
-			modified = true;
 		}
 	}
 
@@ -601,7 +594,6 @@ public:
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
 			cursor = text.size() > 0 && cursor == text.size() ? cursor - 1 : cursor;
-			modified = true;
 			return s;
 		}
 		return {};
@@ -612,7 +604,6 @@ public:
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
 			cursor = text.size() > 0 && cursor == text.size() ? cursor - 1 : cursor;
-			modified = true;
 			return s;
 		}
 		return {};
@@ -623,7 +614,6 @@ public:
 			const auto s = text.substr(0, cursor);
 			text.erase(0, cursor);
 			cursor = 0;
-			modified = true;
 			return s;
 		}
 		return {};
@@ -634,7 +624,6 @@ public:
 			const auto s = text.substr(cursor, text.size() - cursor);
 			text.erase(cursor, text.size() - cursor);
 			cursor = std::min(cursor, text.size() - 1);
-			modified = true;
 			return s;
 		}
 		return {};
@@ -645,7 +634,6 @@ public:
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor + 1);
 				text.erase(cursor, pos - cursor + 1);
-				modified = true;
 				return s;
 			}
 		}
@@ -657,7 +645,6 @@ public:
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor);
 				text.erase(cursor, pos - cursor);
-				modified = true;
 				return s;
 			}
 		}
@@ -670,7 +657,6 @@ public:
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
 			text.erase(current.begin(), current.end() - current.begin() + 1);
 			cursor = std::min(current.begin(), text.size() - 1);
-			modified = true;
 			return s;
 		}
 		return {};
@@ -682,7 +668,6 @@ public:
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
 			text.erase(current.begin(), current.end() - current.begin());
 			cursor = std::min(current.begin(), text.size() - 1);
-			modified = true;
 			return s;
 		}
 		return {};
@@ -694,7 +679,6 @@ public:
 			const auto s = text.substr(cursor, current.end() - cursor);
 			text.erase(cursor, current.end() - cursor);
 			cursor = std::min(cursor, text.size() - 1);
-			modified = true;
 			return s;
 		}
 		return {};
@@ -728,7 +712,6 @@ public:
 			const auto s = text.substr(begin, count);
 			text.erase(begin, count);
 			cursor = begin;
-			modified = true;
 			return s;
 		}
 		return {};
@@ -751,7 +734,6 @@ public:
 				const auto s = text.substr(begin, end - begin + 1);
 				text.erase(begin, end - begin + 1);
 				cursor = begin;
-				modified = true;
 				return s;
 			}
 		}
@@ -816,12 +798,16 @@ public:
 	}
 
 	bool pop() {
-		const bool modified = states.back().is_modified();
-		if (!modified && states.size() > 1) { std::swap(states[states.size() - 2], states[states.size() - 1]); states.pop_back(); }
-		if (undo && states.size() > 1) { states.pop_back(); undo = false; }
-		states.back().fix_eof();
-		states.back().set_modified(false);
-		return modified;
+		if (states.size() > 1) {
+			auto& last = states[states.size() - 1];
+			auto& previous = states[states.size() - 2];
+			const bool modified = last.get_text() != previous.get_text();
+			if (!modified) { std::swap(previous, last); states.pop_back(); }
+			if (undo && states.size() > 1) { states.pop_back(); undo = false; }
+			states.back().fix_eof();
+			return modified;
+		}
+		return false;
 	}
 };
 

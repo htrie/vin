@@ -8,9 +8,8 @@
 +bitmap font
 --- 2022-10-22
 -tilda support
+-remove modified bool (use text compare instead)
 +full insert undo
-	enable undo if text is different
-	remove modified bool
 --- 2022-10-21
 -e-ink color scheme
 -space whitespace mark
