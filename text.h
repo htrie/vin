@@ -1020,8 +1020,6 @@ class Buffer {
 		else if (key == 'n') { word_find_again(row_count); }
 		else if (key == 'N') { word_rfind_again(row_count); }
 		else if (key == '.') { repeat = true; }
-		else if (key == '[') {} // [TODO] Next block.
-		else if (key == ']') {} // [TODO] Previous block.
 	}
 
 	void process_normal_number(unsigned key) {
@@ -1029,8 +1027,6 @@ class Buffer {
 		else if (key == 'j') { state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { mode = Mode::normal; } // [TODO] Nw.
-		else if (key == 'b') { mode = Mode::normal; } // [TODO] Nb.
 		else { accu = 0; mode = Mode::normal; }
 	}
 
@@ -1097,14 +1093,14 @@ class Buffer {
 		else if (key == '(' || key == ')') { end_record(key); clip(state().yank_enclosure('(', ')', false)); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clip(state().yank_enclosure('{', '}', false)); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clip(state().yank_enclosure('[', ']', false)); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO]  " '
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_ya(unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clip(state().yank_enclosure('(', ')', true)); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clip(state().yank_enclosure('{', '}', true)); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clip(state().yank_enclosure('[', ']', true)); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO]  w " '
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_c(unsigned key) {
@@ -1135,14 +1131,14 @@ class Buffer {
 		else if (key == '(' || key == ')') { append_record(key); clip(state().erase_enclosure('(', ')', false)); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clip(state().erase_enclosure('{', '}', false)); mode = Mode::insert; }
 		else if (key == '[' || key == ']') { append_record(key); clip(state().erase_enclosure('[', ']', false)); mode = Mode::insert; }
-		else { mode = Mode::normal; } // [TODO]  " '
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_ca(unsigned key) {
 		if (key == '(' || key == ')') { append_record(key); clip(state().erase_enclosure('(', ')', true)); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clip(state().erase_enclosure('{', '}', true)); mode = Mode::insert; }
 		else if (key == '[' || key == ']') { append_record(key); clip(state().erase_enclosure('[', ']', true)); mode = Mode::insert; }
-		else { mode = Mode::normal; } // [TODO] w " '
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_d(unsigned key) {
@@ -1173,14 +1169,14 @@ class Buffer {
 		else if (key == '(' || key == ')') { end_record(key); clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clip(state().erase_enclosure('{', '}', false)); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clip(state().erase_enclosure('[', ']', false)); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO]  " '
+		else { mode = Mode::normal; }
 	}
 
 	void process_normal_da(unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clip(state().erase_enclosure('(', ')', true)); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clip(state().erase_enclosure('{', '}', true)); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clip(state().erase_enclosure('[', ']', true)); mode = Mode::normal; }
-		else { mode = Mode::normal; } // [TODO] w " '
+		else { mode = Mode::normal; }
 	}
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
@@ -1467,7 +1463,7 @@ public:
 		selected = 0;
 	}
 
-	void filter(Index& index, unsigned row_count) { // [TODO] Fuzzy search.
+	void filter(Index& index, unsigned row_count) {
 		filtered.clear();
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 2)
@@ -1488,7 +1484,7 @@ public:
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == Glyph::CR) { return; }
 		else if (key == Glyph::ESC) { return; }
-		else if (key == Glyph::TAB) { return; } // [TODO] Auto completion.
+		else if (key == Glyph::TAB) { return; }
 		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); } }
 		else if (key == '<') { selected++; }
 		else if (key == '>') { if (selected > 0) selected--; }
@@ -1650,7 +1646,7 @@ public:
 			push_background_line(characters, row, left_col, right_col);
 			if (active == it.second.get_filename())
 				push_cursor_line(characters, row, left_col, right_col);
-			push_string(characters, row, col, it.second.get_filename()); // [TODO] Use short paths.
+			push_string(characters, row, col, it.second.get_filename());
 			if (it.second.is_dirty()) 
 				push_string(characters, row, col, "*");
 			row++;

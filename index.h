@@ -1,6 +1,6 @@
 #pragma once
 
-class Index { // [TODO] Add global symbol database (file id + symbol character index).
+class Index {
 	std::vector<std::string> paths;
 	std::mutex paths_mutex;
 	std::atomic_bool populating;

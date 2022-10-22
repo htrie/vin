@@ -117,11 +117,6 @@ class App {
 		else if (key == 'k') { menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else if (key == 'f') { } // [TODO] Global symbol Finder (async indexing when app starts).
-		else if (key == 'g') { } // [TODO] Go back location.
-		else if (key == 'h') { } // [TODO] Go forward location.
-		else if (key == 'c') { } // [TODO] Copy to clipboard.
-		else if (key == 'v') { } // [TODO] Paste from clipboard.
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {

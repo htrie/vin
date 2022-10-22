@@ -1,20 +1,18 @@
 +symbols index
++symbol find (<space>+f)
 +fuzzy search
 +build support
 +git support
-+location list
++location list (<space>+h/l)
++system clipboard (<space>+c/v)
 --- 2022-10-24
 +bitmap font
 --- 2022-10-22
 -tilda support
 -remove modified bool (use text compare instead)
 -full insert undo
-+dot support
-	begin_record(key): clear dot pattern and add key
-	add_record(key): add key
-	end_record(key): add key and store dot pattern
-	careful with insert: use end_dot when escape
-	replay();
+-dot support
++do not up cursor when zz at beginning of file
 --- 2022-10-21
 -e-ink color scheme
 -space whitespace mark
