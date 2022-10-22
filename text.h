@@ -449,7 +449,7 @@ public:
 
 	void cursor_center(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = cursor_row - row_count / 2;
+		begin_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
 	}
 
 	void cursor_top(unsigned row_count) {
