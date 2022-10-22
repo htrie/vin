@@ -7,8 +7,10 @@
 --- 2022-10-24
 +bitmap font
 --- 2022-10-22
-+tilda support
+-tilda support
 +full insert undo
+	enable undo if text is different
+	remove modified bool
 --- 2022-10-21
 -e-ink color scheme
 -space whitespace mark

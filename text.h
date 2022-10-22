@@ -329,6 +329,17 @@ public:
 		}
 	}
 
+	void change_case() {
+		const char c = text[cursor];
+		char res = c;
+		if (std::islower(c)) { res = std::toupper(c);
+		} else { res = std::tolower(c); }
+		if (res != c) {
+			modified = true;
+			text[cursor] = res;
+		}
+	}
+
 	std::string current_word() {
 		const Word current(text, cursor);
 		if (is_whitespace(text[current.begin()])) {
@@ -959,7 +970,7 @@ class Buffer {
 		else if (key == '.') {} // [TODO] Repeat command.
 		else if (key == '[') {} // [TODO] Next block.
 		else if (key == ']') {} // [TODO] Previous block.
-		else if (key == '~') {} // [TODO] Change case.
+		else if (key == '~') { state().change_case(); }
 	}
 
 	void process_normal_number(unsigned key) {
