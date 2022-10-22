@@ -808,7 +808,6 @@ public:
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }
 
-	void set_modified(bool b) { states.back().set_modified(b); };
 	void set_undo() { undo = true; }
 
 	void push() {
