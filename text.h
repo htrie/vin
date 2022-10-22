@@ -798,16 +798,23 @@ public:
 	}
 
 	bool pop() {
+		bool modified = false;
 		if (states.size() > 1) {
 			auto& last = states[states.size() - 1];
 			auto& previous = states[states.size() - 2];
-			const bool modified = last.get_text() != previous.get_text();
-			if (!modified) { std::swap(previous, last); states.pop_back(); }
-			if (undo && states.size() > 1) { states.pop_back(); undo = false; }
-			states.back().fix_eof();
-			return modified;
+			modified = last.get_text() != previous.get_text();
+			if (!modified) {
+				std::swap(previous, last);
+				states.pop_back();
+			}
 		}
-		return false;
+		if (undo) {
+			undo = false;
+			if (states.size() > 1)
+				states.pop_back();
+		}
+		states.back().fix_eof();
+		return modified;
 	}
 };
 
@@ -853,7 +860,8 @@ class Buffer {
 	}
 
 	void replay(unsigned col_count, unsigned row_count) {
-		for (const auto& c : record) {
+		const auto s = record; // Cache since process_key will modify it.
+		for (const auto& c : s) {
 			process_key(c, col_count, row_count);
 		}
 	}
