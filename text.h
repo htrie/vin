@@ -974,7 +974,7 @@ class Buffer {
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == 'c') { begin_record(key); mode = Mode::normal_c; }
 		else if (key == 'd') { begin_record(key); mode = Mode::normal_d; }
-		else if (key == 'r') { mode = Mode::normal_r; }
+		else if (key == 'r') { begin_record(key); mode = Mode::normal_r; }
 		else if (key == 'f') { mode = Mode::normal_f; }
 		else if (key == 'F') { mode = Mode::normal_F; }
 		else if (key == 'y') { mode = Mode::normal_y; }
@@ -1059,7 +1059,7 @@ class Buffer {
 
 	void process_normal_r(unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
+		else { end_record(key); clip(state().erase()); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
 	}
 
 	void process_normal_z(unsigned key, unsigned row_count) {
