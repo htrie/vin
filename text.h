@@ -816,6 +816,9 @@ class Buffer {
 
 	Mode mode = Mode::normal;
 
+	std::vector<unsigned> record;
+	std::vector<unsigned> temp_record;
+
 	std::string filename;
 	std::string clipboard;
 	std::string highlight;
@@ -828,6 +831,24 @@ class Buffer {
 	bool word_forward = false;
 
 	bool needs_save = false;
+
+	void begin_record(unsigned key) {
+		temp_record.clear();
+		temp_record.push_back(key);
+	}
+
+	void append_record(unsigned key) {
+		temp_record.push_back(key);
+	}
+
+	void end_record(unsigned key) {
+		temp_record.push_back(key);
+		record = std::move(temp_record);
+	}
+
+	void replay() {
+		// [TODO]
+	}
 
 	void accumulate(unsigned key) {
 		verify(key >= '0' && key <= '9');
@@ -907,7 +928,7 @@ class Buffer {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == 'c') { mode = Mode::normal_c; }
-		else if (key == 'd') { mode = Mode::normal_d; }
+		else if (key == 'd') { begin_record(key); mode = Mode::normal_d; }
 		else if (key == 'r') { mode = Mode::normal_r; }
 		else if (key == 'f') { mode = Mode::normal_f; }
 		else if (key == 'F') { mode = Mode::normal_F; }
@@ -1080,40 +1101,40 @@ class Buffer {
 	}
 
 	void process_normal_d(unsigned key) {
-		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'd') { clip(state().erase_line()); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
-		else if (key == 'G') { clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
-		else if (key == 'f') { accu = 0; mode = Mode::normal_df; }
-		else if (key == 't') { accu = 0; mode = Mode::normal_dt; }
-		else if (key == 'i') { accu = 0; mode = Mode::normal_di; }
-		else if (key == 'a') { accu = 0; mode = Mode::normal_da; }
+		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
+		else if (key == 'd') { end_record(key); clip(state().erase_line()); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { end_record(key); clip(state().erase_words(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { end_record(key); clip(state().erase_all_up()); accu = 0; mode = Mode::normal; }
+		else if (key == 'G') { end_record(key); clip(state().erase_all_down()); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); clip(state().erase_lines_down(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clip(state().erase_lines_up(std::max(1u, accu))); accu = 0; mode = Mode::normal; }
+		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_df; }
+		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_dt; }
+		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_di; }
+		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_da; }
 		else { mode = Mode::normal; }
 	}
 
 	void process_normal_df(unsigned key) {
-		clip(state().erase_to(key)); mode = Mode::normal;
+		end_record(key); clip(state().erase_to(key)); mode = Mode::normal;
 	}
 
 	void process_normal_dt(unsigned key) {
-		clip(state().erase_until(key)); mode = Mode::normal;
+		end_record(key); clip(state().erase_until(key)); mode = Mode::normal;
 	}
 
 	void process_normal_di(unsigned key) {
-		if (key == 'w') { clip(state().erase_word(false)); mode = Mode::normal; }
-		else if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
-		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', false)); mode = Mode::normal; }
-		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', false)); mode = Mode::normal; }
+		if (key == 'w') { end_record(key); clip(state().erase_word(false)); mode = Mode::normal; }
+		else if (key == '(' || key == ')') { end_record(key); clip(state().erase_enclosure('(', ')', false)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { end_record(key); clip(state().erase_enclosure('{', '}', false)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { end_record(key); clip(state().erase_enclosure('[', ']', false)); mode = Mode::normal; }
 		else { mode = Mode::normal; } // [TODO]  " '
 	}
 
 	void process_normal_da(unsigned key) {
-		if (key == '(' || key == ')') { clip(state().erase_enclosure('(', ')', true)); mode = Mode::normal; }
-		else if (key == '{' || key == '}') { clip(state().erase_enclosure('{', '}', true)); mode = Mode::normal; }
-		else if (key == '[' || key == ']') { clip(state().erase_enclosure('[', ']', true)); mode = Mode::normal; }
+		if (key == '(' || key == ')') { end_record(key); clip(state().erase_enclosure('(', ')', true)); mode = Mode::normal; }
+		else if (key == '{' || key == '}') { end_record(key); clip(state().erase_enclosure('{', '}', true)); mode = Mode::normal; }
+		else if (key == '[' || key == ']') { end_record(key); clip(state().erase_enclosure('[', ']', true)); mode = Mode::normal; }
 		else { mode = Mode::normal; } // [TODO] w " '
 	}
 
@@ -1383,6 +1404,14 @@ public:
 	const std::string_view get_filename() const { return filename; }
 
 	Mode get_mode() const { return mode; }
+
+	std::string get_record() const {
+		std::string s;
+		for (auto& c : record) {
+			s += (uint8_t)c;
+		}
+		return s;
+	}
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }

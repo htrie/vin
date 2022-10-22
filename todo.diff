@@ -10,6 +10,11 @@
 -remove modified bool (use text compare instead)
 -full insert undo
 +dot support
+	begin_record(key): clear dot pattern and add key
+	add_record(key): add key
+	end_record(key): add key and store dot pattern
+	careful with insert: use end_dot when escape
+	replay();
 --- 2022-10-21
 -e-ink color scheme
 -space whitespace mark

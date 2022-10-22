@@ -60,8 +60,8 @@ class App {
 	std::string status() {
 		return std::string("Vin v0.2 - ") +
 			std::string(switcher.current().get_filename()) + 
-			(switcher.current().is_dirty() ? "*" : "") +
-			" - " +
+			(switcher.current().is_dirty() ? "*" : "") + " - " +
+			switcher.current().get_record() + " - " +
 			"proc " + process_duration +
 			", cull " + cull_duration +
 			", draw " + redraw_duration + 
