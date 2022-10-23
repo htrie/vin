@@ -1,3 +1,4 @@
++find past EOF
 +symbols index
 +symbol find (<space>+f)
 +fuzzy search
@@ -8,8 +9,8 @@
 --- 2022-10-24
 +bitmap font
 --- 2022-10-23
-+cache culled characters
-+try always rendering
+-cache culled characters
+-try always rendering
 --- 2022-10-22
 -tilda support
 -remove modified bool (use text compare instead)

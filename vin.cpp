@@ -42,6 +42,8 @@ class App {
 
 	Menu menu = Menu::normal;
 
+	Characters characters;
+
 	std::string cull_duration;
 	std::string redraw_duration;
 	std::string process_duration;
@@ -55,7 +57,6 @@ class App {
 
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
-	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
 		return std::string("Vin v0.2 - ") +
@@ -84,24 +85,23 @@ class App {
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
 			device.resize(w, h);
+			dirty = true;
 		}
 	}
 
 	void redraw() {
-		if (!minimized && dirty) {
+		if (dirty) {
 			dirty = false;
 			const Timer timer;
-			const auto characters = cull();
+			characters = cull();
 			cull_duration = timer.us();
-			{
-				const Timer timer;
-				device.redraw(characters);
-				SetWindowTextA(device.get_hwnd(), status().data());
-				redraw_duration = timer.us();
-			}
 		}
-		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		if (!minimized) {
+			const Timer timer;
+			device.redraw(characters);
+			SetWindowTextA(device.get_hwnd(), status().data());
+			redraw_duration = timer.us();
 		}
 	}
 
@@ -144,6 +144,7 @@ class App {
 		}
 		switcher.current().state().cursor_clamp(viewport.h);
 		process_duration = timer.us();
+		dirty = true;
 	}
 
 	void update(bool space_down) {
@@ -153,6 +154,7 @@ class App {
 		case Menu::picker: break;
 		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		}
+		dirty = true;
 	}
 
 	static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -160,12 +162,6 @@ class App {
 		case WM_CREATE: {
 			LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
 			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
-			break;
-		}
-		case WM_MOVE:
-		case WM_SETFOCUS: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
-				app->set_dirty(true);
 			break;
 		}
 		case WM_DESTROY:
@@ -179,8 +175,9 @@ class App {
 			break;
 		}
 		case WM_PAINT: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA)))
+			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->redraw();
+			}
 			break;
 		}
 		case WM_SIZE: {
@@ -190,7 +187,6 @@ class App {
 				const unsigned width = lParam & 0xffff;
 				const unsigned height = (lParam & 0xffff0000) >> 16;
 				app->resize(width, height);
-				app->set_dirty(true);
 			}
 			break;
 		}
@@ -198,7 +194,6 @@ class App {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->update(true);
-					app->set_dirty(true);
 				}
 			}
 			break;
@@ -207,7 +202,6 @@ class App {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->update(false);
-					app->set_dirty(true);
 				}
 			}
 			break;
@@ -215,7 +209,6 @@ class App {
 		case WM_CHAR: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->process((unsigned)wParam);
-				app->set_dirty(true);
 			}
 			break;
 		}
