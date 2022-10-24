@@ -6,8 +6,13 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
++load texture
++ change shader to use font texture
+--- 2022-10-25
++read fnt
++read tga
 --- 2022-10-24
-+bitmap font
+-export bitmap font: use bmfont
 --- 2022-10-23
 -cache culled characters
 -try always rendering
