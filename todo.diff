@@ -13,6 +13,7 @@
 +read tga
 --- 2022-10-24
 -export bitmap font: use bmfont
+-change colors back
 --- 2022-10-23
 -cache culled characters
 -try always rendering
