@@ -1039,14 +1039,14 @@ class Buffer {
 	}
 
 	void process_normal_slash(unsigned key, unsigned row_count) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
+		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
 		else if (key == Glyph::CR) { word_find_partial(row_count); mode = Mode::normal; }
 		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
 		else { highlight += key; word_find_partial(row_count); }
 	}
 
 	void process_normal_question(unsigned key, unsigned row_count) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
+		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
 		else if (key == Glyph::CR) { word_rfind_partial(row_count); mode = Mode::normal; }
 		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
 		else { highlight += key; word_rfind_partial(row_count); }
