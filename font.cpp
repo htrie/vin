@@ -5,9 +5,12 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <array>
+#include <string>
 #include <Windows.h>
 
 #include "ttf2mesh.h"
@@ -79,7 +82,137 @@ std::vector<Vertex> generate_vertices(ttf_t* font, wchar_t c) {
 	return out;
 }
 
+unsigned parse_unsigned(const std::string& s, const std::string& name) {
+	unsigned u = 0;
+	std::sscanf(s.c_str(), std::string(name + "=%u").c_str(), &u);
+	return u;
+}
+
+std::string parse_string(const std::string& s, const std::string& name) {
+	const size_t offset = name.size() + 1;
+	return s.substr(offset, s.size() - offset);
+}
+
+struct Char {
+	unsigned id = 0;
+	unsigned x = 0;
+	unsigned y = 0;
+	unsigned width = 0;
+	unsigned height = 0;
+	unsigned xoffset = 0;
+	unsigned yoffset = 0;
+	unsigned xadvance = 0;
+	unsigned page = 0;
+	unsigned chnl = 0;
+};
+
+Char parse_char(std::istringstream& iss) {
+	Char chr;
+	while (iss) {
+		std::string field;
+		iss >> field;
+		if (field.starts_with("id=")) { chr.id = parse_unsigned(field, "id"); }
+		else if (field.starts_with("x=")) { chr.x = parse_unsigned(field, "x"); }
+		else if (field.starts_with("y=")) { chr.y = parse_unsigned(field, "y"); }
+		else if (field.starts_with("width=")) { chr.width = parse_unsigned(field, "width"); }
+		else if (field.starts_with("height=")) { chr.height = parse_unsigned(field, "height"); }
+		else if (field.starts_with("xoffset=")) { chr.xoffset = parse_unsigned(field, "xoffset"); }
+		else if (field.starts_with("yoffset=")) { chr.yoffset = parse_unsigned(field, "yoffset"); }
+		else if (field.starts_with("xadvance=")) { chr.xadvance = parse_unsigned(field, "xadvance"); }
+		else if (field.starts_with("page=")) { chr.page = parse_unsigned(field, "page"); }
+		else if (field.starts_with("chnl=")) { chr.chnl = parse_unsigned(field, "chnl"); }
+	}
+	return chr;
+}
+
+struct Chars {
+	unsigned count = 0;
+	std::vector<Char> values;
+};
+
+Chars parse_chars(std::istringstream& iss) {
+	Chars chars;
+	while (iss) {
+		std::string field;
+		iss >> field;
+		if (field.starts_with("count=")) { chars.count = parse_unsigned(field, "count"); }
+	}
+	return chars;
+}
+
+struct Common {
+	unsigned scaleW = 0;
+	unsigned scaleH = 0;
+};
+
+Common parse_common(std::istringstream& iss) {
+	Common common;
+	while (iss) {
+		std::string field;
+		iss >> field;
+		if (field.starts_with("scaleW=")) { common.scaleW = parse_unsigned(field, "scaleW"); }
+		else if (field.starts_with("scaleH=")) { common.scaleH = parse_unsigned(field, "scaleH"); }
+	}
+	return common;
+}
+
+struct Info {
+	unsigned bold = 0;
+};
+
+Info parse_info(std::istringstream& iss) {
+	Info info;
+	while (iss) {
+		std::string field;
+		iss >> field;
+		if (field.starts_with("bold")) { info.bold = parse_unsigned(field, "bold"); }
+	}
+	return info;
+}
+
+struct Page {
+	std::string file;
+};
+
+Page parse_page(std::istringstream& iss) {
+	Page page;
+	while (iss) {
+		std::string field;
+		iss >> field;
+		if (field.starts_with("file=")) { page.file = parse_string(field, "file"); }
+	}
+	return page;
+}
+
+struct Fnt {
+	Info info;
+	Common common;
+	Page page;
+	Chars chars;
+};
+
+Fnt parse_fnt() {
+	Fnt fnt;
+	std::ifstream in("font.fnt");
+	std::string line;
+	unsigned char_count = 0;
+	while (std::getline(in, line)) {
+		std::istringstream iss(line);
+		std::string keyword;
+		iss >> keyword;
+		if (keyword == "info") { fnt.info = parse_info(iss); }
+		else if (keyword == "common") { fnt.common = parse_common(iss); }
+		else if (keyword == "page") { fnt.page = parse_page(iss); }
+		else if (keyword == "chars") { fnt.chars = parse_chars(iss); }
+		else if (keyword == "char") { fnt.chars.values.push_back(parse_char(iss)); }
+	}
+	return fnt;
+}
+
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
+#if 1
+	const auto fnt = parse_fnt();
+#else
 	const char* dir = ".";
 	ttf_t** list = ttf_list_fonts(&dir, 1, "PragmataPro*");
 	if (list == nullptr) return 1;
@@ -115,6 +248,7 @@ int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpsz
 
 	output_include(symbols, total_vertex_count);
 	output_header(symbols);
+#endif
 
 	return 0;
 }
