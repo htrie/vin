@@ -23,8 +23,8 @@
 -remove modified bool (use text compare instead)
 -full insert undo
 -dot support
--do not up cursor when zz at beginning of file
--fix dot and undo
+-do Not up cursor when zz at beginning of file
+-fix dot And undo
 --- 2022-10-21
 -e-ink color scheme
 -space whitespace mark
