@@ -52,11 +52,12 @@ class App {
 
 	bool maximized = false;
 	bool minimized = false;
-	bool dirty = true;
+	bool dirty = false;
 	bool quit = false;
 
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
+	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
 		return std::string("Vin v0.2 - ") +
@@ -95,13 +96,16 @@ class App {
 			const Timer timer;
 			characters = cull();
 			cull_duration = timer.us();
-		}
 
-		if (!minimized) {
-			const Timer timer;
-			device.redraw(characters);
-			SetWindowTextA(device.get_hwnd(), status().data());
-			redraw_duration = timer.us();
+			if (!minimized) {
+				const Timer timer;
+				device.redraw(characters);
+				SetWindowTextA(device.get_hwnd(), status().data());
+				redraw_duration = timer.us();
+			}
+		}
+		else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 	}
 
@@ -174,6 +178,13 @@ class App {
 			((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
 			break;
 		}
+		case WM_MOVE:
+		case WM_SETFOCUS: {
+			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+				app->set_dirty(true);
+			}
+			break;
+		}
 		case WM_PAINT: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->redraw();
@@ -221,8 +232,9 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, nCmdShow, 800, 600)
-	{}
+		: device(proc, hInstance, 800, 600) {
+		ShowWindow(device.get_hwnd(), nCmdShow);
+	}
 
 	void notify(const std::string& s) {
 		notification = timestamp() + "  " + s;
