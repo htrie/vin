@@ -9,6 +9,7 @@
 +load texture
 + change shader to use font texture
 --- 2022-10-25
+-sleep again
 +read fnt
 +read tga
 --- 2022-10-24

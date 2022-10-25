@@ -4,7 +4,7 @@
 	#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
-HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, unsigned width, unsigned height) {
+HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width, unsigned height) {
 	const char* name = "vin";
 	const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
 
@@ -29,7 +29,7 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
 	RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
-	auto hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
+	const auto hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
 		nullptr, nullptr, hInstance, data);
 	if (!hWnd) {
@@ -39,7 +39,6 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, int nCmdShow, void* data, 
 	BOOL value = TRUE;
 	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
-	ShowWindow(hWnd, nCmdShow);
 	return hWnd;
 }
 
