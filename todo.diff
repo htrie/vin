@@ -10,6 +10,7 @@
 + change shader to use font texture
 +read fnt
 +read tga
++generate header/include
 --- 2022-10-25
 -sleep again
 --- 2022-10-24
