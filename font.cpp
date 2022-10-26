@@ -6,6 +6,7 @@
 #include <time.h>
 #include <math.h>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -235,20 +236,35 @@ struct Tga {
 
 Tga parse_tga() {
 	Tga tga;
-	std::ifstream in("font_0.tga");
+	std::ifstream in("font_0.tga", std::ios::binary);
+
 	in.seekg(0, std::ios_base::end);
 	const size_t size = in.tellg();
 	in.seekg(0, std::ios_base::beg);
+
 	const size_t header_size = sizeof(Tga::Header);
 	in.read((char*)&tga.header, header_size);
+
 	const auto content_size = size - header_size;
 	tga.content.resize(content_size);
 	in.read((char*)tga.content.data(), content_size);
+
 	return tga;
 }
 
 void output_include(const Tga& tga) {
 	std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
+	out << "const uint32_t font_size = " << tga.content.size() << ";" << std::endl;
+	out << "const uint8_t* font_pixels = {" << std::endl;
+	for (unsigned j = 0; j < tga.header.height; j++) {
+		for (unsigned i = 0; i < tga.header.width; i++) {
+			out << (unsigned)tga.content[i + tga.header.width * j];
+			if ( (i < (unsigned)(tga.header.width - 1)) || (j < (unsigned)(tga.header.height - 1)))
+				out << ",";
+		}
+		out << std::endl;
+	}
+	out << "};" << std::endl;
 }
 
 void output_header(const Fnt& fnt) {
