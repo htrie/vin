@@ -7,12 +7,12 @@
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 --- 2022-10-27
-+generate header
 +load texture
 + change shader to use font texture
++generate include
 --- 2022-10-26
 -read tga
--generate include
+-generate header
 --- 2022-10-25
 -sleep again
 -read fnt
