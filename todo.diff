@@ -8,8 +8,9 @@
 +system clipboard (<space>+c/v)
 +load texture
 + change shader to use font texture
-+read tga
 +generate header/include
+--- 2022-10-26
+-read tga
 --- 2022-10-25
 -sleep again
 -read fnt

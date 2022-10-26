@@ -209,9 +209,48 @@ Fnt parse_fnt() {
 	return fnt;
 }
 
+struct Tga {
+  #pragma pack(push, 1)
+    struct Header {
+        uint8_t idlength;
+        uint8_t colourmaptype;
+        uint8_t datatypecode;
+        uint16_t colourmaporigin;
+        uint16_t colourmaplength;
+        uint8_t colourmapdepth;
+        uint16_t x_origin;
+        uint16_t y_origin;
+        uint16_t width;
+        uint16_t height;
+        uint8_t bitsperpixel;
+        uint8_t imagedescriptor;
+    };
+    #pragma pack(pop)
+
+	Header header;
+	std::vector<uint8_t> content;
+};
+
+Tga parse_tga() {
+	Tga tga;
+	std::ifstream in("font_0.tga");
+	in.seekg(0, std::ios_base::end);
+	const size_t size = in.tellg();
+	in.seekg(0, std::ios_base::beg);
+	const size_t header_size = sizeof(Tga::Header);
+	in.read((char*)&tga.header, header_size);
+	const auto content_size = size - header_size;
+	tga.content.resize(content_size);
+	in.read((char*)tga.content.data(), content_size);
+	return tga;
+}
+
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
 #if 1
 	const auto fnt = parse_fnt();
+	const auto tga = parse_tga();
+
+	// Generate header/include.
 #else
 	const char* dir = ".";
 	ttf_t** list = ttf_list_fonts(&dir, 1, "PragmataPro*");
