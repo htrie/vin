@@ -174,7 +174,8 @@ Tga parse_tga() {
 	const size_t header_size = sizeof(Tga::Header);
 	in.read((char*)&tga.header, header_size);
 
-	const auto content_size = size - header_size;
+	const size_t footer_size = 26;
+	const auto content_size = size - header_size - footer_size;
 	tga.content.resize(content_size);
 	in.read((char*)tga.content.data(), content_size);
 
@@ -188,8 +189,7 @@ void output_include(const Fnt& fnt) {
 
 void output_header(const Tga& tga, const Fnt& fnt) {
 	std::ofstream out("font.h", std::ios::trunc | std::ios::out);
-	out << "const uint32_t font_size = " << tga.content.size() << ";" << std::endl;
-	out << "const uint8_t* font_pixels = {" << std::endl;
+	out << "const uint8_t font_pixels[" << tga.content.size() << "] = {" << std::endl;
 	for (unsigned j = 0; j < tga.header.height; j++) {
 		for (unsigned i = 0; i < tga.header.width; i++) {
 			out << (unsigned)tga.content[i + tga.header.width * j];
