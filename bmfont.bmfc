@@ -5,7 +5,7 @@ fileVersion=1
 fontName=PragmataPro Mono
 fontFile=
 charSet=0
-fontSize=-32
+fontSize=20
 aa=4
 scaleH=100
 useSmoothing=1
@@ -34,8 +34,8 @@ forceZero=0
 widthPaddingFactor=0.00
 
 # output file
-outWidth=256
-outHeight=256
+outWidth=128
+outHeight=128
 outBitDepth=8
 fontDescFormat=0
 fourChnlPacked=0
