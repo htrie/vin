@@ -181,8 +181,13 @@ Tga parse_tga() {
 	return tga;
 }
 
-void output_include(const Tga& tga) {
+void output_include(const Fnt& fnt) {
 	std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
+	//
+}
+
+void output_header(const Tga& tga, const Fnt& fnt) {
+	std::ofstream out("font.h", std::ios::trunc | std::ios::out);
 	out << "const uint32_t font_size = " << tga.content.size() << ";" << std::endl;
 	out << "const uint8_t* font_pixels = {" << std::endl;
 	for (unsigned j = 0; j < tga.header.height; j++) {
@@ -196,12 +201,10 @@ void output_include(const Tga& tga) {
 	out << "};" << std::endl;
 }
 
-void output_header(const Fnt& fnt) {
-	std::ofstream out("font.h", std::ios::trunc | std::ios::out);
-}
-
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
-	output_include(parse_tga());
-	output_header(parse_fnt());
+	const auto tga = parse_tga();
+	const auto fnt = parse_fnt();
+	output_include(fnt);
+	output_header(tga, fnt);
 	return 0;
 }
