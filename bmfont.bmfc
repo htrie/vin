@@ -34,8 +34,8 @@ forceZero=0
 widthPaddingFactor=0.00
 
 # output file
-outWidth=128
-outHeight=128
+outWidth=256
+outHeight=256
 outBitDepth=8
 fontDescFormat=0
 fourChnlPacked=0

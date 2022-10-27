@@ -8,6 +8,7 @@
 +system clipboard (<space>+c/v)
 --- 2022-10-27
 +load texture
++use helper functions
 +change shader
 +generate include
 --- 2022-10-26
