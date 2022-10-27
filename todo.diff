@@ -6,11 +6,12 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
---- 2022-10-27
-+load texture
-+use helper functions
+--- 2022-10-28
 +change shader
 +generate include
+--- 2022-10-27
+-load texture
+-use helper functions
 --- 2022-10-26
 -read tga
 -generate header

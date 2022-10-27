@@ -590,10 +590,10 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
 	return std::move(swapchain_handle.value);
 }
 
-vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::SurfaceFormatKHR& surface_format) {
+vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::Format& format) {
 	auto view_info = vk::ImageViewCreateInfo()
 		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(surface_format.format)
+		.setFormat(format)
 		.setImage(image)
 		.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
@@ -616,6 +616,53 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
 	auto framebuffer_handle = device.createFramebufferUnique(fb_info);
 	verify(framebuffer_handle.result == vk::Result::eSuccess);
 	return std::move(framebuffer_handle.value);
+}
+
+vk::UniqueSampler create_sampler(const vk::Device& device) {
+	auto const sampler_info = vk::SamplerCreateInfo()
+		.setMagFilter(vk::Filter::eNearest)
+		.setMinFilter(vk::Filter::eNearest)
+		.setMipmapMode(vk::SamplerMipmapMode::eNearest)
+		.setAddressModeU(vk::SamplerAddressMode::eClampToEdge)
+		.setAddressModeV(vk::SamplerAddressMode::eClampToEdge)
+		.setAddressModeW(vk::SamplerAddressMode::eClampToEdge)
+		.setMipLodBias(0.0f)
+		.setAnisotropyEnable(VK_FALSE)
+		.setMaxAnisotropy(1)
+		.setCompareEnable(VK_FALSE)
+		.setCompareOp(vk::CompareOp::eNever)
+		.setMinLod(0.0f)
+		.setMaxLod(0.0f)
+		.setBorderColor(vk::BorderColor::eFloatOpaqueWhite)
+		.setUnnormalizedCoordinates(VK_FALSE);
+
+	auto sampler_handle = device.createSamplerUnique(sampler_info);
+	verify(sampler_handle.result == vk::Result::eSuccess);
+	return std::move(sampler_handle.value);
+}
+
+vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device) {
+	vk::FormatProperties props;
+	gpu.getFormatProperties(vk::Format::eR8Unorm, &props);
+	verify((props.linearTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) == vk::FormatFeatureFlagBits::eSampledImage);
+
+	const auto image_info = vk::ImageCreateInfo()
+		.setImageType(vk::ImageType::e2D)
+		.setFormat(vk::Format::eR8Unorm)
+		.setExtent({ font_width, font_height, 1 })
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setTiling(vk::ImageTiling::eLinear)
+		.setUsage(vk::ImageUsageFlagBits::eSampled)
+		.setSharingMode(vk::SharingMode::eExclusive)
+		.setQueueFamilyIndexCount(0)
+		.setPQueueFamilyIndices(nullptr)
+		.setInitialLayout(vk::ImageLayout::ePreinitialized);
+
+	auto image_handle = device.createImageUnique(image_info);
+	verify(image_handle.result == vk::Result::eSuccess);
+	return std::move(image_handle.value);
 }
 
 vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
@@ -642,6 +689,22 @@ bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBit
 		typeBits >>= 1;
 	}
 	return false;
+}
+
+vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Image& image) {
+	vk::MemoryRequirements mem_reqs;
+	device.getImageMemoryRequirements(image, &mem_reqs);
+
+	auto mem_info = vk::MemoryAllocateInfo()
+		.setAllocationSize(mem_reqs.size)
+		.setMemoryTypeIndex(0);
+
+	auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
+	verify(pass == true);
+
+	auto memory_handle = device.allocateMemoryUnique(mem_info);
+	verify(memory_handle.result == vk::Result::eSuccess);
+	return std::move(memory_handle.value);
 }
 
 vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
@@ -676,6 +739,23 @@ void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::D
 	verify(result == vk::Result::eSuccess);
 }
 
+void copy_image_data(const vk::Device& device, const vk::Image& image, const vk::DeviceMemory& image_memory) {
+	auto result = device.bindImageMemory(image, image_memory, 0);
+	verify(result == vk::Result::eSuccess);
+
+	auto const image_subres = vk::ImageSubresource()
+		.setAspectMask(vk::ImageAspectFlagBits::eColor)
+		.setMipLevel(0)
+		.setArrayLayer(0);
+
+	vk::SubresourceLayout layout;
+	device.getImageSubresourceLayout(image, &image_subres, &layout);
+	verify(layout.rowPitch == font_width);
+
+	void* image_ptr = map_memory(device, image_memory);
+	memcpy(image_ptr, font_pixels.data(), font_pixels.size());
+	unmap_memory(device, image_memory);
+}
 vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
 	auto const alloc_info = vk::DescriptorSetAllocateInfo()
 		.setDescriptorPool(desc_pool)
@@ -776,6 +856,20 @@ void end_pass(const vk::CommandBuffer& cmd_buf) {
 	cmd_buf.endRenderPass();
 }
 
+void add_image_barrier(const vk::CommandBuffer& cmd_buf, const vk::Image& image) {
+	auto const barrier = vk::ImageMemoryBarrier()
+		.setSrcAccessMask(vk::AccessFlagBits())
+		.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead)
+		.setOldLayout(vk::ImageLayout::ePreinitialized)
+		.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+		.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+		.setImage(image)
+		.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+	cmd_buf.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
+}
+
 void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
 	auto const viewport = vk::Viewport()
 		.setX(0.0f)
@@ -784,11 +878,13 @@ void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
 		.setHeight(height)
 		.setMinDepth((float)0.0f)
 		.setMaxDepth((float)1.0f);
+
 	cmd_buf.setViewport(0, 1, &viewport);
 }
 
 void set_scissor(const vk::CommandBuffer& cmd_buf, uint32_t width, uint32_t height) {
 	vk::Rect2D const scissor(vk::Offset2D(0, 0), vk::Extent2D(width, height));
+
 	cmd_buf.setScissor(0, 1, &scissor);
 }
 
@@ -855,13 +951,10 @@ class Device {
 	vk::UniquePipeline pipeline;
 	vk::UniqueDescriptorSet descriptor_set;
 
-	//
     vk::UniqueImage image;
     vk::UniqueDeviceMemory image_memory;
     vk::UniqueImageView image_view;
     vk::UniqueSampler sampler;
-	bool image_uploaded = false; // [TODO] Remove.
-	//
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -884,6 +977,15 @@ class Device {
 	const float scale = 14.0f;
 	const float char_width = scale * 0.5f;
 	const float char_height = scale * 1.05f;
+
+	void upload_font_image(const vk::CommandBuffer& cmd_buf) {
+		image = create_image(gpu, device.get());
+		image_memory = create_image_memory(gpu, device.get(), image.get());
+		copy_image_data(device.get(), image.get(), image_memory.get());
+		sampler = create_sampler(device.get());
+		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
+		add_image_barrier(cmd_buf, image.get());
+	}
 
 public:
 	Device(WNDPROC proc, HINSTANCE hInstance, unsigned width, unsigned height) {
@@ -917,103 +1019,6 @@ public:
 			draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
 		}
 
-		//
-		{
-			{
-				vk::FormatProperties props;
-				gpu.getFormatProperties(vk::Format::eR8Unorm, &props);
-				verify((props.linearTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) == vk::FormatFeatureFlagBits::eSampledImage);
-
-				const auto image_info = vk::ImageCreateInfo()
-					.setImageType(vk::ImageType::e2D)
-					.setFormat(vk::Format::eR8Unorm)
-					.setExtent({ font_width, font_height, 1 })
-					.setMipLevels(1)
-					.setArrayLayers(1)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setTiling(vk::ImageTiling::eLinear)
-					.setUsage(vk::ImageUsageFlagBits::eSampled)
-					.setSharingMode(vk::SharingMode::eExclusive)
-					.setQueueFamilyIndexCount(0)
-					.setPQueueFamilyIndices(nullptr)
-					.setInitialLayout(vk::ImageLayout::ePreinitialized);
-
-				auto image_handle = device->createImageUnique(image_info);
-				verify(image_handle.result == vk::Result::eSuccess);
-				image = std::move(image_handle.value);
-			}
-
-			{
-				vk::MemoryRequirements mem_reqs;
-				device->getImageMemoryRequirements(image.get(), &mem_reqs);
-
-				auto mem_info = vk::MemoryAllocateInfo()
-					.setAllocationSize(mem_reqs.size)
-					.setMemoryTypeIndex(0);
-
-				auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
-				verify(pass == true);
-
-				auto memory_handle = device->allocateMemoryUnique(mem_info);
-				verify(memory_handle.result == vk::Result::eSuccess);
-				image_memory = std::move(memory_handle.value);
-			}
-
-			{
-				auto result = device->bindImageMemory(image.get(), image_memory.get(), 0);
-				verify(result == vk::Result::eSuccess);
-
-				auto const image_subres = vk::ImageSubresource()
-					.setAspectMask(vk::ImageAspectFlagBits::eColor)
-					.setMipLevel(0)
-					.setArrayLayer(0);
-
-				vk::SubresourceLayout layout;
-				device->getImageSubresourceLayout(image.get(), &image_subres, &layout);
-				verify(layout.rowPitch == font_width);
-
-				void* image_ptr = map_memory(device.get(), image_memory.get());
-				memcpy(image_ptr, font_pixels.data(), font_pixels.size());
-				unmap_memory(device.get(), image_memory.get());
-			}
-
-			{
-				auto const sampler_info = vk::SamplerCreateInfo()
-					.setMagFilter(vk::Filter::eNearest)
-					.setMinFilter(vk::Filter::eNearest)
-					.setMipmapMode(vk::SamplerMipmapMode::eNearest)
-					.setAddressModeU(vk::SamplerAddressMode::eClampToEdge)
-					.setAddressModeV(vk::SamplerAddressMode::eClampToEdge)
-					.setAddressModeW(vk::SamplerAddressMode::eClampToEdge)
-					.setMipLodBias(0.0f)
-					.setAnisotropyEnable(VK_FALSE)
-					.setMaxAnisotropy(1)
-					.setCompareEnable(VK_FALSE)
-					.setCompareOp(vk::CompareOp::eNever)
-					.setMinLod(0.0f)
-					.setMaxLod(0.0f)
-					.setBorderColor(vk::BorderColor::eFloatOpaqueWhite)
-					.setUnnormalizedCoordinates(VK_FALSE);
-
-				auto sampler_handle = device->createSamplerUnique(sampler_info);
-				verify(sampler_handle.result == vk::Result::eSuccess);
-				sampler = std::move(sampler_handle.value);
-			}
-
-			{
-				auto const view_info = vk::ImageViewCreateInfo()
-					.setImage(image.get())
-					.setViewType(vk::ImageViewType::e2D)
-					.setFormat(vk::Format::eR8Unorm)
-					.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-				auto view_handle = device->createImageViewUnique(view_info);
-				verify(view_handle.result == vk::Result::eSuccess);
-				image_view = std::move(view_handle.value);
-			}
-		}
-		//
-
 		resize(width, height);
 	}
 
@@ -1037,7 +1042,7 @@ public:
 			swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, 3);
 			const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
 			for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-				image_views.emplace_back(create_image_view(device.get(), swapchain_images[i], surface_format));
+				image_views.emplace_back(create_image_view(device.get(), swapchain_images[i], surface_format.format));
 				framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), image_views.back().get(), width, height));
 				cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
 			}
@@ -1055,26 +1060,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-
-		//
-		if (!image_uploaded)
-		{
-			image_uploaded = true;
-
-			auto const barrier = vk::ImageMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits())
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead)
-				.setOldLayout(vk::ImageLayout::ePreinitialized)
-				.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setImage(image.get())
-				.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlagBits(), 0, nullptr, 0, nullptr, 1, &barrier);
-		}
-		//
-
+		if (!image) upload_font_image(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear.rgba(), width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
