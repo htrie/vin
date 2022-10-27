@@ -7,8 +7,8 @@
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 --- 2022-10-28
-+change shader
-+generate include
++draw quad using font texture
++draw characters
 --- 2022-10-27
 -load texture
 -use helper functions
