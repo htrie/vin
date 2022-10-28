@@ -91,7 +91,7 @@ class App {
 	}
 
 	void redraw() {
-		if (dirty) {
+		if (true/*dirty*/) {
 			dirty = false;
 			const Timer timer;
 			characters = cull();

@@ -5,6 +5,15 @@
 
 #include "font.inc"
 
+const vec2 vertices[6] = {
+	{ 0.0f, 0.0f },
+	{ 1.0f, 1.0f },
+	{ 1.0f, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, 1.0f },
+	{ 1.0f, 1.0f },
+};
+
 layout (push_constant) uniform Constants {
 	mat4 model;
 	vec4 color;
@@ -16,7 +25,5 @@ layout (std140, binding = 0) uniform Uniforms {
 } uniforms;
 
 void main() {
-	uint vertex_offset = vertex_offsets[constants.char_index];
-	vec2 vertex = vertices[vertex_offset + gl_VertexIndex];
-	gl_Position = uniforms.view_proj * constants.model * vec4(vertex * vec2(1.0f, -1.0f), -1.0f, 1.0f); // [TODO] Do transformation at export.
+	gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
 }

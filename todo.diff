@@ -6,9 +6,11 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
---- 2022-10-28
-+draw quad using font texture
+--- 2022-10-29
 +draw characters
+--- 2022-10-28
+-draw quad
++use font texture
 --- 2022-10-27
 -load texture
 -use helper functions

@@ -1083,7 +1083,7 @@ public:
 			constants.char_index = character.index;
 
 			push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
-			//draw(cmd, vertex_counts[character.index]);
+			draw(cmd, 6);
 		}
 
 		end_pass(cmd);
