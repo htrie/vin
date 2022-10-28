@@ -14,6 +14,8 @@ layout (push_constant) uniform Constants {
 } constants;
 
 void main() {
+	vec4 color = constants.color; 
 	vec2 uv = { 0.0f, 0.0f }; // [TODO] Use vertex UVs.
-    out_color = constants.color * texture(tex, uv);
+	color.a = texture(tex, uv).x;
+    out_color = color;
 }
