@@ -20,7 +20,7 @@ layout (push_constant) uniform Constants {
 	uint char_index;
 } constants;
 
-layout (std140, binding = 0) uniform Uniforms {
+layout (binding = 0) uniform Uniforms {
 	mat4 view_proj;
 } uniforms;
 

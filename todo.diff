@@ -10,7 +10,7 @@
 +draw characters
 --- 2022-10-28
 -draw quad
-+use font texture
+-use font texture
 --- 2022-10-27
 -load texture
 -use helper functions

@@ -306,13 +306,19 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
 }
 
 vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
-	std::array<vk::DescriptorSetLayoutBinding, 1> const layout_bindings = {
+	std::array<vk::DescriptorSetLayoutBinding, 2> const layout_bindings = {
 		vk::DescriptorSetLayoutBinding()
 		   .setBinding(0)
 		   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
 		   .setDescriptorCount(1)
 		   .setStageFlags(vk::ShaderStageFlagBits::eVertex)
-		   .setPImmutableSamplers(nullptr) };
+		   .setPImmutableSamplers(nullptr),
+		vk::DescriptorSetLayoutBinding()
+			.setBinding(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+			.setPImmutableSamplers(nullptr) };
 
 	auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
 		.setBindingCount((uint32_t)layout_bindings.size())
@@ -484,10 +490,14 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 }
 
 vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
-	std::array<vk::DescriptorPoolSize, 1> const pool_sizes = {
+	std::array<vk::DescriptorPoolSize, 2> const pool_sizes = {
 		vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(16) };
+			.setDescriptorCount(16),
+        vk::DescriptorPoolSize()
+            .setType(vk::DescriptorType::eCombinedImageSampler)
+            .setDescriptorCount(16)
+	};
 
 	auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
 		.setMaxSets(16)
@@ -767,17 +777,28 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
 	return std::move(descriptor_set_handles.value[0]);
 }
 
-void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range) {
+void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range, const vk::Sampler& sampler, const vk::ImageView& image_view) {
 	const auto buffer_info = vk::DescriptorBufferInfo()
 		.setOffset(0)
 		.setRange(range)
 		.setBuffer(buffer);
 
-	const std::array<vk::WriteDescriptorSet, 1> writes = {
+    const auto image_info = vk::DescriptorImageInfo()
+        .setSampler(sampler)
+        .setImageView(image_view)
+        .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+
+	const std::array<vk::WriteDescriptorSet, 2> writes = {
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setPBufferInfo(&buffer_info)
+			.setDstSet(desc_set),
+		vk::WriteDescriptorSet()
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setPImageInfo(&image_info)
+			.setDstBinding(1)
 			.setDstSet(desc_set) };
 
 	device.updateDescriptorSets((uint32_t)writes.size(), writes.data(), 0, nullptr);
@@ -985,6 +1006,7 @@ class Device {
 		sampler = create_sampler(device.get());
 		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, image.get());
+		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), image_view.get());
 	}
 
 public:
@@ -1004,14 +1026,12 @@ public:
 		pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
 		render_pass = create_render_pass(device.get(), surface_format);
 		pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
+		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 
 		uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
 		uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
 		bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
 		uniform_ptr = map_memory(device.get(), uniform_memory.get());
-
-		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms));
 
 		for (auto i = 0; i < 2; ++i) {
 			fences.emplace_back(create_fence(device.get()));
