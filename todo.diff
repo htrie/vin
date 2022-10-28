@@ -7,7 +7,8 @@
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 --- 2022-10-29
-+draw characters
++add UVs
++select UVs based on character index
 --- 2022-10-28
 -draw quad
 -use font texture
