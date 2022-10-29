@@ -456,6 +456,13 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 
 	std::array<vk::PipelineColorBlendAttachmentState, 1> const color_blend_attachments = {
 		vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(true)
+			.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+			.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+			.setColorBlendOp(vk::BlendOp::eAdd)
+			.setSrcAlphaBlendFactor(vk::BlendFactor::eOneMinusDstAlpha)
+			.setDstAlphaBlendFactor(vk::BlendFactor::eOne)
+			.setAlphaBlendOp(vk::BlendOp::eAdd)
 			.setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
 
 	auto const color_blend_info = vk::PipelineColorBlendStateCreateInfo()
