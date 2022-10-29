@@ -1,4 +1,4 @@
-Vin - vi normalized - Vulkan streamlined text editor
+Vin - VI Normalized - Vulkan streamlined text editor
 
 My own attempt at a smaller vim, with:
 - only my commonly used bindings are supported
