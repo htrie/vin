@@ -7,12 +7,12 @@
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 --- 2022-10-30
-+fix special characters
 +use hash to color to colorize all words
 --- 2022-10-29
 -add UVs
 -add character map from fnt
 -select UVs based on character index
+-fix special characters
 --- 2022-10-28
 -draw quad
 -use font texture

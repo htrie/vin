@@ -32,12 +32,12 @@ enum Glyph {
 	TAB = 9,
 	CR = 13,
 	ESC = 27,
-	BLOCK = 128,
-	LINE = 129,
-	RETURN = 130,
-	BOTTOM_BLOCK = 131,
-	TABSIGN = 132,
-	SPACESIGN = 133,
+	BLOCK = 9608,
+	LINE = 9615,
+	RETURN = 9166,
+	BOTTOM_BLOCK = 9601,
+	TABSIGN = 9205,
+	SPACESIGN = 8228,
 };
 
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
