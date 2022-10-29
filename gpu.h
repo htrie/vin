@@ -1097,7 +1097,7 @@ public:
 		bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
 		for (auto& character : characters) {
-			if (auto found = font_glyphs.find(character.index); found != font_glyphs.end()) { // [TODO] Special characters.
+			if (auto found = font_glyphs.find(character.index); found != font_glyphs.end()) {
 				const auto& glyph = found->second;
 
 				const float trans_x = character.col * char_width + glyph.x_off * font_width;
