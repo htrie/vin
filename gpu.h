@@ -949,7 +949,8 @@ std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::
 struct Constants {
 	Matrix model;
 	Vec4 color;
-	uint32_t char_index;
+	Vec2 uv_origin;
+	Vec2 uv_sizes;
 };
 
 struct Uniforms {
@@ -1107,7 +1108,8 @@ public:
 				{ 0.0f, 0.0f, scale, 0.0f },
 				{ trans_x, trans_y, 0.0f, 1.0f } };
 			constants.color = character.color.rgba();
-			constants.char_index = character.index;
+			constants.uv_origin = { 0.0f, 0.0f };
+			constants.uv_sizes = { 1.0f, 1.0f };
 
 			push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 			draw(cmd, 6);

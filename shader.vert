@@ -26,7 +26,8 @@ const vec2 uvs[6] = {
 layout (push_constant) uniform Constants {
 	mat4 model;
 	vec4 color;
-	uint char_index;
+	vec2 uv_origin;
+	vec2 uv_sizes;
 } constants;
 
 layout (binding = 0) uniform Uniforms {
@@ -37,5 +38,5 @@ layout (location = 0) out vec2 uv;
 
 void main() {
 	gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
-	uv = uvs[gl_VertexIndex];
+	uv = constants.uv_origin + uvs[gl_VertexIndex] * constants.uv_sizes;
 }
