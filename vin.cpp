@@ -96,16 +96,13 @@ class App {
 			const Timer timer;
 			characters = cull();
 			cull_duration = timer.us();
-
-			if (!minimized) {
-				const Timer timer;
-				device.redraw(characters);
-				SetWindowTextA(device.get_hwnd(), status().data());
-				redraw_duration = timer.us();
-			}
 		}
-		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+		if (!minimized) {
+			const Timer timer;
+			device.redraw(characters);
+			SetWindowTextA(device.get_hwnd(), status().data());
+			redraw_duration = timer.us();
 		}
 	}
 
