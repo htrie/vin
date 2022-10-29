@@ -3,8 +3,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-#include "font.inc"
-
 const vec2 vertices[6] = {
 	{ 0.0f, 0.0f },
 	{ 1.0f, 1.0f },

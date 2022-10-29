@@ -182,15 +182,13 @@ Tga parse_tga() {
 	return tga;
 }
 
-void output_include(const Fnt& fnt) {
-	std::ofstream out("font.inc", std::ios::trunc | std::ios::out);
-	//
-}
-
-void output_header(const Tga& tga, const Fnt& fnt) {
+void output(const Tga& tga, const Fnt& fnt) {
 	std::ofstream out("font.h", std::ios::trunc | std::ios::out);
+
 	out << "const uint32_t font_width = " << tga.header.width << ";" << std::endl;
 	out << "const uint32_t font_height = " << tga.header.height << ";" << std::endl;
+	out << std::endl;
+
 	out << "const std::array<uint8_t, " << tga.content.size() << "> font_pixels  = {" << std::endl;
 	for (unsigned j = 0; j < tga.header.height; j++) {
 		for (unsigned i = 0; i < tga.header.width; i++) {
@@ -201,12 +199,45 @@ void output_header(const Tga& tga, const Fnt& fnt) {
 		out << std::endl;
 	}
 	out << "};" << std::endl;
+	out << std::endl;
+
+	out << "struct FontGlyph {" << std::endl;
+	out << "\tfloat x = 0.0f;" << std::endl;
+	out << "\tfloat y = 0.0f;" << std::endl;
+	out << "\tfloat w = 0.0f;" << std::endl;
+	out << "\tfloat h = 0.0f;" << std::endl;
+	out << "\tfloat x_off = 0.0f;" << std::endl;
+	out << "\tfloat y_off = 0.0f;" << std::endl;
+	out << "\tfloat x_adv = 0.0f;" << std::endl;
+	out << std::endl;
+	out << "\tFontGlyph(float x, float y, float w, float h, float x_off, float y_off, float x_adv)" << std::endl;
+	out << "\t\t: x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}" << std::endl;
+	out << "};" << std::endl;
+	out << std::endl;
+
+	out << "const std::unordered_map<uint16_t, FontGlyph> font_glyphs  = {" << std::endl;
+	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
+		const auto& c = fnt.chars.values[i];
+		out << "\t{ " << c.id << 
+			", FontGlyph(" << 
+			std::to_string((float)c.x / (float)tga.header.width) << "f, " << 
+			std::to_string((float)c.y / (float)tga.header.height) << "f, " << 
+			std::to_string((float)c.width / (float)tga.header.width) << "f, " << 
+			std::to_string((float)c.height / (float)tga.header.height) << "f, " << 
+			std::to_string((float)c.xoffset / (float)tga.header.width) << "f, " << 
+			std::to_string((float)c.yoffset / (float)tga.header.height) << "f, " << 
+			std::to_string((float)c.xadvance / (float)tga.header.width) << "f) }";
+		if (i < (unsigned)fnt.chars.values.size() - 1)
+			out << ",";
+		out << std::endl;
+	}
+	out << "};" << std::endl;
+
 }
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
 	const auto tga = parse_tga();
 	const auto fnt = parse_fnt();
-	output_include(fnt);
-	output_header(tga, fnt);
+	output(tga, fnt);
 	return 0;
 }

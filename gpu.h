@@ -1003,9 +1003,8 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	const float scale = 14.0f;
-	const float char_width = scale * 0.5f;
-	const float char_height = scale * 1.05f;
+	const float char_width = 7.0f; // Character spacing.
+	const float char_height = 15.0f; // Line spacing.
 
 	void upload_font_image(const vk::CommandBuffer& cmd_buf) {
 		image = create_image(gpu, device.get());
@@ -1098,21 +1097,25 @@ public:
 		bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
 		for (auto& character : characters) {
-			const float trans_x = (1.0f + character.col) * char_width;
-			const float trans_y = (1.0f + character.row) * char_height;
+			if (auto found = font_glyphs.find(character.index); found != font_glyphs.end()) { // [TODO] Special characters.
+				const auto& glyph = found->second;
 
-			Constants constants;
-			constants.model = {
-				{ scale, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, scale, 0.0f, 0.0f },
-				{ 0.0f, 0.0f, scale, 0.0f },
-				{ trans_x, trans_y, 0.0f, 1.0f } };
-			constants.color = character.color.rgba();
-			constants.uv_origin = { 0.0f, 0.0f };
-			constants.uv_sizes = { 1.0f, 1.0f };
+				const float trans_x = character.col * char_width + glyph.x_off * font_width;
+				const float trans_y = character.row * char_height + glyph.y_off * font_height;
 
-			push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
-			draw(cmd, 6);
+				Constants constants;
+				constants.model = {
+					{ glyph.w * font_width, 0.0f, 0.0f, 0.0f },
+					{ 0.0f, glyph.h * font_height, 0.0f, 0.0f },
+					{ 0.0f, 0.0f, 1.0f, 0.0f },
+					{ trans_x, trans_y, 0.0f, 1.0f } };
+				constants.color = character.color.rgba();
+				constants.uv_origin = { glyph.x, glyph.y };
+				constants.uv_sizes = { glyph.w, glyph.h };
+
+				push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
+				draw(cmd, 6);
+			}
 		}
 
 		end_pass(cmd);

@@ -9,6 +9,7 @@
 #include <string>
 #include <chrono>
 #include <map>
+#include <unordered_set>
 #include <fstream>
 #include <filesystem>
 #include <future>
