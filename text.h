@@ -52,12 +52,12 @@ constexpr bool is_punctuation(char c) { return
 }
 
 struct Character {
-	uint8_t index;
+	uint16_t index;
 	Color color = Color::rgba(255, 0, 0, 255);
 	unsigned row = 0;
 	unsigned col = 0;
 
-	Character(uint8_t index, Color color, unsigned row, unsigned col)
+	Character(uint16_t index, Color color, unsigned row, unsigned col)
 		: index(index), color(color), row(row), col(col) {}
 };
 
@@ -119,7 +119,7 @@ class Enclosure {
 	size_t start = 0;
 	size_t finish = 0;
 
-	size_t find_prev(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
+	size_t find_prev(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -131,7 +131,7 @@ class Enclosure {
 		return count == 0 ? index : std::string::npos;
 	}
 
-	size_t find_next(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
+	size_t find_next(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = text[pos] == left ? pos + 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -144,7 +144,7 @@ class Enclosure {
 	}
 
 public:
-	Enclosure(std::string_view text, size_t pos, uint8_t left, uint8_t right) {
+	Enclosure(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -534,7 +534,7 @@ public:
 		return s;
 	}
 
-	std::string yank_enclosure(uint8_t left, uint8_t right, bool inclusive) {
+	std::string yank_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
@@ -725,7 +725,7 @@ public:
 		return s;
 	}
 
-	std::string erase_enclosure(uint8_t left, uint8_t right, bool inclusive) {
+	std::string erase_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
@@ -1188,7 +1188,7 @@ class Buffer {
 	}
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
-		characters.emplace_back((uint8_t)(48 + digit), colors().line_number, row, col);
+		characters.emplace_back((uint16_t)(48 + digit), colors().line_number, row, col);
 	}
 
 	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
@@ -1239,7 +1239,7 @@ class Buffer {
 	};
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool block_cursor) const {
-		characters.emplace_back((uint8_t)c, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
+		characters.emplace_back((uint16_t)c, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1308,32 +1308,32 @@ class Buffer {
 	}
 
 	static bool is_cpp_quote(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return c == '\'' || c == '"';
 	}
 
 	static bool is_cpp_digit(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return c >= '0' && c <= '9';
 	}
 
 	static bool is_cpp_lowercase_letter(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return (c >= 'a' && c <= 'z');
 	}
 
 	static bool is_cpp_uppercase_letter(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return (c >= 'A' && c <= 'Z');
 	}
 
 	static bool is_cpp_whitespace(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return c == Glyph::RETURN || c == Glyph::TAB || c == ' ';
 	}
 
 	static bool is_cpp_punctuation(const Character& character) {
-		const uint8_t c = character.index;
+		const uint16_t c = character.index;
 		return
 			c == '-' || c == '+' || c == '*' || c == '/' || c == '=' ||
 			c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
@@ -1445,7 +1445,7 @@ class Picker {
 	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
-		characters.emplace_back((uint8_t)c, colors().text, row, col);
+		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
 
 	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
@@ -1565,7 +1565,7 @@ class Switcher {
 	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
-		characters.emplace_back((uint8_t)c, colors().text, row, col);
+		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
 
 	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
