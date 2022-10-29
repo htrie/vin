@@ -6,6 +6,7 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
++instancing
 --- 2022-10-30
 +use hash to color to colorize all words
 --- 2022-10-29

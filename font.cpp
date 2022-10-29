@@ -31,9 +31,9 @@ struct Char {
 	unsigned y = 0;
 	unsigned width = 0;
 	unsigned height = 0;
-	unsigned xoffset = 0;
-	unsigned yoffset = 0;
-	unsigned xadvance = 0;
+	int xoffset = 0;
+	int yoffset = 0;
+	int xadvance = 0;
 	unsigned page = 0;
 	unsigned chnl = 0;
 };
@@ -220,13 +220,13 @@ void output(const Tga& tga, const Fnt& fnt) {
 		const auto& c = fnt.chars.values[i];
 		out << "\t{ " << c.id << 
 			", FontGlyph(" << 
-			std::to_string((float)c.x / (float)tga.header.width) << "f, " << 
-			std::to_string((float)c.y / (float)tga.header.height) << "f, " << 
-			std::to_string((float)c.width / (float)tga.header.width) << "f, " << 
-			std::to_string((float)c.height / (float)tga.header.height) << "f, " << 
-			std::to_string((float)c.xoffset / (float)tga.header.width) << "f, " << 
-			std::to_string((float)c.yoffset / (float)tga.header.height) << "f, " << 
-			std::to_string((float)c.xadvance / (float)tga.header.width) << "f) }";
+			std::to_string((double)c.x / (double)tga.header.width) << "f, " << 
+			std::to_string((double)c.y / (double)tga.header.height) << "f, " << 
+			std::to_string((double)c.width / (double)tga.header.width) << "f, " << 
+			std::to_string((double)c.height / (double)tga.header.height) << "f, " << 
+			std::to_string((double)c.xoffset / (double)tga.header.width) << "f, " << 
+			std::to_string((double)c.yoffset / (double)tga.header.height) << "f, " << 
+			std::to_string((double)c.xadvance / (double)tga.header.width) << "f) }";
 		if (i < (unsigned)fnt.chars.values.size() - 1)
 			out << ",";
 		out << std::endl;
