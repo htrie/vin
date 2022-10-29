@@ -61,7 +61,7 @@ class App {
 	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
-		return std::string("Vin v0.3 - ") +
+		return std::string("Vin v0.4 - ") +
 			std::string(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + " - " +
 			switcher.current().get_record() + " - " +

@@ -14,6 +14,7 @@
 -add character map from fnt
 -select UVs based on character index
 -fix special characters
+-publish v0.3 tag
 --- 2022-10-28
 -draw quad
 -use font texture
