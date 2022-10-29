@@ -14,6 +14,15 @@ const vec2 vertices[6] = {
 	{ 1.0f, 1.0f },
 };
 
+const vec2 uvs[6] = {
+	{ 0.0f, 0.0f },
+	{ 1.0f, 1.0f },
+	{ 1.0f, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, 1.0f },
+	{ 1.0f, 1.0f },
+};
+
 layout (push_constant) uniform Constants {
 	mat4 model;
 	vec4 color;
@@ -24,6 +33,9 @@ layout (binding = 0) uniform Uniforms {
 	mat4 view_proj;
 } uniforms;
 
+layout (location = 0) out vec2 uv;
+
 void main() {
 	gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
+	uv = uvs[gl_VertexIndex];
 }

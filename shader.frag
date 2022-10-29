@@ -5,6 +5,8 @@
 
 layout (binding = 1) uniform sampler2D tex;
 
+layout (location = 0) in vec2 uv;
+
 layout (location = 0) out vec4 out_color;
 
 layout (push_constant) uniform Constants {
@@ -14,6 +16,5 @@ layout (push_constant) uniform Constants {
 } constants;
 
 void main() {
-	vec2 uv = { 0.0f, 0.0f }; // [TODO] Use vertex UVs.
     out_color = constants.color * vec4(vec3(1.0f), texture(tex, uv).x);
 }
