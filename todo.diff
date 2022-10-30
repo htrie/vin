@@ -9,9 +9,10 @@
 --- 2022-10-31
 +find past EOF
 +switcher past EOL
--- 2022-10-30
--make repo private
+--- 2022-10-31
 +use hash to color to colorize all words
+--- 2022-10-30
+-make repo private
 --- 2022-10-29
 -add UVs
 -add character map from fnt
