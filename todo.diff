@@ -9,7 +9,8 @@
 --- 2022-10-31
 +find past EOF
 +switcher past EOL
---- 2022-10-30
+-- 2022-10-30
+-make repo private
 +use hash to color to colorize all words
 --- 2022-10-29
 -add UVs
