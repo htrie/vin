@@ -9,8 +9,8 @@
 --- 2022-10-31
 +find past EOF
 +switcher past EOL
-+use +/- to jump lines at whitespace
 --- 2022-10-31
+-use +/- to jump lines at whitespace
 +use hash to color to colorize all words
 +use bold to display keywords
 --- 2022-10-30

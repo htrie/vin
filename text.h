@@ -1019,6 +1019,8 @@ class Buffer {
 		else if (key == 'H') { state().window_top(row_count); }
 		else if (key == 'M') { state().window_center(row_count); }
 		else if (key == 'L') { state().window_bottom(row_count); }
+		else if (key == '+') { state().next_line(); state().line_start_whitespace(); }
+		else if (key == '-') { state().prev_line(); state().line_start_whitespace(); }
 		else if (key == ';') { line_find(); }
 		else if (key == ',') { line_rfind(); }
 		else if (key == '*') { word_find_under_cursor(row_count); }
