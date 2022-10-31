@@ -123,9 +123,9 @@ struct Fnt {
 	Chars chars;
 };
 
-Fnt parse_fnt() {
+Fnt parse_fnt(const std::string_view font_filename) {
 	Fnt fnt;
-	std::ifstream in("font.fnt");
+	std::ifstream in(std::string(font_filename) + ".fnt");
 	std::string line;
 	unsigned char_count = 0;
 	while (std::getline(in, line)) {
@@ -163,9 +163,9 @@ struct Tga {
 	std::vector<uint8_t> content;
 };
 
-Tga parse_tga() {
+Tga parse_tga(const std::string_view font_filename) {
 	Tga tga;
-	std::ifstream in("font_0.tga", std::ios::binary);
+	std::ifstream in(std::string(font_filename) + "_0.tga", std::ios::binary);
 
 	in.seekg(0, std::ios_base::end);
 	const size_t size = in.tellg();
@@ -182,14 +182,14 @@ Tga parse_tga() {
 	return tga;
 }
 
-void output(const Tga& tga, const Fnt& fnt) {
-	std::ofstream out("font.h", std::ios::trunc | std::ios::out);
+void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt) {
+	std::ofstream out(std::string(font_filename) + ".h", std::ios::trunc | std::ios::out);
 
-	out << "const uint32_t font_width = " << tga.header.width << ";" << std::endl;
-	out << "const uint32_t font_height = " << tga.header.height << ";" << std::endl;
+	out << "const uint32_t " << font_filename << "_width = " << tga.header.width << ";" << std::endl;
+	out << "const uint32_t " << font_filename << "_height = " << tga.header.height << ";" << std::endl;
 	out << std::endl;
 
-	out << "const std::array<uint8_t, " << tga.content.size() << "> font_pixels  = {" << std::endl;
+	out << "const std::array<uint8_t, " << tga.content.size() << "> " << font_filename << "_pixels  = {" << std::endl;
 	for (unsigned j = 0; j < tga.header.height; j++) {
 		for (unsigned i = 0; i < tga.header.width; i++) {
 			out << (unsigned)tga.content[i + tga.header.width * j];
@@ -201,21 +201,7 @@ void output(const Tga& tga, const Fnt& fnt) {
 	out << "};" << std::endl;
 	out << std::endl;
 
-	out << "struct FontGlyph {" << std::endl;
-	out << "\tfloat x = 0.0f;" << std::endl;
-	out << "\tfloat y = 0.0f;" << std::endl;
-	out << "\tfloat w = 0.0f;" << std::endl;
-	out << "\tfloat h = 0.0f;" << std::endl;
-	out << "\tfloat x_off = 0.0f;" << std::endl;
-	out << "\tfloat y_off = 0.0f;" << std::endl;
-	out << "\tfloat x_adv = 0.0f;" << std::endl;
-	out << std::endl;
-	out << "\tFontGlyph(float x, float y, float w, float h, float x_off, float y_off, float x_adv)" << std::endl;
-	out << "\t\t: x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}" << std::endl;
-	out << "};" << std::endl;
-	out << std::endl;
-
-	out << "const std::unordered_map<uint16_t, FontGlyph> font_glyphs  = {" << std::endl;
+	out << "const std::unordered_map<uint16_t, FontGlyph> " << font_filename << "_glyphs  = {" << std::endl;
 	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
 		const auto& c = fnt.chars.values[i];
 		out << "\t{ " << c.id << 
@@ -232,12 +218,17 @@ void output(const Tga& tga, const Fnt& fnt) {
 		out << std::endl;
 	}
 	out << "};" << std::endl;
+}
 
+void process(const std::string_view font_filename) {
+	const auto tga = parse_tga(font_filename);
+	const auto fnt = parse_fnt(font_filename);
+	output(font_filename, tga, fnt);
 }
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
-	const auto tga = parse_tga();
-	const auto fnt = parse_fnt();
-	output(tga, fnt);
+	process("font_regular");
+	process("font_bold");
+	process("font_italic");
 	return 0;
 }

@@ -56,6 +56,8 @@ struct Character {
 	Color color = Color::rgba(255, 0, 0, 255);
 	unsigned row = 0;
 	unsigned col = 0;
+	bool bold = false;
+	bool italic = false;
 
 	Character(uint16_t index, Color color, unsigned row, unsigned col)
 		: index(index), color(color), row(row), col(col) {}
@@ -1290,10 +1292,12 @@ class Buffer {
 		}
 	}
 
-	static void change_line_color(Characters& characters, size_t& index, const Color& color) {
+	static void change_line_color(Characters& characters, size_t& index, const Color& color, bool bold = false, bool italic = false) {
 		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
 			if (characters[index].color == colors().text) {
 				characters[index].color = color;
+				characters[index].bold = bold;
+				characters[index].italic = italic;
 			}
 			index++;
 		}
@@ -1302,7 +1306,7 @@ class Buffer {
 	static void colorize_diff(Characters& characters) {
 		size_t index = 0;
 		while (index < characters.size()) {
-			if (test(characters, index, "---")) { change_line_color(characters, index, colors().diff_note); }
+			if (test(characters, index, "---")) { change_line_color(characters, index, colors().diff_note, true); }
 			else if (test(characters, index, "+")) { change_line_color(characters, index, colors().diff_add); }
 			else if (test(characters, index, "-")) { change_line_color(characters, index, colors().diff_remove); }
 			else { index++; }
@@ -1356,8 +1360,8 @@ class Buffer {
 		size_t index = 0;
 		while (index < characters.size()) {
 			if (characters[index].color != colors().text) { index++; }
-			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment); }
-			else if (is_cpp_quote(characters[index])) { characters[index].color = colors().cpp_quote; index++; }
+			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment, false); }
+			else if (is_cpp_quote(characters[index])) { characters[index].color = colors().cpp_quote; characters[index].bold = true; index++; }
 			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
 			else { index++; }
 		}

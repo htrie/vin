@@ -9,6 +9,7 @@
 #include <string>
 #include <chrono>
 #include <map>
+#include <ranges>
 #include <unordered_set>
 #include <fstream>
 #include <filesystem>
@@ -22,7 +23,10 @@
 #include "util.h"
 #include "win.h"
 #include "matrix.h"
-#include "font.h"
+#include "font_common.h"
+#include "font_regular.h"
+#include "font_bold.h"
+#include "font_italic.h"
 #include "config.h"
 #include "index.h"
 #include "text.h"

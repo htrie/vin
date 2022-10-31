@@ -5,14 +5,19 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
++use hash to color to colorize all words
 +instancing
---- 2022-10-31
+--- 2022-11-02
 +find past EOF
 +switcher past EOL
+--- 2022-11-01
+-use 28 font size and linear filtering: not great
++scan each character for word
++use bold to display keywords
++do not use file type for colorization
 --- 2022-10-31
 -use +/- to jump lines at whitespace
-+use hash to color to colorize all words
-+use bold to display keywords
+-add bold/italic
 --- 2022-10-30
 -make repo private
 --- 2022-10-29

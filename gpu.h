@@ -658,7 +658,7 @@ vk::UniqueSampler create_sampler(const vk::Device& device) {
 	return std::move(sampler_handle.value);
 }
 
-vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device) {
+vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device, unsigned font_width, unsigned font_height) {
 	vk::FormatProperties props;
 	gpu.getFormatProperties(vk::Format::eR8Unorm, &props);
 	verify((props.linearTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) == vk::FormatFeatureFlagBits::eSampledImage);
@@ -756,7 +756,7 @@ void bind_memory(const vk::Device& device, const vk::Buffer& buffer, const vk::D
 	verify(result == vk::Result::eSuccess);
 }
 
-void copy_image_data(const vk::Device& device, const vk::Image& image, const vk::DeviceMemory& image_memory) {
+void copy_image_data(const vk::Device& device, const vk::Image& image, const vk::DeviceMemory& image_memory, const uint8_t* image_pixels, size_t image_size, unsigned font_width) {
 	auto result = device.bindImageMemory(image, image_memory, 0);
 	verify(result == vk::Result::eSuccess);
 
@@ -770,7 +770,7 @@ void copy_image_data(const vk::Device& device, const vk::Image& image, const vk:
 	verify(layout.rowPitch == font_width);
 
 	void* image_ptr = map_memory(device, image_memory);
-	memcpy(image_ptr, font_pixels.data(), font_pixels.size());
+	memcpy(image_ptr, image_pixels, image_size);
 	unmap_memory(device, image_memory);
 }
 vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
@@ -978,12 +978,21 @@ class Device {
 	vk::UniqueDescriptorSetLayout desc_layout;
 	vk::UniquePipelineLayout pipeline_layout;
 	vk::UniquePipeline pipeline;
-	vk::UniqueDescriptorSet descriptor_set;
 
-    vk::UniqueImage image;
-    vk::UniqueDeviceMemory image_memory;
-    vk::UniqueImageView image_view;
     vk::UniqueSampler sampler;
+
+	struct Font {
+		vk::UniqueImage image;
+		vk::UniqueDeviceMemory image_memory;
+		vk::UniqueImageView image_view;
+		vk::UniqueDescriptorSet descriptor_set;
+		unsigned width = 0;
+		unsigned height = 0;
+		std::unordered_map<uint16_t, FontGlyph> glyphs;
+	};
+	Font font_regular;
+	Font font_bold;
+	Font font_italic;
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -1006,14 +1015,26 @@ class Device {
 	const float char_width = 7.0f; // Character spacing.
 	const float char_height = 15.0f; // Line spacing.
 
-	void upload_font_image(const vk::CommandBuffer& cmd_buf) {
-		image = create_image(gpu, device.get());
-		image_memory = create_image_memory(gpu, device.get(), image.get());
-		copy_image_data(device.get(), image.get(), image_memory.get());
+	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) {
+		Font font;
+		font.width = width;
+		font.height = height;
+		font.glyphs = glyphs;
+		font.image = create_image(gpu, device.get(), width, height);
+		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
+		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), image_pixels, image_size, width);
+		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
+		add_image_barrier(cmd_buf, font.image.get());
+		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
+		return font;
+	}
+
+	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
-		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
-		add_image_barrier(cmd_buf, image.get());
-		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), image_view.get());
+		font_regular = upload_font(cmd_buf, font_regular_pixels.data(), font_regular_pixels.size(), font_regular_width, font_regular_height, font_regular_glyphs);
+		font_bold = upload_font(cmd_buf, font_bold_pixels.data(), font_bold_pixels.size(), font_bold_width, font_bold_height, font_bold_glyphs);
+		font_italic = upload_font(cmd_buf, font_italic_pixels.data(), font_italic_pixels.size(), font_italic_width, font_italic_height, font_italic_glyphs);
 	}
 
 public:
@@ -1033,7 +1054,6 @@ public:
 		pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
 		render_pass = create_render_pass(device.get(), surface_format);
 		pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
-		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 
 		uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
 		uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
@@ -1087,31 +1107,33 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!image) upload_font_image(cmd);
+		if (!font_regular.image) upload_fonts(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear.rgba(), width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);
 
 		bind_pipeline(cmd, pipeline.get());
-		bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
 		for (auto& character : characters) {
-			if (auto found = font_glyphs.find(character.index); found != font_glyphs.end()) {
+			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
+			if (auto found = font.glyphs.find(character.index); found != font.glyphs.end()) {
 				const auto& glyph = found->second;
 
-				const float trans_x = character.col * char_width + glyph.x_off * font_width;
-				const float trans_y = character.row * char_height + glyph.y_off * font_height;
+				const float trans_x = character.col * char_width + glyph.x_off * font.width;
+				const float trans_y = character.row * char_height + glyph.y_off * font.height;
 
 				Constants constants;
 				constants.model = {
-					{ glyph.w * font_width, 0.0f, 0.0f, 0.0f },
-					{ 0.0f, glyph.h * font_height, 0.0f, 0.0f },
+					{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
+					{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
 					{ 0.0f, 0.0f, 1.0f, 0.0f },
 					{ trans_x, trans_y, 0.0f, 1.0f } };
 				constants.color = character.color.rgba();
 				constants.uv_origin = { glyph.x, glyph.y };
 				constants.uv_sizes = { glyph.w, glyph.h };
+
+				bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
 
 				push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 				draw(cmd, 6);
