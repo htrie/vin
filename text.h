@@ -44,6 +44,7 @@ constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
 constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
+constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
@@ -78,7 +79,7 @@ static inline const std::vector<std::vector<const char*>> cpp_keywords = {
 	{ "private", "protected", "public" },
 	{ },
 	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
-	{ "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
+	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
 	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
 	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
 	{ "virtual", "void", "volatile" },
@@ -265,6 +266,10 @@ public:
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
+
+	bool check_string(const std::string_view text, const std::string_view s) const {
+		return text.substr(start, s.size()) == s;
+	}
 };
 
 class State {
@@ -1313,9 +1318,14 @@ class Buffer {
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Word word(state().get_text(), index);
-		if (const bool is_keyword = word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
-		else if (const bool is_class = word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		const Line line(state().get_text(), index);
+		if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
+		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
+		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, true); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true, false); }
+		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
