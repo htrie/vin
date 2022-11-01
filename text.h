@@ -272,6 +272,28 @@ public:
 	}
 };
 
+class Comment {
+	size_t start = 0;
+	size_t finish = 0;
+
+public:
+	Comment(std::string_view text, size_t pos) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			const auto n = text.rfind("//", pos);
+			const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
+			const auto nn = text.find('\n', pos);
+			if (n != std::string::npos && pn < n) {
+				start = n;
+				finish = nn != std::string::npos ? nn : text.size() - 1;
+				verify(start <= finish);
+			}
+		}
+	}
+
+	bool valid() const { return start < finish; }
+};
+
 class State {
 	std::string text;
 	size_t cursor = 0;
@@ -1319,13 +1341,16 @@ class Buffer {
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Word word(state().get_text(), index);
 		const Line line(state().get_text(), index);
-		if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
+		const Comment comment(state().get_text(), index);
+		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		else if (comment.valid()) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, true); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, true); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true, false); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};

@@ -8,7 +8,6 @@
 +use hash to color to colorize all words
 +instancing
 --- 2022-11-02
-+colorize comments
 +find past EOF
 +switcher past EOL
 --- 2022-11-01
@@ -16,6 +15,7 @@
 -do not use file type for colorization
 -scan each character for word
 -use bold to display keywords
+-colorize comments
 --- 2022-10-31
 -use +/- to jump lines at whitespace
 -add bold/italic
