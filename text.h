@@ -1270,111 +1270,6 @@ class Buffer {
 		}
 	}
 
-	static bool test(const Characters& characters, size_t index, const std::string_view s) {
-		if (index + s.size() <= characters.size()) {
-			for (unsigned i = 0; i < s.size(); ++i) {
-				if (characters[index + i].index != s[i])
-					return false;
-			}
-			return true;
-		}
-		return false;
-	}
-
-	static void change_token_color(Characters& characters, size_t& index, size_t count, const Color& color) {
-		size_t offset = 0;
-		while (index < characters.size() && offset < count) {
-			if (characters[index].color == colors().text) {
-				characters[index].color = color;
-			}
-			index++;
-			offset++;
-		}
-	}
-
-	static void change_line_color(Characters& characters, size_t& index, const Color& color, bool bold = false, bool italic = false) {
-		while (index < characters.size() && characters[index].index != Glyph::RETURN) {
-			if (characters[index].color == colors().text) {
-				characters[index].color = color;
-				characters[index].bold = bold;
-				characters[index].italic = italic;
-			}
-			index++;
-		}
-	}
-
-	static void colorize_diff(Characters& characters) {
-		size_t index = 0;
-		while (index < characters.size()) {
-			if (test(characters, index, "---")) { change_line_color(characters, index, colors().diff_note, true); }
-			else if (test(characters, index, "+")) { change_line_color(characters, index, colors().diff_add); }
-			else if (test(characters, index, "-")) { change_line_color(characters, index, colors().diff_remove); }
-			else { index++; }
-		}
-	}
-
-	static bool is_cpp_quote(const Character& character) {
-		const uint16_t c = character.index;
-		return c == '\'' || c == '"';
-	}
-
-	static bool is_cpp_digit(const Character& character) {
-		const uint16_t c = character.index;
-		return c >= '0' && c <= '9';
-	}
-
-	static bool is_cpp_lowercase_letter(const Character& character) {
-		const uint16_t c = character.index;
-		return (c >= 'a' && c <= 'z');
-	}
-
-	static bool is_cpp_uppercase_letter(const Character& character) {
-		const uint16_t c = character.index;
-		return (c >= 'A' && c <= 'Z');
-	}
-
-	static bool is_cpp_whitespace(const Character& character) {
-		const uint16_t c = character.index;
-		return c == Glyph::RETURN || c == Glyph::TAB || c == ' ';
-	}
-
-	static bool is_cpp_punctuation(const Character& character) {
-		const uint16_t c = character.index;
-		return
-			c == '-' || c == '+' || c == '*' || c == '/' || c == '=' ||
-			c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
-			c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
-			c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
-	}
-
-	static bool test_cpp_comment(Characters& characters, size_t index) {
-		if (index + 1 < characters.size()) {
-			if (characters[index + 0].index == '/' &&
-				characters[index + 1].index == '/')
-				return true;
-		}
-		return false;
-	}
-
-	static void colorize_cpp(Characters& characters) {
-		size_t index = 0;
-		while (index < characters.size()) {
-			if (characters[index].color != colors().text) { index++; }
-			else if (test_cpp_comment(characters, index)) { change_line_color(characters, index, colors().cpp_comment, false); }
-			else if (is_cpp_quote(characters[index])) { characters[index].color = colors().cpp_quote; characters[index].bold = true; index++; }
-			else if (is_cpp_punctuation(characters[index])) { characters[index].color = colors().cpp_punctuation; index++; }
-			else { index++; }
-		}
-	}
-
-	void colorize(Characters& characters) const {
-		if (filename.ends_with("diff")) { colorize_diff(characters); }
-		else if (filename.ends_with("cpp")) { colorize_cpp(characters); }
-		else if (filename.ends_with("hpp")) { colorize_cpp(characters); }
-		else if (filename.ends_with("c")) { colorize_cpp(characters); }
-		else if (filename.ends_with("h")) { colorize_cpp(characters); }
-	}
-
 	void init(const std::string& text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
@@ -1418,7 +1313,6 @@ public:
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_text(characters, col_count, row_count);
-		colorize(characters);
 	}
 
 	State& state() { return stack.state(); }
