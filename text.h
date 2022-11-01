@@ -51,6 +51,48 @@ constexpr bool is_punctuation(char c) { return
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
 }
 
+static bool is_lowercase_letter(uint16_t c) {
+	return (c >= 'a' && c <= 'z');
+}
+
+static bool is_uppercase_letter(uint16_t c) {
+	return (c >= 'A' && c <= 'Z');
+}
+
+static inline const std::vector<std::vector<const char*>> cpp_keywords = {
+	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
+	{ "bitand", "bitor", "bool", "break" },
+	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
+	{ "decltype", "default", "delete", "do", "double", "dynamic_cast" },
+	{ "else", "enum", "explicit", "export", "extern" },
+	{ "false", "float", "for", "friend" },
+	{ "goto" },
+	{ },
+	{ "if", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
+	{ },
+	{ },
+	{ "long" },
+	{ "mutable", "namespace" },
+	{ "new", "noexcept", "not", "not_eq", "nullptr" },
+	{ "operator", "or", "or_eq" },
+	{ "private", "protected", "public" },
+	{ },
+	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
+	{ "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
+	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
+	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
+	{ "virtual", "void", "volatile" },
+	{ "wchar_t", "while" },
+	{ "xor", "xor_eq" },
+	{ },
+	{ }
+};
+
+static unsigned compute_letter_index(const uint16_t c) {
+	if (c >= 'a' && c <= 'z') return c - 'a';
+	return (unsigned)-1;
+}
+
 struct Character {
 	uint16_t index;
 	Color color = Color::rgba(255, 0, 0, 255);
@@ -59,8 +101,8 @@ struct Character {
 	bool bold = false;
 	bool italic = false;
 
-	Character(uint16_t index, Color color, unsigned row, unsigned col)
-		: index(index), color(color), row(row), col(col) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, bool italic = false)
+		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -68,6 +110,10 @@ typedef std::vector<Character> Characters;
 class Word {
 	size_t start = 0;
 	size_t finish = 0;
+
+	bool has_letter_or_number = false;
+	bool has_whitespace = false;
+	bool has_punctuation = false;
 
 	bool test_letter_or_number(std::string_view text, size_t pos) {
 		if (pos < text.size()) {
@@ -100,14 +146,17 @@ public:
 			if (is_number(c) || is_letter(c)) {
 				while(test_letter_or_number(text, finish + 1)) { finish++; }
 				while(test_letter_or_number(text, start - 1)) { start--; }
+				has_letter_or_number = true;
 			}
 			else if (is_whitespace(c)) {
 				while(test_whitespace(text, finish + 1)) { finish++; }
 				while(test_whitespace(text, start - 1)) { start--; }
+				has_whitespace = true;
 			}
 			else if (is_punctuation(c)) {
 				while(test_punctuation(text, finish + 1)) { finish++; }
 				while(test_punctuation(text, start - 1)) { start--; }
+				has_punctuation = true;
 			}
 			verify(start <= finish);
 		}
@@ -115,6 +164,26 @@ public:
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
+
+	bool check_letter_or_number() const { return has_letter_or_number; }
+	bool check_punctuation() const { return has_punctuation; }
+	bool check_whitespace() const { return has_whitespace; }
+
+	bool check_keyword(const std::string_view text) const {
+		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
+			const auto& keywords = cpp_keywords[letter_index];
+			const std::string_view word(text.substr(start, finish - start + 1));
+			for (const auto& keyword : keywords) {
+				if (word == keyword)
+					return true;
+			}
+		}
+		return false;
+	}
+
+	bool check_class(const std::string_view text) const {
+		return is_uppercase_letter(text[start]);
+	}
 };
 
 class Enclosure {
@@ -1242,8 +1311,13 @@ class Buffer {
 		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool block_cursor) const {
-		characters.emplace_back((uint16_t)c, block_cursor && get_mode() == Mode::normal ? colors().text_cursor : colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
+		const Word word(state().get_text(), index);
+		if (const bool is_keyword = word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+		else if (const bool is_class = word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1262,7 +1336,7 @@ class Buffer {
 				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 				else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 				else if (c == ' ') { push_space(characters, row, col); col++; }
-				else { push_char(characters, row, col, c, index == state().get_cursor()); col++; }
+				else { push_char(characters, row, col, c, index); col++; }
 			} else {
 				if (c == '\n') { absolute_row++; }
 			}

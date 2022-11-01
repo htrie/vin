@@ -13,10 +13,12 @@ struct Colors {
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
-	Color cpp_comment = Color::rgba(255, 255, 0, 255);
-	Color cpp_punctuation = Color::rgba(127, 219, 202, 255);
-	Color cpp_quote = Color::rgba(247, 140, 108, 255);
-	Color cpp_string = Color::rgba(247, 140, 108, 255);
+	Color comment = Color::rgba(255, 255, 0, 255);
+	Color punctuation = Color::rgba(127, 219, 202, 255);
+	Color keyword = Color::rgba(199, 146, 234, 255);
+	Color clas = Color::rgba(199, 146, 134, 255);
+	Color quote = Color::rgba(247, 140, 108, 255);
+	Color string = Color::rgba(247, 140, 108, 255);
 };
 
 const Colors colors() {

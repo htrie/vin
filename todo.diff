@@ -12,9 +12,9 @@
 +switcher past EOL
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
+-do not use file type for colorization
 +scan each character for word
 +use bold to display keywords
-+do not use file type for colorization
 --- 2022-10-31
 -use +/- to jump lines at whitespace
 -add bold/italic
