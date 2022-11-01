@@ -64,8 +64,8 @@ static inline const std::vector<std::vector<const char*>> cpp_keywords = {
 	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
 	{ "bitand", "bitor", "bool", "break" },
 	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
-	{ "decltype", "default", "delete", "do", "double", "dynamic_cast" },
-	{ "else", "enum", "explicit", "export", "extern" },
+	{ "decltype", "default", "define", "delete", "do", "double", "dynamic_cast" },
+	{ "else", "endif", "enum", "explicit", "export", "extern" },
 	{ "false", "float", "for", "friend" },
 	{ "goto" },
 	{ },
@@ -76,7 +76,7 @@ static inline const std::vector<std::vector<const char*>> cpp_keywords = {
 	{ "mutable", "namespace" },
 	{ "new", "noexcept", "not", "not_eq", "nullptr" },
 	{ "operator", "or", "or_eq" },
-	{ "private", "protected", "public" },
+	{ "pragma", "private", "protected", "public" },
 	{ },
 	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
 	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
@@ -1350,7 +1350,7 @@ class Buffer {
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, true); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true, false); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
