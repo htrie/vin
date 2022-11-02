@@ -3,7 +3,6 @@
 +git support
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
-+use hash to color to colorize all words
 +instancing
 --- 2022-11-03
 +word under cursor find (<space>+f)
@@ -12,6 +11,7 @@
 -switcher past EOL
 -percentage indicator
 -sleep
+-use hash to color to colorize all words
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
 -do not use file type for colorization

@@ -46,10 +46,10 @@ constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_punctuation(char c) { return 
-	c == '-' || c == '+' || c == '*' || c == '/' ||
+	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
-	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~';
+	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' || c == '?';
 }
 
 static bool is_lowercase_letter(uint16_t c) {
@@ -73,8 +73,8 @@ static inline const std::vector<std::vector<const char*>> cpp_keywords = {
 	{ },
 	{ },
 	{ "long" },
-	{ "mutable", "namespace" },
-	{ "new", "noexcept", "not", "not_eq", "nullptr" },
+	{ "mutable" },
+	{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
 	{ "operator", "or", "or_eq" },
 	{ "pragma", "private", "protected", "public" },
 	{ },
@@ -184,6 +184,34 @@ public:
 
 	bool check_class(const std::string_view text) const {
 		return is_uppercase_letter(text[start]);
+	}
+
+	float generate_channel(const std::string_view text, unsigned offset) const {
+		const size_t len = finish - start;
+		if (len < offset) return 0.0f;
+		const char c = text[start + offset];
+		if (c == '_') return 1.0f;
+		if (!is_letter(c)) return 1.0f;
+		const unsigned a = std::tolower(c);
+		return (float)(a - 'a') / 26.0f; 
+	}
+
+	static unsigned constrain_channel(float a, float b) {
+		return std::min(255u, unsigned(64.0f + a * (240.0f - 64.0f) + b * 32.0f));
+	}
+
+	Color generate_color(const std::string_view text) const {
+		const auto r = generate_channel(text, 0);
+		const auto g = generate_channel(text, 1);
+		const auto b = generate_channel(text, 2);
+		const auto i = generate_channel(text, 4);
+		const auto j = generate_channel(text, 5);
+		const auto k = generate_channel(text, 6);
+		return Color::rgba(
+			constrain_channel(r, i),
+			constrain_channel(g, j),
+			constrain_channel(b, k),
+			255);
 	}
 };
 
@@ -1352,7 +1380,7 @@ class Buffer {
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
+		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
