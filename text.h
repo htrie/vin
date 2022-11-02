@@ -1439,6 +1439,10 @@ public:
 		return s;
 	}
 
+	size_t location_percentage() const {
+		return 1 + state().get_cursor() * 100 / state().get_text().size();
+	}
+
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }
 };
