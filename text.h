@@ -1547,6 +1547,9 @@ class Switcher {
 				if (auto prev = --found; prev != buffers.end()) {
 					active = buffers.at((*prev).first).get_filename();
 				}
+				else {
+					active = buffers.at((*buffers.rbegin()).first).get_filename();
+				}
 			} else {
 				active.clear();
 			}
@@ -1562,6 +1565,9 @@ class Switcher {
 			if (auto found = buffers.find(active); found != buffers.end()) {
 				if (auto next = ++found; next != buffers.end()) {
 					active = buffers.at((*next).first).get_filename();
+				}
+				else {
+					active = buffers.at((*buffers.begin()).first).get_filename();
 				}
 			} else {
 				active.clear();

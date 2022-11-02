@@ -9,7 +9,7 @@
 +instancing
 --- 2022-11-02
 -find past EOF
-+switcher past EOL
+-switcher past EOL
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
 -do not use file type for colorization
