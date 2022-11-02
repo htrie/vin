@@ -1,5 +1,3 @@
-+symbols index
-+symbol find (<space>+f)
 +fuzzy search
 +build support
 +git support
@@ -7,10 +5,14 @@
 +system clipboard (<space>+c/v)
 +use hash to color to colorize all words
 +instancing
+--- 2022-11-03
++symbols index
++symbol find (<space>+f)
 --- 2022-11-02
 -find past EOF
 -switcher past EOL
 -percentage indicator
+-sleep
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
 -do not use file type for colorization

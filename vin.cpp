@@ -69,8 +69,10 @@ class App {
 			std::to_string(switcher.current().location_percentage()) + "%  " +
 			std::string(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + "  " +
-			switcher.current().get_record() + "  " +
-			"proc " + process_duration + ", cull " + cull_duration + ", draw " + redraw_duration + "  " + 
+			switcher.current().get_record() + " " +
+			" proc " + process_duration + 
+			" cull " + cull_duration + 
+			" draw " + redraw_duration + "  " + 
 			notification;
 	}
 
@@ -100,13 +102,16 @@ class App {
 			const Timer timer;
 			characters = cull();
 			cull_duration = timer.us();
-		}
 
-		if (!minimized) {
-			const Timer timer;
-			device.redraw(characters);
-			SetWindowTextA(device.get_hwnd(), status().data());
-			redraw_duration = timer.us();
+			if (!minimized) {
+				const Timer timer;
+				device.redraw(characters);
+				SetWindowTextA(device.get_hwnd(), status().data());
+				redraw_duration = timer.us();
+			}
+		}
+		else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
 
@@ -180,6 +185,7 @@ class App {
 			break;
 		}
 		case WM_MOVE:
+		case WM_SETREDRAW:
 		case WM_SETFOCUS: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
