@@ -374,23 +374,23 @@ public:
 	void word_find(const std::string_view s) {
 		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && (cursor + 1 < text.size())) {
-				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) {
-					cursor = pos;
-				}
+				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
+		else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
 	}
 
 	void word_rfind(const std::string_view s) {
 		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && cursor > 0) {
-				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) {
-					cursor = pos;
-				}
+				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
+		else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
 	}
 
 	void next_char() {

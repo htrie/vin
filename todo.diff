@@ -8,7 +8,7 @@
 +use hash to color to colorize all words
 +instancing
 --- 2022-11-02
-+find past EOF
+-find past EOF
 +switcher past EOL
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
