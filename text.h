@@ -201,17 +201,27 @@ public:
 	}
 
 	Color generate_color(const std::string_view text) const {
-		const auto r = generate_channel(text, 0);
-		const auto g = generate_channel(text, 1);
-		const auto b = generate_channel(text, 2);
+		const auto x = generate_channel(text, 0);
+		const auto y = generate_channel(text, 1);
+		const auto z = generate_channel(text, 2);
 		const auto i = generate_channel(text, 4);
 		const auto j = generate_channel(text, 5);
 		const auto k = generate_channel(text, 6);
+		auto r = constrain_channel(x, i);
+		auto g = constrain_channel(y, j);
+		auto b = constrain_channel(z, k);
+		const unsigned min = 128 * 3;
+		if (const auto sum = r + g + b; sum < min) {
+			const auto add = (min - sum) / 3;
+			r += add;
+			g += add;
+			b += add;
+		}
 		return Color::rgba(
-			constrain_channel(r, i),
-			constrain_channel(g, j),
-			constrain_channel(b, k),
-			255);
+			std::min(255u, r),
+			std::min(255u, g),
+			std::min(255u, b),
+			255u);
 	}
 };
 
