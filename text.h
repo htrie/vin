@@ -197,7 +197,7 @@ public:
 	}
 
 	static unsigned constrain_channel(float a, float b) {
-		return std::min(255u, unsigned(64.0f + a * (240.0f - 64.0f) + b * 32.0f));
+		return std::min(255u, unsigned(70.0f + a * 160.0f + b * 25.0f));
 	}
 
 	Color generate_color(const std::string_view text) const {
@@ -1376,7 +1376,7 @@ class Buffer {
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, true); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true, false); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col, true, false); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
