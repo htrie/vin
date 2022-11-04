@@ -4,14 +4,17 @@
 +location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 +instancing
---- 2022-11-03
+--- 2022-11-05
 +word under cursor find (<space>+f)
+--- 2022-11-04
+-use scale for color rebalancing
+--- 2022-11-03
+-use hash to color to colorize all words
 --- 2022-11-02
 -find past EOF
 -switcher past EOL
 -percentage indicator
 -sleep
--use hash to color to colorize all words
 --- 2022-11-01
 -use 28 font size and linear filtering: not great
 -do not use file type for colorization
