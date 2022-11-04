@@ -1,11 +1,14 @@
 +fuzzy search
 +build support
 +git support
-+location list (<space>+h/l)
 +system clipboard (<space>+c/v)
 +instancing
+--- 2022-11-06
++symbol findex (<space>+f)
++word under cursor find
 --- 2022-11-05
-+word under cursor find (<space>+f)
++location list (<space>+h/l)
++edit list (<space>+y/p)
 --- 2022-11-04
 -use scale for color rebalancing
 --- 2022-11-03
