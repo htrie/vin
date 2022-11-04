@@ -212,10 +212,10 @@ public:
 		auto b = constrain_channel(z, k);
 		const unsigned min = 128 * 3;
 		if (const auto sum = r + g + b; sum < min) {
-			const auto add = (min - sum) / 3;
-			r += add;
-			g += add;
-			b += add;
+			const float mul = (float)min / (float)sum;
+			r = unsigned((float)r * mul);
+			g = unsigned((float)g * mul);
+			b = unsigned((float)b * mul);
 		}
 		return Color::rgba(
 			std::min(255u, r),
