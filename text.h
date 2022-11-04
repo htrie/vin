@@ -40,6 +40,25 @@ enum Glyph {
 	SPACESIGN = 8228,
 };
 
+Vec3 hsv_to_rgb(float H, float S, float V) {
+  const float C = V * S; // Chroma
+  const float HPrime = std::fmod(H / 60.0f, 6.0f);
+  const float X = C * (1.0f - std::fabs(std::fmod(HPrime, 2.0f) - 1.0f));
+  const float M = V - C;
+  
+  float R, G, B;
+  if(0.0f <= HPrime && HPrime < 1.0f) { R = C; G = X; B = 0.0f; } 
+  else if(1.0f <= HPrime && HPrime < 2.0f) { R = X; G = C; B = 0.0f; } 
+  else if(2.0f <= HPrime && HPrime < 3.0f) { R = 0.0f; G = C; B = X; } 
+  else if(3.0f <= HPrime && HPrime < 4.0f) { R = 0.0f; G = X; B = C; } 
+  else if(4.0f <= HPrime && HPrime < 5.0f) { R = X; G = 0.0f; B = C; } 
+  else if(5.0f <= HPrime && HPrime < 6.0f) { R = C; G = 0.0f; B = X; } 
+  else { R = 0.0f; G = 0.0f; B = 0.0f; }
+  
+  R += M; G += M; B += M;
+  return Vec3(R, G, B);
+}
+
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
 constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
@@ -196,31 +215,21 @@ public:
 		return (float)(a - 'a') / 26.0f; 
 	}
 
-	static unsigned constrain_channel(float a, float b) {
-		return std::min(255u, unsigned(70.0f + a * 160.0f + b * 25.0f));
-	}
-
-	Color generate_color(const std::string_view text) const {
+	Color generate_color(const std::string_view text, float h_start, float h_range, float h_adjust, float s, float v) const {
 		const auto x = generate_channel(text, 0);
 		const auto y = generate_channel(text, 1);
 		const auto z = generate_channel(text, 2);
 		const auto i = generate_channel(text, 4);
 		const auto j = generate_channel(text, 5);
 		const auto k = generate_channel(text, 6);
-		auto r = constrain_channel(x, i);
-		auto g = constrain_channel(y, j);
-		auto b = constrain_channel(z, k);
-		const unsigned min = 128 * 3;
-		if (const auto sum = r + g + b; sum < min) {
-			const float mul = (float)min / (float)sum;
-			r = unsigned((float)r * mul);
-			g = unsigned((float)g * mul);
-			b = unsigned((float)b * mul);
-		}
+		const auto rand0 = (x * 1000.0f + y * 100.0f + z * 10.0f) / 1000.0f;
+		const auto rand1 = (i * 1000.0f + j * 100.0f + k * 10.0f) / 1000.0f;
+		const auto h = std::fmod(h_start + rand0 * h_range + rand1 * h_adjust, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
+		const auto rgb = hsv_to_rgb(h, s, v);
 		return Color::rgba(
-			std::min(255u, r),
-			std::min(255u, g),
-			std::min(255u, b),
+			unsigned(rgb.x * 255.0f),
+			unsigned(rgb.y * 255.0f),
+			unsigned(rgb.z * 255.0f),
 			255u);
 	}
 };
@@ -976,6 +985,12 @@ class Buffer {
 
 	bool needs_save = false;
 
+	float hue_start = 0.0f;
+	float hue_range = 200.0f;
+	float hue_adjust = 10.0f;
+	float saturation = 0.40f;
+	float brightness = 0.85f;
+
 	void begin_record(unsigned key) {
 		temp_record.clear();
 		temp_record.push_back(key);
@@ -1386,11 +1401,11 @@ class Buffer {
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, true); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col, true, false); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hue_start, hue_range, hue_adjust, saturation, brightness), row, col, true, false); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
+		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hue_start, hue_range, hue_adjust, saturation, brightness), row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1483,6 +1498,21 @@ public:
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }
+
+	std::string increase_hue_start() { hue_start = std::clamp(hue_start + 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
+	std::string decrease_hue_start() { hue_start = std::clamp(hue_start - 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
+
+	std::string increase_hue_range() { hue_range = std::clamp(hue_range + 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
+	std::string decrease_hue_range() { hue_range = std::clamp(hue_range - 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
+
+	std::string increase_hue_adjust() { hue_adjust = std::clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
+	std::string decrease_hue_adjust() { hue_adjust = std::clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
+
+	std::string increase_saturation() { saturation = std::clamp(saturation + 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
+	std::string decrease_saturation() { saturation = std::clamp(saturation - 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
+
+	std::string increase_brightness() { brightness = std::clamp(brightness + 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
+	std::string decrease_brightness() { brightness = std::clamp(brightness - 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
 };
 
 class Picker {

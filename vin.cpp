@@ -127,6 +127,16 @@ class App {
 		else if (key == 'k') { menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
+		else if (key == '1') { notify(switcher.current().decrease_hue_start()); }
+		else if (key == '2') { notify(switcher.current().increase_hue_start()); }
+		else if (key == '3') { notify(switcher.current().decrease_hue_range()); }
+		else if (key == '4') { notify(switcher.current().increase_hue_range()); }
+		else if (key == '5') { notify(switcher.current().decrease_hue_adjust()); }
+		else if (key == '6') { notify(switcher.current().increase_hue_adjust()); }
+		else if (key == '7') { notify(switcher.current().decrease_saturation()); }
+		else if (key == '8') { notify(switcher.current().increase_saturation()); }
+		else if (key == '9') { notify(switcher.current().decrease_brightness()); }
+		else if (key == '0') { notify(switcher.current().increase_brightness()); }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
