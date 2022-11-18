@@ -7,12 +7,13 @@
 +symbol findex (<space>+f)
 +word under cursor find
 +location list (<space>+h/l)
-+edit list (<space>+y/p
-+make space+i/o go past EOF)
++edit list (<space>+y/p)
+--- 2022-11-19
++finder
 --- 2022-11-18
 -populate picker every time
 -make <space>+j/k go down/up directly
-+finder
+-adjust saturation: 0.3 better
 --- 2022-11-05
 -use HSV to RGB
 -rename variables
