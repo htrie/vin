@@ -988,7 +988,7 @@ class Buffer {
 	float hue_start = 0.0f;
 	float hue_range = 200.0f;
 	float hue_adjust = 10.0f;
-	float saturation = 0.40f;
+	float saturation = 0.30f;
 	float brightness = 0.85f;
 
 	void begin_record(unsigned key) {
