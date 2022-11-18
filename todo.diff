@@ -2,14 +2,15 @@
 +fuzzy search
 +build support
 +git support
++hex editor
++static http browser
 +system clipboard (<space>+c/v)
-+instancing
 +symbol findex (<space>+f)
-+word under cursor find
 +location list (<space>+h/l)
 +edit list (<space>+y/p)
 --- 2022-11-19
 +finder
++word under cursor find (<space>+d?)
 --- 2022-11-18
 -populate picker every time
 -make <space>+j/k go down/up directly
