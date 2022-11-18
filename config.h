@@ -10,7 +10,7 @@ struct Colors {
 	Color text = Color::rgba(200, 200, 200, 255);
 	Color text_cursor = Color::rgba(5, 5, 5, 255);
 	Color line_number = Color::rgba(75, 100, 121, 255);
-	Color highlight = Color::rgba(255, 0, 255, 255);
+	Color highlight = Color::rgba(192, 0, 192, 255);
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);
 	Color diff_remove = Color::rgba(192, 0, 0, 255);
