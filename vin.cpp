@@ -83,7 +83,7 @@ class App {
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
-		case Menu::picker: picker.cull(characters, viewport.w, viewport.h, index.is_populating()); break;
+		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
 		case Menu::switcher: switcher.current().cull(characters, viewport.w, viewport.h); switcher.cull(characters, viewport.w, viewport.h); break;
 		}
 		return characters;
@@ -144,8 +144,8 @@ class App {
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); index.wait(); picker.reset(); menu = Menu::normal; }
-		else if (key == Glyph::ESC) { index.wait(); picker.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); picker.reset(); menu = Menu::normal; }
+		else if (key == Glyph::ESC) { picker.reset(); menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); picker.filter(index, row_count); }
 	}
 

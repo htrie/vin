@@ -1580,13 +1580,12 @@ public:
 		else { pattern += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count, bool is_populating) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
 		push_string(characters, row, col, "open: ");
 		push_string(characters, row, col, pattern);
 		push_cursor(characters, row, col);
-		push_string(characters, row, col, is_populating ? " ..." : "");
 		row++;
 
 		unsigned displayed = 0;
