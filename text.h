@@ -1749,7 +1749,14 @@ public:
 };
 
 class Finder {
+
 public:
+	void reset() {
+	}
+
+	void filter(Database& database, unsigned row_count) {
+	}
+
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 	}
 
