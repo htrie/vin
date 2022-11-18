@@ -9,7 +9,7 @@
 +location list (<space>+h/l)
 +edit list (<space>+y/p
 +make space+i/o go past EOF)
---- 2022-11-??
+--- 2022-11-18
 -populate picker every time
 -make <space>+j/k go down/up directly
 +finder
