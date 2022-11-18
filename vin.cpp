@@ -123,8 +123,8 @@ class App {
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
-		else if (key == 'j') { menu = Menu::switcher; }
-		else if (key == 'k') { menu = Menu::switcher; }
+		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
+		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
 		else if (key == '1') { notify(switcher.current().decrease_hue_start()); }

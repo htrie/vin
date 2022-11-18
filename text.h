@@ -1613,44 +1613,6 @@ class Switcher {
 		return longest;
 	}
 
-	void select_previous() {
-		if (!active.empty()) {
-			if (auto found = buffers.find(active); found != buffers.end()) {
-				if (auto prev = --found; prev != buffers.end()) {
-					active = buffers.at((*prev).first).get_filename();
-				}
-				else {
-					active = buffers.at((*buffers.rbegin()).first).get_filename();
-				}
-			} else {
-				active.clear();
-			}
-		} else {
-			if (auto found = buffers.begin(); found != buffers.end()) {
-				active = buffers.at((*found).first).get_filename();
-			}
-		}
-	}
-
-	void select_next() {
-		if (!active.empty()) {
-			if (auto found = buffers.find(active); found != buffers.end()) {
-				if (auto next = ++found; next != buffers.end()) {
-					active = buffers.at((*next).first).get_filename();
-				}
-				else {
-					active = buffers.at((*buffers.begin()).first).get_filename();
-				}
-			} else {
-				active.clear();
-			}
-		} else {
-			if (auto found = buffers.begin(); found != buffers.end()) {
-				active = buffers.at((*found).first).get_filename();
-			}
-		}
-	}
-
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
 		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
@@ -1718,6 +1680,44 @@ public:
 		if (!active.empty())
 			return buffers[active];
 		return empty_buffer;
+	}
+
+	void select_previous() {
+		if (!active.empty()) {
+			if (auto found = buffers.find(active); found != buffers.end()) {
+				if (auto prev = --found; prev != buffers.end()) {
+					active = buffers.at((*prev).first).get_filename();
+				}
+				else {
+					active = buffers.at((*buffers.rbegin()).first).get_filename();
+				}
+			} else {
+				active.clear();
+			}
+		} else {
+			if (auto found = buffers.begin(); found != buffers.end()) {
+				active = buffers.at((*found).first).get_filename();
+			}
+		}
+	}
+
+	void select_next() {
+		if (!active.empty()) {
+			if (auto found = buffers.find(active); found != buffers.end()) {
+				if (auto next = ++found; next != buffers.end()) {
+					active = buffers.at((*next).first).get_filename();
+				}
+				else {
+					active = buffers.at((*buffers.begin()).first).get_filename();
+				}
+			} else {
+				active.clear();
+			}
+		} else {
+			if (auto found = buffers.begin(); found != buffers.end()) {
+				active = buffers.at((*found).first).get_filename();
+			}
+		}
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {

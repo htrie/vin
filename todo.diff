@@ -11,7 +11,7 @@
 +make space+i/o go past EOF)
 --- 2022-11-??
 -populate picker every time
-+make <space>+j/k go down/up directly
+-make <space>+j/k go down/up directly
 +finder
 --- 2022-11-05
 -use HSV to RGB
