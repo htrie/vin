@@ -37,6 +37,7 @@ enum class Menu {
 	normal,
 	picker,
 	switcher,
+	finder,
 };
 
 class App {
@@ -44,6 +45,7 @@ class App {
 	Index index;
 	Picker picker;
 	Switcher switcher;
+	Finder finder;
 
 	Menu menu = Menu::normal;
 
@@ -85,6 +87,7 @@ class App {
 		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
 		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
 		case Menu::switcher: switcher.current().cull(characters, viewport.w, viewport.h); switcher.cull(characters, viewport.w, viewport.h); break;
+		case Menu::finder: finder.cull(characters, viewport.w, viewport.h); break;
 		}
 		return characters;
 	}
@@ -119,6 +122,7 @@ class App {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'e') { index.populate(); picker.filter(index, row_count); menu = Menu::picker; }
+		else if (key == 'f') { menu = Menu::finder; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
@@ -153,6 +157,12 @@ class App {
 		 switcher.process(key, col_count, row_count);
 	}
 
+	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { menu = Menu::normal; }
+		else if (key == Glyph::ESC) { menu = Menu::normal; }
+		else { finder.process(key, col_count, row_count); }
+	}
+
 	void process(unsigned key) {
 		const Timer timer;
 		const auto viewport = device.viewport();
@@ -161,6 +171,7 @@ class App {
 		case Menu::normal: process_normal(key, viewport.w, viewport.h); break;
 		case Menu::picker: process_picker(key, viewport.w, viewport.h); break;
 		case Menu::switcher: process_switcher(key, viewport.w, viewport.h); break;
+		case Menu::finder: process_finder(key, viewport.w, viewport.h); break;
 		}
 		switcher.current().state().cursor_clamp(viewport.h);
 		process_duration = timer.us();
@@ -173,6 +184,7 @@ class App {
 		case Menu::normal: if (space_down && switcher.current().is_normal()) { menu = Menu::space; } break;
 		case Menu::picker: break;
 		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
+		case Menu::finder: break;
 		}
 		dirty = true;
 	}

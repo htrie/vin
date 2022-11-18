@@ -1748,3 +1748,12 @@ public:
 	}
 };
 
+class Finder {
+public:
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	}
+
+	void process(unsigned key, unsigned col_count, unsigned row_count) {
+	}
+};
+
