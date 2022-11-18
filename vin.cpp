@@ -118,7 +118,7 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
-		else if (key == 'e') { picker.filter(index, row_count); menu = Menu::picker; }
+		else if (key == 'e') { index.populate(); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }

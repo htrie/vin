@@ -1,22 +1,24 @@
-+html static browser
++undo/redo in respect to time using undo and redo stacks
 +fuzzy search
 +build support
 +git support
 +system clipboard (<space>+c/v)
 +instancing
---- 2022-11-07
 +symbol findex (<space>+f)
 +word under cursor find
---- 2022-11-06
 +location list (<space>+h/l)
-+edit list (<space>+y/p)
++edit list (<space>+y/p
++make space+i/o go past EOF)
+--- 2022-11-??
+-populate picker every time
++make <space>+j/k go down/up directly
++finder
 --- 2022-11-05
 -use HSV to RGB
 -rename variables
 -use Vec3
 -avoid greens and blues
 -better rand generation
-+make space+i/o go past EOF
 --- 2022-11-04
 -use scale for color rebalancing
 --- 2022-11-03

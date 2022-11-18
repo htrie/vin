@@ -38,6 +38,7 @@ class Index {
 		}
 	}
 
+public:
 	void populate() {
 		paths.clear();
 		populating = true;
@@ -45,11 +46,6 @@ class Index {
 			populate_directory(".");
 			populating = false;
 		});
-	}
-
-public:
-	Index() {
-		populate();
 	}
 
 	void wait() {
