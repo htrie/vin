@@ -1,8 +1,7 @@
-+git
++git diff/add/commit
 +hex editor
 +static http browser
-+system clipboard (<space>+c/v)
-+word under cursor find (<space>+d?)
++word under cursor find (<space>+d)
 --- 2022-11-20
 +symbol find (<space>+f)
 --- 2022-11-19
