@@ -986,9 +986,9 @@ class Buffer {
 	bool needs_save = false;
 
 	float hue_start = 0.0f;
-	float hue_range = 200.0f;
+	float hue_range = 260.0f;
 	float hue_adjust = 10.0f;
-	float saturation = 0.30f;
+	float saturation = 0.50f;
 	float brightness = 0.85f;
 
 	void begin_record(unsigned key) {
@@ -1397,7 +1397,7 @@ class Buffer {
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid()) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
-		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, true); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, false); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, false); }

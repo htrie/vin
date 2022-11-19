@@ -6,10 +6,11 @@
 +location list (<space>+h/l)
 +edit list (<space>+y/p)
 +word under cursor find (<space>+d?)
+--- 2022-11-20
++symbol find (<space>+f)
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)
-+symbol find (<space>+f)
 --- 2022-11-18
 -populate picker every time
 -make <space>+j/k go down/up directly
