@@ -126,8 +126,8 @@ class App {
 		else if (key == 'f') { database.populate(); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'a') { }
-		else if (key == 'c') { }
+		else if (key == 'a') { std::system("run.bat"); }
+		else if (key == 'c') { std::system("build.bat"); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
