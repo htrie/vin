@@ -1,16 +1,14 @@
-+undo/redo in respect to time using undo and redo stacks
 +git
 +hex editor
 +static http browser
 +system clipboard (<space>+c/v)
-+location list (<space>+h/l)
-+edit list (<space>+y/p)
 +word under cursor find (<space>+d?)
 --- 2022-11-20
 +symbol find (<space>+f)
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)
+-use ' to go back to last location
 --- 2022-11-18
 -populate picker every time
 -make <space>+j/k go down/up directly

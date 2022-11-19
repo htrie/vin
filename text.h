@@ -979,17 +979,30 @@ class Buffer {
 	unsigned accu = 0;
 
 	unsigned f_key = 0;
+	size_t cursor = 0;
 
 	bool char_forward = false;
 	bool word_forward = false;
 
 	bool needs_save = false;
 
+	size_t last_cursor = 0;
+
 	float hue_start = 0.0f;
 	float hue_range = 260.0f;
 	float hue_adjust = 10.0f;
 	float saturation = 0.50f;
 	float brightness = 0.85f;
+
+	void save_cursor() {
+		last_cursor = state().get_cursor();
+	}
+
+	void load_cursor() {
+		const auto cursor = state().get_cursor();
+		state().set_cursor(last_cursor);
+		last_cursor = cursor;
+	}
 
 	void begin_record(unsigned key) {
 		temp_record.clear();
@@ -1165,29 +1178,30 @@ class Buffer {
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
 		else if (key == 'e') { state().word_end(); }
-		else if (key == 'g') { state().buffer_start(); }
-		else if (key == 'G') { state().buffer_end(); }
-		else if (key == 'H') { state().window_top(row_count); }
-		else if (key == 'M') { state().window_center(row_count); }
-		else if (key == 'L') { state().window_bottom(row_count); }
-		else if (key == '+') { state().next_line(); state().line_start_whitespace(); }
-		else if (key == '-') { state().prev_line(); state().line_start_whitespace(); }
+		else if (key == 'g') { save_cursor(); state().buffer_start(); }
+		else if (key == 'G') { save_cursor(); state().buffer_end(); }
+		else if (key == 'H') { save_cursor(); state().window_top(row_count); }
+		else if (key == 'M') { save_cursor(); state().window_center(row_count); }
+		else if (key == 'L') { save_cursor(); state().window_bottom(row_count); }
+		else if (key == '+') { save_cursor(); state().next_line(); state().line_start_whitespace(); }
+		else if (key == '-') { save_cursor(); state().prev_line(); state().line_start_whitespace(); }
 		else if (key == ';') { line_find(); }
 		else if (key == ',') { line_rfind(); }
-		else if (key == '*') { word_find_under_cursor(row_count); }
-		else if (key == '#') { word_rfind_under_cursor(row_count); }
+		else if (key == '*') { save_cursor(); word_find_under_cursor(row_count); }
+		else if (key == '#') { save_cursor(); word_rfind_under_cursor(row_count); }
 		else if (key == '/') { highlight.clear(); mode = Mode::normal_slash; }
 		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
 		else if (key == 'n') { word_find_again(row_count); }
 		else if (key == 'N') { word_rfind_again(row_count); }
 		else if (key == '.') { repeat = true; }
+		else if (key == '\'') { load_cursor(); }
 	}
 
 	void process_normal_number(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'j') { state().jump_down(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { state().jump_up(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { save_cursor(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { save_cursor(); state().jump_up(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { save_cursor(); state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
