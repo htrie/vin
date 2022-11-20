@@ -1,6 +1,9 @@
 +word under cursor find (<space>+d)
 +symbol find (<space>+f)
-+symbol database
+--- 2022-11-20
+-symbol database
+-jump to location
++better display filtered
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)

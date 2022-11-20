@@ -161,7 +161,7 @@ class App {
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(finder.selection().first)); finder.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position()); finder.reset(); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { menu = Menu::normal; }
 		else { finder.process(key, col_count, row_count); finder.filter(database, row_count); }
 	}

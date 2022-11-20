@@ -1485,6 +1485,8 @@ public:
 		push_text(characters, col_count, row_count);
 	}
 
+	void jump(size_t position) { state().set_cursor(position); } 
+
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
 
@@ -1572,7 +1574,7 @@ public:
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	std::string selection() {
+	std::string selection() const {
 		if (selected < filtered.size())
 			return filtered[selected];
 		return {};
@@ -1814,10 +1816,16 @@ public:
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	std::pair<std::string, size_t> selection() {
+	std::string selection() const {
 		if (selected < filtered.size())
-			return { filtered[selected].filename, filtered[selected].position };
-		return { "", 0 };
+			return filtered[selected].filename;
+		return {};
+	}
+
+	size_t position() const {
+		if (selected < filtered.size())
+			return filtered[selected].position;
+		return 0;
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
