@@ -1,9 +1,6 @@
-+git diff/add/commit
-+hex editor
-+static http browser
 +word under cursor find (<space>+d)
---- 2022-11-20
 +symbol find (<space>+f)
++symbol database
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)
