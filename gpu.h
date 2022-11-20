@@ -228,7 +228,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 	char const* extension_names[64];
 
 	uint32_t device_extension_count = 0;
-	vk::Bool32 swapchainExtFound = VK_FALSE;
+	bool swapchain_ext_found = false;
 	enabled_extension_count = 0;
 	memset(extension_names, 0, sizeof(extension_names));
 
@@ -242,7 +242,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 
 		for (uint32_t i = 0; i < device_extension_count; i++) {
 			if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
-				swapchainExtFound = 1;
+				swapchain_ext_found = true;
 				extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
 			}
 			if (!strcmp("VK_KHR_portability_subset", device_extensions[i].extensionName)) {
@@ -252,7 +252,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 		}
 	}
 
-	if (!swapchainExtFound) {
+	if (!swapchain_ext_found) {
 		error("vkEnumerateDeviceExtensionProperties failed to find the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			" extension.\n\n"
 			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
