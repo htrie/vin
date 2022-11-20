@@ -61,6 +61,8 @@ Vec3 hsv_to_rgb(float H, float S, float V) {
 
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
 constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
+constexpr bool is_lowercase_letter(uint16_t c) { return (c >= 'a' && c <= 'z'); }
+constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
@@ -69,14 +71,6 @@ constexpr bool is_punctuation(char c) { return
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' || c == '?';
-}
-
-static bool is_lowercase_letter(uint16_t c) {
-	return (c >= 'a' && c <= 'z');
-}
-
-static bool is_uppercase_letter(uint16_t c) {
-	return (c >= 'A' && c <= 'Z');
 }
 
 static inline const std::vector<std::vector<const char*>> cpp_keywords = {
