@@ -4,7 +4,7 @@
 -jump to location
 -word under cursor find
 -fix uppercase find
-+better display filtered
+-display context
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)
