@@ -25,8 +25,8 @@ vk::UniqueInstance create_instance() {
 	char const* extension_names[64];
 	memset(extension_names, 0, sizeof(extension_names));
 
-	vk::Bool32 surfaceExtFound = VK_FALSE;
-	vk::Bool32 platformSurfaceExtFound = VK_FALSE;
+	bool surface_ext_found = false;
+	bool platform_surface_ext_found = false;
 
 	if (instance_extension_count > 0) {
 		std::unique_ptr<vk::ExtensionProperties[]> instance_extensions(new vk::ExtensionProperties[instance_extension_count]);
@@ -38,18 +38,18 @@ vk::UniqueInstance create_instance() {
 				extension_names[enabled_extension_count++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
 			}
 			if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-				surfaceExtFound = 1;
+				surface_ext_found = true;
 				extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
 			}
 			if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-				platformSurfaceExtFound = 1;
+				platform_surface_ext_found = true;
 				extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 			}
 			verify(enabled_extension_count < 64);
 		}
 	}
 
-	if (!surfaceExtFound) {
+	if (!surface_ext_found) {
 		error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_SURFACE_EXTENSION_NAME
 			" extension.\n\n"
 			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
@@ -57,7 +57,7 @@ vk::UniqueInstance create_instance() {
 			"vkCreateInstance Failure");
 	}
 
-	if (!platformSurfaceExtFound) {
+	if (!platform_surface_ext_found) {
 		error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 			" extension.\n\n"
 			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
