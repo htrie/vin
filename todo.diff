@@ -2,8 +2,9 @@
 -symbol database
 -symbol find (<space>+f)
 -jump to location
+-word under cursor find
++fix uppercase find
 +better display filtered
-+word under cursor find (<space>+d)
 --- 2022-11-19
 -compile (<space>+c)
 -run (<space>+a)

@@ -123,7 +123,7 @@ class App {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'e') { index.populate(); picker.filter(index, row_count); menu = Menu::picker; }
-		else if (key == 'f') { database.populate(); finder.filter(database, row_count); menu = Menu::finder; }
+		else if (key == 'f') { database.populate(); finder.seed(switcher.current().get_word()); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'a') { std::system("run.bat"); }

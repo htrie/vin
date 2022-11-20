@@ -474,6 +474,13 @@ public:
 		}
 	}
 
+	std::string get_word() const {
+		const Word current(text, cursor);
+		if (!is_whitespace(text[current.begin()]))
+			return text.substr(current.begin(), current.end() - current.begin() + 1);
+		return "";
+	}
+
 	std::string current_word() {
 		const Word current(text, cursor);
 		if (is_whitespace(text[current.begin()])) {
@@ -1502,6 +1509,10 @@ public:
 		return s;
 	}
 
+	std::string get_word() const {
+		return state().get_word();
+	}
+
 	size_t location_percentage() const {
 		return 1 + state().get_cursor() * 100 / state().get_text().size();
 	}
@@ -1564,6 +1575,7 @@ public:
 
 	void filter(Index& index, unsigned row_count) {
 		filtered.clear();
+		pattern = tolower(pattern);
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 2)
 				return false;
@@ -1801,8 +1813,13 @@ public:
 		selected = 0;
 	}
 
+	void seed(const std::string& word) {
+		pattern = word;
+	}
+
 	void filter(Database& database, unsigned row_count) {
 		filtered.clear();
+		pattern = tolower(pattern);
 		database.process([&](const auto& symbol, const auto& locations) {
 			if (filtered.size() > row_count - 2)
 				return false;
