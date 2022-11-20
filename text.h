@@ -1757,18 +1757,95 @@ public:
 };
 
 class Finder {
+	struct Entry {
+		std::string symbol;
+		std::string filename;
+		size_t position;
+	};
+
+	std::string pattern;
+	std::vector<Entry> filtered;
+	unsigned selected = 0; 
+
+	std::string tolower(std::string s) {
+		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
+		return s;
+	}
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
+		characters.emplace_back((uint16_t)c, colors().text, row, col);
+	};
+
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+		for (auto& c : s) {
+			push_char(characters, row, col++, c);
+		}
+	}
+
+	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+		for (unsigned i = 0; i < col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+		}
+	}
+
+	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
+	};
 
 public:
 	void reset() {
+		pattern.clear();
+		filtered.clear();
+		selected = 0;
 	}
 
 	void filter(Database& database, unsigned row_count) {
+		filtered.clear();
+		database.process([&](const auto& symbol, const auto& locations) {
+			if (filtered.size() > row_count - 2)
+				return false;
+			if (tolower(symbol).find(pattern) != std::string::npos)
+			{
+				for (auto& location : locations)
+					filtered.emplace_back(symbol, location.filename, location.position);
+			}
+			return true;
+		});
+		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	std::pair<std::string, size_t> selection() {
+		if (selected < filtered.size())
+			return { filtered[selected].filename, filtered[selected].position };
+		return { "", 0 };
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { return; }
+		else if (key == Glyph::ESC) { return; }
+		else if (key == Glyph::TAB) { return; }
+		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); } }
+		else if (key == '<') { selected++; }
+		else if (key == '>') { if (selected > 0) selected--; }
+		else { pattern += (char)key; }
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		unsigned col = 0;
+		unsigned row = 0;
+		push_string(characters, row, col, "find: ");
+		push_string(characters, row, col, pattern);
+		push_cursor(characters, row, col);
+		row++;
+
+		unsigned displayed = 0;
+		for (auto& entry : filtered) {
+			col = 0;
+			if (selected == displayed)
+				push_cursor_line(characters, row, col_count);
+			push_string(characters, row++, col, entry.symbol + "> " + entry.filename + " (" + std::to_string(entry.position) + ")");
+			displayed++;
+		}
 	}
 };
 

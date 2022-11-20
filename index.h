@@ -51,7 +51,12 @@ public:
 };
 
 class Database {
-	std::unordered_map<std::string, std::vector<size_t>> locations;
+	struct Location {
+		std::string filename;
+		size_t position;
+	};
+
+	std::map<std::string, std::vector<Location>> locations;
 
 	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 
@@ -64,7 +69,7 @@ class Database {
 			if (!is_letter(c)) {
 				if (location != index) {
 					const auto symbol = text.substr(location, index - location);
-					locations[symbol].push_back(location);
+					locations[symbol].emplace_back(filename, location);
 				}
 				location = index;
 				location++;
@@ -95,6 +100,14 @@ public:
 	void populate() {
 		locations.clear();
 		populate_directory(".");
+	}
+
+	template <typename F>
+	void process(F func) {
+		for (const auto& location : locations) {
+			if (!func(location.first, location.second))
+				break;
+		}
 	}
 };
 
