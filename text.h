@@ -1823,7 +1823,7 @@ public:
 		database.process([&](const auto& symbol, const auto& locations) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (tolower(symbol).find(pattern) != std::string::npos)
+			if (tolower(symbol) == pattern)
 			{
 				for (auto& location : locations)
 					filtered.emplace_back(symbol, location.filename, location.position);
@@ -1868,7 +1868,7 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row++, col, entry.symbol + "> " + entry.filename + " (" + std::to_string(entry.position) + ")");
+			push_string(characters, row++, col, entry.filename + " (" + std::to_string(entry.position) + "): "); // [TODO] Display context.
 			displayed++;
 		}
 	}
