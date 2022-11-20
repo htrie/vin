@@ -70,7 +70,7 @@ class Database {
 			if (!is_letter(c)) {
 				if (location != index) {
 					const auto symbol = text.substr(location, index - location);
-					const auto context = text.substr(location > 20 ? location - 20 : 0, index - location + 20 * 2);
+					const auto context = text.substr(location > 40 ? location - 40 : 0, index - location + 40 * 2);
 					locations[symbol].emplace_back(filename, context, location);
 				}
 				location = index;

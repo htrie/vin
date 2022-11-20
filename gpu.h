@@ -64,6 +64,7 @@ vk::UniqueInstance create_instance() {
 			"Please look at the Getting Started guide for additional information.\n",
 			"vkCreateInstance Failure");
 	}
+
 	auto const app_info = vk::ApplicationInfo()
 		.setApplicationVersion(0)
 		.setEngineVersion(0)
