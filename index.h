@@ -53,11 +53,6 @@ class Database {
 
 public:
 	void populate() {
-		// go through all files
-		// open and parse all words
-		// store all words filenames and locations
-		// avoid storing filename multiple times
-		// use unordered map
 	}
 };
 
