@@ -53,6 +53,7 @@ public:
 class Database {
 	struct Location {
 		std::string filename;
+		std::string context;
 		size_t position;
 	};
 
@@ -69,7 +70,8 @@ class Database {
 			if (!is_letter(c)) {
 				if (location != index) {
 					const auto symbol = text.substr(location, index - location);
-					locations[symbol].emplace_back(filename, location);
+					const auto context = text.substr(location > 20 ? location - 20 : 0, index - location + 20 * 2);
+					locations[symbol].emplace_back(filename, context, location);
 				}
 				location = index;
 				location++;

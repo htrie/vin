@@ -1658,11 +1658,18 @@ class Switcher {
 
 public:
 	std::string load(const std::string_view filename) {
-		if (!filename.empty() && buffers.find(std::string(filename)) == buffers.end()) {
-			const Timer timer;
-			buffers.emplace(filename, filename);
-			active = filename;
-			return std::string("load ") + std::string(filename) + " in " + timer.us();
+		if (!filename.empty()) {
+			if (buffers.find(std::string(filename)) == buffers.end()) {
+				const Timer timer;
+				buffers.emplace(filename, filename);
+				active = filename;
+				return std::string("load ") + std::string(filename) + " in " + timer.us();
+			}
+			else
+			{
+				active = filename;
+				return std::string("switch ") + std::string(filename);
+			}
 		}
 		return {};
 	}
@@ -1774,6 +1781,7 @@ class Finder {
 	struct Entry {
 		std::string symbol;
 		std::string filename;
+		std::string context;
 		size_t position;
 	};
 
@@ -1786,13 +1794,13 @@ class Finder {
 		return s;
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
-		characters.emplace_back((uint16_t)c, colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
+		characters.emplace_back((uint16_t)c, color, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, Color color = colors().text) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c);
+			push_char(characters, row, col++, c, color);
 		}
 	}
 
@@ -1826,7 +1834,7 @@ public:
 			if (tolower(symbol) == pattern)
 			{
 				for (auto& location : locations)
-					filtered.emplace_back(symbol, location.filename, location.position);
+					filtered.emplace_back(symbol, location.filename, location.context, location.position);
 			}
 			return true;
 		});
@@ -1868,7 +1876,9 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row++, col, entry.filename + " (" + std::to_string(entry.position) + "): "); // [TODO] Display context.
+			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ");
+			push_string(characters, row, col, entry.context, colors().comment);
+			row++;
 			displayed++;
 		}
 	}
