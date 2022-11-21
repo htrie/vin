@@ -1,4 +1,5 @@
-+remove 'new' from gpu.h
+--- 2022-11-21
+-remove 'new' from gpu.h
 --- 2022-11-20
 -symbol database
 -symbol find (<space>+f)
