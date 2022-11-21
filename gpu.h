@@ -1,69 +1,15 @@
 #pragma once
 
 vk::UniqueInstance create_instance() {
-	uint32_t enabled_layer_count = 0;
-	char const* enabled_layers[64];
-
+	std::vector<const char*> layers;
 #if !defined(NDEBUG)
-	{
-		uint32_t instance_layer_count = 0;
-		const auto result = vk::enumerateInstanceLayerProperties(&instance_layer_count, static_cast<vk::LayerProperties*>(nullptr));
-		verify(result == vk::Result::eSuccess);
-
-		if (instance_layer_count > 0) {
-			enabled_layer_count = 1;
-			enabled_layers[0] = "VK_LAYER_KHRONOS_validation";
-		}
-	}
+	layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-	uint32_t instance_extension_count = 0;
-	const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
-	verify(result == vk::Result::eSuccess);
-
-	uint32_t enabled_extension_count = 0;
-	char const* extension_names[64];
-	memset(extension_names, 0, sizeof(extension_names));
-
-	bool surface_ext_found = false;
-	bool platform_surface_ext_found = false;
-
-	if (instance_extension_count > 0) {
-		std::unique_ptr<vk::ExtensionProperties[]> instance_extensions(new vk::ExtensionProperties[instance_extension_count]);
-		const auto result = vk::enumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.get());
-		verify(result == vk::Result::eSuccess);
-
-		for (uint32_t i = 0; i < instance_extension_count; i++) {
-			if (!strcmp(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-				extension_names[enabled_extension_count++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
-			}
-			if (!strcmp(VK_KHR_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-				surface_ext_found = true;
-				extension_names[enabled_extension_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
-			}
-			if (!strcmp(VK_KHR_WIN32_SURFACE_EXTENSION_NAME, instance_extensions[i].extensionName)) {
-				platform_surface_ext_found = true;
-				extension_names[enabled_extension_count++] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-			}
-			verify(enabled_extension_count < 64);
-		}
-	}
-
-	if (!surface_ext_found) {
-		error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_SURFACE_EXTENSION_NAME
-			" extension.\n\n"
-			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkCreateInstance Failure");
-	}
-
-	if (!platform_surface_ext_found) {
-		error("vkEnumerateInstanceExtensionProperties failed to find the " VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-			" extension.\n\n"
-			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkCreateInstance Failure");
-	}
+	std::vector<const char*> extensions = {
+		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
 
 	auto const app_info = vk::ApplicationInfo()
 		.setApplicationVersion(0)
@@ -71,10 +17,10 @@ vk::UniqueInstance create_instance() {
 		.setApiVersion(VK_API_VERSION_1_0);
 	auto const inst_info = vk::InstanceCreateInfo()
 		.setPApplicationInfo(&app_info)
-		.setEnabledLayerCount(enabled_layer_count)
-		.setPpEnabledLayerNames(enabled_layers)
-		.setEnabledExtensionCount(enabled_extension_count)
-		.setPpEnabledExtensionNames(extension_names);
+		.setEnabledLayerCount((uint32_t)layers.size())
+		.setPpEnabledLayerNames(layers.data())
+		.setEnabledExtensionCount((uint32_t)extensions.size())
+		.setPpEnabledExtensionNames(extensions.data());
 
 	auto instance_handle = vk::createInstanceUnique(inst_info);
 	if (instance_handle.result == vk::Result::eErrorIncompatibleDriver) {
@@ -183,7 +129,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 		.setQueueCount((uint32_t)priorities.size())
 		.setPQueuePriorities(priorities.data()) };
 
-	std::array<const char*, 1> extension_names = {
+	std::array<const char*, 1> extensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	auto device_info = vk::DeviceCreateInfo()
@@ -191,8 +137,8 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 		.setPQueueCreateInfos(queues.data())
 		.setEnabledLayerCount(0)
 		.setPpEnabledLayerNames(nullptr)
-		.setEnabledExtensionCount((uint32_t)extension_names.size())
-		.setPpEnabledExtensionNames(extension_names.data())
+		.setEnabledExtensionCount((uint32_t)extensions.size())
+		.setPpEnabledExtensionNames(extensions.data())
 		.setPEnabledFeatures(nullptr);
 
 	auto device_handle = gpu.createDeviceUnique(device_info);
