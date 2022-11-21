@@ -183,49 +183,16 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 		.setQueueCount((uint32_t)priorities.size())
 		.setPQueuePriorities(priorities.data()) };
 
-	uint32_t enabled_extension_count = 0;
-	char const* extension_names[64];
-
-	uint32_t device_extension_count = 0;
-	bool swapchain_ext_found = false;
-	enabled_extension_count = 0;
-	memset(extension_names, 0, sizeof(extension_names));
-
-	const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, static_cast<vk::ExtensionProperties*>(nullptr));
-	verify(result == vk::Result::eSuccess);
-
-	if (device_extension_count > 0) {
-		std::unique_ptr<vk::ExtensionProperties[]> device_extensions(new vk::ExtensionProperties[device_extension_count]);
-		const auto result = gpu.enumerateDeviceExtensionProperties(nullptr, &device_extension_count, device_extensions.get());
-		verify(result == vk::Result::eSuccess);
-
-		for (uint32_t i = 0; i < device_extension_count; i++) {
-			if (!strcmp(VK_KHR_SWAPCHAIN_EXTENSION_NAME, device_extensions[i].extensionName)) {
-				swapchain_ext_found = true;
-				extension_names[enabled_extension_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-			}
-			if (!strcmp("VK_KHR_portability_subset", device_extensions[i].extensionName)) {
-				extension_names[enabled_extension_count++] = "VK_KHR_portability_subset";
-			}
-			verify(enabled_extension_count < 64);
-		}
-	}
-
-	if (!swapchain_ext_found) {
-		error("vkEnumerateDeviceExtensionProperties failed to find the " VK_KHR_SWAPCHAIN_EXTENSION_NAME
-			" extension.\n\n"
-			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkCreateInstance Failure");
-	}
+	std::array<const char*, 1> extension_names = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	auto device_info = vk::DeviceCreateInfo()
 		.setQueueCreateInfoCount((uint32_t)queues.size())
 		.setPQueueCreateInfos(queues.data())
 		.setEnabledLayerCount(0)
 		.setPpEnabledLayerNames(nullptr)
-		.setEnabledExtensionCount(enabled_extension_count)
-		.setPpEnabledExtensionNames((const char* const*)extension_names)
+		.setEnabledExtensionCount((uint32_t)extension_names.size())
+		.setPpEnabledExtensionNames(extension_names.data())
 		.setPEnabledFeatures(nullptr);
 
 	auto device_handle = gpu.createDeviceUnique(device_info);
