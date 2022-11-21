@@ -100,11 +100,9 @@ vk::UniqueInstance create_instance() {
 }
 
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
-	uint32_t gpu_count = 0;
-	auto result = instance.enumeratePhysicalDevices(&gpu_count, static_cast<vk::PhysicalDevice*>(nullptr));
-	verify(result == vk::Result::eSuccess);
-
-	if (gpu_count <= 0) {
+	const auto gpus_handle = instance.enumeratePhysicalDevices();
+	verify(gpus_handle.result == vk::Result::eSuccess);
+	if (gpus_handle.value.size() <= 0) {
 		error(
 			"vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
 			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
@@ -112,49 +110,10 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 			"vkEnumeratePhysicalDevices Failure");
 	}
 
-	std::unique_ptr<vk::PhysicalDevice[]> physical_devices(new vk::PhysicalDevice[gpu_count]);
-	result = instance.enumeratePhysicalDevices(&gpu_count, physical_devices.get());
-	verify(result == vk::Result::eSuccess);
-
-	int32_t gpu_number = -1;
-	{
-		uint32_t count_device_type[VK_PHYSICAL_DEVICE_TYPE_CPU + 1];
-		memset(count_device_type, 0, sizeof(count_device_type));
-
-		for (uint32_t i = 0; i < gpu_count; i++) {
-			const auto physicalDeviceProperties = physical_devices[i].getProperties();
-			const auto device_type = static_cast<int>(physicalDeviceProperties.deviceType);
-			if (device_type <= VK_PHYSICAL_DEVICE_TYPE_CPU)
-				count_device_type[static_cast<int>(physicalDeviceProperties.deviceType)]++;
-		}
-
-		const vk::PhysicalDeviceType device_type_preference[] = {
-			vk::PhysicalDeviceType::eDiscreteGpu,
-			vk::PhysicalDeviceType::eIntegratedGpu,
-			vk::PhysicalDeviceType::eVirtualGpu,
-			vk::PhysicalDeviceType::eCpu,
-			vk::PhysicalDeviceType::eOther
-		};
-		auto search_for_device_type = vk::PhysicalDeviceType::eDiscreteGpu;
-		for (uint32_t i = 0; i < sizeof(device_type_preference) / sizeof(vk::PhysicalDeviceType); i++) {
-			if (count_device_type[static_cast<int>(device_type_preference[i])]) {
-				search_for_device_type = device_type_preference[i];
-				break;
-			}
-		}
-
-		for (uint32_t i = 0; i < gpu_count; i++) {
-			const auto physicalDeviceProperties = physical_devices[i].getProperties();
-			if (physicalDeviceProperties.deviceType == search_for_device_type) {
-				gpu_number = i;
-				break;
-			}
-		}
-	}
-	if (gpu_number == (uint32_t)-1) {
-		error("physical device auto-select failed.\n", "Device Selection Failure");
-	}
-	return physical_devices[gpu_number];
+	const auto gpu = gpus_handle.value[0];
+	verify(gpu.getProperties().deviceType== vk::PhysicalDeviceType::eDiscreteGpu || 
+		gpu.getProperties().deviceType == vk::PhysicalDeviceType::eIntegratedGpu);
+	return gpu;
 }
 
 vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hInstance, HWND hWnd) {
