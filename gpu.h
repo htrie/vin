@@ -147,19 +147,10 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 }
 
 vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
-	uint32_t format_count = 0;
-	auto result = gpu.getSurfaceFormatsKHR(surface, &format_count, static_cast<vk::SurfaceFormatKHR*>(nullptr));
-	verify(result == vk::Result::eSuccess);
-	verify(format_count > 0);
-
-	std::unique_ptr<vk::SurfaceFormatKHR[]> surface_formats(new vk::SurfaceFormatKHR[format_count]);
-	result = gpu.getSurfaceFormatsKHR(surface, &format_count, surface_formats.get());
-	verify(result == vk::Result::eSuccess);
-
-	vk::SurfaceFormatKHR res = surface_formats[0];
-	if (surface_formats[0].format == vk::Format::eUndefined)
-		res.format = vk::Format::eB8G8R8A8Unorm;
-	return res;
+	auto formats_handle = gpu.getSurfaceFormatsKHR(surface);
+	verify(formats_handle.result == vk::Result::eSuccess);
+	verify(formats_handle.value.size() > 0);
+	return formats_handle.value[0].format == vk::Format::eUndefined ? vk::Format::eB8G8R8A8Unorm : formats_handle.value[0];
 }
 
 vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
