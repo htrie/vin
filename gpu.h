@@ -834,8 +834,8 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	const float char_width = 6.4f; // Character spacing.
-	const float char_height = 15.0f; // Line spacing.
+	const float char_width = 6.0f; // Character spacing.
+	const float char_height = 13.0f; // Line spacing.
 
 	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) {
 		Font font;
@@ -938,7 +938,7 @@ public:
 		bind_pipeline(cmd, pipeline.get());
 
 		for (auto& character : characters) {
-			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
+			const auto& font = font_regular;
 			if (auto found = font.glyphs.find(character.index); found != font.glyphs.end()) {
 				const auto& glyph = found->second;
 
