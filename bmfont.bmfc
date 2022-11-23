@@ -10,7 +10,7 @@ aa=1
 scaleH=100
 useSmoothing=0
 isBold=0
-isItalic=0
+isItalic=1
 useUnicode=1
 disableBoxChars=1
 outputInvalidCharGlyph=0
@@ -54,6 +54,6 @@ invB=0
 outlineThickness=0
 
 # selected chars
-chars=33-126,8228,9166,9205,9601,9608,9615
+chars=33-126,9608
 
 # imported icon images
