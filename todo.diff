@@ -1,4 +1,5 @@
 --- 2022-11-23
+-allow any extension
 -remove record and profile from title bar
 --- 2022-11-22
 -try other pixel fonts

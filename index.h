@@ -1,19 +1,5 @@
 #pragma once
 
-bool allowed_extension(const std::string_view ext) {
-	if (ext == ".diff") return true;
-	else if (ext == ".bat") return true;
-	else if (ext == ".cpp") return true;
-	else if (ext == ".c") return true;
-	else if (ext == ".h") return true;
-	else if (ext == ".cpp") return true;
-	else if (ext == ".hpp") return true;
-	else if (ext == ".inc") return true;
-	else if (ext == ".frag") return true;
-	else if (ext == ".vert") return true;
-	return false;
-}
-
 class Index {
 	std::vector<std::string> paths;
 
@@ -27,9 +13,7 @@ class Index {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (allowed_extension(path.path().extension().generic_string())) {
-						paths.push_back(path.path().generic_string());
-					}
+					paths.push_back(path.path().generic_string());
 				}
 			}
 		}
@@ -90,9 +74,7 @@ class Database {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (allowed_extension(path.path().extension().generic_string())) {
-						scan(path.path().generic_string());
-					}
+					scan(path.path().generic_string());
 				}
 			}
 		}
