@@ -144,6 +144,10 @@ class App {
 		else if (key == '8') { notify(switcher.current().increase_saturation()); }
 		else if (key == '9') { notify(switcher.current().decrease_brightness()); }
 		else if (key == '0') { notify(switcher.current().increase_brightness()); }
+		else if (key == '[') { notify(device.decrease_char_width()); }
+		else if (key == ']') { notify(device.increase_char_width()); }
+		else if (key == '{') { notify(device.decrease_char_height()); }
+		else if (key == '}') { notify(device.increase_char_height()); }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {

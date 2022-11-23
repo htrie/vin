@@ -834,8 +834,8 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	const float char_width = 6.4f; // Character spacing.
-	const float char_height = 15.0f; // Line spacing.
+	float char_width = 7.0f; // Character spacing.
+	float char_height = 15.0f; // Line spacing.
 
 	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) {
 		Font font;
@@ -980,5 +980,11 @@ public:
 	}
 
 	HWND get_hwnd() const { return hWnd; }
+
+	std::string increase_char_width() { char_width = std::clamp(char_width + 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(char_width); }
+	std::string decrease_char_width() { char_width = std::clamp(char_width - 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(char_width); }
+
+	std::string increase_char_height() { char_height = std::clamp(char_height + 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(char_height); }
+	std::string decrease_char_height() { char_height = std::clamp(char_height - 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(char_height); }
 };
 
