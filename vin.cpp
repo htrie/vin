@@ -52,10 +52,6 @@ class App {
 
 	Characters characters;
 
-	std::string cull_duration;
-	std::string redraw_duration;
-	std::string process_duration;
-
 	std::string notification;
 
 	bool maximized = false;
@@ -69,13 +65,9 @@ class App {
 
 	std::string status() {
 		return std::string("Vin v0.5  ") +
-			std::to_string(switcher.current().location_percentage()) + "%  " +
 			std::string(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + "  " +
-			switcher.current().get_record() + " " +
-			" proc " + process_duration + 
-			" cull " + cull_duration + 
-			" draw " + redraw_duration + "  " + 
+			std::to_string(switcher.current().location_percentage()) + "%  " +
 			notification;
 	}
 
@@ -103,15 +95,10 @@ class App {
 	void redraw() {
 		if (dirty) {
 			dirty = false;
-			const Timer timer;
 			characters = cull();
-			cull_duration = timer.us();
-
 			if (!minimized) {
-				const Timer timer;
 				device.redraw(characters);
 				SetWindowTextA(device.get_hwnd(), status().data());
-				redraw_duration = timer.us();
 			}
 		}
 		else {
@@ -171,7 +158,6 @@ class App {
 	}
 
 	void process(unsigned key) {
-		const Timer timer;
 		const auto viewport = device.viewport();
 		switch (menu) {
 		case Menu::space: process_space(key, viewport.h); break;
@@ -181,7 +167,6 @@ class App {
 		case Menu::finder: process_finder(key, viewport.w, viewport.h); break;
 		}
 		switcher.current().state().cursor_clamp(viewport.h);
-		process_duration = timer.us();
 		dirty = true;
 	}
 
