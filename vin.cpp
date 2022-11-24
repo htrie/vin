@@ -121,6 +121,8 @@ class App {
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
+		else if (key == 'b') { colors().use_rgb(); hsb().use_rgb(); }
+		else if (key == 'g') { colors().use_gray(); hsb().use_gray(); }
 		else if (key == '1') { notify(hsb().decrease_hue_start()); }
 		else if (key == '2') { notify(hsb().increase_hue_start()); }
 		else if (key == '3') { notify(hsb().decrease_hue_range()); }
@@ -255,6 +257,7 @@ public:
 	App(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, 700, 500) {
 		ShowWindow(device.get_hwnd(), nCmdShow);
+		colors().use_rgb();
 	}
 
 	void notify(const std::string& s) {
