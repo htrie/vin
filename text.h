@@ -989,12 +989,6 @@ class Buffer {
 
 	size_t last_cursor = 0;
 
-	float hue_start = 0.0f;
-	float hue_range = 260.0f;
-	float hue_adjust = 10.0f;
-	float saturation = 0.50f;
-	float brightness = 0.85f;
-
 	void save_cursor() {
 		last_cursor = state().get_cursor();
 	}
@@ -1416,11 +1410,11 @@ class Buffer {
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, false); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hue_start, hue_range, hue_adjust, saturation, brightness), row, col, true, false); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col, true, false); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hue_start, hue_range, hue_adjust, saturation, brightness), row, col); }
+		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1507,21 +1501,6 @@ public:
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }
-
-	std::string increase_hue_start() { hue_start = std::clamp(hue_start + 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
-	std::string decrease_hue_start() { hue_start = std::clamp(hue_start - 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
-
-	std::string increase_hue_range() { hue_range = std::clamp(hue_range + 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
-	std::string decrease_hue_range() { hue_range = std::clamp(hue_range - 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
-
-	std::string increase_hue_adjust() { hue_adjust = std::clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
-	std::string decrease_hue_adjust() { hue_adjust = std::clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
-
-	std::string increase_saturation() { saturation = std::clamp(saturation + 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
-	std::string decrease_saturation() { saturation = std::clamp(saturation - 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
-
-	std::string increase_brightness() { brightness = std::clamp(brightness + 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
-	std::string decrease_brightness() { brightness = std::clamp(brightness - 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
 };
 
 class Picker {
