@@ -2,6 +2,7 @@
 +hex display?
 --- 2022-11-24
 -move saturation and sizes to config
+-switch gray/rgb (<space>+b/g)
 --- 2022-11-23
 -allow any extension
 -remove record and profile from title bar
