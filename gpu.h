@@ -834,9 +834,6 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	float char_width = 7.0f; // Character spacing.
-	float char_height = 15.0f; // Line spacing.
-
 	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) {
 		Font font;
 		font.width = width;
@@ -942,8 +939,8 @@ public:
 			if (auto found = font.glyphs.find(character.index); found != font.glyphs.end()) {
 				const auto& glyph = found->second;
 
-				const float trans_x = character.col * char_width + glyph.x_off * font.width;
-				const float trans_y = character.row * char_height + glyph.y_off * font.height;
+				const float trans_x = character.col * spacing().character + glyph.x_off * font.width;
+				const float trans_y = character.row * spacing().line + glyph.y_off * font.height;
 
 				Constants constants;
 				constants.model = {
@@ -974,17 +971,17 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / char_width),
-			(unsigned)((float)height / char_height) - 1 // Remove 1 line for half-lines.
+			(unsigned)((float)width / spacing().character),
+			(unsigned)((float)height / spacing().line) - 1 // Remove 1 line for half-lines.
 		};
 	}
 
 	HWND get_hwnd() const { return hWnd; }
 
-	std::string increase_char_width() { char_width = std::clamp(char_width + 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(char_width); }
-	std::string decrease_char_width() { char_width = std::clamp(char_width - 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(char_width); }
+	std::string increase_char_width() { spacing().character = std::clamp(spacing().character + 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(spacing().character); }
+	std::string decrease_char_width() { spacing().character = std::clamp(spacing().character - 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(spacing().character); }
 
-	std::string increase_char_height() { char_height = std::clamp(char_height + 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(char_height); }
-	std::string decrease_char_height() { char_height = std::clamp(char_height - 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(char_height); }
+	std::string increase_char_height() { spacing().line = std::clamp(spacing().line + 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(spacing().line); }
+	std::string decrease_char_height() { spacing().line = std::clamp(spacing().line - 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(spacing().line); }
 };
 

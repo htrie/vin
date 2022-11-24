@@ -45,3 +45,26 @@ const Colors colors() {
 	return colors;
 }
 
+struct HSB {
+	float hue_start = 0.0f;
+	float hue_range = 260.0f;
+	float hue_adjust = 10.0f;
+	float saturation = 0.50f;
+	float brightness = 0.85f;
+};
+
+HSB& hsb() {
+	static HSB hsb;
+	return hsb;
+}
+
+struct Spacing {
+	float character = 7.0f;
+	float line = 15.0f;
+};
+
+Spacing& spacing() {
+	static Spacing spacing;
+	return spacing;
+}
+
