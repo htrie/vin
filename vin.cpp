@@ -52,6 +52,7 @@ class App {
 
 	Characters characters;
 
+	std::string clipboard;
 	std::string notification;
 
 	bool maximized = false;
@@ -140,7 +141,7 @@ class App {
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		switcher.current().process(key, col_count, row_count);
+		switcher.current().process(clipboard, key, col_count, row_count);
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {

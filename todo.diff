@@ -3,7 +3,7 @@
 --- 2022-11-25
 -try 0.5 UV offset: buggy
 -add >8j and such
-+add copy between buffers
+-add copy between buffers
 --- 2022-11-24
 -move saturation and sizes to config
 -switch gray/rgb (<space>+b/g)
