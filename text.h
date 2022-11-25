@@ -5,6 +5,8 @@ enum class Mode {
 	normal_number,
 	normal_slash,
 	normal_question,
+	normal_gt,
+	normal_lt,
 	normal_c,
 	normal_cf,
 	normal_ct,
@@ -904,6 +906,59 @@ public:
 		}
 	}
 
+	void indent_right(unsigned count) {
+		line_start_whitespace();
+		for (unsigned i = 0; i < count; ++i)
+			insert("\t");
+	}
+
+	void indent_right_down(unsigned count) {
+		line_start_whitespace();
+		insert("\t");
+		for (unsigned i = 0; i < count; ++i) {
+			next_line();
+			line_start_whitespace();
+			insert("\t");
+		}
+	}
+
+	void indent_right_up(unsigned count) {
+		line_start_whitespace();
+		insert("\t");
+		for (unsigned i = 0; i < count; ++i) {
+			prev_line();
+			line_start_whitespace();
+			insert("\t");
+		}
+	}
+
+	void indent_left(unsigned count) {
+		line_start();
+		for (unsigned i = 0; i < count; ++i)
+ 			erase_if('\t');
+		line_start_whitespace();
+	}
+
+	void indent_left_down(unsigned count) {
+		line_start();
+		erase_if('\t');
+		for (unsigned i = 0; i < count; ++i) {
+			next_line();
+			line_start();
+ 			erase_if('\t');
+		}
+	}
+
+	void indent_left_up(unsigned count) {
+		line_start();
+		erase_if('\t');
+		for (unsigned i = 0; i < count; ++i) {
+			prev_line();
+			line_start();
+			erase_if('\t');
+		}
+	}
+
 	void fix_eof() {
 		const auto size = text.size();
 		if (size == 0 || (size > 0 && text[size - 1] != '\n')) {
@@ -1101,6 +1156,8 @@ class Buffer {
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_slash: process_normal_slash(key, row_count); break;
 		case Mode::normal_question: process_normal_question(key, row_count); break;
+		case Mode::normal_gt: process_normal_gt(key); break;
+		case Mode::normal_lt: process_normal_lt(key); break;
 		case Mode::normal_c: process_normal_c(key); break;
 		case Mode::normal_cf: process_normal_cf(key); break;
 		case Mode::normal_ct: process_normal_ct(key); break;
@@ -1139,6 +1196,8 @@ class Buffer {
 	void process_normal(unsigned key, unsigned row_count) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
+		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
+		else if (key == '<') { begin_record(key); mode = Mode::normal_lt; }
 		else if (key == 'c') { begin_record(key); mode = Mode::normal_c; }
 		else if (key == 'd') { begin_record(key); mode = Mode::normal_d; }
 		else if (key == 'y') { begin_record(key); mode = Mode::normal_y; }
@@ -1158,8 +1217,6 @@ class Buffer {
 		else if (key == 'x') { begin_end_record(key); clip(state().erase()); }
 		else if (key == 'D') { begin_end_record(key); clip(state().erase_to_line_end()); }
 		else if (key == 'J') { begin_end_record(key); state().line_end(); state().erase(); state().remove_line_whitespace(); state().insert(" "); state().prev_char(); }
-		else if (key == '<') { begin_end_record(key); state().line_start(); state().erase_if('\t'); state().line_start_whitespace(); }
-		else if (key == '>') { begin_end_record(key); state().line_start_whitespace(); state().insert("\t"); }
 		else if (key == '~') { begin_end_record(key); state().change_case(); }
 		else if (key == 'P') { state().paste_before(clipboard); }
 		else if (key == 'p') { state().paste_after(clipboard); }
@@ -1247,7 +1304,7 @@ class Buffer {
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_yt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_yi; }
 		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_ya; }
-		else { mode = Mode::normal; }
+		else { accu = 0; mode = Mode::normal; }
 	}
 
 	void process_normal_yf(unsigned key) {
@@ -1273,6 +1330,22 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
+	void process_normal_gt(unsigned key) {
+		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
+		else if (key == '>') { end_record(key); state().indent_right(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else { accu = 0; mode = Mode::normal; }
+	}
+
+	void process_normal_lt(unsigned key) {
+		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
+		else if (key == '<') { end_record(key); state().indent_left(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else { accu = 0; mode = Mode::normal; }
+	}
+
 	void process_normal_c(unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clip(state().erase_line_contents()); accu = 0; mode = Mode::insert; }
@@ -1285,7 +1358,7 @@ class Buffer {
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_ct; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_ci; }
 		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_ca; }
-		else { mode = Mode::normal; }
+		else { accu = 0; mode = Mode::normal; }
 	}
 
 	void process_normal_cf(unsigned key) {
@@ -1323,7 +1396,7 @@ class Buffer {
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_dt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_di; }
 		else if (key == 'a') { append_record(key); accu = 0; mode = Mode::normal_da; }
-		else { mode = Mode::normal; }
+		else { accu = 0; mode = Mode::normal; }
 	}
 
 	void process_normal_df(unsigned key) {
