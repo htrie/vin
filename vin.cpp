@@ -116,6 +116,7 @@ class App {
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'a') { std::system("run.bat"); }
 		else if (key == 'c') { std::system("build.bat"); }
+		else if (key == 'x') { std::system("commit.bat"); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count); }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
