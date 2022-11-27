@@ -8,6 +8,7 @@ struct Colors {
 	Color whitespace;
 	Color text;
 	Color text_cursor;
+	Color long_line;
 	Color line_number;
 	Color highlight;
 	Color diff_note;
@@ -27,6 +28,7 @@ struct Colors {
 		whitespace = Color::rgba(11, 32, 42, 255);
 		text = Color::rgba(200, 200, 200, 255);
 		text_cursor = Color::rgba(5, 5, 5, 255);
+		long_line = Color::rgba(255, 0, 0, 255);
 		line_number = Color::rgba(75, 100, 121, 255);
 		highlight = Color::rgba(192, 0, 192, 255);
 		diff_note = Color::rgba(255, 192, 0, 255);
@@ -47,6 +49,7 @@ struct Colors {
 		whitespace = Color::gray(240);
 		text = Color::gray(5);
 		text_cursor = Color::gray(220);
+		long_line = Color::gray(80);
 		line_number = Color::gray(140);
 		highlight = Color::gray(188);
 		diff_note = Color::gray(108);

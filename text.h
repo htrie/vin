@@ -1472,6 +1472,7 @@ class Buffer {
 		const Line line(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
 		else if (comment.valid()) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, false); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }

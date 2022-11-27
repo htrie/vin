@@ -3,6 +3,9 @@
 +hex display?
 +git support?
 +writer tools?
+--- 2022-11-27
+-add commit.bat
+-display all characters after 100 in red
 --- 2022-11-25
 -try 0.5 UV offset: buggy
 -add >8j and such
