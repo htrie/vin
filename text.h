@@ -1565,7 +1565,11 @@ public:
 
 	std::string get_word() const { return state().get_word(); }
 
-	size_t location_percentage() const { return 1 + state().get_cursor() * 100 / state().get_text().size(); }
+	size_t location_percentage() const {
+		if (const auto size = state().get_text().size())
+			return 1 + state().get_cursor() * 100 / size;
+		return 0;
+	}
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }
