@@ -1820,7 +1820,8 @@ class Finder {
 	struct Entry {
 		std::string symbol;
 		std::string filename;
-		std::string context;
+		std::string pre_context;
+		std::string post_context;
 		size_t position;
 	};
 
@@ -1873,7 +1874,7 @@ public:
 			if (tolower(symbol) == pattern)
 			{
 				for (auto& location : locations)
-					filtered.emplace_back(symbol, location.filename, location.context, location.position);
+					filtered.emplace_back(symbol, location.filename, location.pre_context, location.post_context, location.position);
 			}
 			return true;
 		});
@@ -1916,7 +1917,9 @@ public:
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
 			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ");
-			push_string(characters, row, col, entry.context, colors().comment);
+			push_string(characters, row, col, entry.pre_context, colors().comment);
+			push_string(characters, row, col, entry.symbol, colors().keyword);
+			push_string(characters, row, col, entry.post_context, colors().comment);
 			row++;
 			displayed++;
 		}
