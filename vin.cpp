@@ -32,6 +32,9 @@
 #include "text.h"
 #include "gpu.h"
 
+const unsigned version_major = 0;
+const unsigned version_minor = 6;
+
 enum class Menu {
 	space,
 	normal,
@@ -65,7 +68,8 @@ class App {
 	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
-		return std::string("Vin v0.6  ") +
+		return std::string("Vin v") + 
+			std::to_string(version_major) + "." + std::to_string(version_minor) + 
 			std::string(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + "  " +
 			std::to_string(switcher.current().location_percentage()) + "%  " +
