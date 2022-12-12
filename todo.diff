@@ -1,10 +1,15 @@
 +static html display
 +connect to remote http server
++teleport jump with letters
 +terminal to display external tasks
-+faster picker: async?
-+faster finder: async? 
++async picker
++linear allocator
++profile and determine if std::string or allocations are a limiting factor
+--- 2022-12-13
++async finder with multiple std::async jobs
 --- 2022-12-12
 -use version_major/minor
+-remove dirty redraw and sleep when minimized
 --- 2022-11-27
 -add commit.bat
 -display all characters after 100 in red
