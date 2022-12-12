@@ -1,7 +1,10 @@
 +static html display
 +connect to remote http server
++terminal to display external tasks
 +faster picker: async?
 +faster finder: async? 
+--- 2022-12-12
+-use version_major/minor
 --- 2022-11-27
 -add commit.bat
 -display all characters after 100 in red

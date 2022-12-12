@@ -60,12 +60,10 @@ class App {
 
 	bool maximized = false;
 	bool minimized = false;
-	bool dirty = false;
 	bool quit = false;
 
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
-	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
 		return std::string("Vin v") + 
@@ -93,21 +91,14 @@ class App {
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
 			device.resize(w, h);
-			dirty = true;
 		}
 	}
 
 	void redraw() {
-		if (dirty) {
-			dirty = false;
-			characters = cull();
-			if (!minimized) {
-				device.redraw(characters);
-				SetWindowTextA(device.get_hwnd(), status().data());
-			}
-		}
-		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		characters = cull();
+		if (!minimized) {
+			device.redraw(characters);
+			SetWindowTextA(device.get_hwnd(), status().data());
 		}
 	}
 
@@ -175,7 +166,6 @@ class App {
 		case Menu::finder: process_finder(key, viewport.w, viewport.h); break;
 		}
 		switcher.current().state().cursor_clamp(viewport.h);
-		dirty = true;
 	}
 
 	void update(bool space_down) {
@@ -186,7 +176,6 @@ class App {
 		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		case Menu::finder: break;
 		}
-		dirty = true;
 	}
 
 	static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -210,7 +199,6 @@ class App {
 		case WM_SETREDRAW:
 		case WM_SETFOCUS: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				app->set_dirty(true);
 			}
 			break;
 		}
