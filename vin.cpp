@@ -100,6 +100,9 @@ class App {
 			device.redraw(characters);
 			SetWindowTextA(device.get_hwnd(), status().data());
 		}
+		else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Avoid busy loop when minimized.
+		}
 	}
 
 	void process_space(unsigned key, unsigned row_count) {
