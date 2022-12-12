@@ -21,7 +21,7 @@ struct Colors {
 	Color quote;
 
 	void use_rgb() {
-		clear = Color::rgba(1, 22, 39, 255);
+		clear = Color::rgba(32, 32, 18, 255);
 		overlay = Color::rgba(31, 52, 69, 255);
 		cursor = Color::rgba(255, 255, 0, 255);
 		cursor_line = Color::rgba(65, 80, 29, 255);
