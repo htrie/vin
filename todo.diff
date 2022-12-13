@@ -1,6 +1,14 @@
-+terminal to display external tasks
 +static html display
 +connect to remote http server
++terminal to display external tasks
++remove std::string and other std
++remove std::vector
++remove std::array
++remove std::fmod
++remove std::min/max/clamp
+--- 2022-12-14
++linear allocator and string handles
++profile database
 --- 2022-12-12
 -use version_major/minor
 -remove dirty redraw and sleep when minimized
