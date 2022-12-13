@@ -2,11 +2,6 @@
 +connect to remote http server
 +teleport jump with letters
 +terminal to display external tasks
-+async picker
-+linear allocator
-+profile and determine if std::string or allocations are a limiting factor
---- 2022-12-13
-+async finder with multiple std::async jobs
 --- 2022-12-12
 -use version_major/minor
 -remove dirty redraw and sleep when minimized
