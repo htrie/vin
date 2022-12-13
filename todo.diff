@@ -1,7 +1,6 @@
++terminal to display external tasks
 +static html display
 +connect to remote http server
-+teleport jump with letters
-+terminal to display external tasks
 --- 2022-12-12
 -use version_major/minor
 -remove dirty redraw and sleep when minimized
