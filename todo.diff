@@ -1,6 +1,7 @@
 +static html display
 +connect to remote http server
 +terminal to display external tasks
++remove std::ifstream/ofstream
 +remove std::string and other std
 +remove std::vector
 +remove std::array

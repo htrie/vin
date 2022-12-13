@@ -1494,14 +1494,18 @@ class Buffer {
 		unsigned col = 0;
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
-				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
-				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
-				if (state().test(index, highlight)) { push_highlight(characters, row, col); }
-				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
-				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
-				else if (c == '\t') { push_tab(characters, row, col); col += 4; }
-				else if (c == ' ') { push_space(characters, row, col); col++; }
-				else { push_char(characters, row, col, c, index); col++; }
+				if (col <= col_count) {
+					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
+					if (state().test(index, highlight)) { push_highlight(characters, row, col); }
+					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
+					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
+					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
+					else if (c == ' ') { push_space(characters, row, col); col++; }
+					else { push_char(characters, row, col, c, index); col++; }
+				} else {
+					if (c == '\n') { absolute_row++; row++; col = 0; }
+				}
 			} else {
 				if (c == '\n') { absolute_row++; }
 			}
