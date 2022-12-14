@@ -23,3 +23,8 @@ std::string timestamp() {
 	return std::format("{:%r}", hms);
 }
 
+std::string tolower(std::string s) {
+	std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
+	return s;
+}
+

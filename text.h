@@ -1584,11 +1584,6 @@ class Picker {
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
-	std::string tolower(std::string s) {
-		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
-		return s;
-	}
-
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
 		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
@@ -1822,7 +1817,6 @@ public:
 
 class Finder {
 	struct Entry {
-		std::string symbol;
 		std::string filename;
 		std::string pre_context;
 		std::string post_context;
@@ -1832,11 +1826,6 @@ class Finder {
 	std::string pattern;
 	std::vector<Entry> filtered;
 	unsigned selected = 0; 
-
-	std::string tolower(std::string s) {
-		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
-		return s;
-	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
 		characters.emplace_back((uint16_t)c, color, row, col);
@@ -1872,13 +1861,14 @@ public:
 	void filter(Database& database, unsigned row_count) {
 		filtered.clear();
 		pattern = tolower(pattern);
-		database.process([&](const auto& symbol, const auto& locations) {
+		const size_t pattern_hash = std::hash<std::string>{}(pattern);
+		database.process([&](const auto& symbol_hash, const auto& locations) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (tolower(symbol) == pattern)
+			if (symbol_hash == pattern_hash)
 			{
 				for (auto& location : locations)
-					filtered.emplace_back(symbol, location.filename, location.pre_context, location.post_context, location.position);
+					filtered.emplace_back(location.filename, location.pre_context, location.post_context, location.position);
 			}
 			return true;
 		});
@@ -1922,7 +1912,7 @@ public:
 				push_cursor_line(characters, row, col_count);
 			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ");
 			push_string(characters, row, col, entry.pre_context, colors().comment);
-			push_string(characters, row, col, entry.symbol, colors().keyword);
+			push_string(characters, row, col, pattern, colors().keyword);
 			push_string(characters, row, col, entry.post_context, colors().comment);
 			row++;
 			displayed++;

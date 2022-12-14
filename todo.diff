@@ -8,7 +8,8 @@
 +remove std::fmod
 +remove std::min/max/clamp
 --- 2022-12-14
-+linear allocator and string handles
++use symbol hash for map key
++consider using locations/mappings in files instead ofstrings
 +profile database
 --- 2022-12-12
 -use version_major/minor

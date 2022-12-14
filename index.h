@@ -42,7 +42,7 @@ class Database {
 		size_t position;
 	};
 
-	std::map<std::string, std::vector<Location>> locations;
+	std::map<size_t, std::vector<Location>> locations;
 
 	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 
@@ -57,7 +57,8 @@ class Database {
 					const auto symbol = text.substr(location, index - location);
 					const auto pre_context = text.substr(location > 20 ? location - 20 : 0, location > 20 ? 20 : location);
 					const auto post_context = text.substr(index, 20);
-					locations[symbol].emplace_back(filename, pre_context, post_context, location);
+					const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
+					locations[symbol_hash].emplace_back(filename, pre_context, post_context, location);
 				}
 				location = index;
 				location++;
