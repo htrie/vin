@@ -55,10 +55,11 @@ class Database {
 		for (const auto& c : text) {
 			if (!is_letter(c)) {
 				if (location != index) {
-					const auto symbol = text.substr(location, index - location);
-					const auto context = text.substr(index, 20);
-					const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-					locations[symbol_hash].emplace_back(filename, context, location);
+					if (const auto symbol = text.substr(location, index - location); symbol.length() > 2) {
+						const auto context = text.substr(index, 20);
+						const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
+						locations[symbol_hash].emplace_back(filename, context, location);
+					}
 				}
 				location = index;
 				location++;
