@@ -52,19 +52,26 @@ public:
 };
 
 class Database {
-	struct Location {
-		size_t symbol_hash;
-		std::string filename;
-		std::string context;
-		size_t position;
+	struct File {
+		std::string name;
+		size_t size;
 	};
 
+	struct Location {
+		size_t file_index = 0;
+		size_t symbol_hash = 0;
+		size_t position = 0;
+		std::string context;
+	};
+
+	std::vector<File> files;
 	std::vector<Location> locations;
 
 	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 
 	void scan(const std::string& filename) {
 		map(filename, [&](const char* mem, size_t size) {
+			files.emplace_back(filename, size);
 			size_t location = 0;
 			for (size_t i = 0; i < size; ++i) {
 				if (!is_letter(mem[i])) {
@@ -72,7 +79,7 @@ class Database {
 						if (const auto symbol = std::string(&mem[location], i - location); symbol.length() > 2) {
 							const auto context = std::string(&mem[i], std::min((size_t)20, size - i));
 							const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-							locations.emplace_back(symbol_hash, filename, context, location);
+							locations.emplace_back(files.size() - 1, symbol_hash, location, context);
 						}
 					}
 					location = i;
@@ -101,11 +108,14 @@ class Database {
 
 public:
 	void reset() {
+		files.clear();
 		locations.clear();
 	}
 
 	std::string populate() {
 		const Timer timer;
+		files.clear();
+		files.resize(1024);
 		locations.clear();
 		locations.reserve(1024 * 1024);
 		populate_directory(".");
@@ -115,7 +125,7 @@ public:
 	template <typename F>
 	void process(F func) {
 		for (const auto& location : locations) {
-			if (!func(location))
+			if (!func(files[location.file_index], location))
 				break;
 		}
 	}

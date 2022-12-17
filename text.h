@@ -1861,11 +1861,11 @@ public:
 		filtered.clear();
 		pattern = tolower(pattern);
 		const size_t pattern_hash = std::hash<std::string>{}(pattern);
-		database.process([&](const auto& location) {
+		database.process([&](const auto& file, const auto& location) {
 			if (filtered.size() > row_count - 2)
 				return false;
 			if (location.symbol_hash == pattern_hash)
-				filtered.emplace_back(location.filename, location.context, location.position);
+				filtered.emplace_back(file.name, location.context, location.position);
 			return true;
 		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
