@@ -48,6 +48,19 @@ class Database {
 	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 
 	void scan(const std::string& filename) {
+		map(filename, [&](const char* mem, size_t size) {
+			size_t location = 0;
+			for (size_t i = 0; i < size; ++i) {
+				const auto c = mem[i];
+				if (!is_letter(c)) {
+					if (location != i) {
+					}
+					location = i;
+					location++;
+				}
+			}
+		});
+
 		std::ifstream in(filename);
 		const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 		size_t index = 0;

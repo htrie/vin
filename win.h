@@ -72,3 +72,19 @@ public:
 	}
 };
 
+template <typename F>
+void map(const std::string_view filename, F func) {
+	if (const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr); file != INVALID_HANDLE_VALUE) {
+		if (size_t size = 0; GetFileSizeEx(file, (PLARGE_INTEGER)&size)) {
+			if (const auto mapping = CreateFileMapping(file, nullptr, PAGE_READONLY, 0, 0, nullptr); mapping != INVALID_HANDLE_VALUE) {
+				if (const auto mem = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0); mem != nullptr) {
+					func((char*)mem, size);
+					UnmapViewOfFile(mem);
+				}
+				CloseHandle(mapping);
+			}
+		}
+		CloseHandle(file);
+	}
+}
+
