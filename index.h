@@ -1,5 +1,15 @@
 #pragma once
 
+bool accept(const std::string_view extension) {
+	if (extension == ".cpp") return true;
+	if (extension == ".hpp") return true;
+	if (extension == ".c") return true;
+	if (extension == ".h") return true;
+	if (extension == ".txt") return true;
+	if (extension == ".diff") return true;
+	return false;
+}
+
 class Index {
 	std::vector<std::string> paths;
 
@@ -13,7 +23,8 @@ class Index {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					paths.push_back(path.path().generic_string());
+					if (accept(path.path().extension().generic_string()))
+						paths.push_back(path.path().generic_string());
 				}
 			}
 		}
@@ -51,34 +62,19 @@ class Database {
 		map(filename, [&](const char* mem, size_t size) {
 			size_t location = 0;
 			for (size_t i = 0; i < size; ++i) {
-				const auto c = mem[i];
-				if (!is_letter(c)) {
+				if (!is_letter(mem[i])) {
 					if (location != i) {
+						if (const auto symbol = std::string(&mem[location], i - location); symbol.length() > 2) {
+							const auto context = std::string(&mem[i], std::min((size_t)20, size - i));
+							const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
+							locations[symbol_hash].emplace_back(filename, context, location);
+						}
 					}
 					location = i;
 					location++;
 				}
 			}
 		});
-
-		std::ifstream in(filename);
-		const std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-		size_t index = 0;
-		size_t location = 0;
-		for (const auto& c : text) {
-			if (!is_letter(c)) {
-				if (location != index) {
-					if (const auto symbol = text.substr(location, index - location); symbol.length() > 2) {
-						const auto context = text.substr(index, 20);
-						const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-						locations[symbol_hash].emplace_back(filename, context, location);
-					}
-				}
-				location = index;
-				location++;
-			}
-			index++;
-		}
 	}
 
 	void populate_directory(const std::filesystem::path& dir) {
@@ -91,7 +87,8 @@ class Database {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					scan(path.path().generic_string());
+					if (accept(path.path().extension().generic_string()))
+						scan(path.path().generic_string());
 				}
 			}
 		}
