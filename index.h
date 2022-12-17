@@ -31,6 +31,10 @@ class Index {
 	}
 
 public:
+	void reset() {
+		paths.clear();
+	}
+
 	std::string populate() {
 		const Timer timer;
 		paths.clear();
@@ -95,6 +99,10 @@ class Database {
 	}
 
 public:
+	void reset() {
+		locations.clear();
+	}
+
 	std::string populate() {
 		const Timer timer;
 		locations.clear();
