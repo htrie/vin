@@ -1,0 +1,3 @@
+#ifndef MIN_SHADER_VERSION
+#   define MIN_SHADER_VERSION 2
+#endif

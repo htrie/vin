@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <SourceControlRoot>$(ProjectDir)..</SourceControlRoot>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>$(ProjectDir)Precompiled/Precompiled.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles>$(ProjectDir)Precompiled/Precompiled.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <AdditionalIncludeDirectories>$(SourceControlRoot)/Include/freetype/freetype;$(SourceControlRoot)/Include/freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="SourceControlRoot">
+      <Value>$(SourceControlRoot)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
