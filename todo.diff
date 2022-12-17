@@ -9,6 +9,7 @@
 +remove std::min/max/clamp
 +open files to get context when filtering
 +store only locations
++use custom string hash function
 +use non-owning strings
 +don't use map for symbols
 +don't use vector for locations

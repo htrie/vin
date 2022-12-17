@@ -53,12 +53,13 @@ public:
 
 class Database {
 	struct Location {
+		size_t symbol_hash;
 		std::string filename;
 		std::string context;
 		size_t position;
 	};
 
-	std::map<size_t, std::vector<Location>> locations;
+	std::vector<Location> locations;
 
 	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 
@@ -71,7 +72,7 @@ class Database {
 						if (const auto symbol = std::string(&mem[location], i - location); symbol.length() > 2) {
 							const auto context = std::string(&mem[i], std::min((size_t)20, size - i));
 							const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-							locations[symbol_hash].emplace_back(filename, context, location);
+							locations.emplace_back(symbol_hash, filename, context, location);
 						}
 					}
 					location = i;
@@ -106,6 +107,7 @@ public:
 	std::string populate() {
 		const Timer timer;
 		locations.clear();
+		locations.reserve(1024 * 1024);
 		populate_directory(".");
 		return std::string("populate database (") + std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
@@ -113,7 +115,7 @@ public:
 	template <typename F>
 	void process(F func) {
 		for (const auto& location : locations) {
-			if (!func(location.first, location.second))
+			if (!func(location))
 				break;
 		}
 	}
