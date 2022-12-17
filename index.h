@@ -89,7 +89,7 @@ public:
 		const Timer timer;
 		locations.clear();
 		populate_directory(".");
-		return std::string("populate database in ") + timer.us();
+		return std::string("populate database (") + std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
 
 	template <typename F>
