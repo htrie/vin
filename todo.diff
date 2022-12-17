@@ -7,8 +7,9 @@
 +remove std::array
 +remove std::fmod
 +remove std::min/max/clamp
-+store only locations
++use mapped files
 +open files to get context when filtering
++store only locations
 --- 2022-12-18
 -better database test case: visual test folder takes 4s
 -ignore 1/2 letters symbols
