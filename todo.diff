@@ -7,10 +7,12 @@
 +remove std::array
 +remove std::fmod
 +remove std::min/max/clamp
---- 2022-12-14
-+use symbol hash for map key
 +consider using locations/mappings in files instead ofstrings
 +profile database
+--- 2022-12-17
++notify populate
+--- 2022-12-14
+-use symbol hash for map key
 --- 2022-12-12
 -use version_major/minor
 -remove dirty redraw and sleep when minimized

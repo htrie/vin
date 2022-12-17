@@ -20,9 +20,11 @@ class Index {
 	}
 
 public:
-	void populate() {
+	std::string populate() {
+		const Timer timer;
 		paths.clear();
 		populate_directory(".");
+		return std::string("populate index in ") + timer.us();
 	}
 
 	template <typename F>
@@ -84,9 +86,11 @@ class Database {
 	}
 
 public:
-	void populate() {
+	std::string populate() {
+		const Timer timer;
 		locations.clear();
 		populate_directory(".");
+		return std::string("populate database in ") + timer.us();
 	}
 
 	template <typename F>
