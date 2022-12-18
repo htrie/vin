@@ -1,121 +1,120 @@
-+static html display
-+connect to remote http server
-+terminal to display external tasks
-+remove std::ifstream/ofstream
-+remove std::string and other std
-+remove std::vector
-+remove std::array
-+remove std::fmod
-+remove std::min/max/clamp
---- 2022-12-18
--better database test case: visual test folder takes 4s
--ignore 1/2 letters symbols
--only use post-context
--use mapped files
--don't use map for symbols
--don't use vector for locations
--store filename index
--store only locations
--open files to get context when filtering
--use custom string hash function
--remove std::system commands
---- 2022-12-17
--notify populate
---- 2022-12-14
--use symbol hash for map key
---- 2022-12-12
--use version_major/minor
--remove dirty redraw and sleep when minimized
---- 2022-11-27
--add commit.bat
--display all characters after 100 in red
---- 2022-11-25
--try 0.5 UV offset: buggy
--add >8j and such
--add copy between buffers
---- 2022-11-24
--move saturation and sizes to config
--switch gray/rgb (<space>+b/g)
---- 2022-11-23
--allow any extension
--remove record and profile from title bar
---- 2022-11-22
--try other pixel fonts
---- 2022-11-21
--remove 'new' from gpu.h
---- 2022-11-20
--symbol database
--symbol find (<space>+f)
--jump to location
--word under cursor find
--fix uppercase find
--display context
---- 2022-11-19
--compile (<space>+c)
--run (<space>+a)
--use ' to go back to last location
---- 2022-11-18
--populate picker every time
--make <space>+j/k go down/up directly
--adjust saturation: 0.3 better
---- 2022-11-05
--use HSV to RGB
--rename variables
--use Vec3
--avoid greens and blues
--better rand generation
---- 2022-11-04
--use scale for color rebalancing
---- 2022-11-03
--use hash to color to colorize all words
---- 2022-11-02
--find past EOF
--switcher past EOL
--percentage indicator
--sleep
---- 2022-11-01
--use 28 font size and linear filtering: not great
--do not use file type for colorization
--scan each character for word
--use bold to display keywords
--colorize comments
---- 2022-10-31
--use +/- to jump lines at whitespace
--add bold/italic
---- 2022-10-30
--make repo private
---- 2022-10-29
--add UVs
--add character map from fnt
--select UVs based on character index
--fix special characters
--publish v0.3 tag
--bump to 0.4
---- 2022-10-28
--draw quad
--use font texture
---- 2022-10-27
--load texture
--use helper functions
---- 2022-10-26
--read tga
--generate header
---- 2022-10-25
--sleep again
--read fnt
---- 2022-10-24
--export bitmap font: use bmfont
--change colors back
---- 2022-10-23
--cache culled characters
--try always rendering
---- 2022-10-22
--tilda support
--remove modified bool (use text compare instead)
--full insert undo
--dot support
--do Not up cursor when zz at beginning of file
--fix dot And undo
---- 2022-10-21
--e-ink color scheme
--space whitespace mark
++static html display
++connect to remote http server
++terminal to display external tasks
++remove std::ifstream/ofstream
++remove std::string and other std
++remove std::vector
++remove std::array
++remove std::fmod
++remove std::min/max/clamp
+--- 2022-12-18
+-better database test case: visual test folder takes 4s
+-ignore 1/2 letters symbols
+-only use post-context
+-use mapped files
+-don't use map for symbols
+-don't use vector for locations
+-store filename index
+-store only locations
+-open files to get context when filtering
+-use custom string hash function
+--- 2022-12-17
+-notify populate
+--- 2022-12-14
+-use symbol hash for map key
+--- 2022-12-12
+-use version_major/minor
+-remove dirty redraw and sleep when minimized
+--- 2022-11-27
+-add commit.bat
+-display all characters after 100 in red
+--- 2022-11-25
+-try 0.5 UV offset: buggy
+-add >8j and such
+-add copy between buffers
+--- 2022-11-24
+-move saturation and sizes to config
+-switch gray/rgb (<space>+b/g)
+--- 2022-11-23
+-allow any extension
+-remove record and profile from title bar
+--- 2022-11-22
+-try other pixel fonts
+--- 2022-11-21
+-remove 'new' from gpu.h
+--- 2022-11-20
+-symbol database
+-symbol find (<space>+f)
+-jump to location
+-word under cursor find
+-fix uppercase find
+-display context
+--- 2022-11-19
+-compile (<space>+c)
+-run (<space>+a)
+-use ' to go back to last location
+--- 2022-11-18
+-populate picker every time
+-make <space>+j/k go down/up directly
+-adjust saturation: 0.3 better
+--- 2022-11-05
+-use HSV to RGB
+-rename variables
+-use Vec3
+-avoid greens and blues
+-better rand generation
+--- 2022-11-04
+-use scale for color rebalancing
+--- 2022-11-03
+-use hash to color to colorize all words
+--- 2022-11-02
+-find past EOF
+-switcher past EOL
+-percentage indicator
+-sleep
+--- 2022-11-01
+-use 28 font size and linear filtering: not great
+-do not use file type for colorization
+-scan each character for word
+-use bold to display keywords
+-colorize comments
+--- 2022-10-31
+-use +/- to jump lines at whitespace
+-add bold/italic
+--- 2022-10-30
+-make repo private
+--- 2022-10-29
+-add UVs
+-add character map from fnt
+-select UVs based on character index
+-fix special characters
+-publish v0.3 tag
+-bump to 0.4
+--- 2022-10-28
+-draw quad
+-use font texture
+--- 2022-10-27
+-load texture
+-use helper functions
+--- 2022-10-26
+-read tga
+-generate header
+--- 2022-10-25
+-sleep again
+-read fnt
+--- 2022-10-24
+-export bitmap font: use bmfont
+-change colors back
+--- 2022-10-23
+-cache culled characters
+-try always rendering
+--- 2022-10-22
+-tilda support
+-remove modified bool (use text compare instead)
+-full insert undo
+-dot support
+-do Not up cursor when zz at beginning of file
+-fix dot And undo
+--- 2022-10-21
+-e-ink color scheme
+-space whitespace mark
