@@ -5,7 +5,7 @@ My own attempt at a smaller vim, with:
 - sometimes simpler bindings (gg becomes g, since no other g commands supported; << becomes <)
 - space-based action menu (replaces command mode altogether since much more limited)
 - Vulkan rendering
-- Windows-only
+- Windows-only (Unix line endings only though)
 - no cursor support
 - no syntax highlighting
 - no splits
