@@ -1818,13 +1818,22 @@ public:
 class Finder {
 	struct Entry {
 		std::string filename;
-		std::string context;
 		size_t position;
+		std::string context;
 	};
 
 	std::string pattern;
 	std::vector<Entry> filtered;
 	unsigned selected = 0; 
+
+	std::string load(const std::string& filename) {
+		if (!filename.empty()) {
+			if (auto in = std::ifstream(filename)) {
+				return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+			}
+		}
+		return {};
+	}
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
 		characters.emplace_back((uint16_t)c, color, row, col);
@@ -1864,8 +1873,12 @@ public:
 		database.process([&](const auto& file, const auto& location) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (location.symbol_hash == pattern_hash)
-				filtered.emplace_back(file.name, location.context, location.position);
+			if (location.symbol_hash == pattern_hash) {
+				map(file.name, [&](const char* mem, size_t size) {
+					const auto context = std::string(&mem[location.position], std::min((size_t)20, size - location.position));
+					filtered.emplace_back(file.name, location.position, context);
+				});
+			}
 			return true;
 		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);

@@ -61,7 +61,6 @@ class Database {
 		size_t file_index = 0;
 		size_t symbol_hash = 0;
 		size_t position = 0;
-		std::string context;
 	};
 
 	std::vector<File> files;
@@ -76,10 +75,10 @@ class Database {
 			for (size_t i = 0; i < size; ++i) {
 				if (!is_letter(mem[i])) {
 					if (location != i) {
-						if (const auto symbol = std::string(&mem[location], i - location); symbol.length() > 2) {
-							const auto context = std::string(&mem[i], std::min((size_t)20, size - i));
+						if (i - location > 2) { // Ignore small words.
+							const auto symbol = std::string(&mem[location], i - location); // [TODO] don't use std::string.
 							const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-							locations.emplace_back(files.size() - 1, symbol_hash, location, context);
+							locations.emplace_back(files.size() - 1, symbol_hash, location);
 						}
 					}
 					location = i;

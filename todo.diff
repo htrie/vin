@@ -7,10 +7,6 @@
 +remove std::array
 +remove std::fmod
 +remove std::min/max/clamp
-+open files to get context when filtering
-+store only locations
-+use custom string hash function
-+use non-owning strings
 --- 2022-12-18
 -better database test case: visual test folder takes 4s
 -ignore 1/2 letters symbols
@@ -19,6 +15,9 @@
 -don't use map for symbols
 -don't use vector for locations
 -store filename index
+-store only locations
+-open files to get context when filtering
++use custom string hash function
 --- 2022-12-17
 -notify populate
 --- 2022-12-14
