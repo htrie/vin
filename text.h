@@ -1866,7 +1866,7 @@ public:
 				return false;
 			if (location.symbol_hash == pattern_hash) {
 				map(file.name, [&](const char* mem, size_t size) {
-					const auto context = std::string(&mem[location.position], std::min((size_t)20, size - location.position));
+					const auto context = std::string(&mem[location.position], std::min((size_t)60, size - location.position));
 					filtered.emplace_back(file.name, location.position, context);
 				});
 			}
