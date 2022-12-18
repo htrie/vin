@@ -59,7 +59,7 @@ class Database {
 
 	struct Location {
 		size_t file_index = 0;
-		size_t symbol_hash = 0;
+		uint64_t symbol_hash = 0;
 		size_t position = 0;
 	};
 
@@ -74,13 +74,8 @@ class Database {
 			size_t location = 0;
 			for (size_t i = 0; i < size; ++i) {
 				if (!is_letter(mem[i])) {
-					if (location != i) {
-						if (i - location > 2) { // Ignore small words.
-							const auto symbol = std::string(&mem[location], i - location); // [TODO] don't use std::string.
-							const size_t symbol_hash = std::hash<std::string>{}(tolower(symbol));
-							locations.emplace_back(files.size() - 1, symbol_hash, location);
-						}
-					}
+					if ((location != i) && (i - location > 2)) // Ignore small words.
+						locations.emplace_back(files.size() - 1, fnv64(&mem[location], i - location), location);
 					location = i;
 					location++;
 				}
@@ -116,7 +111,7 @@ public:
 		files.clear();
 		files.resize(1024);
 		locations.clear();
-		locations.reserve(1024 * 1024);
+		locations.reserve(4 * 1024 * 1024);
 		populate_directory(".");
 		return std::string("populate database (") + std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}

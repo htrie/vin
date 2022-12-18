@@ -1868,8 +1868,7 @@ public:
 
 	void filter(Database& database, unsigned row_count) {
 		filtered.clear();
-		pattern = tolower(pattern);
-		const size_t pattern_hash = std::hash<std::string>{}(pattern);
+		const auto pattern_hash = fnv64(pattern.data(), pattern.size());
 		database.process([&](const auto& file, const auto& location) {
 			if (filtered.size() > row_count - 2)
 				return false;

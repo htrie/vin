@@ -7,6 +7,7 @@
 +remove std::array
 +remove std::fmod
 +remove std::min/max/clamp
++bug finder location is not the same as cursor location? (tabs?)
 --- 2022-12-18
 -better database test case: visual test folder takes 4s
 -ignore 1/2 letters symbols
@@ -17,7 +18,7 @@
 -store filename index
 -store only locations
 -open files to get context when filtering
-+use custom string hash function
+-use custom string hash function
 --- 2022-12-17
 -notify populate
 --- 2022-12-14
