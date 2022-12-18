@@ -1524,6 +1524,7 @@ class Buffer {
 			map(filename, [&](const char* mem, size_t size) {
 				text = std::string(mem, size);
 			});
+			remove_cr(text); // Force Unix line endings.
 		}
 		return text;
 	}
