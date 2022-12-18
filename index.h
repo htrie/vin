@@ -109,11 +109,13 @@ public:
 	std::string populate() {
 		const Timer timer;
 		files.clear();
-		files.resize(1024);
+		files.resize(4 * 1024);
 		locations.clear();
 		locations.reserve(4 * 1024 * 1024);
 		populate_directory(".");
-		return std::string("populate database (") + std::to_string(locations.size()) + " symbols) in " + timer.us();
+		return std::string("populate database (") + 
+			std::to_string(files.size()) + " files, " + 
+			std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
 
 	template <typename F>

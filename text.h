@@ -1826,15 +1826,6 @@ class Finder {
 	std::vector<Entry> filtered;
 	unsigned selected = 0; 
 
-	std::string load(const std::string& filename) {
-		if (!filename.empty()) {
-			if (auto in = std::ifstream(filename)) {
-				return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-			}
-		}
-		return {};
-	}
-
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
 		characters.emplace_back((uint16_t)c, color, row, col);
 	};
