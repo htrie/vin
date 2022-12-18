@@ -1519,12 +1519,13 @@ class Buffer {
 	}
 
 	std::string load() {
+		std::string text;
 		if (!filename.empty()) {
-			if (auto in = std::ifstream(filename)) {
-				return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-			}
+			map(filename, [&](const char* mem, size_t size) {
+				text = std::string(mem, size);
+			});
 		}
-		return {};
+		return text;
 	}
 
 public:
