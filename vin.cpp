@@ -11,7 +11,7 @@
 #include <unordered_map> // TODO: Remove STL.
 #include <string> // TODO: Remove STL.
 #include <filesystem> // TODO: Remove STL.
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.hpp> // TODO: Use no-STL define.
 #include <dwmapi.h>
 #include <Windows.h>
 
