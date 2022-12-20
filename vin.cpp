@@ -5,10 +5,12 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <string> // TODO: Remove STL.
+#include <array> // TODO: Remove STL.
+#include <vector> // TODO: Remove STL.
 #include <map> // TODO: Remove STL.
 #include <unordered_map> // TODO: Remove STL.
 #include <unordered_set> // TODO: Remove STL.
+#include <string> // TODO: Remove STL.
 #include <filesystem> // TODO: Remove STL.
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
