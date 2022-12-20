@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string> // TODO: Remove STL.
 #include <map> // TODO: Remove STL.
-#include <ranges> // TODO: Remove STL.
 #include <unordered_map> // TODO: Remove STL.
 #include <unordered_set> // TODO: Remove STL.
 #include <filesystem> // TODO: Remove STL.
