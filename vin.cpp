@@ -4,7 +4,7 @@
 #define VULKAN_HPP_NO_EXCEPTIONS
 
 #include <math.h>
-#include <stdlib.h>
+#include <stdlib.h> // TODO: Remove size_t/uintxx_t.
 #include <array> // TODO: Remove STL.
 #include <vector> // TODO: Remove STL.
 #include <map> // TODO: Remove STL.
