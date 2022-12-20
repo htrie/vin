@@ -5,15 +5,13 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <string>
-#include <chrono>
-#include <map>
-#include <ranges>
-#include <unordered_set>
-#include <fstream>
-#include <filesystem>
-#include <future>
-#include <thread>
+#include <string> // TODO: Remove STL.
+#include <map> // TODO: Remove STL.
+#include <ranges> // TODO: Remove STL.
+#include <unordered_map> // TODO: Remove STL.
+#include <unordered_set> // TODO: Remove STL.
+#include <fstream> // TODO: Remove STL.
+#include <filesystem> // TODO: Remove STL.
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
 #include <Windows.h>
@@ -100,7 +98,7 @@ class App {
 			SetWindowTextA(device.get_hwnd(), status().data());
 		}
 		else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Avoid busy loop when minimized.
+			Sleep(1); // Avoid busy loop when minimized.
 		}
 	}
 
@@ -254,7 +252,7 @@ public:
 	}
 
 	void notify(const std::string& s) {
-		notification = timestamp() + "  " + s;
+		notification = s;
 	}
 
 	void run() {
