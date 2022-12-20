@@ -1542,8 +1542,7 @@ public:
 
 	void save() {
 		if (!filename.empty()) {
-			if (auto out = std::ofstream(filename, std::ios::binary)) {
-				out << stack.get_text();
+			if (write(filename, stack.get_text())) {
 				needs_save = false;
 			}
 		}

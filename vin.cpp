@@ -10,7 +10,6 @@
 #include <ranges> // TODO: Remove STL.
 #include <unordered_map> // TODO: Remove STL.
 #include <unordered_set> // TODO: Remove STL.
-#include <fstream> // TODO: Remove STL.
 #include <filesystem> // TODO: Remove STL.
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
