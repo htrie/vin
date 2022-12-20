@@ -90,7 +90,7 @@ void map(const std::string_view filename, F func) {
 
 bool write(const std::string_view filename, const std::string_view text) {
 	bool res = false;
-	if (const auto file = CreateFileA(filename.data(), GENERIC_WRITE, FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr); file != INVALID_HANDLE_VALUE) {
+	if (const auto file = CreateFileA(filename.data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr); file != INVALID_HANDLE_VALUE) {
 		res = WriteFile(file, text.data(), (DWORD)text.size(), nullptr, nullptr);
 		CloseHandle(file);
 	}
