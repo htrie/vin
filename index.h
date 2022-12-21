@@ -1,6 +1,6 @@
 #pragma once
 
-bool accept(const std::string_view extension) {
+bool accept_extension(const std::string_view extension) {
 	if (extension == ".cpp") return true;
 	if (extension == ".hpp") return true;
 	if (extension == ".c") return true;
@@ -23,7 +23,7 @@ class Index {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (accept(path.path().extension().generic_string()))
+					if (accept_extension(path.path().extension().generic_string()))
 						paths.push_back(path.path().generic_string());
 				}
 			}
@@ -66,14 +66,19 @@ class Database {
 	std::vector<File> files;
 	std::vector<Location> locations;
 
-	constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
+	constexpr bool accept_char(char c) {
+		return
+			(c >= 'a' && c <= 'z') || 
+			(c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') ||
+			(c == '_'); }
 
 	void scan(const std::string& filename) {
 		map(filename, [&](const char* mem, size_t size) {
 			files.emplace_back(filename, size);
 			size_t location = 0;
 			for (size_t i = 0; i < size; ++i) {
-				if (!is_letter(mem[i])) {
+				if (!accept_char(mem[i])) {
 					if ((location != i) && (i - location > 2)) // Ignore small words.
 						locations.emplace_back(files.size() - 1, fnv64(&mem[location], i - location), location);
 					location = i;
@@ -93,7 +98,7 @@ class Database {
 			} else if (path.is_regular_file()) {
 				const auto filename = path.path().generic_string();
 				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (accept(path.path().extension().generic_string()))
+					if (accept_extension(path.path().extension().generic_string()))
 						scan(path.path().generic_string());
 				}
 			}
