@@ -5,16 +5,18 @@
 
 // TODO: Custom allocator.
 // TODO: Optimize rendering.
+// TODO: Remove STL.
+// TODO: Use no-STL define before vulkan header.
 
 #include <math.h>
 #include <stdlib.h>
-#include <array> // TODO: Remove STL.
-#include <vector> // TODO: Remove STL.
-#include <map> // TODO: Remove STL.
-#include <unordered_map> // TODO: Remove STL.
-#include <string> // TODO: Remove STL.
-#include <filesystem> // TODO: Remove STL.
-#include <vulkan/vulkan.hpp> // TODO: Use no-STL define.
+#include <array>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <string>
+#include <filesystem>
+#include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
 #include <Windows.h>
 
