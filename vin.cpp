@@ -3,6 +3,9 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
+// TODO: Custom allocator.
+// TODO: Optimize rendering.
+
 #include <math.h>
 #include <stdlib.h>
 #include <array> // TODO: Remove STL.
