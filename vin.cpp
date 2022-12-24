@@ -7,6 +7,7 @@
 // TODO: Optimize rendering.
 // TODO: Remove STL.
 // TODO: Use no-STL define before vulkan header.
+// TODO: Simple text-based HTML browser.
 
 #include <math.h>
 #include <stdlib.h>
