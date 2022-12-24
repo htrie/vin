@@ -834,7 +834,7 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) {
+	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) { // [TODO] Use std::vector in font generator.
 		Font font;
 		font.width = width;
 		font.height = height;

@@ -1662,7 +1662,7 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	std::map<std::string, Buffer> buffers;
+	std::map<std::string, Buffer> buffers; // Use std::vector (don't sort, just use creation order).
 	std::string active;
 
 	unsigned longest_filename() const {
