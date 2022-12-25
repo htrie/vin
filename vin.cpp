@@ -3,10 +3,10 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
+// TODO: Remove STL.
+// TODO: No dynamic allocations.
 // TODO: Custom allocator.
 // TODO: Optimize rendering.
-// TODO: Remove STL.
-// TODO: Use no-STL define before vulkan header.
 // TODO: Simple text-based HTML browser.
 
 #include <math.h>
