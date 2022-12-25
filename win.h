@@ -96,3 +96,29 @@ bool write(const std::string_view filename, const std::string_view text) {
 	}
 	return res;
 }
+
+template<typename F>
+void process_files(const char* path, F func) {
+	TCHAR filter[MAX_PATH];
+	strncpy_s(filter, MAX_PATH, path, MAX_PATH);
+	strncpy_s(filter + strlen(filter), MAX_PATH, "/*", MAX_PATH);
+	WIN32_FIND_DATA find_data;
+	HANDLE handle = FindFirstFile(filter, &find_data);
+	do {
+		if (handle != INVALID_HANDLE_VALUE) {
+			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
+				if (find_data.cFileName[0] != '.') {
+					strncpy_s(filter, MAX_PATH, path, MAX_PATH);
+					strncpy_s(filter + strlen(filter), MAX_PATH, find_data.cFileName, MAX_PATH);
+					strncpy_s(filter + strlen(filter), MAX_PATH, "/", MAX_PATH);
+					process_files(filter, func);
+				}
+			}
+			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+				func(find_data.cFileName);
+			}
+		}
+	} while (FindNextFile(handle, &find_data) != 0);
+	FindClose(handle);
+}
+

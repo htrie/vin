@@ -14,7 +14,6 @@
 #include <array>
 #include <vector>
 #include <string>
-#include <filesystem>
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
 #include <Windows.h>

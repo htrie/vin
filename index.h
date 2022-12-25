@@ -13,23 +13,6 @@ bool accept_extension(const std::string_view extension) {
 class Index {
 	std::vector<std::string> paths;
 
-	void populate_directory(const std::filesystem::path& dir) {
-		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
-			if (path.is_directory()) {
-				const auto dirname = path.path().generic_string();
-				if (dirname.size() > 0 && (dirname.find("/.") == std::string::npos)) { // Skip hidden directories.
-					populate_directory(path);
-				}
-			} else if (path.is_regular_file()) {
-				const auto filename = path.path().generic_string();
-				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (accept_extension(path.path().extension().generic_string()))
-						paths.push_back(path.path().generic_string());
-				}
-			}
-		}
-	}
-
 public:
 	void reset() {
 		paths.clear();
@@ -38,7 +21,9 @@ public:
 	std::string populate() {
 		const Timer timer;
 		paths.clear();
-		populate_directory(".");
+		process_files(".", [&](const char* path) {
+			paths.push_back(path);
+		});
 		return std::string("populate index in ") + timer.us();
 	}
 
@@ -88,23 +73,6 @@ class Database {
 		});
 	}
 
-	void populate_directory(const std::filesystem::path& dir) {
-		for (const auto& path : std::filesystem::directory_iterator{ dir }) {
-			if (path.is_directory()) {
-				const auto dirname = path.path().generic_string();
-				if (dirname.size() > 0 && (dirname.find("/.") == std::string::npos)) { // Skip hidden directories.
-					populate_directory(path);
-				}
-			} else if (path.is_regular_file()) {
-				const auto filename = path.path().generic_string();
-				if (filename.size() > 0 && (filename.find("/.") == std::string::npos)) { // Skip hidden files.
-					if (accept_extension(path.path().extension().generic_string()))
-						scan(path.path().generic_string());
-				}
-			}
-		}
-	}
-
 public:
 	void reset() {
 		files.clear();
@@ -117,7 +85,9 @@ public:
 		files.resize(4 * 1024);
 		locations.clear();
 		locations.reserve(4 * 1024 * 1024);
-		populate_directory(".");
+		process_files(".", [&](const char* path) {
+			scan(path);
+		});
 		return std::string("populate database (") + 
 			std::to_string(files.size()) + " files, " + 
 			std::to_string(locations.size()) + " symbols) in " + timer.us();
