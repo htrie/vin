@@ -1662,13 +1662,13 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	std::map<std::string, Buffer> buffers; // Use std::vector (don't sort, just use creation order).
-	std::string active;
+	std::vector<Buffer> buffers; // Use std::vector (don't sort, just use creation order).
+	size_t active = (size_t)-1;
 
 	unsigned longest_filename() const {
 		unsigned longest = 0;
-		for (auto& it : buffers) {
-			longest = std::max(longest, (unsigned)it.second.get_filename().size());
+		for (auto& buffer : buffers) {
+			longest = std::max(longest, (unsigned)buffer.get_filename().size());
 		}
 		return longest;
 	}
@@ -1695,26 +1695,33 @@ class Switcher {
 		}
 	}
 
+	size_t find_buffer(const std::string_view filename) {
+		for (size_t i = 0; i < buffers.size(); ++i) {
+			if (buffers[i].get_filename() == filename)
+				return i;
+		}
+		return (size_t)-1;
+	}
+
 public:
 	std::string load(const std::string_view filename) {
 		if (!filename.empty()) {
-			if (buffers.find(std::string(filename)) == buffers.end()) {
-				const Timer timer;
-				buffers.emplace(filename, filename);
-				active = filename;
-				return std::string("load ") + std::string(filename) + " in " + timer.us();
-			}
-			else
-			{
-				active = filename;
+			if (auto index = find_buffer(filename); index != (size_t)-1) {
+				active = index;
 				return std::string("switch ") + std::string(filename);
+			}
+			else {
+				const Timer timer;
+				buffers.emplace_back(filename);
+				active = buffers.size() - 1;
+				return std::string("load ") + std::string(filename) + " in " + timer.us();
 			}
 		}
 		return {};
 	}
 
 	std::string reload() {
-		if (!active.empty()) {
+		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].reload();
 			return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
@@ -1723,7 +1730,7 @@ public:
 	}
 
 	std::string save() {
-		if (!active.empty()) {
+		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].save();
 			return std::string("save ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
@@ -1732,11 +1739,10 @@ public:
 	}
 
 	std::string close() {
-		if (!active.empty()) {
+		if (active != (size_t)-1) {
 			const Timer timer;
 			const auto filename = std::string(buffers[active].get_filename());
-			buffers.erase(filename);
-			active.clear();
+			buffers.erase(buffers.begin() + active);
 			select_previous();
 			return std::string("close ") + filename + " in " + timer.us();
 		}
@@ -1744,46 +1750,26 @@ public:
 	}
 
 	Buffer& current() {
-		if (!active.empty())
+		if (active != (size_t)-1)
 			return buffers[active];
 		return empty_buffer;
 	}
 
 	void select_previous() {
-		if (!active.empty()) {
-			if (auto found = buffers.find(active); found != buffers.end()) {
-				if (auto prev = --found; prev != buffers.end()) {
-					active = buffers.at((*prev).first).get_filename();
-				}
-				else {
-					active = buffers.at((*buffers.rbegin()).first).get_filename();
-				}
-			} else {
-				active.clear();
-			}
+		if (active != (size_t)-1) {
+			active = active > 0 ? active - 1 : buffers.size() - 1;
 		} else {
-			if (auto found = buffers.begin(); found != buffers.end()) {
-				active = buffers.at((*found).first).get_filename();
-			}
+			if (buffers.size() > 0)
+				active = 0;
 		}
 	}
 
 	void select_next() {
-		if (!active.empty()) {
-			if (auto found = buffers.find(active); found != buffers.end()) {
-				if (auto next = ++found; next != buffers.end()) {
-					active = buffers.at((*next).first).get_filename();
-				}
-				else {
-					active = buffers.at((*buffers.begin()).first).get_filename();
-				}
-			} else {
-				active.clear();
-			}
+		if (active != (size_t)-1) {
+			active = (active + 1) % buffers.size();
 		} else {
-			if (auto found = buffers.begin(); found != buffers.end()) {
-				active = buffers.at((*found).first).get_filename();
-			}
+			if (buffers.size() > 0)
+				active = 0;
 		}
 	}
 
@@ -1803,13 +1789,13 @@ public:
 
 		unsigned col = left_col;
 		unsigned row = top_row;
-		for (auto& it : buffers) {
+		for (size_t i = 0; i < buffers.size(); ++i) {
 			col = left_col;
 			push_background_line(characters, row, left_col, right_col);
-			if (active == it.second.get_filename())
+			if (i == active)
 				push_cursor_line(characters, row, left_col, right_col);
-			push_string(characters, row, col, it.second.get_filename());
-			if (it.second.is_dirty()) 
+			push_string(characters, row, col, buffers[i].get_filename());
+			if (buffers[i].is_dirty()) 
 				push_string(characters, row, col, "*");
 			row++;
 		}
