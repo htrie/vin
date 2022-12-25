@@ -1662,7 +1662,7 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	std::vector<Buffer> buffers; // Use std::vector (don't sort, just use creation order).
+	std::vector<Buffer> buffers;
 	size_t active = (size_t)-1;
 
 	unsigned longest_filename() const {
