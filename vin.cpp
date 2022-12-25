@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <array>
 #include <vector>
-#include <unordered_map>
 #include <string>
 #include <filesystem>
 #include <vulkan/vulkan.hpp>

@@ -201,18 +201,17 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	out << "};" << std::endl;
 	out << std::endl;
 
-	out << "const std::unordered_map<uint16_t, FontGlyph> " << font_filename << "_glyphs  = {" << std::endl;
+	out << "const std::vector<FontGlyph> " << font_filename << "_glyphs  = {" << std::endl;
 	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
 		const auto& c = fnt.chars.values[i];
-		out << "\t{ " << c.id << 
-			", FontGlyph(" << 
+		out << "\t{ " << c.id << ", " <<
 			std::to_string((double)c.x / (double)tga.header.width) << "f, " << 
 			std::to_string((double)c.y / (double)tga.header.height) << "f, " << 
 			std::to_string((double)c.width / (double)tga.header.width) << "f, " << 
 			std::to_string((double)c.height / (double)tga.header.height) << "f, " << 
 			std::to_string((double)c.xoffset / (double)tga.header.width) << "f, " << 
 			std::to_string((double)c.yoffset / (double)tga.header.height) << "f, " << 
-			std::to_string((double)c.xadvance / (double)tga.header.width) << "f) }";
+			std::to_string((double)c.xadvance / (double)tga.header.width) << "f }";
 		if (i < (unsigned)fnt.chars.values.size() - 1)
 			out << ",";
 		out << std::endl;

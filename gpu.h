@@ -810,7 +810,7 @@ class Device {
 		vk::UniqueDescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
-		std::unordered_map<uint16_t, FontGlyph> glyphs;
+		std::vector<FontGlyph> glyphs;
 	};
 	Font font_regular;
 	Font font_bold;
@@ -834,7 +834,7 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::unordered_map<uint16_t, FontGlyph> glyphs) { // [TODO] Use std::vector in font generator.
+	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::vector<FontGlyph> glyphs) {
 		Font font;
 		font.width = width;
 		font.height = height;
@@ -854,6 +854,14 @@ class Device {
 		font_regular = upload_font(cmd_buf, font_regular_pixels.data(), font_regular_pixels.size(), font_regular_width, font_regular_height, font_regular_glyphs);
 		font_bold = upload_font(cmd_buf, font_bold_pixels.data(), font_bold_pixels.size(), font_bold_width, font_bold_height, font_bold_glyphs);
 		font_italic = upload_font(cmd_buf, font_italic_pixels.data(), font_italic_pixels.size(), font_italic_width, font_italic_height, font_italic_glyphs);
+	}
+
+	const FontGlyph* find_glyph(const std::vector<FontGlyph>& glyphs, uint16_t id) {
+		for (auto& glyph : glyphs) {
+			if (glyph.id == id)
+				return &glyph;
+		}
+		return nullptr;
 	}
 
 public:
@@ -936,21 +944,19 @@ public:
 
 		for (auto& character : characters) {
 			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
-			if (auto found = font.glyphs.find(character.index); found != font.glyphs.end()) {
-				const auto& glyph = found->second;
-
-				const float trans_x = character.col * spacing().character + glyph.x_off * font.width;
-				const float trans_y = character.row * spacing().line + glyph.y_off * font.height;
+			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
+				const float trans_x = character.col * spacing().character + glyph->x_off * font.width;
+				const float trans_y = character.row * spacing().line + glyph->y_off * font.height;
 
 				Constants constants;
 				constants.model = {
-					{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
-					{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
+					{ glyph->w * font.width, 0.0f, 0.0f, 0.0f },
+					{ 0.0f, glyph->h * font.height, 0.0f, 0.0f },
 					{ 0.0f, 0.0f, 1.0f, 0.0f },
 					{ trans_x, trans_y, 0.0f, 1.0f } };
 				constants.color = character.color.rgba();
-				constants.uv_origin = { glyph.x, glyph.y };
-				constants.uv_sizes = { glyph.w, glyph.h };
+				constants.uv_origin = { glyph->x, glyph->y };
+				constants.uv_sizes = { glyph->w, glyph->h };
 
 				bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
 
