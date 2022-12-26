@@ -100,18 +100,21 @@ bool write(const std::string_view filename, const std::string_view text) {
 template<typename F>
 void process_files(const char* path, F func) {
 	TCHAR filter[MAX_PATH];
-	strncpy_s(filter, MAX_PATH, path, MAX_PATH);
-	strncpy_s(filter + strlen(filter), MAX_PATH, "/*", MAX_PATH);
+	filter[0] = 0;
+	append_path(filter, path);
+	append_path(filter, "/*");
 	WIN32_FIND_DATA find_data;
 	HANDLE handle = FindFirstFile(filter, &find_data);
 	do {
 		if (handle != INVALID_HANDLE_VALUE) {
 			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
 				if (find_data.cFileName[0] != '.') {
-					strncpy_s(filter, MAX_PATH, path, MAX_PATH);
-					strncpy_s(filter + strlen(filter), MAX_PATH, find_data.cFileName, MAX_PATH);
-					strncpy_s(filter + strlen(filter), MAX_PATH, "/", MAX_PATH);
-					process_files(filter, func);
+					TCHAR dir[MAX_PATH];
+					dir[0] = 0;
+					append_path(dir, path);
+					append_path(dir, find_data.cFileName);
+					append_path(dir, "/");
+					process_files(dir, func);
 				}
 			}
 			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
