@@ -75,7 +75,7 @@ constexpr bool is_punctuation(char c) { return
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' || c == '?';
 }
 
-static inline const std::vector<std::vector<const char*>> cpp_keywords = {
+static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
 	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
 	{ "bitand", "bitor", "bool", "break" },
 	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
