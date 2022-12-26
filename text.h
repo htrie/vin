@@ -117,11 +117,12 @@ struct Character {
 	bool bold = false;
 	bool italic = false;
 
+	Character() {}
 	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, bool italic = false)
 		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
 };
 
-typedef std::vector<Character> Characters;
+typedef Array<Character, 16 * 1024> Characters;
 
 class Word {
 	size_t start = 0;

@@ -77,7 +77,6 @@ class App {
 	Characters cull() {
 		const auto viewport = device.viewport();
 		Characters characters;
-		characters.reserve(1024);
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
