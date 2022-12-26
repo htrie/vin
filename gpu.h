@@ -11,11 +11,11 @@ vk::UniqueInstance create_instance() {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
 
-	auto const app_info = vk::ApplicationInfo()
+	const auto app_info = vk::ApplicationInfo()
 		.setApplicationVersion(0)
 		.setEngineVersion(0)
 		.setApiVersion(VK_API_VERSION_1_0);
-	auto const inst_info = vk::InstanceCreateInfo()
+	const auto inst_info = vk::InstanceCreateInfo()
 		.setPApplicationInfo(&app_info)
 		.setEnabledLayerCount((uint32_t)layers.size())
 		.setPpEnabledLayerNames(layers.data())
@@ -63,7 +63,7 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 }
 
 vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hInstance, HWND hWnd) {
-	auto const surf_info = vk::Win32SurfaceCreateInfoKHR()
+	const auto surf_info = vk::Win32SurfaceCreateInfoKHR()
 		.setHinstance(hInstance)
 		.setHwnd(hWnd);
 
@@ -118,7 +118,7 @@ vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
 }
 
 vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
-	auto const cmd_pool_info = vk::CommandPoolCreateInfo()
+	const auto cmd_pool_info = vk::CommandPoolCreateInfo()
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
 		.setQueueFamilyIndex(family_index);
 
@@ -142,7 +142,7 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
 			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
 			.setPImmutableSamplers(nullptr) };
 
-	auto const desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
+	const auto desc_layout_info = vk::DescriptorSetLayoutCreateInfo()
 		.setBindingCount((uint32_t)layout_bindings.size())
 		.setPBindings(layout_bindings.data());
 
@@ -158,7 +158,7 @@ vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const 
 			.setSize(constants_size)
 			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment) };
 
-	auto const pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+	const auto pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 		.setPushConstantRangeCount((uint32_t)push_constants.size())
 		.setPPushConstantRanges(push_constants.data())
 		.setSetLayoutCount(1)
@@ -186,7 +186,7 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
 			.setAttachment(0)
 			.setLayout(vk::ImageLayout::eColorAttachmentOptimal) };
 
-	auto const subpass = vk::SubpassDescription()
+	const auto subpass = vk::SubpassDescription()
 		.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
 		.setInputAttachmentCount(0)
 		.setPInputAttachments(nullptr)
@@ -206,7 +206,7 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
 			.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead)
 			.setDependencyFlags(vk::DependencyFlags()), };
 
-	auto const rp_info = vk::RenderPassCreateInfo()
+	const auto rp_info = vk::RenderPassCreateInfo()
 		.setAttachmentCount((uint32_t)attachments.size())
 		.setPAttachments(attachments.data())
 		.setSubpassCount(1)
@@ -252,14 +252,14 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 
 	vk::PipelineVertexInputStateCreateInfo const vertex_input_info;
 
-	auto const input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+	const auto input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
 		.setTopology(vk::PrimitiveTopology::eTriangleList);
 
-	auto const viewport_info = vk::PipelineViewportStateCreateInfo()
+	const auto viewport_info = vk::PipelineViewportStateCreateInfo()
 		.setViewportCount(1)
 		.setScissorCount(1);
 
-	auto const rasterization_info = vk::PipelineRasterizationStateCreateInfo()
+	const auto rasterization_info = vk::PipelineRasterizationStateCreateInfo()
 		.setDepthClampEnable(VK_FALSE)
 		.setRasterizerDiscardEnable(VK_FALSE)
 		.setPolygonMode(vk::PolygonMode::eFill)
@@ -268,9 +268,9 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 		.setDepthBiasEnable(VK_FALSE)
 		.setLineWidth(1.0f);
 
-	auto const multisample_info = vk::PipelineMultisampleStateCreateInfo();
+	const auto multisample_info = vk::PipelineMultisampleStateCreateInfo();
 
-	auto const depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo()
+	const auto depth_stencil_info = vk::PipelineDepthStencilStateCreateInfo()
 		.setDepthTestEnable(VK_FALSE)
 		.setDepthWriteEnable(VK_FALSE)
 		.setDepthBoundsTestEnable(VK_FALSE)
@@ -287,7 +287,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 			.setAlphaBlendOp(vk::BlendOp::eAdd)
 			.setColorWriteMask(vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA) };
 
-	auto const color_blend_info = vk::PipelineColorBlendStateCreateInfo()
+	const auto color_blend_info = vk::PipelineColorBlendStateCreateInfo()
 		.setAttachmentCount((uint32_t)color_blend_attachments.size())
 		.setPAttachments(color_blend_attachments.data());
 
@@ -295,11 +295,11 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 		vk::DynamicState::eViewport,
 		vk::DynamicState::eScissor };
 
-	auto const dynamic_state_info = vk::PipelineDynamicStateCreateInfo()
+	const auto dynamic_state_info = vk::PipelineDynamicStateCreateInfo()
 		.setDynamicStateCount((uint32_t)dynamic_states.size())
 		.setPDynamicStates(dynamic_states.data());
 
-	auto const pipeline_info = vk::GraphicsPipelineCreateInfo()
+	const auto pipeline_info = vk::GraphicsPipelineCreateInfo()
 		.setStageCount((uint32_t)shader_stage_infos.size())
 		.setPStages(shader_stage_infos.data())
 		.setPVertexInputState(&vertex_input_info)
@@ -328,7 +328,7 @@ vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
             .setDescriptorCount(16)
 	};
 
-	auto const desc_pool_info = vk::DescriptorPoolCreateInfo()
+	const auto desc_pool_info = vk::DescriptorPoolCreateInfo()
 		.setMaxSets(16)
 		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
 		.setPoolSizeCount((uint32_t)pool_sizes.size())
@@ -340,7 +340,7 @@ vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
 }
 
 vk::UniqueFence create_fence(const vk::Device& device) {
-	auto const fence_info = vk::FenceCreateInfo()
+	const auto fence_info = vk::FenceCreateInfo()
 		.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
 	auto fence_handle = device.createFenceUnique(fence_info);
@@ -349,7 +349,7 @@ vk::UniqueFence create_fence(const vk::Device& device) {
 }
 
 vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
-	auto const semaphore_info = vk::SemaphoreCreateInfo();
+	const auto semaphore_info = vk::SemaphoreCreateInfo();
 
 	auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
 	verify(semaphore_handle.result == vk::Result::eSuccess);
@@ -357,7 +357,7 @@ vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
 }
 
 vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
-	auto const cmd_info = vk::CommandBufferAllocateInfo()
+	const auto cmd_info = vk::CommandBufferAllocateInfo()
 		.setCommandPool(cmd_pool)
 		.setLevel(vk::CommandBufferLevel::ePrimary)
 		.setCommandBufferCount(1);
@@ -407,7 +407,7 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
 		}
 	}
 
-	auto const swapchain_info = vk::SwapchainCreateInfoKHR()
+	const auto swapchain_info = vk::SwapchainCreateInfoKHR()
 		.setSurface(surface)
 		.setMinImageCount(min_image_count)
 		.setImageFormat(surface_format.format)
@@ -444,7 +444,7 @@ vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image&
 vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
 	const Array<vk::ImageView, 1> attachments = { image_view };
 
-	auto const fb_info = vk::FramebufferCreateInfo()
+	const auto fb_info = vk::FramebufferCreateInfo()
 		.setRenderPass(render_pass)
 		.setAttachmentCount((uint32_t)attachments.size())
 		.setPAttachments(attachments.data())
@@ -458,7 +458,7 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
 }
 
 vk::UniqueSampler create_sampler(const vk::Device& device) {
-	auto const sampler_info = vk::SamplerCreateInfo()
+	const auto sampler_info = vk::SamplerCreateInfo()
 		.setMagFilter(vk::Filter::eNearest)
 		.setMinFilter(vk::Filter::eNearest)
 		.setMipmapMode(vk::SamplerMipmapMode::eNearest)
@@ -505,7 +505,7 @@ vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& de
 }
 
 vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
-	auto const buf_info = vk::BufferCreateInfo()
+	const auto buf_info = vk::BufferCreateInfo()
 		.setSize(size)
 		.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
@@ -582,7 +582,7 @@ void copy_image_data(const vk::Device& device, const vk::Image& image, const vk:
 	auto result = device.bindImageMemory(image, image_memory, 0);
 	verify(result == vk::Result::eSuccess);
 
-	auto const image_subres = vk::ImageSubresource()
+	const auto image_subres = vk::ImageSubresource()
 		.setAspectMask(vk::ImageAspectFlagBits::eColor)
 		.setMipLevel(0)
 		.setArrayLayer(0);
@@ -596,7 +596,7 @@ void copy_image_data(const vk::Device& device, const vk::Image& image, const vk:
 	unmap_memory(device, image_memory);
 }
 vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
-	auto const alloc_info = vk::DescriptorSetAllocateInfo()
+	const auto alloc_info = vk::DescriptorSetAllocateInfo()
 		.setDescriptorPool(desc_pool)
 		.setDescriptorSetCount(1)
 		.setPSetLayouts(&desc_layout);
@@ -653,7 +653,7 @@ uint32_t acquire(const vk::Device& device, const vk::SwapchainKHR& swapchain, co
 
 void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Semaphore& signal_sema, const vk::CommandBuffer& cmd_buf, const vk::Fence& fence) {
 	vk::PipelineStageFlags const pipe_stage_flags = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-	auto const submit_info = vk::SubmitInfo()
+	const auto submit_info = vk::SubmitInfo()
 		.setPWaitDstStageMask(&pipe_stage_flags)
 		.setWaitSemaphoreCount(1)
 		.setPWaitSemaphores(&wait_sema)
@@ -667,7 +667,7 @@ void submit(const vk::Queue& queue, const vk::Semaphore& wait_sema, const vk::Se
 }
 
 void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk::Semaphore& wait_sema, uint32_t image_index) {
-	auto const present_info = vk::PresentInfoKHR()
+	const auto present_info = vk::PresentInfoKHR()
 		.setWaitSemaphoreCount(1)
 		.setPWaitSemaphores(&wait_sema)
 		.setSwapchainCount(1)
@@ -679,7 +679,7 @@ void present(const vk::SwapchainKHR& swapchain, const vk::Queue& queue, const vk
 }
 
 void begin(const vk::CommandBuffer& cmd_buf) {
-	auto const command_buffer_info = vk::CommandBufferBeginInfo()
+	const auto command_buffer_info = vk::CommandBufferBeginInfo()
 		.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
 	auto result = cmd_buf.begin(&command_buffer_info);
@@ -691,8 +691,11 @@ void end(const vk::CommandBuffer& cmd_buf) {
 	verify(result == vk::Result::eSuccess);
 }
 
-void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const vk::ClearColorValue& clear_value, uint32_t width, uint32_t height) {
-	auto const pass_info = vk::RenderPassBeginInfo()
+void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const Color& clear_color, uint32_t width, uint32_t height) {
+	const auto rgba = clear_color.rgba();
+	const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ rgba[0], rgba[1], rgba[2], rgba[3] }));
+
+	const auto pass_info = vk::RenderPassBeginInfo()
 		.setRenderPass(render_pass)
 		.setFramebuffer(framebuffer)
 		.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(width, height)))
@@ -707,7 +710,7 @@ void end_pass(const vk::CommandBuffer& cmd_buf) {
 }
 
 void add_image_barrier(const vk::CommandBuffer& cmd_buf, const vk::Image& image) {
-	auto const barrier = vk::ImageMemoryBarrier()
+	const auto barrier = vk::ImageMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits())
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eInputAttachmentRead)
 		.setOldLayout(vk::ImageLayout::ePreinitialized)
@@ -721,7 +724,7 @@ void add_image_barrier(const vk::CommandBuffer& cmd_buf, const vk::Image& image)
 }
 
 void set_viewport(const vk::CommandBuffer& cmd_buf, float width, float height) {
-	auto const viewport = vk::Viewport()
+	const auto viewport = vk::Viewport()
 		.setX(0.0f)
 		.setY(0.0f)
 		.setWidth(width)
@@ -934,7 +937,7 @@ public:
 
 		begin(cmd);
 		if (!font_regular.image) upload_fonts(cmd);
-		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear.rgba(), width, height);
+		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);
