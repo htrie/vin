@@ -820,14 +820,14 @@ class Device {
 	vk::UniqueDeviceMemory uniform_memory;
 	void* uniform_ptr = nullptr;
 
-	std::vector<vk::UniqueFence> fences;
-	std::vector<vk::UniqueSemaphore> image_acquired_semaphores;
-	std::vector<vk::UniqueSemaphore> draw_complete_semaphores;
+	Array<vk::UniqueFence, 2> fences;
+	Array<vk::UniqueSemaphore, 2> image_acquired_semaphores;
+	Array<vk::UniqueSemaphore, 2> draw_complete_semaphores;
 
 	vk::UniqueSwapchainKHR swapchain;
-	std::vector<vk::UniqueImageView> image_views;
-	std::vector<vk::UniqueFramebuffer> framebuffers;
-	std::vector<vk::UniqueCommandBuffer> cmds;
+	Array<vk::UniqueImageView, 3> image_views;
+	Array<vk::UniqueFramebuffer, 3> framebuffers;
+	Array<vk::UniqueCommandBuffer, 3> cmds;
 
 	unsigned width = 0;
 	unsigned height = 0;
