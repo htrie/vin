@@ -3,7 +3,6 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
-// TODO: Dynamic fixed array.
 // TODO: Remove STL.
 // TODO: No dynamic allocations.
 // TODO: Optimize rendering.
@@ -12,7 +11,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <array>
-#include <vector>
 #include <string>
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
