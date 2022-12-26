@@ -439,12 +439,12 @@ public:
 
 	void next_char() {
 		const Line current(text, cursor);
-		cursor = std::clamp(cursor + 1, current.begin(), current.end());
+		cursor = clamp(cursor + 1, current.begin(), current.end());
 	}
 
 	void prev_char() {
 		const Line current(text, cursor);
-		cursor = std::clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
+		cursor = clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
 	}
 
 	void line_start() {
@@ -593,7 +593,7 @@ public:
 
 	void cursor_clamp(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+		begin_row = clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
 	}
 
 	void cursor_center(unsigned row_count) {
