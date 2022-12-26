@@ -201,7 +201,7 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	out << "};" << std::endl;
 	out << std::endl;
 
-	out << "const std::vector<FontGlyph> " << font_filename << "_glyphs  = {" << std::endl;
+	out << "const FontGlyphs " << font_filename << "_glyphs  = {" << std::endl;
 	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
 		const auto& c = fnt.chars.values[i];
 		out << "\t{ " << c.id << ", " <<

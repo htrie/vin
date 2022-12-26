@@ -810,7 +810,7 @@ class Device {
 		vk::UniqueDescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
-		std::vector<FontGlyph> glyphs;
+		FontGlyphs glyphs;
 	};
 	Font font_regular;
 	Font font_bold;
@@ -834,7 +834,7 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, std::vector<FontGlyph> glyphs) {
+	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, FontGlyphs glyphs) {
 		Font font;
 		font.width = width;
 		font.height = height;
@@ -856,7 +856,7 @@ class Device {
 		font_italic = upload_font(cmd_buf, font_italic_pixels.data(), font_italic_pixels.size(), font_italic_width, font_italic_height, font_italic_glyphs);
 	}
 
-	const FontGlyph* find_glyph(const std::vector<FontGlyph>& glyphs, uint16_t id) {
+	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
 		for (auto& glyph : glyphs) {
 			if (glyph.id == id)
 				return &glyph;
