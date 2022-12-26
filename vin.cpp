@@ -12,7 +12,6 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <array>
 #include <string>
 #include <vulkan/vulkan.hpp>
 #include <dwmapi.h>
