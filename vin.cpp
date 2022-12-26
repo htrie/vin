@@ -3,11 +3,11 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
+// TODO: Dynamic fixed array.
 // TODO: Remove STL.
 // TODO: No dynamic allocations.
-// TODO: Custom allocator.
 // TODO: Optimize rendering.
-// TODO: Simple text-based HTML browser.
+// TODO: Text-only HTML browser.
 
 #include <math.h>
 #include <stdlib.h>
