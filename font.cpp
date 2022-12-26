@@ -189,7 +189,7 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	out << "const uint32_t " << font_filename << "_height = " << tga.header.height << ";" << std::endl;
 	out << std::endl;
 
-	out << "const std::array<uint8_t, " << tga.content.size() << "> " << font_filename << "_pixels  = {" << std::endl;
+	out << "const std::array<uint8_t, " << tga.content.size() << "> " << font_filename << "_pixels  = {" << std::endl; // [TODO] Use Array (careful with exe size).
 	for (unsigned j = 0; j < tga.header.height; j++) {
 		for (unsigned i = 0; i < tga.header.width; i++) {
 			out << (unsigned)tga.content[i + tga.header.width * j];
