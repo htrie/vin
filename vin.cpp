@@ -3,9 +3,9 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
-// TODO: Remove std::array.
 // TODO: Remove std::min/max/clamp.
 // TODO: Remove std::string.
+// TODO: Find a way to not use STL in vulkan hpp.
 // TODO: No dynamic allocations.
 // TODO: Optimize rendering.
 // TODO: Text-only HTML browser.
