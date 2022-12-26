@@ -19,6 +19,7 @@
 #include <Windows.h>
 
 #include "resource.h"
+#include "mem.h"
 #include "util.h"
 #include "win.h"
 #include "matrix.h"
