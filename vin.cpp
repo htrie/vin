@@ -1,20 +1,16 @@
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#define _HAS_EXCEPTIONS 0
-#define VULKAN_HPP_NO_EXCEPTIONS
-
 // TODO: Remove std::string.
 // TODO: Find a way to not use STL in vulkan hpp.
 // TODO: No dynamic allocations.
 // TODO: Optimize rendering.
 // TODO: Text-only HTML browser.
 
-#include <math.h>
-#include <stdlib.h>
-#include <string>
-#include <vulkan/vulkan.hpp>
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#define _HAS_EXCEPTIONS 0
+#define VULKAN_HPP_NO_EXCEPTIONS
+
 #include <dwmapi.h>
-#include <Windows.h>
+#include <vulkan/vulkan.hpp>
 
 #include "resource.h"
 #include "util.h"
