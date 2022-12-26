@@ -1,12 +1,12 @@
 #pragma once
 
 vk::UniqueInstance create_instance() {
-	std::vector<const char*> layers;
+	Array<const char*, 4> layers;
 #if !defined(NDEBUG)
 	layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-	std::vector<const char*> extensions = {
+	Array<const char*, 4> extensions = {
 		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
@@ -754,12 +754,12 @@ void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
 	cmd_buf.draw(vertex_count, 1, 0, 0);
 }
 
-std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
+Array<vk::Image, 3> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
 	uint32_t count = 0;
 	auto result = device.getSwapchainImagesKHR(swapchain, &count, static_cast<vk::Image*>(nullptr));
 	verify(result == vk::Result::eSuccess);
 
-	std::vector<vk::Image> images(count);
+	Array<vk::Image, 3> images(count);
 	result = device.getSwapchainImagesKHR(swapchain, &count, images.data());
 	verify(result == vk::Result::eSuccess);
 
@@ -914,9 +914,8 @@ public:
 			cmds.clear();
 
 			swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, 3);
-			const auto swapchain_images = get_swapchain_images(device.get(), swapchain.get());
-			for (uint32_t i = 0; i < swapchain_images.size(); ++i) {
-				image_views.emplace_back(create_image_view(device.get(), swapchain_images[i], surface_format.format));
+			for (auto& swapchain_image : get_swapchain_images(device.get(), swapchain.get())) {
+				image_views.emplace_back(create_image_view(device.get(), swapchain_image, surface_format.format));
 				framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), image_views.back().get(), width, height));
 				cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
 			}

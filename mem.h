@@ -8,6 +8,9 @@ class Array
 
 public:
 	Array() {}
+	Array(size_t size)
+		: count(size)
+	{}
 	Array(const std::initializer_list<T> _values)
 	{
 		for (auto& value : _values)
