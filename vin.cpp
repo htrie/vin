@@ -3,7 +3,6 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
-// TODO: Remove std::min/max/clamp/abs/mod.
 // TODO: Remove std::string.
 // TODO: Find a way to not use STL in vulkan hpp.
 // TODO: No dynamic allocations.

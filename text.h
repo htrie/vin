@@ -44,8 +44,8 @@ enum Glyph {
 
 Vec3 hsv_to_rgb(float H, float S, float V) {
   const float C = V * S; // Chroma
-  const float HPrime = std::fmod(H / 60.0f, 6.0f);
-  const float X = C * (1.0f - std::fabs(std::fmod(HPrime, 2.0f) - 1.0f));
+  const float HPrime = fmod(H / 60.0f, 6.0f);
+  const float X = C * (1.0f - fabs(fmod(HPrime, 2.0f) - 1.0f));
   const float M = V - C;
   
   float R, G, B;
