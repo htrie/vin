@@ -88,9 +88,6 @@ struct Vec3 {
 
 	Vec3 lerp(const Vec3& o, float t) const { return *this + (o - *this) * t; }
 
-	Vec3 min(const Vec3& o) const { return Vec3(std::min(x, o[0]), std::min(y, o[1]), std::min(z, o[2])); }
-	Vec3 max(const Vec3& o) const { return Vec3(std::max(x, o[0]), std::max(y, o[1]), std::max(z, o[2])); }
-
 	float sqrlen() const { return x * x + y * y + z * z; }
 	float len() const { return sqrt(sqrlen()); }
 };

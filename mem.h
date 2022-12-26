@@ -18,14 +18,14 @@ public:
 	}
 	template <size_t M>
 	Array(const T(&_values)[M])
-		: count(std::min(M, N))
+		: count(min(M, N))
 	{
 		for (size_t i = 0; i < count; ++i)
 			values[i] = _values[i];
 	}
 	template <size_t M>
 	Array(const Array<T, M>& other)
-		: count(std::min(other.size(), N))
+		: count(min(other.size(), N))
 	{
 		for (size_t i = 0; i < count; ++i)
 			values[i] = other[i];

@@ -76,20 +76,20 @@ struct HSB {
 	float saturation = 0.50f;
 	float brightness = 0.85f;
 
-	std::string increase_hue_start() { hue_start = std::clamp(hue_start + 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
-	std::string decrease_hue_start() { hue_start = std::clamp(hue_start - 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
+	std::string increase_hue_start() { hue_start = clamp(hue_start + 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
+	std::string decrease_hue_start() { hue_start = clamp(hue_start - 5.0f, 0.0f, 360.0f); return std::string("hue_start = ") + std::to_string(hue_start); }
 
-	std::string increase_hue_range() { hue_range = std::clamp(hue_range + 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
-	std::string decrease_hue_range() { hue_range = std::clamp(hue_range - 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
+	std::string increase_hue_range() { hue_range = clamp(hue_range + 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
+	std::string decrease_hue_range() { hue_range = clamp(hue_range - 5.0f, 0.0f, 360.0f); return std::string("hue_range = ") + std::to_string(hue_range); }
 
-	std::string increase_hue_adjust() { hue_adjust = std::clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
-	std::string decrease_hue_adjust() { hue_adjust = std::clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
+	std::string increase_hue_adjust() { hue_adjust = clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
+	std::string decrease_hue_adjust() { hue_adjust = clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return std::string("hue_adjust = ") + std::to_string(hue_adjust); }
 
-	std::string increase_saturation() { saturation = std::clamp(saturation + 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
-	std::string decrease_saturation() { saturation = std::clamp(saturation - 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
+	std::string increase_saturation() { saturation = clamp(saturation + 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
+	std::string decrease_saturation() { saturation = clamp(saturation - 0.05f, 0.0f, 1.0f); return std::string("saturation = ") + std::to_string(saturation); }
 
-	std::string increase_brightness() { brightness = std::clamp(brightness + 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
-	std::string decrease_brightness() { brightness = std::clamp(brightness - 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
+	std::string increase_brightness() { brightness = clamp(brightness + 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
+	std::string decrease_brightness() { brightness = clamp(brightness - 0.05f, 0.0f, 1.0f); return std::string("brightness = ") + std::to_string(brightness); }
 
 	void use_rgb() {
 		hue_start = 0.0f;
@@ -118,11 +118,11 @@ struct Spacing {
 	float character = 7.0f;
 	float line = 15.0f;
 
-	std::string increase_char_width() { character = std::clamp(character + 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(character); }
-	std::string decrease_char_width() { character = std::clamp(character - 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(character); }
+	std::string increase_char_width() { character = clamp(character + 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(character); }
+	std::string decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 10.0f); return std::string("char_width = ") + std::to_string(character); }
 
-	std::string increase_char_height() { line = std::clamp(line + 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(line); }
-	std::string decrease_char_height() { line = std::clamp(line - 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(line); }
+	std::string increase_char_height() { line = clamp(line + 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(line); }
+	std::string decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 20.0f); return std::string("char_height = ") + std::to_string(line); }
 };
 
 Spacing& spacing() {
