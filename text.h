@@ -969,7 +969,7 @@ public:
 };
 
 class Stack {
-	std::vector<State> states;
+	Array<State, 128> states;
 	bool undo = false;
 
 public:

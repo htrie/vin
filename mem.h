@@ -91,7 +91,9 @@ public:
 	const T& at(size_t index) const { return values[index]; }
 	T& at(size_t index) { return values[index]; }
 
+	const T& front() const { return values[0]; }
 	T& front() { return values[0]; }
+	const T& back() const { return values[count - 1]; }
 	T& back() { return values[count - 1]; }
 
 	const T* begin() const { return &values[0]; }
