@@ -1025,8 +1025,8 @@ class Buffer {
 
 	Mode mode = Mode::normal;
 
-	std::vector<unsigned> record;
-	std::vector<unsigned> temp_record;
+	Array<unsigned, 64> record;
+	Array<unsigned, 64> temp_record;
 	bool repeat = false;
 
 	std::string filename;
