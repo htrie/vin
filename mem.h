@@ -46,16 +46,17 @@ public:
 
 	void push_back(const T& value)
 	{
-		verify(!full() && "No more space in array");
 		if (count < N)
 			values[count++] = value;
 	}
 
 	void pop_back()
 	{
-		verify(!empty() && "Cannot erase from empty array");
-		values[count - 1] = T();
-		count--;
+		if (count > 0)
+		{
+			values[count - 1] = T();
+			count--;
+		}
 	}
 
 	void resize(size_t new_size)
@@ -70,7 +71,6 @@ public:
 	template<typename... ARGS>
 	void emplace_back(ARGS&&... args)
 	{
-		verify(!full() && "No more space in array");
 		if (count < N)
 			values[count++] = T(std::forward<ARGS>(args)...);
 	}

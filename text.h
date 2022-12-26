@@ -1619,8 +1619,7 @@ public:
 			if (filtered.size() > row_count - 2)
 				return false;
 			if (tolower(path).find(pattern) != std::string::npos)
-				if (!filtered.full())
-					filtered.push_back(path);
+				filtered.push_back(path);
 			return true;
 		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
@@ -1857,8 +1856,7 @@ public:
 			if (location.symbol_hash == pattern_hash) {
 				map(file.name, [&](const char* mem, size_t size) {
 					const auto context = std::string(&mem[location.position], std::min((size_t)60, size - location.position));
-					if (!filtered.full())
-						filtered.emplace_back(file.name, location.position, context);
+					filtered.emplace_back(file.name, location.position, context);
 				});
 			}
 			return true;
