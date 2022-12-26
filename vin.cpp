@@ -19,9 +19,9 @@
 #include <Windows.h>
 
 #include "resource.h"
-#include "mem.h"
 #include "util.h"
 #include "win.h"
+#include "mem.h"
 #include "matrix.h"
 #include "font_common.h"
 #include "font_regular.h"

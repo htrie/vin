@@ -1662,7 +1662,7 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	std::vector<Buffer> buffers;
+	Array<Buffer, 8> buffers;
 	size_t active = (size_t)-1;
 
 	unsigned longest_filename() const {
@@ -1710,11 +1710,14 @@ public:
 				active = index;
 				return std::string("switch ") + std::string(filename);
 			}
-			else {
+			else if (!buffers.full()) {
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
 				return std::string("load ") + std::string(filename) + " in " + timer.us();
+			}
+			else {
+				return std::string("too many files open");
 			}
 		}
 		return {};
