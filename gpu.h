@@ -854,9 +854,9 @@ class Device {
 
 	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
-		font_regular = upload_font(cmd_buf, font_regular_pixels.data(), font_regular_pixels.size(), font_regular_width, font_regular_height, font_regular_glyphs);
-		font_bold = upload_font(cmd_buf, font_bold_pixels.data(), font_bold_pixels.size(), font_bold_width, font_bold_height, font_bold_glyphs);
-		font_italic = upload_font(cmd_buf, font_italic_pixels.data(), font_italic_pixels.size(), font_italic_width, font_italic_height, font_italic_glyphs);
+		font_regular = upload_font(cmd_buf, font_regular_pixels, sizeof(font_regular_pixels), font_regular_width, font_regular_height, font_regular_glyphs);
+		font_bold = upload_font(cmd_buf, font_bold_pixels, sizeof(font_bold_pixels), font_bold_width, font_bold_height, font_bold_glyphs);
+		font_italic = upload_font(cmd_buf, font_italic_pixels, sizeof(font_italic_pixels), font_italic_width, font_italic_height, font_italic_glyphs);
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
