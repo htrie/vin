@@ -122,7 +122,7 @@ struct Character {
 		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
 };
 
-typedef Array<Character, 16 * 1024> Characters;
+typedef Array<Character, 4 * 1024> Characters;
 
 class Word {
 	size_t start = 0;

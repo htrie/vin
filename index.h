@@ -11,7 +11,7 @@ bool accept_extension(const std::string_view extension) {
 }
 
 class Index {
-	std::vector<std::string> paths;
+	Array<std::string, 1024> paths;
 
 public:
 	void reset() {
@@ -48,8 +48,8 @@ class Database {
 		size_t position = 0;
 	};
 
-	std::vector<File> files;
-	std::vector<Location> locations;
+	Array<File, 1024> files;
+	Array<Location, 128 * 1024> locations;
 
 	constexpr bool accept_char(char c) {
 		return
@@ -82,9 +82,7 @@ public:
 	std::string populate() {
 		const Timer timer;
 		files.clear();
-		files.resize(4 * 1024);
 		locations.clear();
-		locations.reserve(4 * 1024 * 1024);
 		process_files(".", [&](const char* path) {
 			scan(path);
 		});
