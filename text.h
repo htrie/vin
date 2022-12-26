@@ -1582,7 +1582,7 @@ public:
 
 class Picker {
 	std::string pattern;
-	std::vector<std::string> filtered;
+	Array<std::string, 64> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
@@ -1619,7 +1619,8 @@ public:
 			if (filtered.size() > row_count - 2)
 				return false;
 			if (tolower(path).find(pattern) != std::string::npos)
-				filtered.push_back(path);
+				if (!filtered.full())
+					filtered.push_back(path);
 			return true;
 		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
@@ -1813,7 +1814,7 @@ class Finder {
 	};
 
 	std::string pattern;
-	std::vector<Entry> filtered;
+	Array<Entry, 64> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
@@ -1856,7 +1857,8 @@ public:
 			if (location.symbol_hash == pattern_hash) {
 				map(file.name, [&](const char* mem, size_t size) {
 					const auto context = std::string(&mem[location.position], std::min((size_t)60, size - location.position));
-					filtered.emplace_back(file.name, location.position, context);
+					if (!filtered.full())
+						filtered.emplace_back(file.name, location.position, context);
 				});
 			}
 			return true;
