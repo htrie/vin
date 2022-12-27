@@ -9,6 +9,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
+#define VULKAN_HPP_NO_SMART_HANDLE
 
 #include <dwmapi.h>
 #include <vulkan/vulkan.hpp>
