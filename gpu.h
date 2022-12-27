@@ -480,7 +480,7 @@ vk::Sampler create_sampler(const vk::Device& device) {
 	return sampler_handle.value;
 }
 
-vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device, unsigned font_width, unsigned font_height) {
+vk::Image create_image(const vk::PhysicalDevice& gpu, const vk::Device& device, unsigned font_width, unsigned font_height) {
 	vk::FormatProperties props;
 	gpu.getFormatProperties(vk::Format::eR8Unorm, &props);
 	verify((props.linearTilingFeatures & vk::FormatFeatureFlagBits::eSampledImage) == vk::FormatFeatureFlagBits::eSampledImage);
@@ -499,9 +499,9 @@ vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& de
 		.setPQueueFamilyIndices(nullptr)
 		.setInitialLayout(vk::ImageLayout::ePreinitialized);
 
-	auto image_handle = device.createImageUnique(image_info);
+	auto image_handle = device.createImage(image_info);
 	verify(image_handle.result == vk::Result::eSuccess);
-	return std::move(image_handle.value);
+	return image_handle.value;
 }
 
 vk::Buffer create_uniform_buffer(const vk::Device& device, size_t size) {
@@ -807,7 +807,7 @@ class Device {
     vk::Sampler sampler;
 
 	struct Font {
-		vk::UniqueImage image;
+		vk::Image image;
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
 		vk::DescriptorSet descriptor_set;
@@ -843,10 +843,10 @@ class Device {
 		font.height = height;
 		font.glyphs = glyphs;
 		font.image = create_image(gpu, device, width, height);
-		font.image_memory = create_image_memory(gpu, device, font.image.get());
-		copy_image_data(device, font.image.get(), font.image_memory.get(), image_pixels, image_size, width);
-		font.image_view = create_image_view(device, font.image.get(), vk::Format::eR8Unorm);
-		add_image_barrier(cmd_buf, font.image.get());
+		font.image_memory = create_image_memory(gpu, device, font.image);
+		copy_image_data(device, font.image, font.image_memory.get(), image_pixels, image_size, width);
+		font.image_view = create_image_view(device, font.image, vk::Format::eR8Unorm);
+		add_image_barrier(cmd_buf, font.image);
 		font.descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
 		update_descriptor_set(device, font.descriptor_set, uniform_buffer, sizeof(Uniforms), sampler, font.image_view.get());
 		return font;
