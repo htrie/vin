@@ -226,14 +226,14 @@ const uint32_t frag_bytecode[] =
 #include "shader.frag.inc"
 ;
 
-vk::ShaderModule create_module(const vk::Device& device, const uint32_t* code, size_t size) {
+vk::UniqueShaderModule create_module(const vk::Device& device, const uint32_t* code, size_t size) {
 	const auto module_info = vk::ShaderModuleCreateInfo()
 		.setCodeSize(size)
 		.setPCode(code);
 
-	auto module_handle = device.createShaderModule(module_info);
+	auto module_handle = device.createShaderModuleUnique(module_info);
 	verify(module_handle.result == vk::Result::eSuccess);
-	return module_handle.value;
+	return std::move(module_handle.value);
 }
 
 vk::Pipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout& pipeline_layout, const vk::RenderPass& render_pass) {
@@ -243,11 +243,11 @@ vk::Pipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout&
 	Array<vk::PipelineShaderStageCreateInfo, 2> const shader_stage_infos = {
 		vk::PipelineShaderStageCreateInfo()
 			.setStage(vk::ShaderStageFlagBits::eVertex)
-			.setModule(vert_shader_module)
+			.setModule(vert_shader_module.get())
 			.setPName("main"),
 		vk::PipelineShaderStageCreateInfo()
 			.setStage(vk::ShaderStageFlagBits::eFragment)
-			.setModule(frag_shader_module)
+			.setModule(frag_shader_module.get())
 			.setPName("main") };
 
 	vk::PipelineVertexInputStateCreateInfo const vertex_input_info;
