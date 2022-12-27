@@ -692,8 +692,7 @@ void end(const vk::CommandBuffer& cmd_buf) {
 }
 
 void begin_pass(const vk::CommandBuffer& cmd_buf, const vk::RenderPass& render_pass, const vk::Framebuffer& framebuffer, const Color& clear_color, uint32_t width, uint32_t height) {
-	const auto rgba = clear_color.rgba();
-	const auto clear_value = vk::ClearColorValue(std::array<float, 4>({ rgba[0], rgba[1], rgba[2], rgba[3] }));
+	const auto clear_value = vk::ClearColorValue(clear_color.rgba());
 
 	const auto pass_info = vk::RenderPassBeginInfo()
 		.setRenderPass(render_pass)

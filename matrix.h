@@ -99,7 +99,7 @@ struct Vec4 {
 	Vec4(const float& f) { x = f; y = f; z = f; w = f; }
 	Vec4(const float& X, const float& Y, const float& Z, const float& W) { x = X; y = Y; z = Z; w = W; }
 	Vec4(const Vec4& o) { x = o[0]; y = o[1]; z = o[2]; w = o[3]; }
-	Vec4(const Array<float, 4>& o) { x = o[0]; y = o[1]; z = o[2]; w = o[3]; }
+	Vec4(const std::array<float, 4>& o) { x = o[0]; y = o[1]; z = o[2]; w = o[3]; }
 	explicit Vec4(const Vec3& v, const float& w) : Vec4(v.x, v.y, v.z, w) {}
 	explicit Vec4(const Vec2& v, const float& z, const float& w) : Vec4(v.x, v.y, z, w) {}
 
@@ -139,13 +139,13 @@ struct Color {
 
 	explicit Color(uint32_t C) { as_uint() = C; }
 	explicit Color(float r, float g, float b, float a) : r((uint8_t)(r * 255.0f)), g((uint8_t)(g * 255.0f)), b((uint8_t)(b * 255.0f)), a((uint8_t)(a * 255.0f)) {}
-	explicit Color(const Array<float, 4>& v) : Color(v[0], v[1], v[2], v[3]) {}
+	explicit Color(const std::array<float, 4>& v) : Color(v[0], v[1], v[2], v[3]) {}
 
 	static Color argb(unsigned a, unsigned r, unsigned g, unsigned b) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color gray(unsigned c) { Color color; color.a = (uint8_t)255; color.r = (uint8_t)c;  color.g = (uint8_t)c;  color.b = (uint8_t)c; return color; }
 
-	Array<float, 4> rgba() const { return { (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f }; }
+	std::array<float, 4> rgba() const { return { (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f }; }
 
 	bool operator==(const Color& o) const { return b == o.b && g == o.g && r == o.r && a == o.a; }
 	bool operator!=(const Color& o) const { return !(*this == o); }
