@@ -1,6 +1,6 @@
 #pragma once
 
-vk::Instance create_instance() {
+vk::UniqueInstance create_instance() {
 	Array<const char*, 4> layers;
 #if !defined(NDEBUG)
 	layers.push_back("VK_LAYER_KHRONOS_validation");
@@ -22,7 +22,7 @@ vk::Instance create_instance() {
 		.setEnabledExtensionCount((uint32_t)extensions.size())
 		.setPpEnabledExtensionNames(extensions.data());
 
-	auto instance_handle = vk::createInstance(inst_info);
+	auto instance_handle = vk::createInstanceUnique(inst_info);
 	if (instance_handle.result == vk::Result::eErrorIncompatibleDriver) {
 		error(
 			"Cannot find a compatible Vulkan installable client driver (ICD).\n\n"
@@ -42,7 +42,7 @@ vk::Instance create_instance() {
 			"Please look at the Getting Started guide for additional information.\n",
 			"vkCreateInstance Failure");
 	}
-	return instance_handle.value;
+	return std::move(instance_handle.value);
 }
 
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
@@ -62,14 +62,14 @@ vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 	return gpu;
 }
 
-vk::SurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hInstance, HWND hWnd) {
+vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hInstance, HWND hWnd) {
 	const auto surf_info = vk::Win32SurfaceCreateInfoKHR()
 		.setHinstance(hInstance)
 		.setHwnd(hWnd);
 
-	auto surface_handle = instance.createWin32SurfaceKHR(surf_info);
+	auto surface_handle = instance.createWin32SurfaceKHRUnique(surf_info);
 	verify(surface_handle.result == vk::Result::eSuccess);
-	return surface_handle.value;
+	return std::move(surface_handle.value);
 }
 
 uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
@@ -79,7 +79,7 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
 	return 0;
 }
 
-vk::Device create_device(const vk::PhysicalDevice& gpu, uint32_t family_index) {
+vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_index) {
 	Array<float, 1> const priorities = { 0.0 };
 
 	Array<vk::DeviceQueueCreateInfo, 1> queues = { vk::DeviceQueueCreateInfo()
@@ -99,9 +99,9 @@ vk::Device create_device(const vk::PhysicalDevice& gpu, uint32_t family_index) {
 		.setPpEnabledExtensionNames(extensions.data())
 		.setPEnabledFeatures(nullptr);
 
-	auto device_handle = gpu.createDevice(device_info);
+	auto device_handle = gpu.createDeviceUnique(device_info);
 	verify(device_handle.result == vk::Result::eSuccess);
-	return device_handle.value;
+	return std::move(device_handle.value);
 }
 
 vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
@@ -117,17 +117,17 @@ vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
 	return queue;
 }
 
-vk::CommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
+vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t family_index) {
 	const auto cmd_pool_info = vk::CommandPoolCreateInfo()
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
 		.setQueueFamilyIndex(family_index);
 
-	auto cmd_pool_handle = device.createCommandPool(cmd_pool_info);
+	auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);
 	verify(cmd_pool_handle.result == vk::Result::eSuccess);
-	return cmd_pool_handle.value;
+	return std::move(cmd_pool_handle.value);
 }
 
-vk::DescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
+vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
 	Array<vk::DescriptorSetLayoutBinding, 2> const layout_bindings = {
 		vk::DescriptorSetLayoutBinding()
 		   .setBinding(0)
@@ -146,12 +146,12 @@ vk::DescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
 		.setBindingCount((uint32_t)layout_bindings.size())
 		.setPBindings(layout_bindings.data());
 
-	auto desc_layout_handle = device.createDescriptorSetLayout(desc_layout_info);
+	auto desc_layout_handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
 	verify(desc_layout_handle.result == vk::Result::eSuccess);
-	return desc_layout_handle.value;
+	return std::move(desc_layout_handle.value);
 }
 
-vk::PipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
+vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
 	Array<vk::PushConstantRange, 1> const push_constants = {
 		vk::PushConstantRange()
 			.setOffset(0)
@@ -164,12 +164,12 @@ vk::PipelineLayout create_pipeline_layout(const vk::Device& device, const vk::De
 		.setSetLayoutCount(1)
 		.setPSetLayouts(&desc_layout);
 
-	auto pipeline_layout_handle = device.createPipelineLayout(pipeline_layout_info);
+	auto pipeline_layout_handle = device.createPipelineLayoutUnique(pipeline_layout_info);
 	verify(pipeline_layout_handle.result == vk::Result::eSuccess);
-	return pipeline_layout_handle.value;
+	return std::move(pipeline_layout_handle.value);
 }
 
-vk::RenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
+vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
 	const Array<vk::AttachmentDescription, 1> attachments = {
 		vk::AttachmentDescription()
 			.setFormat(surface_format.format)
@@ -214,9 +214,9 @@ vk::RenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFor
 		.setDependencyCount((uint32_t)dependencies.size())
 		.setPDependencies(dependencies.data());
 
-	auto render_pass_handle = device.createRenderPass(rp_info);
+	auto render_pass_handle = device.createRenderPassUnique(rp_info);
 	verify(render_pass_handle.result == vk::Result::eSuccess);
-	return render_pass_handle.value;
+	return std::move(render_pass_handle.value);
 }
 
 const uint32_t vert_bytecode[] =
@@ -236,7 +236,7 @@ vk::UniqueShaderModule create_module(const vk::Device& device, const uint32_t* c
 	return std::move(module_handle.value);
 }
 
-vk::Pipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout& pipeline_layout, const vk::RenderPass& render_pass) {
+vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout& pipeline_layout, const vk::RenderPass& render_pass) {
 	const auto vert_shader_module = create_module(device, vert_bytecode, sizeof(vert_bytecode));
 	const auto frag_shader_module = create_module(device, frag_bytecode, sizeof(frag_bytecode));
 
@@ -313,12 +313,12 @@ vk::Pipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout&
 		.setLayout(pipeline_layout)
 		.setRenderPass(render_pass);
 
-	auto pipeline_handles = device.createGraphicsPipelines(nullptr, pipeline_info);
+	auto pipeline_handles = device.createGraphicsPipelinesUnique(nullptr, pipeline_info);
 	verify(pipeline_handles.result == vk::Result::eSuccess);
-	return pipeline_handles.value[0];
+	return std::move(pipeline_handles.value[0]);
 }
 
-vk::DescriptorPool create_descriptor_pool(const vk::Device& device) {
+vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
 	Array<vk::DescriptorPoolSize, 2> const pool_sizes = {
 		vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eUniformBuffer)
@@ -334,26 +334,26 @@ vk::DescriptorPool create_descriptor_pool(const vk::Device& device) {
 		.setPoolSizeCount((uint32_t)pool_sizes.size())
 		.setPPoolSizes(pool_sizes.data());
 
-	auto desc_pool_handle = device.createDescriptorPool(desc_pool_info);
+	auto desc_pool_handle = device.createDescriptorPoolUnique(desc_pool_info);
 	verify(desc_pool_handle.result == vk::Result::eSuccess);
-	return desc_pool_handle.value;
+	return std::move(desc_pool_handle.value);
 }
 
-vk::Fence create_fence(const vk::Device& device) {
+vk::UniqueFence create_fence(const vk::Device& device) {
 	const auto fence_info = vk::FenceCreateInfo()
 		.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-	auto fence_handle = device.createFence(fence_info);
+	auto fence_handle = device.createFenceUnique(fence_info);
 	verify(fence_handle.result == vk::Result::eSuccess);
-	return fence_handle.value;
+	return std::move(fence_handle.value);
 }
 
-vk::Semaphore create_semaphore(const vk::Device& device) {
+vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
 	const auto semaphore_info = vk::SemaphoreCreateInfo();
 
-	auto semaphore_handle = device.createSemaphore(semaphore_info);
+	auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
 	verify(semaphore_handle.result == vk::Result::eSuccess);
-	return semaphore_handle.value;
+	return std::move(semaphore_handle.value);
 }
 
 vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
@@ -457,7 +457,7 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
 	return std::move(framebuffer_handle.value);
 }
 
-vk::Sampler create_sampler(const vk::Device& device) {
+vk::UniqueSampler create_sampler(const vk::Device& device) {
 	const auto sampler_info = vk::SamplerCreateInfo()
 		.setMagFilter(vk::Filter::eNearest)
 		.setMinFilter(vk::Filter::eNearest)
@@ -475,9 +475,9 @@ vk::Sampler create_sampler(const vk::Device& device) {
 		.setBorderColor(vk::BorderColor::eFloatOpaqueWhite)
 		.setUnnormalizedCoordinates(VK_FALSE);
 
-	auto sampler_handle = device.createSampler(sampler_info);
+	auto sampler_handle = device.createSamplerUnique(sampler_info);
 	verify(sampler_handle.result == vk::Result::eSuccess);
-	return sampler_handle.value;
+	return std::move(sampler_handle.value);
 }
 
 vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device, unsigned font_width, unsigned font_height) {
@@ -504,14 +504,14 @@ vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& de
 	return std::move(image_handle.value);
 }
 
-vk::Buffer create_uniform_buffer(const vk::Device& device, size_t size) {
+vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
 	const auto buf_info = vk::BufferCreateInfo()
 		.setSize(size)
 		.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
-	auto buffer_handle = device.createBuffer(buf_info);
+	auto buffer_handle = device.createBufferUnique(buf_info);
 	verify(buffer_handle.result == vk::Result::eSuccess);
-	return buffer_handle.value;
+	return std::move(buffer_handle.value);
 }
 
 bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
@@ -546,7 +546,7 @@ vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const 
 	return std::move(memory_handle.value);
 }
 
-vk::DeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
+vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
 	vk::MemoryRequirements mem_reqs;
 	device.getBufferMemoryRequirements(buffer, &mem_reqs);
 
@@ -557,9 +557,9 @@ vk::DeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::
 	bool const pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass);
 
-	auto memory_handle = device.allocateMemory(mem_info);
+	auto memory_handle = device.allocateMemoryUnique(mem_info);
 	verify(memory_handle.result == vk::Result::eSuccess);
-	return memory_handle.value;
+	return std::move(memory_handle.value);
 }
 
 void* map_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
@@ -595,15 +595,15 @@ void copy_image_data(const vk::Device& device, const vk::Image& image, const vk:
 	memcpy(image_ptr, image_pixels, image_size);
 	unmap_memory(device, image_memory);
 }
-vk::DescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
+vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
 	const auto alloc_info = vk::DescriptorSetAllocateInfo()
 		.setDescriptorPool(desc_pool)
 		.setDescriptorSetCount(1)
 		.setPSetLayouts(&desc_layout);
 
-	auto descriptor_set_handles = device.allocateDescriptorSets(alloc_info);
+	auto descriptor_set_handles = device.allocateDescriptorSetsUnique(alloc_info);
 	verify(descriptor_set_handles.result == vk::Result::eSuccess);
-	return descriptor_set_handles.value[0];
+	return std::move(descriptor_set_handles.value[0]);
 }
 
 void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range, const vk::Sampler& sampler, const vk::ImageView& image_view) {
@@ -790,27 +790,27 @@ struct Viewport {
 class Device {
 	HWND hWnd = NULL;
 
-	vk::Instance instance;
+	vk::UniqueInstance instance;
 	vk::PhysicalDevice gpu;
-	vk::SurfaceKHR surface;
+	vk::UniqueSurfaceKHR surface;
 	vk::SurfaceFormatKHR surface_format;
-	vk::Device device;
+	vk::UniqueDevice device;
 	vk::Queue queue;
 
-	vk::CommandPool cmd_pool;
-	vk::DescriptorPool desc_pool;
-	vk::RenderPass render_pass;
-	vk::DescriptorSetLayout desc_layout;
-	vk::PipelineLayout pipeline_layout;
-	vk::Pipeline pipeline;
+	vk::UniqueCommandPool cmd_pool;
+	vk::UniqueDescriptorPool desc_pool;
+	vk::UniqueRenderPass render_pass;
+	vk::UniqueDescriptorSetLayout desc_layout;
+	vk::UniquePipelineLayout pipeline_layout;
+	vk::UniquePipeline pipeline;
 
-    vk::Sampler sampler;
+    vk::UniqueSampler sampler;
 
 	struct Font {
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
-		vk::DescriptorSet descriptor_set;
+		vk::UniqueDescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
 		FontGlyphs glyphs;
@@ -819,13 +819,13 @@ class Device {
 	Font font_bold;
 	Font font_italic;
 
-	vk::Buffer uniform_buffer;
-	vk::DeviceMemory uniform_memory;
+	vk::UniqueBuffer uniform_buffer;
+	vk::UniqueDeviceMemory uniform_memory;
 	void* uniform_ptr = nullptr;
 
-	Array<vk::Fence, 2> fences;
-	Array<vk::Semaphore, 2> image_acquired_semaphores;
-	Array<vk::Semaphore, 2> draw_complete_semaphores;
+	Array<vk::UniqueFence, 2> fences;
+	Array<vk::UniqueSemaphore, 2> image_acquired_semaphores;
+	Array<vk::UniqueSemaphore, 2> draw_complete_semaphores;
 
 	vk::UniqueSwapchainKHR swapchain;
 	Array<vk::UniqueImageView, 3> image_views;
@@ -842,18 +842,18 @@ class Device {
 		font.width = width;
 		font.height = height;
 		font.glyphs = glyphs;
-		font.image = create_image(gpu, device, width, height);
-		font.image_memory = create_image_memory(gpu, device, font.image.get());
-		copy_image_data(device, font.image.get(), font.image_memory.get(), image_pixels, image_size, width);
-		font.image_view = create_image_view(device, font.image.get(), vk::Format::eR8Unorm);
+		font.image = create_image(gpu, device.get(), width, height);
+		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
+		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), image_pixels, image_size, width);
+		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image.get());
-		font.descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
-		update_descriptor_set(device, font.descriptor_set, uniform_buffer, sizeof(Uniforms), sampler, font.image_view.get());
+		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
 		return font;
 	}
 
 	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
-		sampler = create_sampler(device);
+		sampler = create_sampler(device.get());
 		font_regular = upload_font(cmd_buf, font_regular_pixels, sizeof(font_regular_pixels), font_regular_width, font_regular_height, font_regular_glyphs);
 		font_bold = upload_font(cmd_buf, font_bold_pixels, sizeof(font_bold_pixels), font_bold_width, font_bold_height, font_bold_glyphs);
 		font_italic = upload_font(cmd_buf, font_italic_pixels, sizeof(font_italic_pixels), font_italic_width, font_italic_height, font_italic_glyphs);
@@ -870,37 +870,37 @@ class Device {
 public:
 	Device(WNDPROC proc, HINSTANCE hInstance, unsigned width, unsigned height) {
 		instance = create_instance();
-		gpu = pick_gpu(instance);
+		gpu = pick_gpu(instance.get());
 		hWnd = create_window(proc, hInstance, this, width, height);
-		surface = create_surface(instance, hInstance, hWnd);
-		surface_format = select_format(gpu, surface);
-		auto family_index = find_queue_family(gpu, surface);
+		surface = create_surface(instance.get(), hInstance, hWnd);
+		surface_format = select_format(gpu, surface.get());
+		auto family_index = find_queue_family(gpu, surface.get());
 		device = create_device(gpu, family_index);
-		queue = fetch_queue(device, family_index);
+		queue = fetch_queue(device.get(), family_index);
 
-		cmd_pool = create_command_pool(device, family_index);
-		desc_pool = create_descriptor_pool(device);
-		desc_layout = create_descriptor_layout(device);
-		pipeline_layout = create_pipeline_layout(device, desc_layout, sizeof(Constants));
-		render_pass = create_render_pass(device, surface_format);
-		pipeline = create_pipeline(device, pipeline_layout, render_pass);
+		cmd_pool = create_command_pool(device.get(), family_index);
+		desc_pool = create_descriptor_pool(device.get());
+		desc_layout = create_descriptor_layout(device.get());
+		pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
+		render_pass = create_render_pass(device.get(), surface_format);
+		pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
 
-		uniform_buffer = create_uniform_buffer(device, sizeof(Uniforms));
-		uniform_memory = create_uniform_memory(gpu, device, uniform_buffer);
-		bind_memory(device, uniform_buffer, uniform_memory);
-		uniform_ptr = map_memory(device, uniform_memory);
+		uniform_buffer = create_uniform_buffer(device.get(), sizeof(Uniforms));
+		uniform_memory = create_uniform_memory(gpu, device.get(), uniform_buffer.get());
+		bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
+		uniform_ptr = map_memory(device.get(), uniform_memory.get());
 
 		for (auto i = 0; i < 2; ++i) {
-			fences.emplace_back(create_fence(device));
-			image_acquired_semaphores.emplace_back(create_semaphore(device));
-			draw_complete_semaphores.emplace_back(create_semaphore(device));
+			fences.emplace_back(create_fence(device.get()));
+			image_acquired_semaphores.emplace_back(create_semaphore(device.get()));
+			draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
 		}
 
 		resize(width, height);
 	}
 
 	~Device() {
-		wait_idle(device);
+		wait_idle(device.get());
 
 		destroy_window(hWnd);
 	}
@@ -910,17 +910,17 @@ public:
 		height = h;
 
 		if (device) {
-			wait_idle(device);
+			wait_idle(device.get());
 
 			image_views.clear();
 			framebuffers.clear();
 			cmds.clear();
 
-			swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height, 3);
-			for (auto& swapchain_image : get_swapchain_images(device, swapchain.get())) {
-				image_views.emplace_back(create_image_view(device, swapchain_image, surface_format.format));
-				framebuffers.emplace_back(create_framebuffer(device, render_pass, image_views.back().get(), width, height));
-				cmds.emplace_back(create_command_buffer(device, cmd_pool));
+			swapchain = create_swapchain(gpu, device.get(), surface.get(), surface_format, swapchain.get(), width, height, 3);
+			for (auto& swapchain_image : get_swapchain_images(device.get(), swapchain.get())) {
+				image_views.emplace_back(create_image_view(device.get(), swapchain_image, surface_format.format));
+				framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), image_views.back().get(), width, height));
+				cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
 			}
 
 			const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
@@ -931,18 +931,18 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		wait(device, fences[fence_index]);
-		const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index]);
+		wait(device.get(), fences[fence_index].get());
+		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
 		if (!font_regular.image) upload_fonts(cmd);
-		begin_pass(cmd, render_pass, framebuffers[frame_index].get(), colors().clear, width, height);
+		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);
 
-		bind_pipeline(cmd, pipeline);
+		bind_pipeline(cmd, pipeline.get());
 
 		for (auto& character : characters) {
 			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
@@ -960,9 +960,9 @@ public:
 				constants.uv_origin = { glyph->x, glyph->y };
 				constants.uv_sizes = { glyph->w, glyph->h };
 
-				bind_descriptor_set(cmd, pipeline_layout, font.descriptor_set);
+				bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
 
-				push(cmd, pipeline_layout, sizeof(Constants), &constants);
+				push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
 				draw(cmd, 6);
 			}
 		}
@@ -970,8 +970,8 @@ public:
 		end_pass(cmd);
 		end(cmd);
 
-		submit(queue, image_acquired_semaphores[fence_index], draw_complete_semaphores[fence_index], cmd, fences[fence_index]);
-		present(swapchain.get(), queue, draw_complete_semaphores[fence_index], frame_index);
+		submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmd, fences[fence_index].get());
+		present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
 
 		fence_index += 1;
 		fence_index %= fences.size();
