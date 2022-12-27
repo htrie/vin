@@ -356,15 +356,15 @@ vk::Semaphore create_semaphore(const vk::Device& device) {
 	return semaphore_handle.value;
 }
 
-vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
+vk::CommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
 	const auto cmd_info = vk::CommandBufferAllocateInfo()
 		.setCommandPool(cmd_pool)
 		.setLevel(vk::CommandBufferLevel::ePrimary)
 		.setCommandBufferCount(1);
 
-	auto cmd_handles = device.allocateCommandBuffersUnique(cmd_info);
+	auto cmd_handles = device.allocateCommandBuffers(cmd_info);
 	verify(cmd_handles.result == vk::Result::eSuccess);
-	return std::move(cmd_handles.value[0]);
+	return cmd_handles.value[0];
 }
 
 vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height, uint32_t image_count) {
@@ -830,7 +830,7 @@ class Device {
 	vk::UniqueSwapchainKHR swapchain;
 	Array<vk::ImageView, 3> image_views;
 	Array<vk::UniqueFramebuffer, 3> framebuffers;
-	Array<vk::UniqueCommandBuffer, 3> cmds;
+	Array<vk::CommandBuffer, 3> cmds;
 
 	unsigned width = 0;
 	unsigned height = 0;
@@ -933,7 +933,7 @@ public:
 	void redraw(const Characters& characters) {
 		wait(device, fences[fence_index]);
 		const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index]);
-		const auto& cmd = cmds[frame_index].get();
+		const auto& cmd = cmds[frame_index];
 
 		begin(cmd);
 		if (!font_regular.image) upload_fonts(cmd);
