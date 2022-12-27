@@ -429,16 +429,16 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
 	return std::move(swapchain_handle.value);
 }
 
-vk::ImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::Format& format) {
+vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::Format& format) {
 	auto view_info = vk::ImageViewCreateInfo()
 		.setViewType(vk::ImageViewType::e2D)
 		.setFormat(format)
 		.setImage(image)
 		.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-	auto view_handle = device.createImageView(view_info);
+	auto view_handle = device.createImageViewUnique(view_info);
 	verify(view_handle.result == vk::Result::eSuccess);
-	return view_handle.value;
+	return std::move(view_handle.value);
 }
 
 vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
@@ -809,7 +809,7 @@ class Device {
 	struct Font {
 		vk::Image image;
 		vk::UniqueDeviceMemory image_memory;
-		vk::ImageView image_view;
+		vk::UniqueImageView image_view;
 		vk::DescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
@@ -828,7 +828,7 @@ class Device {
 	Array<vk::Semaphore, 2> draw_complete_semaphores;
 
 	vk::UniqueSwapchainKHR swapchain;
-	Array<vk::ImageView, 3> image_views;
+	Array<vk::UniqueImageView, 3> image_views;
 	Array<vk::UniqueFramebuffer, 3> framebuffers;
 	Array<vk::UniqueCommandBuffer, 3> cmds;
 
@@ -848,7 +848,7 @@ class Device {
 		font.image_view = create_image_view(device, font.image, vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image);
 		font.descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
-		update_descriptor_set(device, font.descriptor_set, uniform_buffer, sizeof(Uniforms), sampler, font.image_view);
+		update_descriptor_set(device, font.descriptor_set, uniform_buffer, sizeof(Uniforms), sampler, font.image_view.get());
 		return font;
 	}
 
@@ -919,7 +919,7 @@ public:
 			swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height, 3);
 			for (auto& swapchain_image : get_swapchain_images(device, swapchain.get())) {
 				image_views.emplace_back(create_image_view(device, swapchain_image, surface_format.format));
-				framebuffers.emplace_back(create_framebuffer(device, render_pass, image_views.back(), width, height));
+				framebuffers.emplace_back(create_framebuffer(device, render_pass, image_views.back().get(), width, height));
 				cmds.emplace_back(create_command_buffer(device, cmd_pool));
 			}
 
