@@ -33,10 +33,8 @@ public:
 
 	void clear()
 	{
-		for (size_t i = 0; i < count; ++i) {
-			values[i].~T();
+		for (size_t i = 0; i < count; ++i)
 			values[i] = T();
-		}
 		count = 0;
 	}
 
@@ -45,7 +43,6 @@ public:
 		verify(!empty() && "Cannot erase from empty array");
 		verify((value >= begin()) && (value < end()) && "Value does not belong to array");
 		*value = std::move(values[count-1]);
-		values[count-1].~T();
 		values[count-1] = T();
 		count--;
 	}
