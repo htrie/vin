@@ -356,6 +356,10 @@ vk::Semaphore create_semaphore(const vk::Device& device) {
 	return semaphore_handle.value;
 }
 
+void destroy_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool, const vk::CommandBuffer& cmd) {
+	device.freeCommandBuffers(cmd_pool, cmd);
+}
+
 vk::CommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
 	const auto cmd_info = vk::CommandBufferAllocateInfo()
 		.setCommandPool(cmd_pool)
@@ -367,7 +371,11 @@ vk::CommandBuffer create_command_buffer(const vk::Device& device, const vk::Comm
 	return cmd_handles.value[0];
 }
 
-vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height, uint32_t image_count) {
+void destroy_swapchain(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
+	device.destroySwapchainKHR(swapchain);
+}
+
+vk::SwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, int32_t window_width, int32_t window_height, uint32_t image_count) {
 	vk::SurfaceCapabilitiesKHR surf_caps;
 	const auto result = gpu.getSurfaceCapabilitiesKHR(surface, &surf_caps);
 	verify(result == vk::Result::eSuccess);
@@ -421,12 +429,15 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
 		.setPreTransform(preTransform)
 		.setCompositeAlpha(compositeAlpha)
 		.setPresentMode(vk::PresentModeKHR::eFifo)
-		.setClipped(true)
-		.setOldSwapchain(old_swapchain);
+		.setClipped(true);
 
-	auto swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
+	auto swapchain_handle = device.createSwapchainKHR(swapchain_info);
 	verify(swapchain_handle.result == vk::Result::eSuccess);
-	return std::move(swapchain_handle.value);
+	return swapchain_handle.value;
+}
+
+void destroy_image_view(const vk::Device& device, const vk::ImageView& image_view) {
+	device.destroyImageView(image_view);
 }
 
 vk::ImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::Format& format) {
@@ -439,6 +450,10 @@ vk::ImageView create_image_view(const vk::Device& device, const vk::Image& image
 	auto view_handle = device.createImageView(view_info);
 	verify(view_handle.result == vk::Result::eSuccess);
 	return view_handle.value;
+}
+
+void destroy_framebuffer(const vk::Device& device, const vk::Framebuffer& framebuffer) {
+	device.destroyFramebuffer(framebuffer);
 }
 
 vk::Framebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
@@ -827,7 +842,7 @@ class Device {
 	Array<vk::Semaphore, 2> image_acquired_semaphores;
 	Array<vk::Semaphore, 2> draw_complete_semaphores;
 
-	vk::UniqueSwapchainKHR swapchain;
+	vk::SwapchainKHR swapchain;
 	Array<vk::ImageView, 3> image_views;
 	Array<vk::Framebuffer, 3> framebuffers;
 	Array<vk::CommandBuffer, 3> cmds;
@@ -912,12 +927,17 @@ public:
 		if (device) {
 			wait_idle(device);
 
+			for (auto& image_view : image_views) destroy_image_view(device, image_view);
+			for (auto& framebuffer : framebuffers) destroy_framebuffer(device, framebuffer);
+			for (auto& cmd : cmds) destroy_command_buffer(device, cmd_pool, cmd);
 			image_views.clear();
 			framebuffers.clear();
 			cmds.clear();
 
-			swapchain = create_swapchain(gpu, device, surface, surface_format, swapchain.get(), width, height, 3);
-			for (auto& swapchain_image : get_swapchain_images(device, swapchain.get())) {
+			destroy_swapchain(device, swapchain);
+			swapchain = create_swapchain(gpu, device, surface, surface_format, width, height, 3);
+
+			for (auto& swapchain_image : get_swapchain_images(device, swapchain)) {
 				image_views.emplace_back(create_image_view(device, swapchain_image, surface_format.format));
 				framebuffers.emplace_back(create_framebuffer(device, render_pass, image_views.back(), width, height));
 				cmds.emplace_back(create_command_buffer(device, cmd_pool));
@@ -932,7 +952,7 @@ public:
 
 	void redraw(const Characters& characters) {
 		wait(device, fences[fence_index]);
-		const auto frame_index = acquire(device, swapchain.get(), image_acquired_semaphores[fence_index]);
+		const auto frame_index = acquire(device, swapchain, image_acquired_semaphores[fence_index]);
 		const auto& cmd = cmds[frame_index];
 
 		begin(cmd);
@@ -971,7 +991,7 @@ public:
 		end(cmd);
 
 		submit(queue, image_acquired_semaphores[fence_index], draw_complete_semaphores[fence_index], cmd, fences[fence_index]);
-		present(swapchain.get(), queue, draw_complete_semaphores[fence_index], frame_index);
+		present(swapchain, queue, draw_complete_semaphores[fence_index], frame_index);
 
 		fence_index += 1;
 		fence_index %= fences.size();

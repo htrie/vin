@@ -75,7 +75,7 @@
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>dwmapi.lib;..\Lib\vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <StackReserveSize>4194304</StackReserveSize>
+      <StackReserveSize>8388608</StackReserveSize>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -124,7 +124,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <StackReserveSize>4194304</StackReserveSize>
+      <StackReserveSize>8388608</StackReserveSize>
     </Link>
     <CustomBuildStep>
       <Command>
