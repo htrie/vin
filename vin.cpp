@@ -1,3 +1,4 @@
+// TODO: Catch all allocs and check who's doing them.
 // TODO: Remove std::string.
 // TODO: No dynamic allocations.
 // TODO: Optimize rendering.
