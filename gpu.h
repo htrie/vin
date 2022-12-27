@@ -441,7 +441,7 @@ vk::ImageView create_image_view(const vk::Device& device, const vk::Image& image
 	return view_handle.value;
 }
 
-vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
+vk::Framebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
 	const Array<vk::ImageView, 1> attachments = { image_view };
 
 	const auto fb_info = vk::FramebufferCreateInfo()
@@ -452,9 +452,9 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
 		.setHeight((uint32_t)window_height)
 		.setLayers(1);
 
-	auto framebuffer_handle = device.createFramebufferUnique(fb_info);
+	auto framebuffer_handle = device.createFramebuffer(fb_info);
 	verify(framebuffer_handle.result == vk::Result::eSuccess);
-	return std::move(framebuffer_handle.value);
+	return framebuffer_handle.value;
 }
 
 vk::Sampler create_sampler(const vk::Device& device) {
@@ -530,7 +530,7 @@ bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBit
 	return false;
 }
 
-vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Image& image) {
+vk::DeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Image& image) {
 	vk::MemoryRequirements mem_reqs;
 	device.getImageMemoryRequirements(image, &mem_reqs);
 
@@ -541,9 +541,9 @@ vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const 
 	auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass == true);
 
-	auto memory_handle = device.allocateMemoryUnique(mem_info);
+	auto memory_handle = device.allocateMemory(mem_info);
 	verify(memory_handle.result == vk::Result::eSuccess);
-	return std::move(memory_handle.value);
+	return memory_handle.value;
 }
 
 vk::DeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
@@ -808,7 +808,7 @@ class Device {
 
 	struct Font {
 		vk::Image image;
-		vk::UniqueDeviceMemory image_memory;
+		vk::DeviceMemory image_memory;
 		vk::ImageView image_view;
 		vk::DescriptorSet descriptor_set;
 		unsigned width = 0;
@@ -829,7 +829,7 @@ class Device {
 
 	vk::UniqueSwapchainKHR swapchain;
 	Array<vk::ImageView, 3> image_views;
-	Array<vk::UniqueFramebuffer, 3> framebuffers;
+	Array<vk::Framebuffer, 3> framebuffers;
 	Array<vk::CommandBuffer, 3> cmds;
 
 	unsigned width = 0;
@@ -844,7 +844,7 @@ class Device {
 		font.glyphs = glyphs;
 		font.image = create_image(gpu, device, width, height);
 		font.image_memory = create_image_memory(gpu, device, font.image);
-		copy_image_data(device, font.image, font.image_memory.get(), image_pixels, image_size, width);
+		copy_image_data(device, font.image, font.image_memory, image_pixels, image_size, width);
 		font.image_view = create_image_view(device, font.image, vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image);
 		font.descriptor_set = create_descriptor_set(device, desc_pool, desc_layout);
@@ -937,7 +937,7 @@ public:
 
 		begin(cmd);
 		if (!font_regular.image) upload_fonts(cmd);
-		begin_pass(cmd, render_pass, framebuffers[frame_index].get(), colors().clear, width, height);
+		begin_pass(cmd, render_pass, framebuffers[frame_index], colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);
