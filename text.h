@@ -1899,7 +1899,7 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ");
+			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ");
 			push_string(characters, row, col, entry.context, colors().comment);
 			row++;
 			displayed++;

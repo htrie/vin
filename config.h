@@ -76,20 +76,20 @@ struct HSB {
 	float saturation = 0.50f;
 	float brightness = 0.85f;
 
-	SmallString increase_hue_start() { hue_start = clamp(hue_start + 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + std::to_string(hue_start); }
-	SmallString decrease_hue_start() { hue_start = clamp(hue_start - 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + std::to_string(hue_start); }
+	SmallString increase_hue_start() { hue_start = clamp(hue_start + 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + SmallString(hue_start); }
+	SmallString decrease_hue_start() { hue_start = clamp(hue_start - 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + SmallString(hue_start); }
 
-	SmallString increase_hue_range() { hue_range = clamp(hue_range + 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + std::to_string(hue_range); }
-	SmallString decrease_hue_range() { hue_range = clamp(hue_range - 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + std::to_string(hue_range); }
+	SmallString increase_hue_range() { hue_range = clamp(hue_range + 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + SmallString(hue_range); }
+	SmallString decrease_hue_range() { hue_range = clamp(hue_range - 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + SmallString(hue_range); }
 
-	SmallString increase_hue_adjust() { hue_adjust = clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + std::to_string(hue_adjust); }
-	SmallString decrease_hue_adjust() { hue_adjust = clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + std::to_string(hue_adjust); }
+	SmallString increase_hue_adjust() { hue_adjust = clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + SmallString(hue_adjust); }
+	SmallString decrease_hue_adjust() { hue_adjust = clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + SmallString(hue_adjust); }
 
-	SmallString increase_saturation() { saturation = clamp(saturation + 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + std::to_string(saturation); }
-	SmallString decrease_saturation() { saturation = clamp(saturation - 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + std::to_string(saturation); }
+	SmallString increase_saturation() { saturation = clamp(saturation + 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + SmallString(saturation); }
+	SmallString decrease_saturation() { saturation = clamp(saturation - 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + SmallString(saturation); }
 
-	SmallString increase_brightness() { brightness = clamp(brightness + 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + std::to_string(brightness); }
-	SmallString decrease_brightness() { brightness = clamp(brightness - 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + std::to_string(brightness); }
+	SmallString increase_brightness() { brightness = clamp(brightness + 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + SmallString(brightness); }
+	SmallString decrease_brightness() { brightness = clamp(brightness - 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + SmallString(brightness); }
 
 	void use_rgb() {
 		hue_start = 0.0f;
@@ -118,11 +118,11 @@ struct Spacing {
 	float character = 7.0f;
 	float line = 15.0f;
 
-	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + std::to_string(character); }
-	SmallString decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + std::to_string(character); }
+	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + SmallString(character); }
+	SmallString decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + SmallString(character); }
 
-	SmallString increase_char_height() { line = clamp(line + 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + std::to_string(line); }
-	SmallString decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + std::to_string(line); }
+	SmallString increase_char_height() { line = clamp(line + 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + SmallString(line); }
+	SmallString decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + SmallString(line); }
 };
 
 Spacing& spacing() {

@@ -147,6 +147,18 @@ public:
 		chars[len] = 0;
 	}
 
+	explicit String(const float f) {
+		char buf[_CVTBUFSIZE];
+		_gcvt(f, 12, buf);
+		*this = String((char*)buf);
+	}
+
+	explicit String(const double f) {
+		char buf[_CVTBUFSIZE];
+		_gcvt(f, 12, buf);
+		*this = String((char*)buf);
+	}
+
 	explicit String(const int i) {
 		char buf[_MAX_ITOSTR_BASE10_COUNT];
 		_itoa(i, buf, 10);
@@ -179,11 +191,6 @@ public:
 	String(const char* s, size_t l) {
 		resize(l);
 		memcpy(chars.data(), s, len);
-	}
-
-	String(const std::string& s) {
-		resize(s.length());
-		memcpy(chars.data(), s.data(), len);
 	}
 
 	String(const std::string_view s) {
@@ -279,16 +286,9 @@ public:
 		return *this;
 	}
 
-	String& operator+=(const std::string& s) {
-		const auto old = resize(len + s.length());
-		memcpy(&chars[old], s.data(), len - old);
-		return *this;
-	}
-
 	String operator+(const String& other) const { return String(*this) += other; }
 	String operator+(const char* s) const { return String(*this) += s; }
 	String operator+(const char& c) const { return String(*this) += c; }
-	String operator+(const std::string& s) const { return String(*this) += s; }
 
 	template <size_t M> String& operator+=(const char(&_chars)[M]) {
 		const auto old = resize(len + M);
