@@ -20,11 +20,6 @@ std::string tolower(std::string s) {
 	return s;
 }
 
-void append_path(char* dst, const char* src) {
-	strncpy_s(dst + strlen(dst), MAX_PATH - strlen(dst), src, strlen(src));
-	dst[strlen(dst)] = 0; // EOS
-}
-
 void remove_cr(std::string& s) {
 	s.erase(std::remove_if(s.begin(), s.end(), [&](const char c) {
 		return c == '\r'; }), s.end());
