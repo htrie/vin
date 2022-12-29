@@ -8,9 +8,9 @@ void verify(bool expr) {
 #endif
 }
 
-void error(std::string_view err_msg, std::string_view err_class) {
+void error(const char* err_msg, const char* err_class) {
 	do {
-		MessageBox(nullptr, err_msg.data(), err_class.data(), MB_OK);
+		MessageBox(nullptr, err_msg, err_class, MB_OK);
 		exit(1);
 	} while (0);
 }
