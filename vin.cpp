@@ -3,6 +3,9 @@
 // TODO: CPU render.
 // TODO: Custom pixel font.
 
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "vulkan-1.lib")
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define _HAS_EXCEPTIONS 0
