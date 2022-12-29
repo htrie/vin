@@ -1029,7 +1029,7 @@ class Buffer {
 	Array<unsigned, 64> temp_record;
 	bool repeat = false;
 
-	std::string filename;
+	PathString filename;
 	std::string highlight;
 
 	unsigned accu = 0;
