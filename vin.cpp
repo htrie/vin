@@ -1,4 +1,3 @@
-// TODO: Replace some substr with cmpstr
 // TODO: CPU render.
 // TODO: Custom pixel font.
 

@@ -312,7 +312,9 @@ public:
 	size_t end() const { return finish; }
 
 	bool check_string(const HugeString& text, const SmallString& s) const {
-		return text.substr(start, s.size()) == s;
+		if (start + s.size() <= text.size())
+			return strncmp(&text[start], s.data(), s.size()) == 0;
+		return false;
 	}
 };
 
@@ -360,7 +362,7 @@ public:
 
 	bool test(size_t index, const SmallString& s) const {
 		if (index + s.size() <= text.size())
-			return text.substr(index, s.size()) == s;
+			return strncmp(&text[index], s.data(), s.size()) == 0;
 		return false;
 	}
 
