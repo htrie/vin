@@ -1615,11 +1615,11 @@ public:
 
 	void filter(Index& index, unsigned row_count) {
 		filtered.clear();
-		pattern = tolower(pattern);
+		pattern = pattern.tolower();
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (tolower(path).find(pattern) != std::string::npos)
+			if (path.tolower().find(pattern) != SmallString::npos)
 				filtered.push_back(path.c_str());
 			return true;
 		});

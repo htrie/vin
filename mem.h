@@ -284,6 +284,12 @@ public:
 
 	operator std::basic_string_view<char>() const { return std::basic_string_view<char>(chars.data(), len); }
 
+	String tolower() const {
+		String s = *this;
+		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
+		return s;
+	}
+
 	const char* c_str() const { return chars.data(); }
 	char* c_str() { return chars.data(); }
 
