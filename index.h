@@ -1,17 +1,7 @@
 #pragma once
 
-bool accept_extension(const std::string_view extension) {
-	if (extension == ".cpp") return true;
-	if (extension == ".hpp") return true;
-	if (extension == ".c") return true;
-	if (extension == ".h") return true;
-	if (extension == ".txt") return true;
-	if (extension == ".diff") return true;
-	return false;
-}
-
 class Index {
-	Array<std::string, 1024> paths;
+	Array<PathString, 1024> paths;
 
 public:
 	void reset() {
@@ -38,7 +28,7 @@ public:
 
 class Database {
 	struct File {
-		std::string name;
+		PathString name;
 		size_t size;
 	};
 
@@ -58,7 +48,7 @@ class Database {
 			(c >= '0' && c <= '9') ||
 			(c == '_'); }
 
-	void scan(const std::string& filename) {
+	void scan(const PathString& filename) {
 		map(filename, [&](const char* mem, size_t size) {
 			files.emplace_back(filename, size);
 			size_t location = 0;

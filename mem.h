@@ -258,3 +258,4 @@ public:
 };
 
 typedef String<64> SmallString;
+typedef String<MAX_PATH> PathString;
