@@ -54,7 +54,7 @@ class App {
 
 	Characters characters;
 
-	std::string clipboard;
+	HugeString clipboard;
 	SmallString notification;
 
 	bool maximized = false;

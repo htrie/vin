@@ -1073,7 +1073,7 @@ class Buffer {
 		end_record(key);
 	}
 
-	void replay(std::string& clipboard, unsigned col_count, unsigned row_count) {
+	void replay(HugeString& clipboard, unsigned col_count, unsigned row_count) {
 		const auto s = record; // Cache since process_key will modify it.
 		for (const auto& c : s) {
 			process_key(clipboard, c, col_count, row_count);
@@ -1141,7 +1141,7 @@ class Buffer {
 		state().cursor_center(row_count);
 	}
 
-	void process_key(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
+	void process_key(HugeString& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
 		if (mode != Mode::insert) {
 			stack.push();
 		}
@@ -1188,7 +1188,7 @@ class Buffer {
 		else { append_record(key); state().insert(std::string(1, (char)key)); }
 	}
 
-	void process_normal(std::string& clipboard, unsigned key, unsigned row_count) {
+	void process_normal(HugeString& clipboard, unsigned key, unsigned row_count) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
@@ -1275,7 +1275,7 @@ class Buffer {
 		else { state().line_rfind(key); f_key = key; char_forward = false; mode = Mode::normal; }
 	}
 
-	void process_normal_r(std::string& clipboard, unsigned key) {
+	void process_normal_r(HugeString& clipboard, unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
 		else { end_record(key); clipboard = state().erase(); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
 	}
@@ -1287,7 +1287,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_y(std::string& clipboard, unsigned key) {
+	void process_normal_y(HugeString& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'y') { end_record(key); clipboard = state().yank_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().yank_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
@@ -1302,15 +1302,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_yf(std::string& clipboard, unsigned key) {
+	void process_normal_yf(HugeString& clipboard, unsigned key) {
 		end_record(key); clipboard = state().yank_to(key); mode = Mode::normal;
 	}
 
-	void process_normal_yt(std::string& clipboard, unsigned key) {
+	void process_normal_yt(HugeString& clipboard, unsigned key) {
 		end_record(key); clipboard = state().yank_until(key); mode = Mode::normal;
 	}
 
-	void process_normal_yi(std::string& clipboard, unsigned key) {
+	void process_normal_yi(HugeString& clipboard, unsigned key) {
 		if (key == 'w') { end_record(key); clipboard = state().yank_word(); mode = Mode::normal; }
 		else if (key == '(' || key == ')') { end_record(key); clipboard = state().yank_enclosure('(', ')', false); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().yank_enclosure('{', '}', false); mode = Mode::normal; }
@@ -1318,7 +1318,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_ya(std::string& clipboard, unsigned key) {
+	void process_normal_ya(HugeString& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clipboard = state().yank_enclosure('(', ')', true); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().yank_enclosure('{', '}', true); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clipboard = state().yank_enclosure('[', ']', true); mode = Mode::normal; }
@@ -1341,7 +1341,7 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_c(std::string& clipboard, unsigned key) {
+	void process_normal_c(HugeString& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clipboard = state().erase_line_contents(); accu = 0; mode = Mode::insert; }
 		else if (key == 'w') { append_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::insert; }
@@ -1356,15 +1356,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_cf(std::string& clipboard, unsigned key) {
+	void process_normal_cf(HugeString& clipboard, unsigned key) {
 		append_record(key); clipboard = state().erase_to(key); mode = Mode::insert;
 	}
 
-	void process_normal_ct(std::string& clipboard, unsigned key) {
+	void process_normal_ct(HugeString& clipboard, unsigned key) {
 		append_record(key); clipboard = state().erase_until(key); mode = Mode::insert;
 	}
 
-	void process_normal_ci(std::string& clipboard, unsigned key) {
+	void process_normal_ci(HugeString& clipboard, unsigned key) {
 		if (key == 'w') { append_record(key); clipboard = state().erase_word(false); mode = Mode::insert; }
 		else if (key == '(' || key == ')') { append_record(key); clipboard = state().erase_enclosure('(', ')', false); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clipboard = state().erase_enclosure('{', '}', false); mode = Mode::insert; }
@@ -1372,14 +1372,14 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_ca(std::string& clipboard, unsigned key) {
+	void process_normal_ca(HugeString& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { append_record(key); clipboard = state().erase_enclosure('(', ')', true); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clipboard = state().erase_enclosure('{', '}', true); mode = Mode::insert; }
 		else if (key == '[' || key == ']') { append_record(key); clipboard = state().erase_enclosure('[', ']', true); mode = Mode::insert; }
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_d(std::string& clipboard, unsigned key) {
+	void process_normal_d(HugeString& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'd') { end_record(key); clipboard = state().erase_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
@@ -1394,15 +1394,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_df(std::string& clipboard, unsigned key) {
+	void process_normal_df(HugeString& clipboard, unsigned key) {
 		end_record(key); clipboard = state().erase_to(key); mode = Mode::normal;
 	}
 
-	void process_normal_dt(std::string& clipboard, unsigned key) {
+	void process_normal_dt(HugeString& clipboard, unsigned key) {
 		end_record(key); clipboard = state().erase_until(key); mode = Mode::normal;
 	}
 
-	void process_normal_di(std::string& clipboard, unsigned key) {
+	void process_normal_di(HugeString& clipboard, unsigned key) {
 		if (key == 'w') { end_record(key); clipboard = state().erase_word(false); mode = Mode::normal; }
 		else if (key == '(' || key == ')') { end_record(key); clipboard = state().erase_enclosure('(', ')', false); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().erase_enclosure('{', '}', false); mode = Mode::normal; }
@@ -1410,7 +1410,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_da(std::string& clipboard, unsigned key) {
+	void process_normal_da(HugeString& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clipboard = state().erase_enclosure('(', ')', true); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().erase_enclosure('{', '}', true); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clipboard = state().erase_enclosure('[', ']', true); mode = Mode::normal; }
@@ -1551,7 +1551,7 @@ public:
 
 	void clear_highlight() { highlight.clear(); }
 
-	void process(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
+	void process(HugeString& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
 		process_key(clipboard, key, col_count, row_count);
 		if (repeat) { repeat = false; replay(clipboard, col_count, row_count); }
 	}
