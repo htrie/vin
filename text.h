@@ -1808,12 +1808,12 @@ public:
 
 class Finder {
 	struct Entry {
-		std::string filename;
+		PathString filename;
 		size_t position;
-		std::string context;
+		SmallString context;
 	};
 
-	std::string pattern;
+	SmallString pattern;
 	Array<Entry, 64> filtered;
 	unsigned selected = 0; 
 
@@ -1844,7 +1844,7 @@ public:
 		selected = 0;
 	}
 
-	void seed(const std::string& word) {
+	void seed(const SmallString& word) {
 		pattern = word;
 	}
 
@@ -1856,7 +1856,7 @@ public:
 				return false;
 			if (location.symbol_hash == pattern_hash) {
 				map(file.name, [&](const char* mem, size_t size) {
-					const auto context = std::string(&mem[location.position], min((size_t)60, size - location.position));
+					const auto context = SmallString(&mem[location.position], min((size_t)60, size - location.position));
 					filtered.emplace_back(file.name.c_str(), location.position, context);
 				});
 			}
@@ -1865,7 +1865,7 @@ public:
 		selected = min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	std::string selection() const {
+	PathString selection() const {
 		if (selected < filtered.size())
 			return filtered[selected].filename;
 		return {};

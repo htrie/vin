@@ -190,13 +190,16 @@ public:
 		resize(0);
 	}
 
+	void pop_back() {
+		if (len > 0)
+			resize(len - 1);
+	}
+
 	String& operator+=(const String& other) {
 		const auto old = resize(len + other.size());
 		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
 		return *this;
 	}
-
-	String operator+(const String& other) const { return String(*this) += other; }
 
 	String& operator+=(const char* s) {
 		const auto old = resize(len + strlen(s));
@@ -204,7 +207,11 @@ public:
 		return *this;
 	}
 
-	String operator+(const char* s) const { return String(*this) += s; }
+	String operator+=(const char& c) {
+		const auto old = resize(len + 1);
+		chars[old] = c;
+		return *this;
+	}
 
 	String& operator+=(const std::string& s) {
 		const auto old = resize(len + s.length());
@@ -212,6 +219,9 @@ public:
 		return *this;
 	}
 
+	String operator+(const String& other) const { return String(*this) += other; }
+	String operator+(const char* s) const { return String(*this) += s; }
+	String operator+(const char& c) const { return String(*this) += c; }
 	String operator+(const std::string& s) const { return String(*this) += s; }
 
 	template <size_t M> String& operator+=(const char(&_chars)[M]) {
@@ -220,7 +230,6 @@ public:
 			chars[old + i] = _chars[i];
 		return *this;
 	}
-
 	template <size_t M> String operator+(const char(&_chars)[M]) const { return String(*this) += _chars; }
 
 	template <size_t M> String& operator+=(const String<M>& other) {
@@ -228,7 +237,6 @@ public:
 		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
 		return *this;
 	}
-
 	template <size_t M> String operator+(const String<M>& other) const { return String(*this) += other; }
 
 	template <size_t M> bool operator==(const String<M>& other) const {
