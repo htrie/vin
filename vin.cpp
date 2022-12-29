@@ -1,4 +1,3 @@
-// TODO: Remove std::string.
 // TODO: Replace some substr with cmpstr
 // TODO: Remove std::string_view.
 // TODO: CPU render.

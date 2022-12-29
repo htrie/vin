@@ -244,7 +244,7 @@ class Enclosure {
 			if (count > 0)
 				index--;
 		}
-		return count == 0 ? index : std::string::npos;
+		return count == 0 ? index : SmallString::npos;
 	}
 
 	size_t find_next(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
@@ -256,7 +256,7 @@ class Enclosure {
 			if (count > 0)
 				index++;
 		}
-		return count == 0 ? index : std::string::npos;
+		return count == 0 ? index : SmallString::npos;
 	}
 
 public:
@@ -267,9 +267,9 @@ public:
 			finish = pos;
 			const auto prev = find_prev(text, pos, left, right);
 			const auto next = find_next(text, pos, left, right);
-			if (prev != std::string::npos && next != std::string::npos) {
-				start = prev != std::string::npos ? prev : pos;
-				finish = next != std::string::npos ? next : pos;
+			if (prev != SmallString::npos && next != SmallString::npos) {
+				start = prev != SmallString::npos ? prev : pos;
+				finish = next != SmallString::npos ? next : pos;
 			}
 			verify(start <= finish);
 		}
@@ -291,20 +291,20 @@ public:
 			verify(pos < text.size());
 			const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find('\n', pos);
-			start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
-			finish = nn != std::string::npos ? nn : text.size() - 1;
+			start = pn != SmallString::npos ? (pn < pos ? pn + 1 : pn) : 0;
+			finish = nn != SmallString::npos ? nn : text.size() - 1;
 			verify(start <= finish);
 		}
 	}
 
 	size_t to_relative(size_t pos) const {
-		verify(pos != std::string::npos);
+		verify(pos != SmallString::npos);
 		verify(pos >= start && pos <= finish);
 		return pos - start;
 	}
 
 	size_t to_absolute(size_t pos) const {
-		verify(pos != std::string::npos);
+		verify(pos != SmallString::npos);
 		return min(start + pos, finish);
 	}
 
@@ -327,9 +327,9 @@ public:
 			const auto n = text.rfind("//", pos);
 			const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find('\n', pos);
-			if (n != std::string::npos && pn < n) {
+			if (n != SmallString::npos && pn < n) {
 				start = n;
-				finish = nn != std::string::npos ? nn : text.size() - 1;
+				finish = nn != SmallString::npos ? nn : text.size() - 1;
 				verify(start <= finish);
 			}
 		}
@@ -385,7 +385,7 @@ public:
 			}
 			if (found) return pos;
 		}
-		return std::string::npos;
+		return SmallString::npos;
 	}
 
 	size_t rfind_char(unsigned key) {
@@ -400,41 +400,41 @@ public:
 			}
 			if (found) return pos;
 		}
-		return std::string::npos;
+		return SmallString::npos;
 	}
 
 	void line_find(unsigned key) {
-		if (const auto pos = find_char(key); pos != std::string::npos) {
+		if (const auto pos = find_char(key); pos != SmallString::npos) {
 			cursor = pos;
 		}
 	}
 
 	void line_rfind(unsigned key) {
-		if (const auto pos = rfind_char(key); pos != std::string::npos) {
+		if (const auto pos = rfind_char(key); pos != SmallString::npos) {
 			cursor = pos;
 		}
 	}
 
 	void word_find(const std::string_view s) {
-		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
+		if (const auto pos = text.find(s, cursor); pos != SmallString::npos) {
 			if (pos == cursor && (cursor + 1 < text.size())) {
-				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) { cursor = pos; }
-				else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
+				if (const auto pos = text.find(s, cursor + 1); pos != SmallString::npos) { cursor = pos; }
+				else if (const auto pos = text.find(s, 0); pos != SmallString::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
-		else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
+		else if (const auto pos = text.find(s, 0); pos != SmallString::npos) { cursor = pos; }
 	}
 
 	void word_rfind(const std::string_view s) {
-		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
+		if (const auto pos = text.rfind(s, cursor); pos != SmallString::npos) {
 			if (pos == cursor && cursor > 0) {
-				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) { cursor = pos; }
-				else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
+				if (const auto pos = text.rfind(s, cursor - 1); pos != SmallString::npos) { cursor = pos; }
+				else if (const auto pos = text.rfind(s, text.size() - 1); pos != SmallString::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
-		else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
+		else if (const auto pos = text.rfind(s, text.size() - 1); pos != SmallString::npos) { cursor = pos; }
 	}
 
 	void next_char() {
@@ -621,7 +621,7 @@ public:
 
 	HugeString yank_to(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != std::string::npos) {
+			if (const auto pos = find_char(key); pos != SmallString::npos) {
 				return text.substr(cursor, pos - cursor + 1);
 			}
 		}
@@ -630,7 +630,7 @@ public:
 
 	HugeString yank_until(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != std::string::npos) {
+			if (const auto pos = find_char(key); pos != SmallString::npos) {
 				return text.substr(cursor, pos - cursor);
 			}
 		}
@@ -780,7 +780,7 @@ public:
 
 	HugeString erase_to(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != std::string::npos) {
+			if (const auto pos = find_char(key); pos != SmallString::npos) {
 				const auto s = text.substr(cursor, pos - cursor + 1);
 				text.erase(cursor, pos - cursor + 1);
 				return s;
@@ -791,7 +791,7 @@ public:
 
 	HugeString erase_until(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != std::string::npos) {
+			if (const auto pos = find_char(key); pos != SmallString::npos) {
 				const auto s = text.substr(cursor, pos - cursor);
 				text.erase(cursor, pos - cursor);
 				return s;
@@ -890,7 +890,7 @@ public:
 	}
 
 	void paste_before(const std::string_view s) {
-		if (s.find('\n') != std::string::npos) {
+		if (s.find('\n') != SmallString::npos) {
 			line_start(); insert(s); prev_line();
 		}
 		else {
@@ -899,7 +899,7 @@ public:
 	}
 
 	void paste_after(const std::string_view s) {
-		if (s.find('\n') != std::string::npos) {
+		if (s.find('\n') != SmallString::npos) {
 			next_line(); line_start(); insert(s); prev_line();
 		}
 		else {
