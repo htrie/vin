@@ -145,6 +145,10 @@ class String {
 		return old;
 	}
 
+	void move(size_t old, size_t from, size_t to) {
+		memcpy(&chars[to], &chars[from], min(old - from, len - to));
+	}
+
 public:
 	String() noexcept {
 		chars[len] = 0;
@@ -214,10 +218,6 @@ public:
 	void pop_back() {
 		if (len > 0)
 			resize(len - 1);
-	}
-
-	void move(size_t old, size_t from, size_t to) {
-		memcpy(&chars[to], &chars[from], min(old - from, len - to));
 	}
 
 	void insert(size_t off, const String& s) {
