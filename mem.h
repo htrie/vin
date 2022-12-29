@@ -119,6 +119,18 @@ public:
 	bool full() const { return count == N; }
 };
 
+class StringView {
+	const char* s = nullptr;
+	size_t n;
+
+public:
+	StringView(const char* s, size_t n)
+		: s(s), n(n) {}
+
+	const char* data() const { return s; }
+	size_t size() const { return n; }
+};
+
 template <size_t N>
 class String {
 	size_t len = 0; // Not including EOS.
@@ -126,7 +138,7 @@ class String {
 
 	size_t resize(size_t n) {
 		const size_t old = len;
-		len = std::min(N - 1, n);
+		len = min(N - 1, n);
 		chars[len] = 0;
 		return old;
 	}
@@ -184,6 +196,11 @@ public:
 	String(const char* s, size_t l) {
 		resize(l);
 		memcpy(chars.data(), s, len);
+	}
+
+	String(const StringView s) {
+		resize(s.size());
+		memcpy(chars.data(), s.data(), len);
 	}
 
 	String(const std::string_view s) {
@@ -310,6 +327,8 @@ public:
 	explicit operator bool() const { return len > 0; }
 
 	operator std::basic_string_view<char>() const { return std::basic_string_view<char>(chars.data(), len); }
+
+	operator StringView() const { return StringView(chars.data(), len); }
 
 	String tolower() const {
 		String s = *this;
