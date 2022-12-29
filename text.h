@@ -1030,7 +1030,7 @@ class Buffer {
 	bool repeat = false;
 
 	PathString filename;
-	std::string highlight;
+	SmallString highlight;
 
 	unsigned accu = 0;
 

@@ -212,6 +212,10 @@ public:
 			resize(len - 1);
 	}
 
+	// erase(size_t off, size_t count)
+
+	// substr(size_t off, size_t count)
+
 	size_t find(const std::string_view s) {
 		if (len >= s.size())
 			for (size_t i = 0; i < len; ++i)
