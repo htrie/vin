@@ -484,7 +484,7 @@ public:
 		return "";
 	}
 
-	std::string current_word() {
+	SmallString current_word() {
 		const Word current(text, cursor);
 		if (is_whitespace(text[current.begin()])) {
 			const Word next = incr(current);

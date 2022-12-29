@@ -216,6 +216,13 @@ public:
 
 	// substr(size_t off, size_t count)
 
+	bool starts_with(const std::string_view s) {
+		if (len >= s.size())
+			if (strncmp(chars.data(), s.data(), s.size()) == 0)
+				return true;
+		return false;
+	}
+
 	size_t find(const std::string_view s) {
 		if (len >= s.size())
 			for (size_t i = 0; i < len; ++i)
