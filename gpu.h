@@ -23,38 +23,14 @@ vk::UniqueInstance create_instance() {
 		.setPpEnabledExtensionNames(extensions.data());
 
 	auto instance_handle = vk::createInstanceUnique(inst_info);
-	if (instance_handle.result == vk::Result::eErrorIncompatibleDriver) {
-		error(
-			"Cannot find a compatible Vulkan installable client driver (ICD).\n\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkCreateInstance Failure");
-	}
-	else if (instance_handle.result == vk::Result::eErrorExtensionNotPresent) {
-		error(
-			"Cannot find a specified extension library.\n"
-			"Make sure your layers path is set appropriately.\n",
-			"vkCreateInstance Failure");
-	}
-	else if (instance_handle.result != vk::Result::eSuccess) {
-		error(
-			"vkCreateInstance failed.\n\n"
-			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkCreateInstance Failure");
-	}
+	verify(instance_handle.result == vk::Result::eSuccess);
 	return std::move(instance_handle.value);
 }
 
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
 	const auto gpus_handle = instance.enumeratePhysicalDevices();
 	verify(gpus_handle.result == vk::Result::eSuccess);
-	if (gpus_handle.value.size() <= 0) {
-		error(
-			"vkEnumeratePhysicalDevices reported zero accessible devices.\n\n"
-			"Do you have a compatible Vulkan installable client driver (ICD) installed?\n"
-			"Please look at the Getting Started guide for additional information.\n",
-			"vkEnumeratePhysicalDevices Failure");
-	}
+	verify(gpus_handle.value.size() > 0);
 
 	const auto gpu = gpus_handle.value[0];
 	verify(gpu.getProperties().deviceType== vk::PhysicalDeviceType::eDiscreteGpu || 

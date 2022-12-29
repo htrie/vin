@@ -22,9 +22,7 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width
 	win_class.lpszClassName = name;
 	win_class.hIconSm = hIcon;
 
-	if (!RegisterClassEx(&win_class)) {
-		error("Unexpected error trying to start the application!\n", "RegisterClass Failure");
-	}
+	RegisterClassEx(&win_class);
 
 	RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
@@ -32,9 +30,6 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width
 	const auto hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
 		nullptr, nullptr, hInstance, data);
-	if (!hWnd) {
-		error("Cannot create a window in which to draw!\n", "CreateWindow Failure");
-	}
 
 	BOOL value = TRUE;
 	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));

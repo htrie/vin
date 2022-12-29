@@ -8,13 +8,6 @@ void verify(bool expr) {
 #endif
 }
 
-void error(const char* err_msg, const char* err_class) {
-	do {
-		MessageBox(nullptr, err_msg, err_class, MB_OK);
-		exit(1);
-	} while (0);
-}
-
 template<typename T> static constexpr T min(T a, T b) { return (a < b) ? a : b; }
 template<typename T> static constexpr T max(T a, T b) { return (a > b) ? a : b; }
 template<typename T> static constexpr T clamp(T x, T a, T b) { return min(max(x, a), b); }
