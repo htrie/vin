@@ -726,7 +726,7 @@ public:
 		return s;
 	}
 
-	void insert(std::string_view s) {
+	void insert(const HugeString& s) {
 		text.insert(cursor, s);
 		cursor = min(cursor + s.length(), text.size() - 1);
 	}
@@ -1185,7 +1185,7 @@ class Buffer {
 		else if (key == Glyph::BS) { append_record(key); state().erase_back(); }
 		else if (key == Glyph::TAB) { append_record(key); state().insert("\t"); }
 		else if (key == Glyph::CR) { append_record(key); state().insert("\n"); }
-		else { append_record(key); state().insert(std::string(1, (char)key)); }
+		else { append_record(key); state().insert(SmallString((char*)&key, 1)); }
 	}
 
 	void process_normal(HugeString& clipboard, unsigned key, unsigned row_count) {
@@ -1277,7 +1277,7 @@ class Buffer {
 
 	void process_normal_r(HugeString& clipboard, unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { end_record(key); clipboard = state().erase(); state().insert(std::string(1, (char)key)); state().prev_char(); mode = Mode::normal; }
+		else { end_record(key); clipboard = state().erase(); state().insert(SmallString((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
 	}
 
 	void process_normal_z(unsigned key, unsigned row_count) {
