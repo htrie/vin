@@ -213,9 +213,18 @@ public:
 	}
 
 	size_t find(const std::string_view s) {
-		for (size_t i = 0; i < len; ++i)
-			if (strncmp(&chars[i], s.data(), s.size()) == 0)
-				return i;
+		if (len >= s.size())
+			for (size_t i = 0; i < len; ++i)
+				if (strncmp(&chars[i], s.data(), s.size()) == 0)
+					return i;
+		return npos;
+	}
+
+	size_t rfind(const std::string_view s) {
+		if (len >= s.size())
+			for (size_t i = len - s.size(); i < len; --i)
+				if (strncmp(&chars[i], s.data(), s.size()) == 0)
+					return i;
 		return npos;
 	}
 
