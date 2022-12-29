@@ -113,3 +113,148 @@ public:
 	bool empty() const { return count == 0; }
 	bool full() const { return count == N; }
 };
+
+template <size_t N>
+class String {
+	size_t len = 0; // Not including EOS.
+	std::array<char, N> chars; // Contains EOS.
+
+	size_t resize(size_t n) {
+		const size_t old = len;
+		len = std::min(N - 1, n);
+		chars[len] = 0;
+		return old;
+	}
+
+public:
+	String() noexcept {
+		chars[len] = 0;
+	}
+
+	explicit String(const int i) {
+		char buf[_MAX_ITOSTR_BASE10_COUNT];
+		_itoa(i, buf, 10);
+		*this = String((char*)buf);
+	}
+
+	explicit String(const unsigned u) {
+		char buf[_MAX_ULTOSTR_BASE10_COUNT];
+		_ultoa(u, buf, 10);
+		*this = String((char*)buf);
+	}
+
+	explicit String(const int64_t i) {
+		char buf[_MAX_I64TOSTR_BASE10_COUNT];
+		_i64toa(i, buf, 10);
+		*this = String((char*)buf);
+	}
+
+	explicit String(const uint64_t u) {
+		char buf[_MAX_U64TOSTR_BASE10_COUNT];
+		_ui64toa(u, buf, 10);
+		*this = String((char*)buf);
+	}
+
+	String(const char* s) {
+		resize(strlen(s));
+		memcpy(chars.data(), s, len * sizeof(char));
+	}
+
+	String(const char* s, size_t l) {
+		resize(l);
+		memcpy(chars.data(), s, len * sizeof(char));
+	}
+
+	String(const std::string& s) {
+		resize(s.length());
+		memcpy(chars.data(), s.data(), len * sizeof(char));
+	}
+
+	String(const std::string_view s) {
+		resize(s.size());
+		memcpy(chars.data(), s.data(), len * sizeof(char));
+	}
+
+	template <size_t M> String(const char(&_chars)[M]) {
+		resize(M);
+		for (size_t i = 0; i < len; ++i)
+			chars[i] = _chars[i];
+	}
+
+	template <size_t M> String(const String<M>& other) {
+		resize(other.size());
+		memcpy(chars.data(), other.data(), len * sizeof(char));
+	}
+
+	void clear() {
+		resize(0);
+	}
+
+	String& operator+=(const String& other) {
+		const auto old = resize(len + other.size());
+		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
+		return *this;
+	}
+
+	String operator+(const String& other) const { return String(*this) += other; }
+
+	String& operator+=(const char* s) {
+		const auto old = resize(len + strlen(s));
+		memcpy(&chars[old], s, (len - old) * sizeof(char));
+		return *this;
+	}
+
+	String operator+(const char* s) const { return String(*this) += s; }
+
+	String& operator+=(const std::string& s) {
+		const auto old = resize(len + s.length());
+		memcpy(&chars[old], s.data(), (len - old) * sizeof(char));
+		return *this;
+	}
+
+	String operator+(const std::string& s) const { return String(*this) += s; }
+
+	template <size_t M> String& operator+=(const char(&_chars)[M]) {
+		const auto old = resize(len + M);
+		for (size_t i = 0; i < len - old; ++i)
+			chars[old + i] = _chars[i];
+		return *this;
+	}
+
+	template <size_t M> String operator+(const char(&_chars)[M]) const { return String(*this) += _chars; }
+
+	template <size_t M> String& operator+=(const String<M>& other) {
+		const auto old = resize(len + other.size());
+		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
+		return *this;
+	}
+
+	template <size_t M> String operator+(const String<M>& other) const { return String(*this) += other; }
+
+	template <size_t M> bool operator==(const String<M>& other) const {
+		if (size() != other.size())
+			return false;
+		return memcmp(data(), other.data(), size() * sizeof(char)) == 0;
+	}
+
+	template <size_t M> bool operator!=(const String<M>& other) const { return !operator==(other); }
+
+	explicit operator bool() const { return len > 0; }
+
+	operator std::basic_string_view<char>() const { return std::basic_string_view<char>(chars.data(), len); }
+
+	const char* c_str() const { return chars.data(); }
+	char* c_str() { return chars.data(); }
+
+	const char* data() const { return chars.data(); }
+	char* data() { return chars.data(); }
+
+	size_t length() const { return len; }
+	size_t size() const { return len; }
+
+	static constexpr size_t max_size() { return N - 1; }
+
+	bool empty() const { return len == 0; }
+};
+
+typedef String<64> SmallString;

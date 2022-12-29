@@ -1705,50 +1705,50 @@ class Switcher {
 	}
 
 public:
-	std::string load(const std::string_view filename) {
+	SmallString load(const std::string_view filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
-				return std::string("switch ") + std::string(filename);
+				return SmallString("switch ") + SmallString(filename);
 			}
 			else if (!buffers.full()) {
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
-				return std::string("load ") + std::string(filename) + " in " + timer.us();
+				return SmallString("load ") + SmallString(filename) + " in " + timer.us();
 			}
 			else {
-				return std::string("too many files open");
+				return SmallString("too many files open");
 			}
 		}
 		return {};
 	}
 
-	std::string reload() {
+	SmallString reload() {
 		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].reload();
-			return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
+			return SmallString("reload ") + SmallString(buffers[active].get_filename()) + " in " + timer.us();
 		}
 		return {};
 	}
 
-	std::string save() {
+	SmallString save() {
 		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].save();
-			return std::string("save ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
+			return SmallString("save ") + SmallString(buffers[active].get_filename()) + " in " + timer.us();
 		}
 		return {};
 	}
 
-	std::string close() {
+	SmallString close() {
 		if (active != (size_t)-1) {
 			const Timer timer;
-			const auto filename = std::string(buffers[active].get_filename());
+			const auto filename = SmallString(buffers[active].get_filename());
 			buffers.erase(buffers.begin() + active);
 			select_previous();
-			return std::string("close ") + filename + " in " + timer.us();
+			return SmallString("close ") + filename + " in " + timer.us();
 		}
 		return {};
 	}

@@ -11,13 +11,16 @@
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <dwmapi.h>
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
 #include "util.h"
-#include "win.h"
 #include "mem.h"
+#include "win.h"
 #include "matrix.h"
 #include "font_common.h"
 #include "font_regular.h"
@@ -52,7 +55,7 @@ class App {
 	Characters characters;
 
 	std::string clipboard;
-	std::string notification;
+	SmallString notification;
 
 	bool maximized = false;
 	bool minimized = false;
@@ -61,13 +64,13 @@ class App {
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
 
-	std::string status() {
-		return std::string("Vin v") + 
-			std::to_string(version_major) + "." + std::to_string(version_minor) + 
-			std::string(switcher.current().get_filename()) + 
+	SmallString status() {
+		return SmallString("Vin v") + 
+			SmallString(version_major) + "." + SmallString(version_minor) + " " +
+			SmallString(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + "  " +
-			std::to_string(switcher.current().location_percentage()) + "%  " +
-			notification;
+			SmallString(switcher.current().location_percentage()) + "%  " +
+			notification.c_str();
 	}
 
 	Characters cull() {
@@ -249,7 +252,7 @@ public:
 		colors().use_rgb();
 	}
 
-	void notify(const std::string& s) {
+	void notify(const SmallString& s) {
 		notification = s;
 	}
 
@@ -265,7 +268,7 @@ public:
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
 	const Timer timer;
 	App app(hInstance, nCmdShow);
-	app.notify(std::string("init in ") + timer.us());
+	app.notify(SmallString("init in ") + timer.us());
 	app.run();
 	return 0;
 }

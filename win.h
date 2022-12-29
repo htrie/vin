@@ -67,8 +67,8 @@ public:
 		start = now();
 	}
 
-	std::string us() const {
-		return std::to_string((unsigned)(duration() * 1000.0f)) + "us";
+	SmallString us() const {
+		return SmallString((unsigned)(duration() * 1000.0f)) + "us";
 	}
 };
 

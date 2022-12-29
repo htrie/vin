@@ -18,13 +18,13 @@ public:
 		paths.clear();
 	}
 
-	std::string populate() {
+	SmallString populate() {
 		const Timer timer;
 		paths.clear();
 		process_files(".", [&](const char* path) {
 			paths.push_back(path);
 		});
-		return std::string("populate index in ") + timer.us();
+		return SmallString("populate index in ") + timer.us();
 	}
 
 	template <typename F>
@@ -79,16 +79,16 @@ public:
 		locations.clear();
 	}
 
-	std::string populate() {
+	SmallString populate() {
 		const Timer timer;
 		files.clear();
 		locations.clear();
 		process_files(".", [&](const char* path) {
 			scan(path);
 		});
-		return std::string("populate database (") + 
-			std::to_string(files.size()) + " files, " + 
-			std::to_string(locations.size()) + " symbols) in " + timer.us();
+		return SmallString("populate database (") + 
+			SmallString(files.size()) + " files, " + 
+			SmallString(locations.size()) + " symbols) in " + timer.us();
 	}
 
 	template <typename F>
