@@ -119,18 +119,6 @@ public:
 	bool full() const { return count == N; }
 };
 
-class StringView {
-	const char* s = nullptr;
-	size_t n;
-
-public:
-	StringView(const char* s, size_t n)
-		: s(s), n(n) {}
-
-	const char* data() const { return s; }
-	size_t size() const { return n; }
-};
-
 template <size_t N>
 class String {
 	size_t len = 0; // Not including EOS.
@@ -198,16 +186,6 @@ public:
 		memcpy(chars.data(), s, len);
 	}
 
-	String(const StringView s) {
-		resize(s.size());
-		memcpy(chars.data(), s.data(), len);
-	}
-
-	String(const std::string_view s) {
-		resize(s.size());
-		memcpy(chars.data(), s.data(), len);
-	}
-
 	template <size_t M> String(const char(&_chars)[M]) {
 		resize(M);
 		for (size_t i = 0; i < len; ++i)
@@ -253,7 +231,7 @@ public:
 		return {};
 	}
 
-	size_t find(const std::string_view s, size_t pos = 0) {
+	size_t find(const String& s, size_t pos = 0) const {
 		if (len >= pos + s.size())
 			for (size_t i = pos; i < len; ++i)
 				if (len - i >= s.size())
@@ -262,7 +240,7 @@ public:
 		return npos;
 	}
 
-	size_t rfind(const std::string_view s, size_t pos = 0) {
+	size_t rfind(const String& s, size_t pos = 0) const {
 		if (pos < len && len >= s.size())
 			for (size_t i = pos; i < len; --i)
 				if (len - i >= s.size())
@@ -271,7 +249,7 @@ public:
 		return npos;
 	}
 
-	bool starts_with(const std::string_view s) {
+	bool starts_with(const String& s) const {
 		if (len >= s.size())
 			if (strncmp(chars.data(), s.data(), s.size()) == 0)
 				return true;
@@ -325,10 +303,6 @@ public:
 	template <size_t M> bool operator!=(const String<M>& other) const { return !operator==(other); }
 
 	explicit operator bool() const { return len > 0; }
-
-	operator std::basic_string_view<char>() const { return std::basic_string_view<char>(chars.data(), len); }
-
-	operator StringView() const { return StringView(chars.data(), len); }
 
 	String tolower() const {
 		String s = *this;

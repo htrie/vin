@@ -1,5 +1,4 @@
 // TODO: Replace some substr with cmpstr
-// TODO: Remove std::string_view.
 // TODO: CPU render.
 // TODO: Custom pixel font.
 

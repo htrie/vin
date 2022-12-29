@@ -132,21 +132,21 @@ class Word {
 	bool has_whitespace = false;
 	bool has_punctuation = false;
 
-	bool test_letter_or_number(std::string_view text, size_t pos) {
+	bool test_letter_or_number(const HugeString& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_number(text[pos]) || is_letter(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_whitespace(std::string_view text, size_t pos) {
+	bool test_whitespace(const HugeString& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_line_whitespace(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_punctuation(std::string_view text, size_t pos) {
+	bool test_punctuation(const HugeString& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_punctuation(text[pos]);
 		}
@@ -154,7 +154,7 @@ class Word {
 	}
 
 public:
-	Word(std::string_view text, size_t pos) {
+	Word(const HugeString& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -186,23 +186,23 @@ public:
 	bool check_punctuation() const { return has_punctuation; }
 	bool check_whitespace() const { return has_whitespace; }
 
-	bool check_keyword(const std::string_view text) const {
+	bool check_keyword(const HugeString& text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
 			const auto& keywords = cpp_keywords[letter_index];
-			const std::string_view word(text.substr(start, finish - start + 1));
+			const SmallString word(text.substr(start, finish - start + 1));
 			for (const auto& keyword : keywords) {
-				if (word == keyword)
+				if (strcmp(word.data(), keyword) == 0)
 					return true;
 			}
 		}
 		return false;
 	}
 
-	bool check_class(const std::string_view text) const {
+	bool check_class(const HugeString& text) const {
 		return is_uppercase_letter(text[start]);
 	}
 
-	float generate_channel(const std::string_view text, unsigned offset) const {
+	float generate_channel(const HugeString& text, unsigned offset) const {
 		const size_t len = finish - start;
 		if (len < offset) return 0.0f;
 		const char c = text[start + offset];
@@ -212,7 +212,7 @@ public:
 		return (float)(a - 'a') / 26.0f; 
 	}
 
-	Color generate_color(const std::string_view text, float h_start, float h_range, float h_adjust, float s, float v) const {
+	Color generate_color(const HugeString& text, float h_start, float h_range, float h_adjust, float s, float v) const {
 		const auto x = generate_channel(text, 0);
 		const auto y = generate_channel(text, 1);
 		const auto z = generate_channel(text, 2);
@@ -235,7 +235,7 @@ class Enclosure {
 	size_t start = 0;
 	size_t finish = 0;
 
-	size_t find_prev(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_prev(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -247,7 +247,7 @@ class Enclosure {
 		return count == 0 ? index : SmallString::npos;
 	}
 
-	size_t find_next(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_next(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = text[pos] == left ? pos + 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -260,7 +260,7 @@ class Enclosure {
 	}
 
 public:
-	Enclosure(std::string_view text, size_t pos, uint16_t left, uint16_t right) {
+	Enclosure(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -286,11 +286,11 @@ class Line {
 	size_t finish = 0;
 
 public:
-	Line(std::string_view text, size_t pos) {
+	Line(const HugeString& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
-			const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
-			const auto nn = text.find('\n', pos);
+			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
+			const auto nn = text.find("\n", pos);
 			start = pn != SmallString::npos ? (pn < pos ? pn + 1 : pn) : 0;
 			finish = nn != SmallString::npos ? nn : text.size() - 1;
 			verify(start <= finish);
@@ -311,7 +311,7 @@ public:
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
 
-	bool check_string(const std::string_view text, const std::string_view s) const {
+	bool check_string(const HugeString& text, const SmallString& s) const {
 		return text.substr(start, s.size()) == s;
 	}
 };
@@ -321,12 +321,12 @@ class Comment {
 	size_t finish = 0;
 
 public:
-	Comment(std::string_view text, size_t pos) {
+	Comment(const HugeString& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			const auto n = text.rfind("//", pos);
-			const auto pn = text.rfind('\n', pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
-			const auto nn = text.find('\n', pos);
+			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
+			const auto nn = text.find("\n", pos);
 			if (n != SmallString::npos && pn < n) {
 				start = n;
 				finish = nn != SmallString::npos ? nn : text.size() - 1;
@@ -358,7 +358,7 @@ public:
 	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
 
-	bool test(size_t index, const std::string_view s) const {
+	bool test(size_t index, const SmallString& s) const {
 		if (index + s.size() <= text.size())
 			return text.substr(index, s.size()) == s;
 		return false;
@@ -415,7 +415,7 @@ public:
 		}
 	}
 
-	void word_find(const std::string_view s) {
+	void word_find(const SmallString& s) {
 		if (const auto pos = text.find(s, cursor); pos != SmallString::npos) {
 			if (pos == cursor && (cursor + 1 < text.size())) {
 				if (const auto pos = text.find(s, cursor + 1); pos != SmallString::npos) { cursor = pos; }
@@ -426,7 +426,7 @@ public:
 		else if (const auto pos = text.find(s, 0); pos != SmallString::npos) { cursor = pos; }
 	}
 
-	void word_rfind(const std::string_view s) {
+	void word_rfind(const SmallString& s) {
 		if (const auto pos = text.rfind(s, cursor); pos != SmallString::npos) {
 			if (pos == cursor && cursor > 0) {
 				if (const auto pos = text.rfind(s, cursor - 1); pos != SmallString::npos) { cursor = pos; }
@@ -889,8 +889,8 @@ public:
 		return {};
 	}
 
-	void paste_before(const std::string_view s) {
-		if (s.find('\n') != SmallString::npos) {
+	void paste_before(const HugeString& s) {
+		if (s.find("\n") != SmallString::npos) {
 			line_start(); insert(s); prev_line();
 		}
 		else {
@@ -898,8 +898,8 @@ public:
 		}
 	}
 
-	void paste_after(const std::string_view s) {
-		if (s.find('\n') != SmallString::npos) {
+	void paste_after(const HugeString& s) {
+		if (s.find("\n") != SmallString::npos) {
 			next_line(); line_start(); insert(s); prev_line();
 		}
 		else {
@@ -1531,7 +1531,7 @@ class Buffer {
 
 public:
 	Buffer() {}
-	Buffer(const std::string_view filename)
+	Buffer(const PathString& filename)
 		: filename(filename) {
 		init(load());
 	}
@@ -1564,7 +1564,7 @@ public:
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
 
-	const std::string_view get_filename() const { return filename; }
+	const PathString& get_filename() const { return filename; }
 
 	Mode get_mode() const { return mode; }
 
@@ -1589,7 +1589,7 @@ class Picker {
 		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c);
 		}
@@ -1677,7 +1677,7 @@ class Switcher {
 		characters.emplace_back((uint16_t)c, colors().text, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c);
 		}
@@ -1695,7 +1695,7 @@ class Switcher {
 		}
 	}
 
-	size_t find_buffer(const std::string_view filename) {
+	size_t find_buffer(const PathString& filename) {
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			if (buffers[i].get_filename() == filename)
 				return i;
@@ -1704,7 +1704,7 @@ class Switcher {
 	}
 
 public:
-	SmallString load(const std::string_view filename) {
+	SmallString load(const PathString& filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
@@ -1820,7 +1820,7 @@ class Finder {
 		characters.emplace_back((uint16_t)c, color, row, col);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, Color color = colors().text) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, Color color = colors().text) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, color);
 		}
