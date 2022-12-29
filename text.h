@@ -345,7 +345,7 @@ class State {
 
 public:
 	const std::string& get_text() const { return text; }
-	void set_text(const std::string& t) { text = t; }
+	void set_text(const std::string_view t) { text = std::string(t); }
 
 	size_t get_cursor() const { return cursor; }
 	void set_cursor(size_t u) { cursor = u; }
@@ -987,7 +987,7 @@ public:
 	const State& state() const { return states.back(); }
 
 	const std::string& get_text() const { return states.back().get_text(); }
-	void set_text(const std::string& t) { states.back().set_text(t); }
+	void set_text(const std::string_view t) { states.back().set_text(t); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }
@@ -1514,18 +1514,17 @@ class Buffer {
 		}
 	}
 
-	void init(const std::string& text) {
+	void init(const HugeString& text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
 	}
 
-	std::string load() {
-		std::string text;
+	HugeString load() {
+		HugeString text;
 		if (!filename.empty()) {
 			map(filename, [&](const char* mem, size_t size) {
-				text = std::string(mem, size);
+				text = HugeString(mem, size);
 			});
-			remove_cr(text); // Force Unix line endings.
 		}
 		return text;
 	}

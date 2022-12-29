@@ -1,10 +1,5 @@
 #pragma once
 
-void remove_cr(std::string& s) {
-	s.erase(std::remove_if(s.begin(), s.end(), [&](const char c) {
-		return c == '\r'; }), s.end());
-}
-
 uint64_t fnv64(const char* s, size_t count) {
 	const uint64_t basis = 14695981039346656037u;
 	const uint64_t prime = 1099511628211u;
