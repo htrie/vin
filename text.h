@@ -969,7 +969,7 @@ public:
 };
 
 class Stack {
-	Array<State, 4> states;
+	Array<State, 6> states;
 	bool undo = false;
 
 public:
@@ -1662,7 +1662,7 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	Array<Buffer, 8> buffers;
+	Array<Buffer, 4> buffers;
 	size_t active = (size_t)-1;
 
 	unsigned longest_filename() const {
