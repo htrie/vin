@@ -1,10 +1,7 @@
-// TODO: Custom pixel font.
-// TODO: CPU render.
-// TODO: Catch all allocs and check who's doing them.
 // TODO: Remove std::string.
-// TODO: No dynamic allocations.
-// TODO: Optimize rendering.
-// TODO: Text-only HTML browser.
+// TODO: Remove std::string_view.
+// TODO: CPU render.
+// TODO: Custom pixel font.
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
