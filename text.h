@@ -1582,8 +1582,8 @@ public:
 };
 
 class Picker {
-	std::string pattern;
-	Array<std::string, 64> filtered;
+	SmallString pattern;
+	Array<PathString, 64> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
@@ -1619,14 +1619,14 @@ public:
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (tolower(path.c_str()).find(pattern) != std::string::npos)
+			if (tolower(path).find(pattern) != std::string::npos)
 				filtered.push_back(path.c_str());
 			return true;
 		});
 		selected = min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	std::string selection() const {
+	PathString selection() const {
 		if (selected < filtered.size())
 			return filtered[selected];
 		return {};

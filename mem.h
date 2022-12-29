@@ -1,5 +1,20 @@
 #pragma once
 
+void verify(bool expr) {
+#ifndef NDEBUG
+	if (!(expr)) {
+		abort();
+	}
+#endif
+}
+
+void error(std::string_view err_msg, std::string_view err_class) {
+	do {
+		MessageBox(nullptr, err_msg.data(), err_class.data(), MB_OK);
+		exit(1);
+	} while (0);
+}
+
 template <typename T, size_t N>
 class Array
 {
@@ -186,6 +201,8 @@ public:
 		memcpy(chars.data(), other.data(), len * sizeof(char));
 	}
 
+	static constexpr auto npos{ static_cast<size_t>(-1) };
+
 	void clear() {
 		resize(0);
 	}
@@ -193,6 +210,13 @@ public:
 	void pop_back() {
 		if (len > 0)
 			resize(len - 1);
+	}
+
+	size_t find(const std::string_view s) {
+		for (size_t i = 0; i < len; ++i)
+			if (strncmp(&chars[i], s.data(), s.size()) == 0)
+				return i;
+		return npos;
 	}
 
 	String& operator+=(const String& other) {
@@ -253,6 +277,11 @@ public:
 
 	const char* c_str() const { return chars.data(); }
 	char* c_str() { return chars.data(); }
+
+	const char* begin() const { return &chars[0]; }
+	char* begin() { return &chars[0]; }
+	const char* end() const { return &chars[len]; }
+	char* end() { return &chars[len]; }
 
 	const char* data() const { return chars.data(); }
 	char* data() { return chars.data(); }

@@ -18,8 +18,8 @@
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
-#include "util.h"
 #include "mem.h"
+#include "util.h"
 #include "win.h"
 #include "matrix.h"
 #include "font_common.h"
