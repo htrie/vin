@@ -710,8 +710,8 @@ public:
 		return s;
 	}
 
-	std::string yank_lines_up(unsigned count) {
-		std::string s;
+	HugeString yank_lines_up(unsigned count) {
+		HugeString s;
 		if (text.size() > 0) {
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
@@ -841,8 +841,8 @@ public:
 		return s;
 	}
 
-	std::string erase_lines_up(unsigned count) {
-		std::string s;
+	HugeString erase_lines_up(unsigned count) {
+		HugeString s;
 		bool first_line = false;
 		for (unsigned i = 0; i <= count; i++) {
 			if (first_line) break; // Don't erase twice.

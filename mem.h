@@ -15,6 +15,10 @@ void error(std::string_view err_msg, std::string_view err_class) {
 	} while (0);
 }
 
+template<typename T> static constexpr T min(T a, T b) { return (a < b) ? a : b; }
+template<typename T> static constexpr T max(T a, T b) { return (a > b) ? a : b; }
+template<typename T> static constexpr T clamp(T x, T a, T b) { return min(max(x, a), b); }
+
 template <typename T, size_t N>
 class Array
 {
@@ -172,22 +176,22 @@ public:
 
 	String(const char* s) {
 		resize(strlen(s));
-		memcpy(chars.data(), s, len * sizeof(char));
+		memcpy(chars.data(), s, len);
 	}
 
 	String(const char* s, size_t l) {
 		resize(l);
-		memcpy(chars.data(), s, len * sizeof(char));
+		memcpy(chars.data(), s, len);
 	}
 
 	String(const std::string& s) {
 		resize(s.length());
-		memcpy(chars.data(), s.data(), len * sizeof(char));
+		memcpy(chars.data(), s.data(), len);
 	}
 
 	String(const std::string_view s) {
 		resize(s.size());
-		memcpy(chars.data(), s.data(), len * sizeof(char));
+		memcpy(chars.data(), s.data(), len);
 	}
 
 	template <size_t M> String(const char(&_chars)[M]) {
@@ -198,7 +202,7 @@ public:
 
 	template <size_t M> String(const String<M>& other) {
 		resize(other.size());
-		memcpy(chars.data(), other.data(), len * sizeof(char));
+		memcpy(chars.data(), other.data(), len);
 	}
 
 	static constexpr auto npos{ static_cast<size_t>(-1) };
@@ -212,7 +216,15 @@ public:
 			resize(len - 1);
 	}
 
-	// insert(size_t off, const String& s)
+	void move(size_t old, size_t from, size_t to) {
+		memcpy(&chars[to], &chars[from], min(old - from, len - to));
+	}
+
+	void insert(size_t off, const String& s) {
+		const auto old = resize(len + s.size());
+		move(old, off, off + s.size());
+		memcpy(&chars[off], s.data(), s.size());
+	}
 
 	// erase(size_t off, size_t count)
 
@@ -243,13 +255,13 @@ public:
 
 	String& operator+=(const String& other) {
 		const auto old = resize(len + other.size());
-		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
+		memcpy(&chars[old], other.data(), len - old);
 		return *this;
 	}
 
 	String& operator+=(const char* s) {
 		const auto old = resize(len + strlen(s));
-		memcpy(&chars[old], s, (len - old) * sizeof(char));
+		memcpy(&chars[old], s, len - old);
 		return *this;
 	}
 
@@ -261,7 +273,7 @@ public:
 
 	String& operator+=(const std::string& s) {
 		const auto old = resize(len + s.length());
-		memcpy(&chars[old], s.data(), (len - old) * sizeof(char));
+		memcpy(&chars[old], s.data(), len - old);
 		return *this;
 	}
 
@@ -280,7 +292,7 @@ public:
 
 	template <size_t M> String& operator+=(const String<M>& other) {
 		const auto old = resize(len + other.size());
-		memcpy(&chars[old], other.data(), (len - old) * sizeof(char));
+		memcpy(&chars[old], other.data(), len - old);
 		return *this;
 	}
 	template <size_t M> String operator+(const String<M>& other) const { return String(*this) += other; }
@@ -288,7 +300,7 @@ public:
 	template <size_t M> bool operator==(const String<M>& other) const {
 		if (size() != other.size())
 			return false;
-		return memcmp(data(), other.data(), size() * sizeof(char)) == 0;
+		return memcmp(data(), other.data(), size()) == 0;
 	}
 
 	template <size_t M> bool operator!=(const String<M>& other) const { return !operator==(other); }
