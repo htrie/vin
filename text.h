@@ -339,13 +339,13 @@ public:
 };
 
 class State {
-	std::string text;
+	HugeString text;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
 
 public:
-	const std::string& get_text() const { return text; }
-	void set_text(const std::string_view t) { text = std::string(t); }
+	const HugeString& get_text() const { return text; }
+	void set_text(const HugeString& t) { text = t; }
 
 	size_t get_cursor() const { return cursor; }
 	void set_cursor(size_t u) { cursor = u; }
@@ -969,7 +969,7 @@ public:
 };
 
 class Stack {
-	Array<State, 128> states;
+	Array<State, 4> states;
 	bool undo = false;
 
 public:
@@ -986,8 +986,8 @@ public:
 	State& state() { return states.back(); }
 	const State& state() const { return states.back(); }
 
-	const std::string& get_text() const { return states.back().get_text(); }
-	void set_text(const std::string_view t) { states.back().set_text(t); }
+	const HugeString& get_text() const { return states.back().get_text(); }
+	void set_text(const HugeString& t) { states.back().set_text(t); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }
@@ -995,7 +995,7 @@ public:
 	void set_undo() { undo = true; }
 
 	void push() {
-		if (states.size() > 100) { states.erase(states.begin()); }
+		if (states.full()) { states.pop_front(); }
 		if (states.size() > 0) { states.push_back(states.back()); }
 	}
 

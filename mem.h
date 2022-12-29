@@ -20,45 +20,38 @@ template<typename T> static constexpr T max(T a, T b) { return (a > b) ? a : b; 
 template<typename T> static constexpr T clamp(T x, T a, T b) { return min(max(x, a), b); }
 
 template <typename T, size_t N>
-class Array
-{
+class Array {
 	T values[N];
 	size_t count = 0;
 
 public:
 	Array() {}
 	Array(size_t size)
-		: count(size)
-	{}
-	Array(const std::initializer_list<T> _values)
-	{
+		: count(size) {}
+	Array(const std::initializer_list<T> _values) {
 		for (auto& value : _values)
 			push_back(value);
 	}
 	template <size_t M>
 	Array(const T(&_values)[M])
-		: count(min(M, N))
-	{
+		: count(min(M, N)) {
 		for (size_t i = 0; i < count; ++i)
 			values[i] = _values[i];
 	}
 	template <size_t M>
 	Array(const Array<T, M>& other)
-		: count(min(other.size(), N))
-	{
+		: count(min(other.size(), N)) {
 		for (size_t i = 0; i < count; ++i)
 			values[i] = other[i];
 	}
 
-	void clear()
-	{
+	void clear() {
 		for (size_t i = 0; i < count; ++i)
 			values[i] = T();
 		count = 0;
 	}
 
-	void erase(T* value)
-	{
+	void erase(T* value) {
 		verify(!empty() && "Cannot erase from empty array");
 		verify((value >= begin()) && (value < end()) && "Value does not belong to array");
 		*value = std::move(values[count-1]);
@@ -66,23 +59,27 @@ public:
 		count--;
 	}
 
-	void push_back(const T& value)
-	{
+	void push_back(const T& value) {
 		if (count < N)
 			values[count++] = value;
 	}
 
-	void pop_back()
-	{
-		if (count > 0)
-		{
+	void pop_front() {
+		if (count > 0) {
+			for (size_t i = 0; i < count-1; ++i)
+				values[i] = std::move(values[i + 1]);
+			count--;
+		}
+	}
+
+	void pop_back() {
+		if (count > 0) {
 			values[count - 1] = T();
 			count--;
 		}
 	}
 
-	void resize(size_t new_size)
-	{
+	void resize(size_t new_size) {
 		verify(new_size <= N && "No more space in array");
 		if (new_size > count)
 			count = new_size; // Values are already default-initialised
@@ -90,16 +87,12 @@ public:
 			pop_back();
 	}
 
-	template<typename... ARGS>
-	void emplace_back(ARGS&&... args)
-	{
+	template<typename... ARGS> void emplace_back(ARGS&&... args) {
 		if (count < N)
 			values[count++] = T(std::forward<ARGS>(args)...);
 	}
 
-	template <size_t M>
-	bool operator==(const Array<T, M>& other) const
-	{
+	template <size_t M> bool operator==(const Array<T, M>& other) const {
 		if (count != other.size())
 			return false;
 		for (size_t i = 0; i < count; ++i)
@@ -108,10 +101,10 @@ public:
 		return true;
 	}
 
-	const T& operator[](size_t index) const { return values[index]; }
-	T& operator[](size_t index) { return values[index]; }
-	const T& at(size_t index) const { return values[index]; }
-	T& at(size_t index) { return values[index]; }
+	const T& operator[](size_t index) const { verify(index < count); return values[index]; }
+	T& operator[](size_t index) { verify(index < count); return values[index]; }
+	const T& at(size_t index) const { verify(index < count); return values[index]; }
+	T& at(size_t index) { verify(index < count); return values[index]; }
 
 	const T& front() const { return values[0]; }
 	T& front() { return values[0]; }
@@ -221,36 +214,51 @@ public:
 	}
 
 	void insert(size_t off, const String& s) {
-		const auto old = resize(len + s.size());
-		move(old, off, off + s.size());
-		memcpy(&chars[off], s.data(), s.size());
+		if (off < len) {
+			const auto old = resize(len + s.size());
+			move(old, off, off + s.size());
+			memcpy(&chars[off], s.data(), s.size());
+		}
 	}
 
-	// erase(size_t off, size_t count)
+	void erase(size_t off, size_t count) {
+		if (off < len) {
+			const auto n = min(len - off, count);
+			move(len, min(len, off + count), off);
+			resize(len - n);
+		}
+	}
 
-	// substr(size_t off, size_t count)
+	String substr(size_t off, size_t count) const {
+		if (off < len) {
+			return String(&chars[off], min(len - off, count));
+		}
+		return {};
+	}
+
+	size_t find(const std::string_view s, size_t pos = 0) {
+		if (len >= pos + s.size())
+			for (size_t i = pos; i < len; ++i)
+				if (len - i >= s.size())
+					if (strncmp(&chars[i], s.data(), s.size()) == 0)
+						return i;
+		return npos;
+	}
+
+	size_t rfind(const std::string_view s, size_t pos = 0) {
+		if (pos < len && len >= s.size())
+			for (size_t i = pos; i < len; --i)
+				if (len - i >= s.size())
+					if (strncmp(&chars[i], s.data(), s.size()) == 0)
+						return i;
+		return npos;
+	}
 
 	bool starts_with(const std::string_view s) {
 		if (len >= s.size())
 			if (strncmp(chars.data(), s.data(), s.size()) == 0)
 				return true;
 		return false;
-	}
-
-	size_t find(const std::string_view s) {
-		if (len >= s.size())
-			for (size_t i = 0; i < len; ++i)
-				if (strncmp(&chars[i], s.data(), s.size()) == 0)
-					return i;
-		return npos;
-	}
-
-	size_t rfind(const std::string_view s) {
-		if (len >= s.size())
-			for (size_t i = len - s.size(); i < len; --i)
-				if (strncmp(&chars[i], s.data(), s.size()) == 0)
-					return i;
-		return npos;
 	}
 
 	String& operator+=(const String& other) {
@@ -288,13 +296,14 @@ public:
 			chars[old + i] = _chars[i];
 		return *this;
 	}
-	template <size_t M> String operator+(const char(&_chars)[M]) const { return String(*this) += _chars; }
 
 	template <size_t M> String& operator+=(const String<M>& other) {
 		const auto old = resize(len + other.size());
 		memcpy(&chars[old], other.data(), len - old);
 		return *this;
 	}
+
+	template <size_t M> String operator+(const char(&_chars)[M]) const { return String(*this) += _chars; }
 	template <size_t M> String operator+(const String<M>& other) const { return String(*this) += other; }
 
 	template <size_t M> bool operator==(const String<M>& other) const {
@@ -314,6 +323,9 @@ public:
 		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return std::tolower(c); } );
 		return s;
 	}
+
+	const char& operator[](size_t index) const { verify(index < len); return chars[index]; }
+	char& operator[](size_t index) { verify(index < len); return chars[index]; }
 
 	const char* c_str() const { return chars.data(); }
 	char* c_str() { return chars.data(); }
