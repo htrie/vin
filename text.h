@@ -619,7 +619,7 @@ public:
 		}
 	}
 
-	std::string yank_to(unsigned key) {
+	HugeString yank_to(unsigned key) {
 		if (text.size() > 0) {
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				return text.substr(cursor, pos - cursor + 1);
@@ -628,7 +628,7 @@ public:
 		return {};
 	}
 
-	std::string yank_until(unsigned key) {
+	HugeString yank_until(unsigned key) {
 		if (text.size() > 0) {
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				return text.substr(cursor, pos - cursor);
@@ -637,7 +637,7 @@ public:
 		return {};
 	}
 
-	std::string yank_line() {
+	HugeString yank_line() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -645,21 +645,21 @@ public:
 		return {};
 	}
 
-	std::string yank_all_up() {
+	HugeString yank_all_up() {
 		if (text.size() > 0) {
 			return text.substr(0, cursor);
 		}
 		return {};
 	}
 
-	std::string yank_all_down() {
+	HugeString yank_all_down() {
 		if (text.size() > 0) {
 			return text.substr(cursor, text.size() - cursor);
 		}
 		return {};
 	}
 
-	std::string yank_word() {
+	HugeString yank_word() {
 		if (text.size() > 0) {
 			Word current(text, cursor);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -667,8 +667,8 @@ public:
 		return {};
 	}
 
-	std::string yank_words(unsigned count) {
-		std::string s;
+	HugeString yank_words(unsigned count) {
+		HugeString s;
 		if (text.size() > 0) {
 			Word current(text, cursor);
 			const size_t begin = cursor;
@@ -683,7 +683,7 @@ public:
 		return s;
 	}
 
-	std::string yank_enclosure(uint16_t left, uint16_t right, bool inclusive) {
+	HugeString yank_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
@@ -695,8 +695,8 @@ public:
 		return {};
 	}
 
-	std::string yank_lines_down(unsigned count) {
-		std::string s;
+	HugeString yank_lines_down(unsigned count) {
+		HugeString s;
 		if (text.size() > 0) {
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
@@ -738,7 +738,7 @@ public:
 		}
 	}
 
-	std::string erase() {
+	HugeString erase() {
 		if (text.size() > 0) {
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
@@ -748,7 +748,7 @@ public:
 		return {};
 	}
 
-	std::string erase_if(char c) {
+	HugeString erase_if(char c) {
 		if (text.size() > 0 && text[cursor] == c) {
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
@@ -758,7 +758,7 @@ public:
 		return {};
 	}
 
-	std::string erase_all_up() {
+	HugeString erase_all_up() {
 		if (text.size() > 0) {
 			const auto s = text.substr(0, cursor);
 			text.erase(0, cursor);
@@ -768,7 +768,7 @@ public:
 		return {};
 	}
 
-	std::string erase_all_down() {
+	HugeString erase_all_down() {
 		if (text.size() > 0) {
 			const auto s = text.substr(cursor, text.size() - cursor);
 			text.erase(cursor, text.size() - cursor);
@@ -778,7 +778,7 @@ public:
 		return {};
 	}
 
-	std::string erase_to(unsigned key) {
+	HugeString erase_to(unsigned key) {
 		if (text.size() > 0) {
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor + 1);
@@ -789,7 +789,7 @@ public:
 		return {};
 	}
 
-	std::string erase_until(unsigned key) {
+	HugeString erase_until(unsigned key) {
 		if (text.size() > 0) {
 			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor);
@@ -800,7 +800,7 @@ public:
 		return {};
 	}
 
-	std::string erase_line() {
+	HugeString erase_line() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -811,7 +811,7 @@ public:
 		return {};
 	}
 
-	std::string erase_line_contents() {
+	HugeString erase_line_contents() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
@@ -822,7 +822,7 @@ public:
 		return {};
 	}
 
-	std::string erase_to_line_end() {
+	HugeString erase_to_line_end() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(cursor, current.end() - cursor);
@@ -833,8 +833,8 @@ public:
 		return {};
 	}
 
-	std::string erase_lines_down(unsigned count) {
-		std::string s;
+	HugeString erase_lines_down(unsigned count) {
+		HugeString s;
 		for (unsigned i = 0; i <= count; i++) {
 			s += erase_line();
 		}
@@ -853,7 +853,7 @@ public:
 		return s;
 	}
 
-	std::string erase_word(bool from_cursor) {
+	HugeString erase_word(bool from_cursor) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Word current(text, cursor);
 			const auto begin = from_cursor ? cursor : current.begin();
@@ -866,15 +866,15 @@ public:
 		return {};
 	}
 
-	std::string erase_words(unsigned count) {
-		std::string s;
+	HugeString erase_words(unsigned count) {
+		HugeString s;
 		for (unsigned i = 0; i < count; i++) {
 			s += erase_word(i == 0);
 		}
 		return s;
 	}
 
-	std::string erase_enclosure(uint16_t left, uint16_t right, bool inclusive) {
+	HugeString erase_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {

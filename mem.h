@@ -212,6 +212,8 @@ public:
 			resize(len - 1);
 	}
 
+	// insert(size_t off, const String& s)
+
 	// erase(size_t off, size_t count)
 
 	// substr(size_t off, size_t count)
