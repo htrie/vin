@@ -477,7 +477,7 @@ public:
 		}
 	}
 
-	std::string get_word() const {
+	SmallString get_word() const {
 		const Word current(text, cursor);
 		if (!is_whitespace(text[current.begin()]))
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -1568,7 +1568,7 @@ public:
 
 	Mode get_mode() const { return mode; }
 
-	std::string get_word() const { return state().get_word(); }
+	SmallString get_word() const { return state().get_word(); }
 
 	size_t location_percentage() const {
 		if (const auto size = state().get_text().size())
