@@ -1,3 +1,5 @@
+// TODO: Custo pixel font.
+// TODO: CPU render.
 // TODO: Catch all allocs and check who's doing them.
 // TODO: Remove std::string.
 // TODO: No dynamic allocations.
