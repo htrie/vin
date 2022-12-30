@@ -240,6 +240,15 @@ public:
 		return npos;
 	}
 
+	size_t find_range(const String& s, size_t start, size_t end) const {
+		if (len >= start + s.size())
+			for (size_t i = start; i < end; ++i)
+				if (len - i >= s.size())
+					if (strncmp(&chars[i], s.data(), s.size()) == 0)
+						return i;
+		return npos;
+	}
+
 	size_t rfind(const String& s, size_t pos = 0) const {
 		if (pos < len && len >= s.size())
 			for (size_t i = pos; i < len; --i)

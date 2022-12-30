@@ -326,10 +326,10 @@ public:
 	Comment(const HugeString& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
-			const auto n = text.rfind("//", pos);
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
-			if (n != SmallString::npos && pn < n) {
+			const auto n = text.find_range("//", pn, nn);
+			if (n != SmallString::npos) {
 				start = n;
 				finish = nn != SmallString::npos ? nn : text.size() - 1;
 				verify(start <= finish);
@@ -338,6 +338,7 @@ public:
 	}
 
 	bool valid() const { return start < finish; }
+	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
 class State {
@@ -1476,7 +1477,7 @@ class Buffer {
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
-		else if (comment.valid()) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
+		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, false); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
