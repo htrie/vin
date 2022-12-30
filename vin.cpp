@@ -1,5 +1,3 @@
-// TODO: CPU render.
-// TODO: Custom pixel font.
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "vulkan-1.lib")
