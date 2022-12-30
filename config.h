@@ -59,7 +59,7 @@ struct Colors {
 		clas = Color::gray(50);
 		comment = Color::gray(166);
 		punctuation = Color::gray(158);
-		Color quote = Color::gray(120);
+		quote = Color::gray(120);
 	}
 };
 
