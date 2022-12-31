@@ -328,7 +328,7 @@ public:
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
-			const auto n = text.find_range("//", pn, nn);
+			const auto n = text.find_range("//", pn != HugeString::npos ? pn : 0, nn);
 			if (n != SmallString::npos) {
 				start = n;
 				finish = nn != SmallString::npos ? nn : text.size() - 1;
