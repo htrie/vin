@@ -816,6 +816,43 @@ class Device {
 		return nullptr;
 	}
 
+	Matrix compute_viewproj() {
+		const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
+		const auto proj = Matrix::ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
+		return view * proj;
+	}
+
+	unsigned accumulate_uniforms(const Characters& characters) {
+		auto& uniforms = *(Uniforms*)uniform_ptr; // [TODO] Triple-buffering (or use one fence).
+		uniforms.view_proj = compute_viewproj();
+
+		unsigned index = 0;
+
+		const auto add = [&](const auto& character, const auto& glyph) {
+			uniforms.model[index] = {
+				{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
+				{ 0.0f, 0.0f, 1.0f, 0.0f },
+				{
+					character.col * spacing().character + glyph.x_off * font.width,
+					character.row * spacing().line + glyph.y_off * font.height,
+					0.0f, 1.0f }
+			};
+			uniforms.color[index] = character.color.rgba();
+			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
+			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
+			index++;
+		};
+
+		for (auto& character : characters) {
+			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
+				add(character, *glyph);
+			}
+		}
+
+		return index;
+	}
+
 public:
 	Device(WNDPROC proc, HINSTANCE hInstance, unsigned width, unsigned height) {
 		instance = create_instance();
@@ -889,41 +926,7 @@ public:
 		bind_pipeline(cmd, pipeline.get());
 		bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
 
-		const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }); // [TODO] Helper function.
-		const auto proj = Matrix::ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
-
-		auto& uniforms = *(Uniforms*)uniform_ptr; // [TODO] Triple-buffering (or use one fence).
-		uniforms.view_proj = view * proj;
-
-		unsigned index = 0;
-
-		const auto add = [&](const auto& character, const auto& glyph) { // [TODO] Helper function.
-			uniforms.model[index] = {
-				{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
-				{ 0.0f, 0.0f, 1.0f, 0.0f },
-				{
-					character.col * spacing().character + glyph.x_off * font.width,
-					character.row * spacing().line + glyph.y_off * font.height,
-					0.0f, 1.0f }
-			};
-			uniforms.color[index] = character.color.rgba();
-			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
-			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
-			index++;
-		};
-
-		const auto flush = [&]() { // [TODO] Remove.
-			if (index > 0)
-				draw(cmd, 6, index);
-		};
-
-		for (auto& character : characters) {
-			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
-				add(character, *glyph);
-			}
-		}
-		flush();
+		draw(cmd, 6, accumulate_uniforms(characters));
 
 		end_pass(cmd);
 		end(cmd);
