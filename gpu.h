@@ -780,9 +780,9 @@ class Device {
 	vk::UniqueDeviceMemory uniform_memory;
 	void* uniform_ptr = nullptr;
 
-	Array<vk::UniqueFence, 2> fences;
-	Array<vk::UniqueSemaphore, 2> image_acquired_semaphores;
-	Array<vk::UniqueSemaphore, 2> draw_complete_semaphores;
+	vk::UniqueFence fence;
+	vk::UniqueSemaphore image_acquired_semaphore;
+	vk::UniqueSemaphore draw_complete_semaphore;
 
 	vk::UniqueSwapchainKHR swapchain;
 	Array<vk::UniqueImageView, 3> image_views;
@@ -791,8 +791,6 @@ class Device {
 
 	unsigned width = 0;
 	unsigned height = 0;
-
-	unsigned fence_index = 0;
 
 	void upload_font(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
@@ -823,7 +821,7 @@ class Device {
 	}
 
 	unsigned accumulate_uniforms(const Characters& characters) {
-		auto& uniforms = *(Uniforms*)uniform_ptr; // [TODO] Triple-buffering (or use one fence).
+		auto& uniforms = *(Uniforms*)uniform_ptr;
 		uniforms.view_proj = compute_viewproj();
 
 		unsigned index = 0;
@@ -876,11 +874,9 @@ public:
 		bind_memory(device.get(), uniform_buffer.get(), uniform_memory.get());
 		uniform_ptr = map_memory(device.get(), uniform_memory.get());
 
-		for (auto i = 0; i < 2; ++i) {
-			fences.emplace_back(create_fence(device.get()));
-			image_acquired_semaphores.emplace_back(create_semaphore(device.get()));
-			draw_complete_semaphores.emplace_back(create_semaphore(device.get()));
-		}
+		fence = create_fence(device.get());
+		image_acquired_semaphore = create_semaphore(device.get());
+		draw_complete_semaphore = create_semaphore(device.get());
 
 		resize(width, height);
 	}
@@ -912,8 +908,8 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		wait(device.get(), fences[fence_index].get());
-		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphores[fence_index].get());
+		wait(device.get(), fence.get());
+		const auto frame_index = acquire(device.get(), swapchain.get(), image_acquired_semaphore.get());
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
@@ -931,11 +927,8 @@ public:
 		end_pass(cmd);
 		end(cmd);
 
-		submit(queue, image_acquired_semaphores[fence_index].get(), draw_complete_semaphores[fence_index].get(), cmd, fences[fence_index].get());
-		present(swapchain.get(), queue, draw_complete_semaphores[fence_index].get(), frame_index);
-
-		fence_index += 1;
-		fence_index %= fences.size();
+		submit(queue, image_acquired_semaphore.get(), draw_complete_semaphore.get(), cmd, fence.get());
+		present(swapchain.get(), queue, draw_complete_semaphore.get(), frame_index);
 	}
 
 	Viewport viewport() const {
