@@ -250,7 +250,7 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, 700, 500) {
+		: device(proc, hInstance, 800, 600) {
 		ShowWindow(device.get_hwnd(), nCmdShow);
 		colors().use_rgb();
 	}
