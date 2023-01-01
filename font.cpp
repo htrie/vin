@@ -141,7 +141,7 @@ Fnt parse_fnt(const std::string_view font_filename) {
 }
 
 struct Tga {
-  #pragma pack(push, 1)
+#pragma pack(push, 1)
     struct Header {
         uint8_t idlength;
         uint8_t colourmaptype;
@@ -156,7 +156,7 @@ struct Tga {
         uint8_t bitsperpixel;
         uint8_t imagedescriptor;
     };
-    #pragma pack(pop)
+#pragma pack(pop)
 
 	Header header;
 	std::vector<uint8_t> content;
@@ -198,6 +198,24 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 		out << std::endl;
 	}
 	out << "};" << std::endl;
+	out << std::endl;
+
+	out << "struct FontGlyph {" << std::endl;
+	out << "	uint16_t id = 0;" << std::endl;
+	out << "	float x = 0.0f;" << std::endl;
+	out << "	float y = 0.0f;" << std::endl;
+	out << "	float w = 0.0f;" << std::endl;
+	out << "	float h = 0.0f;" << std::endl;
+	out << "	float x_off = 0.0f;" << std::endl;
+	out << "	float y_off = 0.0f;" << std::endl;
+	out << "	float x_adv = 0.0f;" << std::endl;
+	out << std::endl;
+	out << "	FontGlyph() {}" << std::endl;
+	out << "	FontGlyph(uint16_t id, float x, float y, float w, float h, float x_off, float y_off, float x_adv)" << std::endl;
+	out << "		: id(id), x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}" << std::endl;
+	out << "};" << std::endl;
+	out << std::endl;
+	out << "typedef Array<FontGlyph, 128> FontGlyphs;" << std::endl;
 	out << std::endl;
 
 	out << "const FontGlyphs " << font_filename << "_glyphs  = {" << std::endl;
