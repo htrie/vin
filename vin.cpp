@@ -27,7 +27,7 @@
 #include "gpu.h"
 
 const unsigned version_major = 0;
-const unsigned version_minor = 6;
+const unsigned version_minor = 7;
 
 enum class Menu {
 	space,

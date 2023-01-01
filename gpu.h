@@ -811,6 +811,7 @@ class Device {
 	unsigned fence_index = 0;
 
 	void upload_font(const vk::CommandBuffer& cmd_buf) {
+		sampler = create_sampler(device.get());
 		font.width = font_width;
 		font.height = font_height;
 		font.glyphs = font_glyphs;
@@ -821,7 +822,6 @@ class Device {
 		add_image_barrier(cmd_buf, font.image.get());
 		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
-		sampler = create_sampler(device.get());
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
