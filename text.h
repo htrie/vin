@@ -1243,7 +1243,7 @@ class Buffer {
 		else if (key == 'n') { word_find_again(row_count); }
 		else if (key == 'N') { word_rfind_again(row_count); }
 		else if (key == '.') { repeat = true; }
-		else if (key == '\'') { load_cursor(); }
+		else if (key == '\'') { load_cursor(); state().cursor_center(row_count); }
 	}
 
 	void process_normal_number(unsigned key) {
