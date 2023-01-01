@@ -790,9 +790,7 @@ class Device {
 		unsigned height = 0;
 		FontGlyphs glyphs;
 	};
-	Font font_regular;
-	Font font_bold;
-	Font font_italic;
+	Font font;
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -812,26 +810,18 @@ class Device {
 
 	unsigned fence_index = 0;
 
-	Font upload_font(const vk::CommandBuffer& cmd_buf, const uint8_t* image_pixels, size_t image_size, unsigned width, unsigned height, FontGlyphs glyphs) {
-		Font font;
-		font.width = width;
-		font.height = height;
-		font.glyphs = glyphs;
-		font.image = create_image(gpu, device.get(), width, height);
+	void upload_font(const vk::CommandBuffer& cmd_buf) {
+		font.width = font_width;
+		font.height = font_height;
+		font.glyphs = font_glyphs;
+		font.image = create_image(gpu, device.get(), font_width, font_height);
 		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
-		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), image_pixels, image_size, width);
+		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels, sizeof(font_pixels), font_width);
 		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image.get());
 		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
-		return font;
-	}
-
-	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
-		font_regular = upload_font(cmd_buf, font_regular_pixels, sizeof(font_regular_pixels), font_regular_width, font_regular_height, font_regular_glyphs);
-		font_bold = upload_font(cmd_buf, font_bold_pixels, sizeof(font_bold_pixels), font_bold_width, font_bold_height, font_bold_glyphs);
-		font_italic = upload_font(cmd_buf, font_italic_pixels, sizeof(font_italic_pixels), font_italic_width, font_italic_height, font_italic_glyphs);
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -911,7 +901,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font_regular.image) upload_fonts(cmd);
+		if (!font.image) upload_font(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
@@ -920,7 +910,6 @@ public:
 		bind_pipeline(cmd, pipeline.get());
 
 		for (auto& character : characters) {
-			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
 			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
 				const float trans_x = character.col * spacing().character + glyph->x_off * font.width;
 				const float trans_y = character.row * spacing().line + glyph->y_off * font.height;

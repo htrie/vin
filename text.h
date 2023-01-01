@@ -114,12 +114,10 @@ struct Character {
 	Color color = Color::rgba(255, 0, 0, 255);
 	unsigned row = 0;
 	unsigned col = 0;
-	bool bold = false;
-	bool italic = false;
 
 	Character() {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, bool italic = false)
-		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col)
+		: index(index), color(color), row(row), col(col) {}
 };
 
 typedef Array<Character, 4 * 1024> Characters;
@@ -1478,13 +1476,13 @@ class Buffer {
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
-		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, false, false); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
-		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, false, false); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col, true, false); }
-		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col, true); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col); }
+		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col); }
 	};
