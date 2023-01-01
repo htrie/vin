@@ -16,7 +16,6 @@
 
 #include "resource.h"
 #include "mem.h"
-#include "util.h"
 #include "win.h"
 #include "matrix.h"
 #include "font_common.h"
