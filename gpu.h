@@ -828,12 +828,12 @@ class Device {
 
 		const auto add = [&](const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
+				{ spacing().zoom * glyph.w * font.width, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					character.col * spacing().character + glyph.x_off * font.width,
-					character.row * spacing().line + glyph.y_off * font.height,
+					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width),
+					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -933,8 +933,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / spacing().character),
-			(unsigned)((float)height / spacing().line) - 1 // Remove 1 line for half-lines.
+			(unsigned)((float)width / (spacing().zoom * spacing().character)),
+			(unsigned)((float)height / (spacing().zoom * spacing().line)) - 1 // Remove 1 line for half-lines.
 		};
 	}
 

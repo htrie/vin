@@ -128,6 +128,8 @@ class App {
 		else if (key == ']') { notify(spacing().increase_char_width()); }
 		else if (key == '{') { notify(spacing().decrease_char_height()); }
 		else if (key == '}') { notify(spacing().increase_char_height()); }
+		else if (key == '(') { notify(spacing().decrease_char_zoom()); }
+		else if (key == ')') { notify(spacing().increase_char_zoom()); }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
