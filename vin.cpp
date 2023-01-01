@@ -52,10 +52,12 @@ class App {
 
 	bool maximized = false;
 	bool minimized = false;
+	bool dirty = false;
 	bool quit = false;
 
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
+	void set_dirty(bool b) { dirty = b; }
 
 	SmallString status() {
 		return SmallString("Vin v") + 
@@ -86,14 +88,17 @@ class App {
 	}
 
 	void redraw() {
-		characters = cull();
-		if (!minimized) {
+		if (dirty) {
+			characters = cull();
+		}
+		if (!minimized && dirty) {
 			device.redraw(characters);
 			SetWindowTextA(device.get_hwnd(), status().data());
 		}
 		else {
 			Sleep(1); // Avoid busy loop when minimized.
 		}
+		dirty = false;
 	}
 
 	void process_space(unsigned key, unsigned row_count) {
@@ -190,6 +195,7 @@ class App {
 		case WM_SETREDRAW:
 		case WM_SETFOCUS: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+				app->set_dirty(true);
 			}
 			break;
 		}
@@ -203,6 +209,7 @@ class App {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_maximized(wParam == SIZE_MAXIMIZED);
 				app->set_minimized(wParam == SIZE_MINIMIZED);
+				app->set_dirty(true);
 				const unsigned width = lParam & 0xffff;
 				const unsigned height = (lParam & 0xffff0000) >> 16;
 				app->resize(width, height);
@@ -212,6 +219,7 @@ class App {
 		case WM_KEYDOWN: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
+					app->set_dirty(true);
 					app->update(true);
 				}
 			}
@@ -220,6 +228,7 @@ class App {
 		case WM_KEYUP: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
+					app->set_dirty(true);
 					app->update(false);
 				}
 			}
@@ -227,6 +236,7 @@ class App {
 		}
 		case WM_CHAR: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+				app->set_dirty(true);
 				app->process((unsigned)wParam);
 			}
 			break;
