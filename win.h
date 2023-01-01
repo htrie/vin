@@ -24,6 +24,8 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width
 
 	RegisterClassEx(&win_class);
 
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+
 	RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
 	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -33,6 +35,8 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width
 
 	BOOL value = TRUE;
 	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+
+	//SetWindowPos(hWnd, HWND_TOP, 0, 0, width, height, SWP_SHOWWINDOW);
 
 	return hWnd;
 }

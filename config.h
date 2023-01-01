@@ -115,14 +115,14 @@ HSB& hsb() {
 
 
 struct Spacing {
-	float character = 7.0f;
-	float line = 15.0f;
+	float character = 8.0f;
+	float line = 20.0f;
 
-	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + SmallString(character); }
-	SmallString decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 10.0f); return SmallString("char_width = ") + SmallString(character); }
+	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 20.0f); return SmallString("char_width = ") + SmallString(character); }
+	SmallString decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 20.0f); return SmallString("char_width = ") + SmallString(character); }
 
-	SmallString increase_char_height() { line = clamp(line + 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + SmallString(line); }
-	SmallString decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 20.0f); return SmallString("char_height = ") + SmallString(line); }
+	SmallString increase_char_height() { line = clamp(line + 0.05f, 0.0f, 30.0f); return SmallString("char_height = ") + SmallString(line); }
+	SmallString decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 30.0f); return SmallString("char_height = ") + SmallString(line); }
 };
 
 Spacing& spacing() {
