@@ -127,16 +127,8 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
 	return std::move(desc_layout_handle.value);
 }
 
-vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout, uint32_t constants_size) {
-	Array<vk::PushConstantRange, 1> const push_constants = {
-		vk::PushConstantRange()
-			.setOffset(0)
-			.setSize(constants_size)
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment) };
-
+vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout) {
 	const auto pipeline_layout_info = vk::PipelineLayoutCreateInfo()
-		.setPushConstantRangeCount((uint32_t)push_constants.size())
-		.setPPushConstantRanges(push_constants.data())
 		.setSetLayoutCount(1)
 		.setPSetLayouts(&desc_layout);
 
@@ -724,12 +716,8 @@ void bind_descriptor_set(const vk::CommandBuffer& cmd_buf, const vk::PipelineLay
 	cmd_buf.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout, 0, 1, &desc_set, 0, nullptr);
 }
 
-void push(const vk::CommandBuffer& cmd_buf, const vk::PipelineLayout& pipeline_layout, uint32_t size, const void* data) {
-	cmd_buf.pushConstants(pipeline_layout, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, size, data);
-}
-
-void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count) {
-	cmd_buf.draw(vertex_count, 1, 0, 0);
+void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count, uint32_t instance_count) {
+	cmd_buf.draw(vertex_count, instance_count, 0, 0);
 }
 
 Array<vk::Image, 3> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
@@ -745,16 +733,12 @@ Array<vk::Image, 3> get_swapchain_images(const vk::Device& device, const vk::Swa
 }
 
 
-
-struct Constants {
-	Matrix model;
-	Vec4 color;
-	Vec2 uv_origin;
-	Vec2 uv_sizes;
-};
-
 struct Uniforms {
 	Matrix view_proj;
+	Matrix model[CharacterMaxCount];
+	Vec4 color[CharacterMaxCount];
+	Vec4 uv_origin[CharacterMaxCount];
+	Vec4 uv_sizes[CharacterMaxCount];
 };
 
 struct Viewport {
@@ -846,7 +830,7 @@ public:
 		cmd_pool = create_command_pool(device.get(), family_index);
 		desc_pool = create_descriptor_pool(device.get());
 		desc_layout = create_descriptor_layout(device.get());
-		pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get(), sizeof(Constants));
+		pipeline_layout = create_pipeline_layout(device.get(), desc_layout.get());
 		render_pass = create_render_pass(device.get(), surface_format);
 		pipeline = create_pipeline(device.get(), pipeline_layout.get(), render_pass.get());
 
@@ -887,11 +871,6 @@ public:
 				framebuffers.emplace_back(create_framebuffer(device.get(), render_pass.get(), image_views.back().get(), width, height));
 				cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
 			}
-
-			const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f });
-			const auto proj = Matrix::ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
-			auto& uniforms = *(Uniforms*)uniform_ptr;
-			uniforms.view_proj = view * proj;
 		}
 	}
 
@@ -908,28 +887,43 @@ public:
 		set_scissor(cmd, width, height);
 
 		bind_pipeline(cmd, pipeline.get());
+		bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
+
+		const auto view = Matrix::look_at({ 0.0f, 0.0f, 10.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }); // [TODO] Helper function.
+		const auto proj = Matrix::ortho(0.0f, (float)width, 0.0f, (float)height, -100.0f, 100.0f);
+
+		auto& uniforms = *(Uniforms*)uniform_ptr; // [TODO] Triple-buffering (or use one fence).
+		uniforms.view_proj = view * proj;
+
+		unsigned index = 0;
+
+		const auto add = [&](const auto& character, const auto& glyph) { // [TODO] Helper function.
+			uniforms.model[index] = {
+				{ glyph.w * font.width, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, glyph.h * font.height, 0.0f, 0.0f },
+				{ 0.0f, 0.0f, 1.0f, 0.0f },
+				{
+					character.col * spacing().character + glyph.x_off * font.width,
+					character.row * spacing().line + glyph.y_off * font.height,
+					0.0f, 1.0f }
+			};
+			uniforms.color[index] = character.color.rgba();
+			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
+			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
+			index++;
+		};
+
+		const auto flush = [&]() { // [TODO] Remove.
+			if (index > 0)
+				draw(cmd, 6, index);
+		};
 
 		for (auto& character : characters) {
 			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
-				const float trans_x = character.col * spacing().character + glyph->x_off * font.width;
-				const float trans_y = character.row * spacing().line + glyph->y_off * font.height;
-
-				Constants constants;
-				constants.model = {
-					{ glyph->w * font.width, 0.0f, 0.0f, 0.0f },
-					{ 0.0f, glyph->h * font.height, 0.0f, 0.0f },
-					{ 0.0f, 0.0f, 1.0f, 0.0f },
-					{ trans_x, trans_y, 0.0f, 1.0f } };
-				constants.color = character.color.rgba();
-				constants.uv_origin = { glyph->x, glyph->y };
-				constants.uv_sizes = { glyph->w, glyph->h };
-
-				bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
-
-				push(cmd, pipeline_layout.get(), sizeof(Constants), &constants);
-				draw(cmd, 6);
+				add(character, *glyph);
 			}
 		}
+		flush();
 
 		end_pass(cmd);
 		end(cmd);

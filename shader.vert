@@ -21,20 +21,19 @@ const vec2 uvs[6] = {
 	{ 1.0f, 1.0f },
 };
 
-layout (push_constant) uniform Constants {
-	mat4 model;
-	vec4 color;
-	vec2 uv_origin;
-	vec2 uv_sizes;
-} constants;
-
 layout (binding = 0) uniform Uniforms {
 	mat4 view_proj;
+	mat4 model[4096];
+	vec4 color[4096];
+	vec4 uv_origin[4096];
+	vec4 uv_sizes[4096];
 } uniforms;
 
 layout (location = 0) out vec2 uv;
+layout (location = 1) out vec4 color;
 
 void main() {
-	gl_Position = uniforms.view_proj * constants.model * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
-	uv = constants.uv_origin + uvs[gl_VertexIndex] * constants.uv_sizes;
+	gl_Position = uniforms.view_proj * uniforms.model[gl_InstanceIndex] * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
+	uv = uniforms.uv_origin[gl_InstanceIndex].xy + uvs[gl_VertexIndex] * uniforms.uv_sizes[gl_InstanceIndex].xy;
+	color = uniforms.color[gl_InstanceIndex];
 }

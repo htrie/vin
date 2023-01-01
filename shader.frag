@@ -6,15 +6,10 @@
 layout (binding = 1) uniform sampler2D tex;
 
 layout (location = 0) in vec2 uv;
+layout (location = 1) in vec4 color;
 
 layout (location = 0) out vec4 out_color;
 
-layout (push_constant) uniform Constants {
-	mat4 model;
-	vec4 color;
-	uint char_index;
-} constants;
-
 void main() {
-    out_color = constants.color * vec4(vec3(1.0f), texture(tex, uv).x);
+    out_color = vec4(color.rgb, color.a * texture(tex, uv).x);
 }
