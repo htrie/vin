@@ -14,7 +14,8 @@ public:
 		process_files(".", [&](const char* path) {
 			paths.push_back(path);
 		});
-		return SmallString("populate index in ") + timer.us();
+		return SmallString("populate index (") + 
+			SmallString(paths.size()) + " paths) in " + timer.us();
 	}
 
 	template <typename F>
