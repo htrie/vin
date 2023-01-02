@@ -22,17 +22,17 @@ vk::UniqueInstance create_instance() {
 		.setEnabledExtensionCount((uint32_t)extensions.size())
 		.setPpEnabledExtensionNames(extensions.data());
 
-	auto instance_handle = vk::createInstanceUnique(inst_info);
-	verify(instance_handle.result == vk::Result::eSuccess);
-	return std::move(instance_handle.value);
+	auto handle = vk::createInstanceUnique(inst_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::PhysicalDevice pick_gpu(const vk::Instance& instance) {
-	const auto gpus_handle = instance.enumeratePhysicalDevices();
-	verify(gpus_handle.result == vk::Result::eSuccess);
-	verify(gpus_handle.value.size() > 0);
+	const auto handles = instance.enumeratePhysicalDevices();
+	verify(handles.result == vk::Result::eSuccess);
+	verify(handles.value.size() > 0);
 
-	const auto gpu = gpus_handle.value[0];
+	const auto gpu = handles.value[0];
 	verify(gpu.getProperties().deviceType== vk::PhysicalDeviceType::eDiscreteGpu || 
 		gpu.getProperties().deviceType == vk::PhysicalDeviceType::eIntegratedGpu);
 	return gpu;
@@ -43,9 +43,9 @@ vk::UniqueSurfaceKHR create_surface(const vk::Instance& instance, HINSTANCE hIns
 		.setHinstance(hInstance)
 		.setHwnd(hWnd);
 
-	auto surface_handle = instance.createWin32SurfaceKHRUnique(surf_info);
-	verify(surface_handle.result == vk::Result::eSuccess);
-	return std::move(surface_handle.value);
+	auto handle = instance.createWin32SurfaceKHRUnique(surf_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
@@ -66,7 +66,7 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 	Array<const char*, 1> extensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-	auto device_info = vk::DeviceCreateInfo()
+	const auto device_info = vk::DeviceCreateInfo()
 		.setQueueCreateInfoCount((uint32_t)queues.size())
 		.setPQueueCreateInfos(queues.data())
 		.setEnabledLayerCount(0)
@@ -75,16 +75,16 @@ vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_in
 		.setPpEnabledExtensionNames(extensions.data())
 		.setPEnabledFeatures(nullptr);
 
-	auto device_handle = gpu.createDeviceUnique(device_info);
-	verify(device_handle.result == vk::Result::eSuccess);
-	return std::move(device_handle.value);
+	auto handle = gpu.createDeviceUnique(device_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::SurfaceFormatKHR select_format(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& surface) {
-	auto formats_handle = gpu.getSurfaceFormatsKHR(surface);
-	verify(formats_handle.result == vk::Result::eSuccess);
-	verify(formats_handle.value.size() > 0);
-	return formats_handle.value[0].format == vk::Format::eUndefined ? vk::Format::eB8G8R8A8Unorm : formats_handle.value[0];
+	const auto handle = gpu.getSurfaceFormatsKHR(surface);
+	verify(handle.result == vk::Result::eSuccess);
+	verify(handle.value.size() > 0);
+	return handle.value[0].format == vk::Format::eUndefined ? vk::Format::eB8G8R8A8Unorm : handle.value[0];
 }
 
 vk::Queue fetch_queue(const vk::Device& device, uint32_t family_index) {
@@ -98,9 +98,9 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
 		.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
 		.setQueueFamilyIndex(family_index);
 
-	auto cmd_pool_handle = device.createCommandPoolUnique(cmd_pool_info);
-	verify(cmd_pool_handle.result == vk::Result::eSuccess);
-	return std::move(cmd_pool_handle.value);
+	auto handle = device.createCommandPoolUnique(cmd_pool_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
@@ -122,9 +122,9 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
 		.setBindingCount((uint32_t)layout_bindings.size())
 		.setPBindings(layout_bindings.data());
 
-	auto desc_layout_handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
-	verify(desc_layout_handle.result == vk::Result::eSuccess);
-	return std::move(desc_layout_handle.value);
+	auto handle = device.createDescriptorSetLayoutUnique(desc_layout_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const vk::DescriptorSetLayout& desc_layout) {
@@ -132,9 +132,9 @@ vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const 
 		.setSetLayoutCount(1)
 		.setPSetLayouts(&desc_layout);
 
-	auto pipeline_layout_handle = device.createPipelineLayoutUnique(pipeline_layout_info);
-	verify(pipeline_layout_handle.result == vk::Result::eSuccess);
-	return std::move(pipeline_layout_handle.value);
+	auto handle = device.createPipelineLayoutUnique(pipeline_layout_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
@@ -182,9 +182,9 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
 		.setDependencyCount((uint32_t)dependencies.size())
 		.setPDependencies(dependencies.data());
 
-	auto render_pass_handle = device.createRenderPassUnique(rp_info);
-	verify(render_pass_handle.result == vk::Result::eSuccess);
-	return std::move(render_pass_handle.value);
+	auto handle = device.createRenderPassUnique(rp_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 const uint32_t vert_bytecode[] =
@@ -199,9 +199,9 @@ vk::UniqueShaderModule create_module(const vk::Device& device, const uint32_t* c
 		.setCodeSize(size)
 		.setPCode(code);
 
-	auto module_handle = device.createShaderModuleUnique(module_info);
-	verify(module_handle.result == vk::Result::eSuccess);
-	return std::move(module_handle.value);
+	auto handle = device.createShaderModuleUnique(module_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineLayout& pipeline_layout, const vk::RenderPass& render_pass) {
@@ -281,9 +281,9 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 		.setLayout(pipeline_layout)
 		.setRenderPass(render_pass);
 
-	auto pipeline_handles = device.createGraphicsPipelinesUnique(nullptr, pipeline_info);
-	verify(pipeline_handles.result == vk::Result::eSuccess);
-	return std::move(pipeline_handles.value[0]);
+	auto handles = device.createGraphicsPipelinesUnique(nullptr, pipeline_info);
+	verify(handles.result == vk::Result::eSuccess);
+	return std::move(handles.value[0]);
 }
 
 vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
@@ -302,26 +302,26 @@ vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
 		.setPoolSizeCount((uint32_t)pool_sizes.size())
 		.setPPoolSizes(pool_sizes.data());
 
-	auto desc_pool_handle = device.createDescriptorPoolUnique(desc_pool_info);
-	verify(desc_pool_handle.result == vk::Result::eSuccess);
-	return std::move(desc_pool_handle.value);
+	auto handle = device.createDescriptorPoolUnique(desc_pool_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueFence create_fence(const vk::Device& device) {
 	const auto fence_info = vk::FenceCreateInfo()
 		.setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-	auto fence_handle = device.createFenceUnique(fence_info);
-	verify(fence_handle.result == vk::Result::eSuccess);
-	return std::move(fence_handle.value);
+	auto handle = device.createFenceUnique(fence_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueSemaphore create_semaphore(const vk::Device& device) {
 	const auto semaphore_info = vk::SemaphoreCreateInfo();
 
-	auto semaphore_handle = device.createSemaphoreUnique(semaphore_info);
-	verify(semaphore_handle.result == vk::Result::eSuccess);
-	return std::move(semaphore_handle.value);
+	auto handle = device.createSemaphoreUnique(semaphore_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk::CommandPool& cmd_pool) {
@@ -330,9 +330,9 @@ vk::UniqueCommandBuffer create_command_buffer(const vk::Device& device, const vk
 		.setLevel(vk::CommandBufferLevel::ePrimary)
 		.setCommandBufferCount(1);
 
-	auto cmd_handles = device.allocateCommandBuffersUnique(cmd_info);
-	verify(cmd_handles.result == vk::Result::eSuccess);
-	return std::move(cmd_handles.value[0]);
+	auto handles = device.allocateCommandBuffersUnique(cmd_info);
+	verify(handles.result == vk::Result::eSuccess);
+	return std::move(handles.value[0]);
 }
 
 vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::SurfaceKHR& surface, const vk::SurfaceFormatKHR& surface_format, const vk::SwapchainKHR& old_swapchain, int32_t window_width, int32_t window_height, uint32_t image_count) {
@@ -392,9 +392,9 @@ vk::UniqueSwapchainKHR create_swapchain(const vk::PhysicalDevice& gpu, const vk:
 		.setClipped(true)
 		.setOldSwapchain(old_swapchain);
 
-	auto swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
-	verify(swapchain_handle.result == vk::Result::eSuccess);
-	return std::move(swapchain_handle.value);
+	auto handle = device.createSwapchainKHRUnique(swapchain_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image& image, const vk::Format& format) {
@@ -404,9 +404,9 @@ vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image&
 		.setImage(image)
 		.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-	auto view_handle = device.createImageViewUnique(view_info);
-	verify(view_handle.result == vk::Result::eSuccess);
-	return std::move(view_handle.value);
+	auto handle = device.createImageViewUnique(view_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
@@ -420,9 +420,9 @@ vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::Ren
 		.setHeight((uint32_t)window_height)
 		.setLayers(1);
 
-	auto framebuffer_handle = device.createFramebufferUnique(fb_info);
-	verify(framebuffer_handle.result == vk::Result::eSuccess);
-	return std::move(framebuffer_handle.value);
+	auto handle = device.createFramebufferUnique(fb_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueSampler create_sampler(const vk::Device& device) {
@@ -443,9 +443,9 @@ vk::UniqueSampler create_sampler(const vk::Device& device) {
 		.setBorderColor(vk::BorderColor::eFloatOpaqueWhite)
 		.setUnnormalizedCoordinates(VK_FALSE);
 
-	auto sampler_handle = device.createSamplerUnique(sampler_info);
-	verify(sampler_handle.result == vk::Result::eSuccess);
-	return std::move(sampler_handle.value);
+	auto handle = device.createSamplerUnique(sampler_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& device, unsigned font_width, unsigned font_height) {
@@ -467,9 +467,9 @@ vk::UniqueImage create_image(const vk::PhysicalDevice& gpu, const vk::Device& de
 		.setPQueueFamilyIndices(nullptr)
 		.setInitialLayout(vk::ImageLayout::ePreinitialized);
 
-	auto image_handle = device.createImageUnique(image_info);
-	verify(image_handle.result == vk::Result::eSuccess);
-	return std::move(image_handle.value);
+	auto handle = device.createImageUnique(image_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
@@ -477,9 +477,9 @@ vk::UniqueBuffer create_uniform_buffer(const vk::Device& device, size_t size) {
 		.setSize(size)
 		.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
 
-	auto buffer_handle = device.createBufferUnique(buf_info);
-	verify(buffer_handle.result == vk::Result::eSuccess);
-	return std::move(buffer_handle.value);
+	auto handle = device.createBufferUnique(buf_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 bool memory_type_from_properties(const vk::PhysicalDevice& gpu, uint32_t typeBits, vk::MemoryPropertyFlags requirements_mask, uint32_t* typeIndex) {
@@ -509,9 +509,9 @@ vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const 
 	auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass == true);
 
-	auto memory_handle = device.allocateMemoryUnique(mem_info);
-	verify(memory_handle.result == vk::Result::eSuccess);
-	return std::move(memory_handle.value);
+	auto handle = device.allocateMemoryUnique(mem_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, const vk::Device& device, const vk::Buffer& buffer) {
@@ -525,9 +525,9 @@ vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, cons
 	bool const pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass);
 
-	auto memory_handle = device.allocateMemoryUnique(mem_info);
-	verify(memory_handle.result == vk::Result::eSuccess);
-	return std::move(memory_handle.value);
+	auto handle = device.allocateMemoryUnique(mem_info);
+	verify(handle.result == vk::Result::eSuccess);
+	return std::move(handle.value);
 }
 
 void* map_memory(const vk::Device& device, const vk::DeviceMemory& memory) {
@@ -569,9 +569,9 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
 		.setDescriptorSetCount(1)
 		.setPSetLayouts(&desc_layout);
 
-	auto descriptor_set_handles = device.allocateDescriptorSetsUnique(alloc_info);
-	verify(descriptor_set_handles.result == vk::Result::eSuccess);
-	return std::move(descriptor_set_handles.value[0]);
+	auto handles = device.allocateDescriptorSetsUnique(alloc_info);
+	verify(handles.result == vk::Result::eSuccess);
+	return std::move(handles.value[0]);
 }
 
 void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range, const vk::Sampler& sampler, const vk::ImageView& image_view) {
