@@ -112,8 +112,6 @@ class App {
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else if (key == 'b') { colors().use_rgb(); hsb().use_rgb(); }
-		else if (key == 'g') { colors().use_gray(); hsb().use_gray(); }
 		else if (key == '1') { notify(hsb().decrease_hue_start()); }
 		else if (key == '2') { notify(hsb().increase_hue_start()); }
 		else if (key == '3') { notify(hsb().decrease_hue_range()); }
@@ -147,7 +145,7 @@ class App {
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position()); finder.reset(); database.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); finder.reset(); database.reset(); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { finder.reset(); database.reset(); menu = Menu::normal; }
 		else { finder.process(key, col_count, row_count); finder.filter(database, row_count); }
 	}
@@ -252,7 +250,6 @@ public:
 	App(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, 800, 600) {
 		ShowWindow(device.get_hwnd(), nCmdShow);
-		colors().use_rgb();
 	}
 
 	void notify(const SmallString& s) {

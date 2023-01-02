@@ -1562,7 +1562,7 @@ public:
 		push_text(characters, col_count, row_count);
 	}
 
-	void jump(size_t position) { state().set_cursor(position); } 
+	void jump(size_t position, unsigned row_count) { state().set_cursor(position); state().cursor_center(row_count); } 
 
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
