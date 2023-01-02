@@ -38,8 +38,8 @@ enum Glyph {
 	LINE = 9615,
 	RETURN = 9166,
 	BOTTOM_BLOCK = 9601,
-	TABSIGN = 9205,
-	SPACESIGN = 8228,
+	TABSIGN = 8594,
+	SPACESIGN = 8901,
 };
 
 Vec3 hsv_to_rgb(float H, float S, float V) {
