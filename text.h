@@ -121,7 +121,7 @@ struct Character {
 		: index(index), color(color), row(row), col(col) {}
 };
 
-const size_t CharacterMaxCount = 4096;
+const size_t CharacterMaxCount = 8192;
 typedef Array<Character, CharacterMaxCount> Characters;
 
 class Word {

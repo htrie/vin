@@ -23,10 +23,10 @@ const vec2 uvs[6] = {
 
 layout (binding = 0) uniform Uniforms {
 	mat4 view_proj;
-	mat4 model[4096];
-	vec4 color[4096];
-	vec4 uv_origin[4096];
-	vec4 uv_sizes[4096];
+	mat4 model[8192];
+	vec4 color[8192];
+	vec4 uv_origin[8192];
+	vec4 uv_sizes[8192];
 } uniforms;
 
 layout (location = 0) out vec2 uv;
