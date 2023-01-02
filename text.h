@@ -85,7 +85,7 @@ static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
 	{ "false", "float", "for", "friend" },
 	{ "goto" },
 	{ },
-	{ "if", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
+	{ "include", "if", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
 	{ },
 	{ },
 	{ "long" },
