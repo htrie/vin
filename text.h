@@ -40,6 +40,7 @@ enum Glyph {
 	BOTTOM_BLOCK = 9601,
 	TABSIGN = 8594,
 	SPACESIGN = 8901,
+	UNKNOWN = 9633,
 };
 
 Vec3 hsv_to_rgb(float H, float S, float V) {

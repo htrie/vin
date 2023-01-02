@@ -843,9 +843,10 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			if (auto* glyph = find_glyph(font.glyphs, character.index)) {
-				add(character, *glyph);
-			}
+			const auto* glyph = find_glyph(font.glyphs, character.index);
+			if (glyph == nullptr)
+				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
+			add(character, *glyph);
 		}
 
 		return index;
