@@ -105,12 +105,13 @@ void process_files(const char* path, F func) {
 		if (handle != INVALID_HANDLE_VALUE) {
 			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
 				if (find_data.cFileName[0] != '.') {
-					const auto dir = PathString(path) + find_data.cFileName + "/";
+					const auto dir = PathString(path) + "/" + find_data.cFileName;
 					process_files(dir.c_str(), func);
 				}
 			}
 			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-				func(find_data.cFileName);
+				const auto file = PathString(path) + "/" + find_data.cFileName;
+				func(file);
 			}
 		}
 	} while (FindNextFile(handle, &find_data) != 0);

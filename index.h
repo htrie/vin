@@ -11,7 +11,7 @@ public:
 	SmallString populate() {
 		const Timer timer;
 		paths.clear();
-		process_files(".", [&](const char* path) {
+		process_files(".", [&](const auto& path) {
 			paths.push_back(path);
 		});
 		return SmallString("populate index (") + 
@@ -74,7 +74,7 @@ public:
 		const Timer timer;
 		files.clear();
 		locations.clear();
-		process_files(".", [&](const char* path) {
+		process_files(".", [&](const auto& path) {
 			scan(path);
 		});
 		return SmallString("populate database (") + 
