@@ -2,9 +2,9 @@
 fileVersion=1
 
 # font settings
-fontName=PragmataPro Mono Liga
+fontName=CozetteVector
 fontFile=
-charSet=0
+charSet=1
 fontSize=20
 aa=2
 scaleH=100

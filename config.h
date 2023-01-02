@@ -115,7 +115,7 @@ HSB& hsb() {
 
 
 struct Spacing {
-	float character = 8.0f;
+	float character = 10.0f;
 	float line = 20.0f;
 	float zoom = 1.0f;
 
