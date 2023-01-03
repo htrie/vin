@@ -1456,6 +1456,7 @@ class Buffer {
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i);
+			characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col + i) + 0.5f); // Fill in gaps.
 		}
 	};
 
@@ -1710,6 +1711,7 @@ class Switcher {
 	void push_background_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
 		for (unsigned i = col_begin; i < col_end; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().overlay, row, i);
+			characters.emplace_back(Glyph::BLOCK, colors().overlay, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
