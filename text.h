@@ -125,12 +125,14 @@ static unsigned compute_letter_index(const uint16_t c) {
 struct Character {
 	uint16_t index;
 	Color color = Color::rgba(255, 0, 0, 255);
-	unsigned row = 0;
-	unsigned col = 0;
+	float row = 0.0f;
+	float col = 0.0f;
 
 	Character() {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col)
+	Character(uint16_t index, Color color, float row, float col)
 		: index(index), color(color), row(row), col(col) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col)
+		: index(index), color(color), row((float)row), col((float)col) {}
 };
 
 const size_t CharacterMaxCount = 8192;
@@ -1460,6 +1462,7 @@ class Buffer {
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(7 + i) + 0.5f); // Fill in gaps.
 		}
 	}
 
