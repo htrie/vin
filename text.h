@@ -1621,6 +1621,7 @@ class Picker {
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
@@ -1715,6 +1716,7 @@ class Switcher {
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
 		for (unsigned i = col_begin; i < col_end; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
@@ -1852,6 +1854,7 @@ class Finder {
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
