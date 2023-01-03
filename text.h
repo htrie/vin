@@ -69,11 +69,23 @@ constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); 
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
+constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
+constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' || c == '?';
+}
+
+Color bracket_color(unsigned nesting) {
+	const auto h = fmod(hsb().hue_start + (float)nesting * 40.0f, hsb().hue_range); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
+	const auto rgb = hsv_to_rgb(h, hsb().saturation, hsb().brightness);
+	return Color::rgba(
+		unsigned(rgb.x * 255.0f),
+		unsigned(rgb.y * 255.0f),
+		unsigned(rgb.z * 255.0f),
+		255u);
 }
 
 static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
@@ -212,7 +224,7 @@ public:
 		return (float)(a - 'a') / 26.0f; 
 	}
 
-	Color generate_color(const HugeString& text, float h_start, float h_range, float h_adjust, float s, float v) const {
+	Color generate_color(const HugeString& text) const {
 		const auto x = generate_channel(text, 0);
 		const auto y = generate_channel(text, 1);
 		const auto z = generate_channel(text, 2);
@@ -221,8 +233,8 @@ public:
 		const auto k = generate_channel(text, 6);
 		const auto rand0 = (x * 1000.0f + y * 100.0f + z * 10.0f) / 1000.0f;
 		const auto rand1 = (i * 1000.0f + j * 100.0f + k * 10.0f) / 1000.0f;
-		const auto h = std::fmod(h_start + rand0 * h_range + rand1 * h_adjust, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
-		const auto rgb = hsv_to_rgb(h, s, v);
+		const auto h = std::fmod(hsb().hue_start + rand0 * hsb().hue_range + rand1 * hsb().hue_adjust, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
+		const auto rgb = hsv_to_rgb(h, hsb().saturation, hsb().brightness);
 		return Color::rgba(
 			unsigned(rgb.x * 255.0f),
 			unsigned(rgb.y * 255.0f),
@@ -1471,7 +1483,7 @@ class Buffer {
 		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
 		const Word word(state().get_text(), index);
 		const Line line(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
@@ -1482,11 +1494,13 @@ class Buffer {
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
+		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
+		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
 		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text(), hsb().hue_start, hsb().hue_range, hsb().hue_adjust, hsb().saturation, hsb().brightness), row, col); }
+		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -1496,7 +1510,9 @@ class Buffer {
 		unsigned index = 0;
 		unsigned row = 0;
 		unsigned col = 0;
+		unsigned nesting = 0;
 		for (auto& c : state().get_text()) {
+			if (is_closing(c)) nesting--;
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
@@ -1506,13 +1522,14 @@ class Buffer {
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
-					else { push_char(characters, row, col, c, index); col++; } // TODO: Rainbow brackets. // TODO: Running comments and quotes.
+					else { push_char(characters, row, col, c, index, nesting); col++; } // TODO: Rainbow brackets. // TODO: Running comments and quotes.
 				} else {
 					if (c == '\n') { absolute_row++; row++; col = 0; }
 				}
 			} else {
 				if (c == '\n') { absolute_row++; }
 			}
+			if (is_opening(c)) nesting++;
 			index++;
 		}
 	}

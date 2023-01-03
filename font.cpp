@@ -243,6 +243,8 @@ void process(const std::string_view font_filename) {
 }
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
-	process("font");
+	process("font_regular");
+	process("font_bold");
+	process("font_italic");
 	return 0;
 }
