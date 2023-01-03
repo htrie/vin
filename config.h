@@ -29,8 +29,8 @@ Colors& colors() {
 
 struct HSB {
 	float hue_start = 0.0f;
-	float hue_range = 260.0f;
-	float hue_adjust = 10.0f;
+	float hue_range = 360.0f;
+	float hue_adjust = 30.0f;
 	float saturation = 0.50f;
 	float brightness = 0.85f;
 
