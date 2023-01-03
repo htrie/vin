@@ -1527,7 +1527,7 @@ class Buffer {
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
-					else { push_char(characters, row, col, c, index, nesting); col++; } // TODO: Running comments and quotes.
+					else { push_char(characters, row, col, c, index, nesting); col++; }
 				} else {
 					if (c == '\n') { absolute_row++; row++; col = 0; }
 				}
