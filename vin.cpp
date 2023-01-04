@@ -1,3 +1,7 @@
+// TODO: WinHttp connection.
+// TODO: Url highlighting.
+// TODO: <space>+u to jump to url.
+
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
