@@ -1,4 +1,5 @@
-// TODO: WinHttp connection through win.h helper function (takes URL and returns page contents as string).
+// TODO: Request when opening url as file.
+// TODO: Notify time to download request or failure.
 // TODO: Url highlighting.
 // TODO: <space>+u to jump to url.
 
