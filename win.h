@@ -119,42 +119,29 @@ void process_files(const char* path, F func) {
 }
 
 HugeString request() { // TODO: Use URL parameter.
-	DWORD dwSize = 0; // TODO: Local variables.
-	BOOL  bResults = FALSE; // TODO: Rename variables.
-	HINTERNET hConnect = NULL;
-	HINTERNET hRequest = NULL;
-
-	const auto hSession = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-	if (hSession) hConnect = WinHttpConnect(hSession, L"www.microsoft.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
-	if (hConnect) hRequest = WinHttpOpenRequest(hConnect, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE); 
-	if (hRequest) bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-	if (bResults) bResults = WinHttpReceiveResponse(hRequest, NULL);
-
 	HugeString contents;
-
-	if (bResults)
-	{
-		do
-		{
-			dwSize = 0;
-			if (!WinHttpQueryDataAvailable(hRequest, &dwSize))
-				return {}; // TODO: Don't return early (handle leaks).
-
-			HugeString partial;
-			partial.reserve(dwSize);
-
-			DWORD dwDownloaded = 0;
-			if (!WinHttpReadData(hRequest, (LPVOID)partial.data(), dwSize, &dwDownloaded))
-				return {};
-
-			contents += partial;
+	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
+		if (const auto connection = WinHttpConnect(session, L"www.microsoft.com", INTERNET_DEFAULT_HTTPS_PORT, 0)) {
+			if (const auto request = WinHttpOpenRequest(connection, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
+				if (WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
+					if (WinHttpReceiveResponse(request, NULL)) {
+						DWORD size = 0;
+						do {
+							if (WinHttpQueryDataAvailable(request, &size)) {
+								HugeString partial;
+								partial.reserve(size);
+								DWORD downloaded = 0;
+								if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded))
+									contents += partial;
+							}
+						} while (size > 0);
+					}
+				}
+				WinHttpCloseHandle(request);
+			}
+			WinHttpCloseHandle(connection);
 		}
-		while (dwSize > 0);
+		WinHttpCloseHandle(session);
 	}
-
-	if (hRequest) WinHttpCloseHandle(hRequest);
-	if (hConnect) WinHttpCloseHandle(hConnect);
-	if (hSession) WinHttpCloseHandle(hSession);
-
 	return contents;
 }
