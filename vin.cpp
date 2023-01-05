@@ -272,10 +272,10 @@ public:
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	request();
 	const Timer timer;
 	App app(hInstance, nCmdShow);
 	app.notify(SmallString("init in ") + timer.us());
+	app.notify(request());
 	app.run();
 	return 0;
 }

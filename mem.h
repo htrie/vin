@@ -214,6 +214,10 @@ public:
 		resize(0);
 	}
 
+	void reserve(size_t count) {
+		resize(len + count);
+	}
+
 	void pop_back() {
 		if (len > 0)
 			resize(len - 1);

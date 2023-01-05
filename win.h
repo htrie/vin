@@ -118,10 +118,8 @@ void process_files(const char* path, F func) {
 	FindClose(handle);
 }
 
-void request() { // TODO: Return bool and avoid printf/error. // TODO: Use URL parameter.
+HugeString request() { // TODO: Use URL parameter.
 	DWORD dwSize = 0; // TODO: Local variables.
-	DWORD dwDownloaded = 0;
-	LPSTR pszOutBuffer = NULL;
 	BOOL  bResults = FALSE; // TODO: Rename variables.
 	HINTERNET hConnect = NULL;
 	HINTERNET hRequest = NULL;
@@ -132,40 +130,31 @@ void request() { // TODO: Return bool and avoid printf/error. // TODO: Use URL p
 	if (hRequest) bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
 	if (bResults) bResults = WinHttpReceiveResponse(hRequest, NULL);
 
+	HugeString contents;
+
 	if (bResults)
 	{
 		do
 		{
 			dwSize = 0;
 			if (!WinHttpQueryDataAvailable(hRequest, &dwSize))
-				printf("Error %u in WinHttpQueryDataAvailable.\n",
-					GetLastError());
+				return {}; // TODO: Don't return early (handle leaks).
 
-			pszOutBuffer = new char[dwSize + 1]; // TODO: Use HugeString.
-			if (!pszOutBuffer)
-			{
-				printf("Out of memory\n");
-				dwSize = 0;
-			}
-			else
-			{
-				ZeroMemory(pszOutBuffer, dwSize + 1);
+			HugeString partial;
+			partial.reserve(dwSize);
 
-				if (!WinHttpReadData(hRequest, (LPVOID)pszOutBuffer,
-					dwSize, &dwDownloaded))
-					printf("Error %u in WinHttpReadData.\n", GetLastError());
-				else
-					printf("%s", pszOutBuffer);
+			DWORD dwDownloaded = 0;
+			if (!WinHttpReadData(hRequest, (LPVOID)partial.data(), dwSize, &dwDownloaded))
+				return {};
 
-				delete[] pszOutBuffer;
-			}
-		} while (dwSize > 0);
+			contents += partial;
+		}
+		while (dwSize > 0);
 	}
-
-	if (!bResults)
-		printf("Error %d has occurred.\n", GetLastError());
 
 	if (hRequest) WinHttpCloseHandle(hRequest);
 	if (hConnect) WinHttpCloseHandle(hConnect);
 	if (hSession) WinHttpCloseHandle(hSession);
+
+	return contents;
 }
