@@ -275,7 +275,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	const Timer timer;
 	App app(hInstance, nCmdShow);
 	app.notify(SmallString("init in ") + timer.us());
-	app.notify(request("www.microsoft.com"));
+	app.notify(request("www.wanderinginn.com"));
 	app.run();
 	return 0;
 }
