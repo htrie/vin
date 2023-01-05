@@ -118,24 +118,38 @@ void process_files(const char* path, F func) {
 	FindClose(handle);
 }
 
-HugeString request() { // TODO: Use URL parameter.
+HugeString download(const HINTERNET request) {
+	HugeString contents;
+	DWORD size = 0;
+	do {
+		if (WinHttpQueryDataAvailable(request, &size)) {
+			HugeString partial;
+			partial.reserve(size);
+			DWORD downloaded = 0;
+			if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded))
+				contents += partial;
+		}
+	} while (size > 0);
+	return contents;
+}
+
+HugeString request(const UrlString& url) {
+
+	const auto len = mbstowcs(nullptr, url.data(), 0);
+	verify(len == url.length());
+    
+    std::wstring address;
+    address.resize(len);
+	const auto converted = mbstowcs(address.data(), url.data(), len + 1);
+	verify(converted == len);
+    
 	HugeString contents;
 	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
-		if (const auto connection = WinHttpConnect(session, L"www.microsoft.com", INTERNET_DEFAULT_HTTPS_PORT, 0)) {
+		if (const auto connection = WinHttpConnect(session, address.data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {
 			if (const auto request = WinHttpOpenRequest(connection, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
 				if (WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-					if (WinHttpReceiveResponse(request, NULL)) {
-						DWORD size = 0;
-						do {
-							if (WinHttpQueryDataAvailable(request, &size)) {
-								HugeString partial;
-								partial.reserve(size);
-								DWORD downloaded = 0;
-								if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded))
-									contents += partial;
-							}
-						} while (size > 0);
-					}
+					if (WinHttpReceiveResponse(request, NULL))
+						contents = download(request);
 				}
 				WinHttpCloseHandle(request);
 			}
