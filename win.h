@@ -118,58 +118,30 @@ void process_files(const char* path, F func) {
 	FindClose(handle);
 }
 
-void request() {
-	DWORD dwSize = 0;
+void request() { // TODO: Return bool and avoid printf/error. // TODO: Use URL parameter.
+	DWORD dwSize = 0; // TODO: Local variables.
 	DWORD dwDownloaded = 0;
-	LPSTR pszOutBuffer;
-	BOOL  bResults = FALSE;
-	HINTERNET  hSession = NULL,
-		hConnect = NULL,
-		hRequest = NULL;
+	LPSTR pszOutBuffer = NULL;
+	BOOL  bResults = FALSE; // TODO: Rename variables.
+	HINTERNET hConnect = NULL;
+	HINTERNET hRequest = NULL;
 
-	// Use WinHttpOpen to obtain a session handle.
-	hSession = WinHttpOpen(L"WinHTTP Example/1.0",
-		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-		WINHTTP_NO_PROXY_NAME,
-		WINHTTP_NO_PROXY_BYPASS, 0);
+	const auto hSession = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+	if (hSession) hConnect = WinHttpConnect(hSession, L"www.microsoft.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
+	if (hConnect) hRequest = WinHttpOpenRequest(hConnect, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE); 
+	if (hRequest) bResults = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
+	if (bResults) bResults = WinHttpReceiveResponse(hRequest, NULL);
 
-	// Specify an HTTP server.
-	if (hSession)
-		hConnect = WinHttpConnect(hSession, L"www.microsoft.com",
-			INTERNET_DEFAULT_HTTPS_PORT, 0);
-
-	// Create an HTTP request handle.
-	if (hConnect)
-		hRequest = WinHttpOpenRequest(hConnect, L"GET", NULL,
-			NULL, WINHTTP_NO_REFERER,
-			WINHTTP_DEFAULT_ACCEPT_TYPES,
-			WINHTTP_FLAG_SECURE);
-
-	// Send a request.
-	if (hRequest)
-		bResults = WinHttpSendRequest(hRequest,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			0, 0);
-
-
-	// End the request.
-	if (bResults)
-		bResults = WinHttpReceiveResponse(hRequest, NULL);
-
-	// Keep checking for data until there is nothing left.
 	if (bResults)
 	{
 		do
 		{
-			// Check for available data.
 			dwSize = 0;
 			if (!WinHttpQueryDataAvailable(hRequest, &dwSize))
 				printf("Error %u in WinHttpQueryDataAvailable.\n",
 					GetLastError());
 
-			// Allocate space for the buffer.
-			pszOutBuffer = new char[dwSize + 1];
+			pszOutBuffer = new char[dwSize + 1]; // TODO: Use HugeString.
 			if (!pszOutBuffer)
 			{
 				printf("Out of memory\n");
@@ -177,7 +149,6 @@ void request() {
 			}
 			else
 			{
-				// Read the data.
 				ZeroMemory(pszOutBuffer, dwSize + 1);
 
 				if (!WinHttpReadData(hRequest, (LPVOID)pszOutBuffer,
@@ -186,18 +157,14 @@ void request() {
 				else
 					printf("%s", pszOutBuffer);
 
-				// Free the memory allocated to the buffer.
 				delete[] pszOutBuffer;
 			}
 		} while (dwSize > 0);
 	}
 
-
-	// Report any errors.
 	if (!bResults)
 		printf("Error %d has occurred.\n", GetLastError());
 
-	// Close any open handles.
 	if (hRequest) WinHttpCloseHandle(hRequest);
 	if (hConnect) WinHttpCloseHandle(hConnect);
 	if (hSession) WinHttpCloseHandle(hSession);
