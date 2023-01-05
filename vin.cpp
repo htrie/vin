@@ -1,8 +1,9 @@
-// TODO: WinHttp connection.
+// TODO: WinHttp connection through win.h helper function (takes URL and returns page contents as string).
 // TODO: Url highlighting.
 // TODO: <space>+u to jump to url.
 
 #pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 #define NOMINMAX
@@ -14,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dwmapi.h>
+#include <winhttp.h>
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
@@ -270,6 +272,7 @@ public:
 };
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
+	request();
 	const Timer timer;
 	App app(hInstance, nCmdShow);
 	app.notify(SmallString("init in ") + timer.us());
