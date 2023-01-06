@@ -60,7 +60,7 @@ class App {
 	void set_dirty(bool b) { dirty = b; }
 
 	SmallString status() {
-		return SmallString("Vin v") + 
+		return SmallString("Vin ") + 
 			SmallString(version_major) + "." + SmallString(version_minor) + " " +
 			SmallString(switcher.current().get_filename()) + 
 			(switcher.current().is_dirty() ? "*" : "") + "  " +
