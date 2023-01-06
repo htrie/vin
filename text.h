@@ -139,6 +139,33 @@ struct Character {
 const size_t CharacterMaxCount = 8192;
 typedef Array<Character, CharacterMaxCount> Characters;
 
+class Url{
+	size_t start = 0;
+	size_t finish = 0;
+
+	bool test(const HugeString& text, size_t pos) {
+		if (pos < text.size()) {
+			return is_number(text[pos]) || is_letter(text[pos]) || is_punctuation(text[pos]);
+		}
+		return false;
+	}
+
+public:
+	Url(const HugeString& text, size_t pos) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			start = pos;
+			finish = pos;
+			while(test(text, finish + 1)) { finish++; }
+			while(test(text, start - 1)) { start--; }
+			verify(start <= finish);
+		}
+	}
+
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+};
+
 class Word {
 	size_t start = 0;
 	size_t finish = 0;
@@ -493,6 +520,13 @@ public:
 		if (res != c) {
 			text[cursor] = res;
 		}
+	}
+
+	UrlString get_url() const {
+		const Url current(text, cursor);
+		if (!is_whitespace(text[current.begin()]))
+			return text.substr(current.begin(), current.end() - current.begin() + 1);
+		return "";
 	}
 
 	SmallString get_word() const {
@@ -1048,6 +1082,8 @@ class Buffer {
 	bool repeat = false;
 
 	PathString filename;
+	bool url = false; // TODO: Remove.
+
 	SmallString highlight;
 
 	unsigned accu = 0;
@@ -1544,7 +1580,7 @@ class Buffer {
 		stack.set_text(text);
 	}
 
-	HugeString load() {
+	HugeString load_file() {
 		HugeString text;
 		if (!filename.empty()) {
 			map(filename, [&](const char* mem, size_t size) {
@@ -1554,10 +1590,23 @@ class Buffer {
 		return text;
 	}
 
+	HugeString load_url() {
+		HugeString text;
+		if (!filename.empty()) {
+			text = request(filename);
+		}
+		return text;
+	}
+
+	HugeString load() {
+		if (url) return load_url();
+		else return load_file();
+	}
+
 public:
 	Buffer() {}
-	Buffer(const PathString& filename)
-		: filename(filename) {
+	Buffer(const PathString& filename, bool url)
+		: filename(filename), url(url) {
 		init(load());
 	}
 
@@ -1593,6 +1642,7 @@ public:
 
 	Mode get_mode() const { return mode; }
 
+	UrlString get_url() const { return state().get_url(); }
 	SmallString get_word() const { return state().get_word(); }
 
 	size_t location_percentage() const {
@@ -1732,7 +1782,7 @@ class Switcher {
 	}
 
 public:
-	SmallString load(const PathString& filename) {
+	SmallString load(const PathString& filename, bool url) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
@@ -1740,7 +1790,7 @@ public:
 			}
 			else if (!buffers.full()) {
 				const Timer timer;
-				buffers.emplace_back(filename);
+				buffers.emplace_back(filename, url);
 				active = buffers.size() - 1;
 				return SmallString("load ") + SmallString(filename) + " in " + timer.us();
 			}
