@@ -1457,7 +1457,7 @@ class Buffer {
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i);
-			characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col + i) + 0.5f); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col + i) + (i < (unsigned)highlight.size() - 1 ? 0.5f : 0.0f)); // Fill in gaps.
 		}
 	};
 
