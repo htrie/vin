@@ -1083,8 +1083,6 @@ class Buffer {
 	bool repeat = false;
 
 	PathString filename;
-	bool url = false; // TODO: Remove.
-
 	SmallString highlight;
 
 	unsigned accu = 0;
@@ -1581,33 +1579,23 @@ class Buffer {
 		stack.set_text(text);
 	}
 
-	HugeString load_file() {
+	HugeString load() {
 		HugeString text;
 		if (!filename.empty()) {
 			map(filename, [&](const char* mem, size_t size) {
 				text = HugeString(mem, size);
 			});
+			if (text.empty()) {
+				text = request(filename);
+			}
 		}
 		return text;
-	}
-
-	HugeString load_url() {
-		HugeString text;
-		if (!filename.empty()) {
-			text = request(filename);
-		}
-		return text;
-	}
-
-	HugeString load() {
-		if (url) return load_url();
-		else return load_file();
 	}
 
 public:
 	Buffer() {}
-	Buffer(const PathString& filename, bool url)
-		: filename(filename), url(url) {
+	Buffer(const PathString& filename)
+		: filename(filename) {
 		init(load());
 	}
 
@@ -1783,7 +1771,7 @@ class Switcher {
 	}
 
 public:
-	SmallString load(const PathString& filename, bool url) {
+	SmallString load(const PathString& filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
@@ -1791,7 +1779,7 @@ public:
 			}
 			else if (!buffers.full()) {
 				const Timer timer;
-				buffers.emplace_back(filename, url);
+				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
 				return SmallString("load ") + SmallString(filename) + " in " + timer.us();
 			}
