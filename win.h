@@ -130,48 +130,55 @@ void process_files(const char* path, F func) {
 	FindClose(handle);
 }
 
-Array<wchar_t, PathString::max_size()> convert(const PathString& url) {
-	const auto len = mbstowcs(nullptr, url.data(), 0);
-	verify(len == url.length());
-	Array<wchar_t, PathString::max_size()> res;
-    res.resize(len);
-	const auto converted = mbstowcs(res.data(), url.data(), len + 1);
-	verify(converted == len);
-	return res;
+bool is_secure(const PathString& url) {
+	if (url.starts_with("https://"))
+		return true;
+	return false;
 }
 
-HugeString download(const HINTERNET request) {
-	HugeString contents;
-	DWORD size = 0;
-	do {
-		if (WinHttpQueryDataAvailable(request, &size)) {
-			HugeString partial;
-			partial.reserve(size);
-			DWORD downloaded = 0;
-			if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded))
-				contents += partial;
-		}
-	} while (size > 0);
-	return contents;
+PathString extract_domain(const PathString& url) {
+	const auto prefix_pos = url.find("//");
+	const auto begin = prefix_pos != PathString::npos ? prefix_pos + 2 : 0;
+	const auto end = url.find("/", begin);
+	return url.substr(begin, end - begin);
+}
+
+PathString extract_object(const PathString& url) {
+	const auto prefix_pos = url.find("//");
+	const auto begin = prefix_pos != PathString::npos ? prefix_pos + 2 : 0;
+	const auto end = url.find("/", begin);
+	return url.substr(end);
 }
 
 HugeString request(const PathString& url) {
 	HugeString contents;
-	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
-		if (const auto connection = WinHttpConnect(session, convert(url).data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {
-			if (const auto request = WinHttpOpenRequest(connection, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
-				if (WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-					if (WinHttpReceiveResponse(request, NULL))
-						contents = download(request);
+	const auto agent = SmallString("Vin/") + SmallString(version_major) + "." + SmallString(version_minor);
+	const bool secure = is_secure(url);
+	const auto domain = extract_domain(url);
+	const auto object = extract_object(url);
+	if (HINTERNET session = InternetOpenA(agent.data(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0)) {
+		if (HINTERNET connection = InternetConnectA(session, domain.data(), secure ? INTERNET_DEFAULT_HTTPS_PORT : 0, "", "", INTERNET_SERVICE_HTTP, 0, 0)) {
+			if (HINTERNET request = HttpOpenRequestA(connection, "GET", object.data(), NULL, NULL, NULL, secure ? INTERNET_FLAG_SECURE : 0, 0)) {
+				if (HttpSendRequestA(request, NULL, 0, 0, 0)) {
+					DWORD read = 0;
+					do {
+						HugeString partial;
+						partial.reserve(HugeString::max_size());
+						if (InternetReadFile(request, partial.data(), (DWORD)partial.size(), &read)) {
+							partial.resize(read);
+							contents += partial;
+						}
+						else { contents = url + " Failed to read file " + get_error_string(); break; }
+					} while (read > 0);
 				}
 				else { contents = url + " Failed to send request " + get_error_string(); }
-				WinHttpCloseHandle(request);
+				InternetCloseHandle(request);
 			}
 			else { contents = url + " Failed to open request " + get_error_string(); }
-			WinHttpCloseHandle(connection);
+			InternetCloseHandle(connection);
 		}
 		else { contents = url + " Failed to establish connection " + get_error_string(); }
-		WinHttpCloseHandle(session);
+		InternetCloseHandle(session);
 	}
 	else { contents = url + " Failed to open session " + get_error_string(); }
 	return contents;

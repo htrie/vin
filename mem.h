@@ -135,13 +135,6 @@ class String {
 	size_t len = 0; // Not including EOS.
 	std::array<char, N> chars; // Contains EOS.
 
-	size_t resize(size_t n) {
-		const size_t old = len;
-		len = min(N - 1, n);
-		chars[len] = 0;
-		return old;
-	}
-
 	void move(size_t old, size_t from, size_t to) {
 		memcpy(&chars[to], &chars[from], min(old - from, len - to));
 	}
@@ -214,6 +207,13 @@ public:
 		resize(0);
 	}
 
+	size_t resize(size_t n) {
+		const size_t old = len;
+		len = min(N - 1, n);
+		chars[len] = 0;
+		return old;
+	}
+
 	void reserve(size_t count) {
 		resize(len + count);
 	}
@@ -239,7 +239,7 @@ public:
 		}
 	}
 
-	String substr(size_t off, size_t count) const {
+	String substr(size_t off, size_t count = npos) const {
 		if (off < len) {
 			return String(&chars[off], min(len - off, count));
 		}

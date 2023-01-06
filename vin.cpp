@@ -1,5 +1,8 @@
+const unsigned version_major = 0;
+const unsigned version_minor = 7;
+
 #pragma comment(lib, "dwmapi.lib")
-#pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "Wininet.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 #define NOMINMAX
@@ -11,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dwmapi.h>
-#include <winhttp.h>
+#include <wininet.h>
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
@@ -23,9 +26,6 @@
 #include "index.h"
 #include "text.h"
 #include "gpu.h"
-
-const unsigned version_major = 0;
-const unsigned version_minor = 7;
 
 enum class Menu {
 	space,
