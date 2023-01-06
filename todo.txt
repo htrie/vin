@@ -1,0 +1,3 @@
+beautify HTML
+128KB not enough for some pages
+word wrap
