@@ -130,10 +130,10 @@ void process_files(const char* path, F func) {
 	FindClose(handle);
 }
 
-Array<wchar_t, UrlString::max_size()> convert(const UrlString& url) {
+Array<wchar_t, PathString::max_size()> convert(const PathString& url) {
 	const auto len = mbstowcs(nullptr, url.data(), 0);
 	verify(len == url.length());
-	Array<wchar_t, UrlString::max_size()> res;
+	Array<wchar_t, PathString::max_size()> res;
     res.resize(len);
 	const auto converted = mbstowcs(res.data(), url.data(), len + 1);
 	verify(converted == len);
@@ -155,7 +155,7 @@ HugeString download(const HINTERNET request) {
 	return contents;
 }
 
-HugeString request(const UrlString& url) {
+HugeString request(const PathString& url) {
 	HugeString contents;
 	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
 		if (const auto connection = WinHttpConnect(session, convert(url).data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {

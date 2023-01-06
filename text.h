@@ -523,7 +523,7 @@ public:
 		}
 	}
 
-	UrlString get_url() const {
+	PathString get_url() const {
 		const Url current(text, cursor);
 		if (!is_whitespace(text[current.begin()]))
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -1631,7 +1631,7 @@ public:
 
 	Mode get_mode() const { return mode; }
 
-	UrlString get_url() const { return state().get_url(); }
+	PathString get_url() const { return state().get_url(); }
 	SmallString get_word() const { return state().get_word(); }
 
 	size_t location_percentage() const {
