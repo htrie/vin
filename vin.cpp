@@ -115,6 +115,10 @@ class App {
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
+		else if (key == '-') { resize_window(device.get_hwnd(), 0, 40); }
+		else if (key == '_') { resize_window(device.get_hwnd(), 0, -40); }
+		else if (key == '=') { resize_window(device.get_hwnd(), 40, 0); }
+		else if (key == '+') { resize_window(device.get_hwnd(), -40, 0); }
 		else if (key == '1') { notify(hsb().decrease_hue_start()); }
 		else if (key == '2') { notify(hsb().increase_hue_start()); }
 		else if (key == '3') { notify(hsb().decrease_hue_range()); }

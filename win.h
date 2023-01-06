@@ -48,13 +48,20 @@ HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width
 	BOOL value = TRUE;
 	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
-	//SetWindowPos(hWnd, HWND_TOP, 0, 0, width, height, SWP_SHOWWINDOW);
-
 	return hWnd;
 }
 
 void destroy_window(HWND hWnd) {
 	DestroyWindow(hWnd);
+}
+
+void resize_window(HWND hWnd, int dw, int dh) {
+	RECT rect;
+	if (GetWindowRect(hWnd, &rect)) {
+		const auto w = rect.right - rect.left;
+		const auto h = rect.bottom - rect.top;
+		SetWindowPos(hWnd, 0, 0, 0, w + dw, h + dh, SWP_NOMOVE | SWP_NOOWNERZORDER);
+	}
 }
 
 
