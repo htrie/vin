@@ -4,6 +4,18 @@
 	#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+SmallString get_error_string() {
+	const DWORD error = GetLastError();
+	SmallString res = SmallString("(error ") + SmallString((unsigned)error);
+	char* message = NULL;
+	if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&message, 0, NULL)) {
+		res += SmallString(": ") + message;
+		LocalFree(message);
+	}
+	res += ")";
+	return res;
+}
+
 HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width, unsigned height) {
 	const char* name = "vin";
 	const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
@@ -152,15 +164,15 @@ HugeString request(const UrlString& url) {
 					if (WinHttpReceiveResponse(request, NULL))
 						contents = download(request);
 				}
-				else { contents = HugeString("Failed to send request: ") + url; }
+				else { contents = url + "> Failed to send request " + get_error_string(); }
 				WinHttpCloseHandle(request);
 			}
-			else { contents = HugeString("Failed to open request: ") + url; }
+			else { contents = url + "> Failed to open request " + get_error_string(); }
 			WinHttpCloseHandle(connection);
 		}
-		else { contents = HugeString("Failed to connect: ") + url; }
+		else { contents = url + "> Failed to establish connection " + get_error_string(); }
 		WinHttpCloseHandle(session);
 	}
-	else { contents = HugeString("Failed to open session: ") + url; }
+	else { contents = url + "> Failed to open session " + get_error_string(); }
 	return contents;
 }
