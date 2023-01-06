@@ -1,8 +1,3 @@
-// TODO: Request when opening url as file.
-// TODO: Notify time to download request or failure.
-// TODO: Url highlighting.
-// TODO: <space>+u to jump to url.
-
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -111,6 +106,7 @@ class App {
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'e') { notify(index.populate()); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'f') { notify(database.populate()); finder.seed(switcher.current().get_word()); finder.filter(database, row_count); menu = Menu::finder; }
+		else if (key == 'u') { notify(switcher.load(switcher.current().get_url(), true)); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
@@ -142,7 +138,7 @@ class App {
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); picker.reset(); index.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(picker.selection(), false)); picker.reset(); index.reset(); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { picker.reset(); index.reset(); menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); picker.filter(index, row_count); }
 	}
@@ -276,7 +272,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 	const Timer timer;
 	App app(hInstance, nCmdShow);
 	app.notify(SmallString("init in ") + timer.us());
-	app.notify(request("www.wanderinginn.com"));
 	app.run();
 	return 0;
 }

@@ -152,11 +152,15 @@ HugeString request(const UrlString& url) {
 					if (WinHttpReceiveResponse(request, NULL))
 						contents = download(request);
 				}
+				else { contents = HugeString("Failed to send request: ") + url; }
 				WinHttpCloseHandle(request);
 			}
+			else { contents = HugeString("Failed to open request: ") + url; }
 			WinHttpCloseHandle(connection);
 		}
+		else { contents = HugeString("Failed to connect: ") + url; }
 		WinHttpCloseHandle(session);
 	}
+	else { contents = HugeString("Failed to open session: ") + url; }
 	return contents;
 }
