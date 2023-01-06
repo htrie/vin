@@ -164,15 +164,15 @@ HugeString request(const UrlString& url) {
 					if (WinHttpReceiveResponse(request, NULL))
 						contents = download(request);
 				}
-				else { contents = url + "> Failed to send request " + get_error_string(); }
+				else { contents = url + " Failed to send request " + get_error_string(); }
 				WinHttpCloseHandle(request);
 			}
-			else { contents = url + "> Failed to open request " + get_error_string(); }
+			else { contents = url + " Failed to open request " + get_error_string(); }
 			WinHttpCloseHandle(connection);
 		}
-		else { contents = url + "> Failed to establish connection " + get_error_string(); }
+		else { contents = url + " Failed to establish connection " + get_error_string(); }
 		WinHttpCloseHandle(session);
 	}
-	else { contents = url + "> Failed to open session " + get_error_string(); }
+	else { contents = url + " Failed to open session " + get_error_string(); }
 	return contents;
 }
