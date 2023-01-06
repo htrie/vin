@@ -1,5 +1,5 @@
 const unsigned version_major = 0;
-const unsigned version_minor = 7;
+const unsigned version_minor = 8;
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "Wininet.lib")
