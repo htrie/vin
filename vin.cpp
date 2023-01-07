@@ -104,8 +104,9 @@ class App {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
-		else if (key == 'e') { notify(index.populate()); picker.filter(index, row_count); menu = Menu::picker; }
+		else if (key == 'e') { notify(index.populate()); picker.reset(); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'f') { notify(database.populate()); finder.seed(switcher.current().get_word()); finder.filter(database, row_count); menu = Menu::finder; }
+		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'u') { notify(switcher.load(switcher.current().get_url())); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
@@ -142,8 +143,8 @@ class App {
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); picker.reset(); index.reset(); menu = Menu::normal; }
-		else if (key == Glyph::ESC) { picker.reset(); index.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); menu = Menu::normal; }
+		else if (key == Glyph::ESC) { menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); picker.filter(index, row_count); }
 	}
 
@@ -152,8 +153,8 @@ class App {
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); finder.reset(); database.reset(); menu = Menu::normal; }
-		else if (key == Glyph::ESC) { finder.reset(); database.reset(); menu = Menu::normal; }
+		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
+		else if (key == Glyph::ESC) { menu = Menu::normal; }
 		else { finder.process(key, col_count, row_count); finder.filter(database, row_count); }
 	}
 

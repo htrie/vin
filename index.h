@@ -4,10 +4,6 @@ class Index {
 	Array<PathString, 1024> paths;
 
 public:
-	void reset() {
-		paths.clear();
-	}
-
 	SmallString populate() {
 		const Timer timer;
 		paths.clear();
@@ -65,11 +61,6 @@ class Database {
 	}
 
 public:
-	void reset() {
-		files.clear();
-		locations.clear();
-	}
-
 	SmallString populate() {
 		const Timer timer;
 		files.clear();
