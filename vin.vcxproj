@@ -74,7 +74,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <StackReserveSize>16000000</StackReserveSize>
+      <StackReserveSize>64000000</StackReserveSize>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -123,7 +123,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-      <StackReserveSize>16000000</StackReserveSize>
+      <StackReserveSize>64000000</StackReserveSize>
     </Link>
     <CustomBuildStep>
       <Command>
