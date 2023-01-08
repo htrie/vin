@@ -1677,7 +1677,7 @@ public:
 		selected = 0;
 	}
 
-	void filter(Index& index, unsigned row_count) {
+	void filter(const Index& index, unsigned row_count) {
 		filtered.clear();
 		pattern = pattern.tolower();
 		index.process([&](const auto& path) {
@@ -1915,18 +1915,17 @@ public:
 		pattern = word;
 	}
 
-	void filter(Database& database, unsigned row_count) {
+	const SmallString& get_pattern() const { return pattern; }
+
+	void filter(const Database& database, unsigned row_count) {
 		filtered.clear();
-		const auto pattern_hash = fnv64(pattern.data(), pattern.size());
 		database.process([&](const auto& file, const auto& location) {
 			if (filtered.size() > row_count - 2)
 				return false;
-			if (location.symbol_hash == pattern_hash) {
-				map(file.name, [&](const char* mem, size_t size) {
-					const auto context = SmallString(&mem[location.position], min((size_t)60, size - location.position));
-					filtered.emplace_back(file.name.c_str(), location.position, context);
-				});
-			}
+			map(file.name, [&](const char* mem, size_t size) {
+				const auto context = SmallString(&mem[location.position], min((size_t)60, size - location.position));
+				filtered.emplace_back(file.name.c_str(), location.position, context);
+			});
 			return true;
 		});
 		selected = min(selected, (unsigned)filtered.size() - 1);
@@ -1944,14 +1943,15 @@ public:
 		return 0;
 	}
 
-	void process(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { return; }
-		else if (key == Glyph::ESC) { return; }
-		else if (key == Glyph::TAB) { return; }
-		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); } }
+	bool process(unsigned key, unsigned col_count, unsigned row_count) {
+		if (key == Glyph::CR) { return false; }
+		else if (key == Glyph::ESC) { return false; }
+		else if (key == Glyph::TAB) { return false; }
+		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); return true; } }
 		else if (key == '<') { selected++; }
 		else if (key == '>') { if (selected > 0) selected--; }
-		else { pattern += (char)key; }
+		else { pattern += (char)key; return true; }
+		return false;
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {

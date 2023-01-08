@@ -105,7 +105,7 @@ class App {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'e') { notify(index.populate()); picker.reset(); picker.filter(index, row_count); menu = Menu::picker; }
-		else if (key == 'f') { notify(database.populate()); finder.seed(switcher.current().get_word()); finder.filter(database, row_count); menu = Menu::finder; }
+		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'u') { notify(switcher.load(switcher.current().get_url())); }
 		else if (key == 'r') { notify(switcher.reload()); }
@@ -155,7 +155,7 @@ class App {
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { menu = Menu::normal; }
-		else { finder.process(key, col_count, row_count); finder.filter(database, row_count); }
+		else { if (finder.process(key, col_count, row_count)) { notify(database.search(finder.get_pattern())); } finder.filter(database, row_count); }
 	}
 
 	void process(unsigned key) {

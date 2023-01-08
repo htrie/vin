@@ -1,5 +1,18 @@
 #pragma once
 
+bool accept(const PathString& filename) {
+	if (filename.ends_with(".c")) return true;
+	if (filename.ends_with(".h")) return true;
+	if (filename.ends_with(".cpp")) return true;
+	if (filename.ends_with(".hpp")) return true;
+	if (filename.ends_with(".inc")) return true;
+	if (filename.ends_with(".txt")) return true;
+	if (filename.ends_with(".bat")) return true;
+	if (filename.ends_with(".frag")) return true;
+	if (filename.ends_with(".vert")) return true;
+	return false;
+}
+
 class Index {
 	Array<PathString, 1024> paths;
 
@@ -8,14 +21,16 @@ public:
 		const Timer timer;
 		paths.clear();
 		process_files(".", [&](const auto& path) {
-			paths.push_back(path);
+			const PathString filename(path);
+			if (accept(filename))
+				paths.push_back(filename);
 		});
 		return SmallString("populate index (") + 
 			SmallString(paths.size()) + " paths) in " + timer.us();
 	}
 
 	template <typename F>
-	void process(F func) {
+	void process(F func) const {
 		for (const auto& path : paths) {
 			if (!func(path))
 				break;
@@ -31,50 +46,44 @@ class Database {
 
 	struct Location {
 		size_t file_index = 0;
-		uint64_t symbol_hash = 0;
 		size_t position = 0;
 	};
 
 	Array<File, 1024> files;
 	Array<Location, 128 * 1024> locations;
 
-	constexpr bool accept_char(char c) {
-		return
-			(c >= 'a' && c <= 'z') || 
-			(c >= 'A' && c <= 'Z') ||
-			(c >= '0' && c <= '9') ||
-			(c == '_'); }
-
-	void scan(const PathString& filename) {
+	void scan(const PathString& filename, const SmallString& pattern) {
 		map(filename, [&](const char* mem, size_t size) {
 			files.emplace_back(filename, size);
-			size_t location = 0;
 			for (size_t i = 0; i < size; ++i) {
-				if (!accept_char(mem[i])) {
-					if ((location != i) && (i - location > 2)) // Ignore small words.
-						locations.emplace_back(files.size() - 1, fnv64(&mem[location], i - location), location);
-					location = i;
-					location++;
+				if (mem[i] == pattern[0]) {
+					if (strncmp(&mem[i], pattern.data(), pattern.size()) == 0) {
+						locations.emplace_back(files.size() - 1, i);
+					}
 				}
 			}
 		});
 	}
 
 public:
-	SmallString populate() {
+	SmallString search(const SmallString& pattern) {
 		const Timer timer;
 		files.clear();
 		locations.clear();
-		process_files(".", [&](const auto& path) {
-			scan(path);
-		});
-		return SmallString("populate database (") + 
+		if (!pattern.empty()) {
+			process_files(".", [&](const auto& path) {
+				const PathString filename(path);
+				if (accept(filename))
+					scan(filename, pattern);
+			});
+		}
+		return SmallString("search database (") + 
 			SmallString(files.size()) + " files, " + 
 			SmallString(locations.size()) + " symbols) in " + timer.us();
 	}
 
 	template <typename F>
-	void process(F func) {
+	void process(F func) const {
 		for (const auto& location : locations) {
 			if (!func(files[location.file_index], location))
 				break;

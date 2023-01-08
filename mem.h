@@ -280,6 +280,13 @@ public:
 		return false;
 	}
 
+	bool ends_with(const String& s) const {
+		if (len >= s.size())
+			if (strncmp(&chars[len - s.size()], s.data(), s.size()) == 0)
+				return true;
+		return false;
+	}
+
 	String& operator+=(const String& other) {
 		const auto old = resize(len + other.size());
 		memcpy(&chars[old], other.data(), len - old);
