@@ -7,6 +7,7 @@ bool accept(const PathString& filename) {
 	if (filename.ends_with(".hpp")) return true;
 	if (filename.ends_with(".inc")) return true;
 	if (filename.ends_with(".txt")) return true;
+	if (filename.ends_with(".diff")) return true;
 	if (filename.ends_with(".bat")) return true;
 	if (filename.ends_with(".frag")) return true;
 	if (filename.ends_with(".vert")) return true;
