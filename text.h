@@ -1628,6 +1628,7 @@ public:
 	const State& state() const { return stack.state(); }
 
 	const PathString& get_filename() const { return filename; }
+	size_t get_size() const { return state().get_text().size(); }
 
 	Mode get_mode() const { return mode; }
 
@@ -1635,7 +1636,7 @@ public:
 	SmallString get_word() const { return state().get_word(); }
 
 	size_t location_percentage() const {
-		if (const auto size = state().get_text().size())
+		if (const auto size = get_size())
 			return 1 + state().get_cursor() * 100 / size;
 		return 0;
 	}
@@ -1781,7 +1782,7 @@ public:
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
-				return SmallString("load ") + SmallString(filename) + " in " + timer.us();
+				return SmallString("load ") + SmallString(buffers[active].get_filename()) + " (" + SmallString(buffers[active].get_size()) + " bytes) in " + timer.us();
 			}
 			else {
 				return SmallString("too many files open");
@@ -1803,7 +1804,7 @@ public:
 		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].save();
-			return SmallString("save ") + SmallString(buffers[active].get_filename()) + " in " + timer.us();
+			return SmallString("save ") + SmallString(buffers[active].get_filename()) + " (" + SmallString(buffers[active].get_size()) + " bytes) in " + timer.us();
 		}
 		return {};
 	}
