@@ -1,2 +1,5 @@
-parse HTML tags (<a>, <p>)
-beautify HTML (links, text, word wrap)
+handle href better (scan 4 char ahead)
+don't display tags, just values
+word warp around 80 chars
+colorize url before comment
+colorize text in cream color
