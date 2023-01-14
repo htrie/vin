@@ -23,6 +23,7 @@ const unsigned version_minor = 8;
 #include "matrix.h"
 #include "font.h"
 #include "config.h"
+#include "html.h"
 #include "index.h"
 #include "text.h"
 #include "gpu.h"

@@ -1579,12 +1579,6 @@ class Buffer {
 		stack.set_text(text);
 	}
 
-	HugeString beautify(const HugeString& html) {
-		HugeString res;
-		res = html;
-		return res;
-	}
-
 	HugeString load() {
 		HugeString text;
 		if (!filename.empty()) {
@@ -1592,7 +1586,7 @@ class Buffer {
 				text = HugeString(mem, size);
 			});
 			if (text.empty()) {
-				text = beautify(request(filename));
+				text = Html().process(request(filename));
 			}
 		}
 		return text;
