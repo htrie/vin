@@ -24,10 +24,6 @@ class Html {
 
 	void process_address_footer(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '>') { tag = Tag::none; }
-		else if (c0 == '\\') { }
-		else if (c0 == '/') { }
-		else if (c0 == 'a') { }
-		//else { verify(false); }
 	}
 
 	void process_address_body(const char c0, const char c1, const char c2, const char c3) {
@@ -52,10 +48,6 @@ class Html {
 
 	void process_paragraph_footer(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '>') { tag = Tag::none; }
-		else if (c0 == '\\') { }
-		else if (c0 == '/') { }
-		else if (c0 == 'p') { }
-		//else { verify(false); }
 	}
 
 	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
