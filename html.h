@@ -76,9 +76,9 @@ class Html {
 	}
 	void process_paragraph_nested_body(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '<') { tag = Tag::paragraph_nested_footer; }
-		else if (c0 == '\n') { /* Skip */ }
-		else if (c0 == 13/*CR*/) { /* Skip */ }
-		else if (c0 == '\t') { /* Skip */ }
+		else if (c0 == '\n') { append_paragraph(' '); }
+		else if (c0 == 13/*CR*/) { append_paragraph(' '); }
+		else if (c0 == '\t') { append_paragraph(' '); }
 		else { append_paragraph(c0); }
 	}
 	void process_paragraph_nested_header(const char c0, const char c1, const char c2, const char c3) {
@@ -95,9 +95,9 @@ class Html {
 		else if (c0 == '<' && c1 == 'i' && c2 == '>') { tag = Tag::paragraph_nested_header; }
 		else if (c0 == '<' && c1 == 'a' && c2 == ' ') { tag = Tag::paragraph_nested_header; }
 		else if (c0 == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
-		else if (c0 == '\n') { /* Skip */ }
-		else if (c0 == 13/*CR*/) { /* Skip */ }
-		else if (c0 == '\t') { /* Skip */ }
+		else if (c0 == '\n') { append_paragraph(' '); }
+		else if (c0 == 13/*CR*/) { append_paragraph(' '); }
+		else if (c0 == '\t') { append_paragraph(' '); }
 		else { append_paragraph(c0); }
 	}
 	void process_paragraph_header(const char c0, const char c1, const char c2, const char c3) {
