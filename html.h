@@ -12,6 +12,9 @@ class Html {
 		paragraph_header,
 		paragraph_body,
 		paragraph_footer,
+		paragraph_nested_header,
+		paragraph_nested_body,
+		paragraph_nested_footer,
 	};
 
 	Tag tag = Tag::none;
@@ -48,7 +51,6 @@ class Html {
 	void process_address_footer(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '>') { print_address(); tag = Tag::none; }
 	}
-
 	void process_address_body(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '<') { tag = Tag::address_footer; }
 		else if (c0 == '\n') { /* Skip */ }
@@ -56,36 +58,46 @@ class Html {
 		else if (c0 == '\t') { /* Skip */ }
 		else { address_body += c0; }
 	}
-
 	void process_address_header_href_value(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '"') { tag = Tag::address_header; }
 		else { address_value += c0; }
 	}
-
 	void process_address_header_href(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '=') {}
 		else if (c0 == '"') { address_value.clear(); tag = Tag::address_header_href_value; }
 	}
-
 	void process_address_header(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '>') { address_body.clear(); tag = Tag::address_body; }
 		else if (c0 == 'h' && c1 == 'r' && c2 == 'e' && c3 == 'f') { tag = Tag::address_header_href; }
 	}
 
-	void process_paragraph_footer(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { tag = Tag::none; }
+	void process_paragraph_nested_footer(const char c0, const char c1, const char c2, const char c3) {
+		if (c0 == '>') { tag = Tag::paragraph_body; }
 	}
-
-	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
+	void process_paragraph_nested_body(const char c0, const char c1, const char c2, const char c3) {
+		if (c0 == '<') { tag = Tag::paragraph_nested_footer; }
 		else if (c0 == '\n') { /* Skip */ }
 		else if (c0 == 13/*CR*/) { /* Skip */ }
 		else if (c0 == '\t') { /* Skip */ }
 		else { append_paragraph(c0); }
 	}
+	void process_paragraph_nested_header(const char c0, const char c1, const char c2, const char c3) {
+		if (c0 == '>') { tag = Tag::paragraph_nested_body; }
+	}
 
+	void process_paragraph_footer(const char c0, const char c1, const char c2, const char c3) {
+		if (c0 == '>') { tag = Tag::none; }
+	}
+	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
+		if (c0 == '<' && c1 == 'e' && c2 == 'm' && c3 == '>') { tag = Tag::paragraph_nested_header; }
+		else if (c0 == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
+		else if (c0 == '\n') { /* Skip */ }
+		else if (c0 == 13/*CR*/) { /* Skip */ }
+		else if (c0 == '\t') { /* Skip */ }
+		else { append_paragraph(c0); }
+	}
 	void process_paragraph_header(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { paragraph_body.clear(); tag = Tag::paragraph_body; }
+		if (c0 == '>') { paragraph_body.clear(); paragraph_line_size = 0; tag = Tag::paragraph_body; }
 	}
 
 	void process_skip(const char c0, const char c1, const char c2, const char c3) {
@@ -115,6 +127,9 @@ class Html {
 			case Tag::paragraph_header: process_paragraph_header(c0, c1, c2, c3); break;
 			case Tag::paragraph_body: process_paragraph_body(c0, c1, c2, c3); break;
 			case Tag::paragraph_footer: process_paragraph_footer(c0, c1, c2, c3); break;
+			case Tag::paragraph_nested_header: process_paragraph_nested_header(c0, c1, c2, c3); break;
+			case Tag::paragraph_nested_body: process_paragraph_nested_body(c0, c1, c2, c3); break;
+			case Tag::paragraph_nested_footer: process_paragraph_nested_footer(c0, c1, c2, c3); break;
 		}
 	}
 
