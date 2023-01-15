@@ -18,17 +18,41 @@ class Html {
 
 	HugeString address_body;
 	HugeString address_value;
+
 	HugeString paragraph_body;
+	size_t paragraph_line_size = 0;
 
 	HugeString result;
 
+	void print_address() {
+		if (!address_body.empty() && address_value.starts_with("http"))
+			result += address_body + " " + address_value + "\n";
+	}
+
+	void print_paragraph() {
+		if (!paragraph_body.empty())
+			result += paragraph_body + "\n";
+	}
+
+	void append_paragraph(const char c) {
+		if (paragraph_line_size > 80 && c == ' ') {
+			paragraph_body += '\n';
+			paragraph_line_size = 0;
+		}
+		else {
+			paragraph_body += c;
+			paragraph_line_size++;
+		}
+	}
+
 	void process_address_footer(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { result += SmallString("\n<") + address_body + " " + address_value + ">"; tag = Tag::none; }
+		if (c0 == '>') { print_address(); tag = Tag::none; }
 	}
 
 	void process_address_body(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '<') { tag = Tag::address_footer; }
 		else if (c0 == '\n') { /* Skip */ }
+		else if (c0 == 13/*CR*/) { /* Skip */ }
 		else if (c0 == '\t') { /* Skip */ }
 		else { address_body += c0; }
 	}
@@ -53,8 +77,11 @@ class Html {
 	}
 
 	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '<') { result += SmallString("\n") + paragraph_body; tag = Tag::paragraph_footer; }
-		else { paragraph_body += c0; }
+		if (c0 == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
+		else if (c0 == '\n') { /* Skip */ }
+		else if (c0 == 13/*CR*/) { /* Skip */ }
+		else if (c0 == '\t') { /* Skip */ }
+		else { append_paragraph(c0); }
 	}
 
 	void process_paragraph_header(const char c0, const char c1, const char c2, const char c3) {

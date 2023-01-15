@@ -1,3 +1,2 @@
-word warp around 80 chars
-remove weird characters
+replace some missing unicode characters
 colorize text in cream color
