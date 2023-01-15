@@ -90,6 +90,10 @@ class Html {
 	}
 	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
 		if (c0 == '<' && c1 == 'e' && c2 == 'm' && c3 == '>') { tag = Tag::paragraph_nested_header; }
+		else if (c0 == '<' && c1 == 'c' && c2 == 'o' && c3 == 'd') { tag = Tag::paragraph_nested_header; }
+		else if (c0 == '<' && c1 == 'b' && c2 == '>') { tag = Tag::paragraph_nested_header; }
+		else if (c0 == '<' && c1 == 'i' && c2 == '>') { tag = Tag::paragraph_nested_header; }
+		else if (c0 == '<' && c1 == 'a' && c2 == ' ') { tag = Tag::paragraph_nested_header; }
 		else if (c0 == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
 		else if (c0 == '\n') { /* Skip */ }
 		else if (c0 == 13/*CR*/) { /* Skip */ }
