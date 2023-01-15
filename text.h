@@ -73,7 +73,7 @@ constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
 constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
 constexpr bool is_url_punctuation(char c) { return 
 	c == '/' || c == '-' || c == '_' || c == ':' || c == '.' || c == '?' ||
-	c == '%' || c == '=' || c == '#' || c == '@' || c == '\\';
+	c == '!' || c == '%' || c == '=' || c == '#' || c == '@' || c == '\\';
 }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
