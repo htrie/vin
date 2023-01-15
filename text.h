@@ -71,7 +71,10 @@ constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
 constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
-constexpr bool is_url_punctuation(char c) { return c == '/' || c == '-' || c == '_' || c == ':' || c == '.'; }
+constexpr bool is_url_punctuation(char c) { return 
+	c == '/' || c == '-' || c == '_' || c == ':' || c == '.' || c == '?' ||
+	c == '=' || c == '#' || c == '\\';
+}
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
@@ -160,8 +163,13 @@ public:
 			while(test(text, finish + 1)) { finish++; }
 			while(test(text, start - 1)) { start--; }
 			verify(start <= finish);
+			if (!text.substr(start, 4).starts_with("http"))
+				start = finish = 0; // Reset.
 		}
 	}
+
+	bool valid() const { return start < finish; }
+	bool contains(size_t pos) const { return start <= pos && pos <= finish; }
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
@@ -1527,8 +1535,10 @@ class Buffer {
 		const Word word(state().get_text(), index);
 		const Line line(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
+		const Url url(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
+		else if (url.valid() && url.contains(index)) { characters.emplace_back((uint16_t)c, colors().url, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }

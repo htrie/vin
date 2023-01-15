@@ -1,4 +1,5 @@
-wanderinginn.com
+http://lobste.rs
+http://news.ycombinator.com
 http://wanderinginn.com
 https://wanderinginn.com
 https://wanderinginn.com/table-of-contents/

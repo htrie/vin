@@ -23,16 +23,18 @@ class Html {
 	HugeString result;
 
 	void process_address_footer(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { tag = Tag::none; }
+		if (c0 == '>') { result += SmallString("\n<") + address_body + " " + address_value + ">"; tag = Tag::none; }
 	}
 
 	void process_address_body(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '<') { result += address_body; tag = Tag::address_footer; }
+		if (c0 == '<') { tag = Tag::address_footer; }
+		else if (c0 == '\n') { /* Skip */ }
+		else if (c0 == '\t') { /* Skip */ }
 		else { address_body += c0; }
 	}
 
 	void process_address_header_href_value(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '"') { result += address_value; tag = Tag::address_header; }
+		if (c0 == '"') { tag = Tag::address_header; }
 		else { address_value += c0; }
 	}
 
@@ -42,8 +44,8 @@ class Html {
 	}
 
 	void process_address_header(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { result += " body="; address_body.clear(); tag = Tag::address_body; }
-		else if (c0 == 'h' && c1 == 'r' && c2 == 'e' && c3 == 'f') { result += " link="; tag = Tag::address_header_href; }
+		if (c0 == '>') { address_body.clear(); tag = Tag::address_body; }
+		else if (c0 == 'h' && c1 == 'r' && c2 == 'e' && c3 == 'f') { tag = Tag::address_header_href; }
 	}
 
 	void process_paragraph_footer(const char c0, const char c1, const char c2, const char c3) {
@@ -51,12 +53,12 @@ class Html {
 	}
 
 	void process_paragraph_body(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '<') { result += paragraph_body; tag = Tag::paragraph_footer; }
+		if (c0 == '<') { result += SmallString("\n") + paragraph_body; tag = Tag::paragraph_footer; }
 		else { paragraph_body += c0; }
 	}
 
 	void process_paragraph_header(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == '>') { result += " body="; paragraph_body.clear(); tag = Tag::paragraph_body; }
+		if (c0 == '>') { paragraph_body.clear(); tag = Tag::paragraph_body; }
 	}
 
 	void process_skip(const char c0, const char c1, const char c2, const char c3) {
@@ -64,8 +66,8 @@ class Html {
 	}
 
 	void process_tag(const char c0, const char c1, const char c2, const char c3) {
-		if (c0 == 'a') { result += "\n[address]"; tag = Tag::address_header; }
-		else if (c0 == 'p') { result += "\n[paragraph]"; tag = Tag::paragraph_header; }
+		if (c0 == 'a') { tag = Tag::address_header; }
+		else if (c0 == 'p') { tag = Tag::paragraph_header; }
 		else { tag = Tag::skip; }
 	}
 

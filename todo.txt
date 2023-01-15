@@ -1,4 +1,3 @@
-don't display tags, just values
 word warp around 80 chars
-colorize url before comment
+remove weird characters
 colorize text in cream color

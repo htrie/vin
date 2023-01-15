@@ -17,6 +17,7 @@ struct Colors {
 	Color keyword = Color::rgba(199, 146, 234, 255);
 	Color clas = Color::rgba(180, 180, 180, 255);
 	Color comment = Color::rgba(255, 255, 0, 255);
+	Color url = Color::rgba(0, 64, 255, 255);
 	Color punctuation = Color::rgba(127, 219, 202, 255);
 	Color quote = Color::rgba(247, 140, 108, 255);
 };
