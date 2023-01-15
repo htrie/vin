@@ -83,6 +83,14 @@ constexpr bool is_punctuation(char c) { return
 	c == '?' || c == '"' || c == '\'';
 }
 
+bool is_code_extension(const PathString& filename) {
+	if (filename.ends_with(".cpp")) return true;
+	if (filename.ends_with(".hpp")) return true;
+	if (filename.ends_with(".c")) return true;
+	if (filename.ends_with(".h")) return true;
+	return false;
+}
+
 Color bracket_color(unsigned nesting) {
 	const auto h = fmod(hsb().hue_start + (float)nesting * 40.0f, hsb().hue_range); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
 	const auto rgb = hsv_to_rgb(h, hsb().saturation, hsb().brightness);
@@ -1102,6 +1110,8 @@ class Buffer {
 	bool word_forward = false;
 
 	bool needs_save = false;
+	bool is_code = false;
+
 
 	size_t last_cursor = 0;
 
@@ -1531,18 +1541,24 @@ class Buffer {
 		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
 	};
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
-		const Word word(state().get_text(), index);
+	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
 		const Line line(state().get_text(), index);
-		const Comment comment(state().get_text(), index);
 		const Url url(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
 		else if (url.valid() && url.contains(index)) { characters.emplace_back((uint16_t)c, colors().url, row, col); }
-		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
+	};
+
+	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
+		const Word word(state().get_text(), index);
+		const Line line(state().get_text(), index);
+		const Comment comment(state().get_text(), index);
+		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
+		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
 		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
@@ -1572,7 +1588,8 @@ class Buffer {
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
-					else { push_char(characters, row, col, c, index, nesting); col++; }
+					else if (is_code) { push_char_code(characters, row, col, c, index, nesting); col++; }
+					else { push_char_text(characters, row, col, c, index, nesting); col++; }
 				} else {
 					if (c == '\n') { absolute_row++; row++; col = 0; }
 				}
@@ -1605,7 +1622,8 @@ class Buffer {
 public:
 	Buffer() {}
 	Buffer(const PathString& filename)
-		: filename(filename) {
+		: filename(filename)
+		, is_code(is_code_extension(filename)) {
 		init(load());
 	}
 
