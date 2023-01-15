@@ -71,10 +71,6 @@ constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
 constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
-constexpr bool is_url_punctuation(char c) { return 
-	c == '/' || c == '-' || c == '_' || c == ':' || c == '.' || c == '?' ||
-	c == '!' || c == '%' || c == '=' || c == '#' || c == '@' || c == '\\';
-}
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
@@ -157,7 +153,7 @@ class Url{
 
 	bool test(const HugeString& text, size_t pos) {
 		if (pos < text.size()) {
-			return is_number(text[pos]) || is_letter(text[pos]) || is_url_punctuation(text[pos]);
+			return is_number(text[pos]) || is_letter(text[pos]) || is_punctuation(text[pos]);
 		}
 		return false;
 	}

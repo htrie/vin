@@ -34,7 +34,7 @@ class Html {
 
 	void print_paragraph() {
 		if (!paragraph_body.empty())
-			result += paragraph_body + "\n";
+			result += paragraph_body + "\n\n";
 	}
 
 	void append_paragraph(const char c) {
