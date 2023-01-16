@@ -1,2 +1,3 @@
-replace some missing unicode characters (apostrophe, quotes, ...)
+better actual parser
+support &nbsp
 support nested <a> tag
