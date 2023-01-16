@@ -15,6 +15,7 @@ class Html {
 		paragraph_footer,
 		paragraph_nested_header,
 		paragraph_nested_body,
+		paragraph_nested_body_unicode,
 		paragraph_nested_footer,
 	};
 
@@ -75,8 +76,21 @@ class Html {
 	void process_paragraph_nested_footer(const HugeString& text, size_t pos) {
 		if (text[pos] == '>') { tag = Tag::paragraph_body; }
 	}
+	void process_paragraph_nested_body_unicode(const HugeString& text, size_t pos) {
+		if (text[pos] == -128) { /* Skip */ }
+		else if (text[pos] == -96) { /* Skip */ }
+		else if (text[pos] == -90) { append_paragraph('.'); append_paragraph('.'); append_paragraph('.'); tag = Tag::paragraph_body; }
+		else if (text[pos] == -99) { append_paragraph('"'); tag = Tag::paragraph_body; }
+		else if (text[pos] == -100) { append_paragraph('"'); tag = Tag::paragraph_body; }
+		else if (text[pos] == -103) { append_paragraph('\''); tag = Tag::paragraph_body; }
+		else if (text[pos] == -108) { append_paragraph('-'); tag = Tag::paragraph_body; }
+		else if (text[pos] == -109) { append_paragraph('-'); tag = Tag::paragraph_body; }
+		else { append_paragraph(text[pos]); tag = Tag::paragraph_body; }
+	}
 	void process_paragraph_nested_body(const HugeString& text, size_t pos) {
 		if (text[pos] == '<') { tag = Tag::paragraph_nested_footer; }
+		else if (text[pos] == -30) { tag = Tag::paragraph_nested_body_unicode; }
+		else if (text[pos] == -62) { tag = Tag::paragraph_nested_body_unicode; }
 		else if (text[pos] == '\n') { append_paragraph(' '); }
 		else if (text[pos] == 13/*CR*/) { append_paragraph(' '); }
 		else if (text[pos] == '\t') { append_paragraph(' '); }
@@ -91,11 +105,13 @@ class Html {
 	}
 	void process_paragraph_body_unicode(const HugeString& text, size_t pos) {
 		if (text[pos] == -128) { /* Skip */ }
+		else if (text[pos] == -96) { /* Skip */ }
 		else if (text[pos] == -90) { append_paragraph('.'); append_paragraph('.'); append_paragraph('.'); tag = Tag::paragraph_body; }
 		else if (text[pos] == -99) { append_paragraph('"'); tag = Tag::paragraph_body; }
 		else if (text[pos] == -100) { append_paragraph('"'); tag = Tag::paragraph_body; }
 		else if (text[pos] == -103) { append_paragraph('\''); tag = Tag::paragraph_body; }
 		else if (text[pos] == -108) { append_paragraph('-'); tag = Tag::paragraph_body; }
+		else if (text[pos] == -109) { append_paragraph('-'); tag = Tag::paragraph_body; }
 		else { append_paragraph(text[pos]); tag = Tag::paragraph_body; }
 	}
 	void process_paragraph_body(const HugeString& text, size_t pos) {
@@ -106,6 +122,7 @@ class Html {
 		else if (text.substr(pos, 4) == SmallString("<a >")) { tag = Tag::paragraph_nested_header; }
 		else if (text[pos] == '<') { print_paragraph(); tag = Tag::paragraph_footer; }
 		else if (text[pos] == -30) { tag = Tag::paragraph_body_unicode; }
+		else if (text[pos] == -62) { tag = Tag::paragraph_body_unicode; }
 		else if (text[pos] == '\n') { append_paragraph(' '); }
 		else if (text[pos] == 13/*CR*/) { append_paragraph(' '); }
 		else if (text[pos] == '\t') { append_paragraph(' '); }
@@ -145,6 +162,7 @@ class Html {
 			case Tag::paragraph_footer: process_paragraph_footer(text, pos); break;
 			case Tag::paragraph_nested_header: process_paragraph_nested_header(text, pos); break;
 			case Tag::paragraph_nested_body: process_paragraph_nested_body(text, pos); break;
+			case Tag::paragraph_nested_body_unicode: process_paragraph_nested_body_unicode(text, pos); break;
 			case Tag::paragraph_nested_footer: process_paragraph_nested_footer(text, pos); break;
 		}
 	}
