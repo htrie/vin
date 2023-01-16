@@ -199,19 +199,22 @@ class App {
 			break;
 		}
 		case WM_MOVE:
-		case WM_SETREDRAW:
+		case WM_MOVING:
+		case WM_KILLFOCUS:
 		case WM_SETFOCUS: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
 			}
 			break;
 		}
+		case WM_SETREDRAW:
 		case WM_PAINT: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->redraw();
 			}
 			break;
 		}
+		case WM_SIZING:
 		case WM_SIZE: {
 			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_maximized(wParam == SIZE_MAXIMIZED);
