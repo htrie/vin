@@ -76,7 +76,7 @@ constexpr bool is_punctuation(char c) { return
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' ||
-	c == '?' || c == '"' || c == '\'';
+	c == '?' || c == '"' || c == '#' || c == '\'';
 }
 
 bool is_code_extension(const PathString& filename) {
