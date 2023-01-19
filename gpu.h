@@ -772,7 +772,7 @@ class Device {
 		vk::UniqueDescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
-		FontGlyphs glyphs;
+		Array<FontGlyph, 128> glyphs;
 	};
 	Font font;
 
@@ -792,21 +792,21 @@ class Device {
 	unsigned width = 0;
 	unsigned height = 0;
 
-	void upload_font(const vk::CommandBuffer& cmd_buf) {
+	void upload_font(const vk::CommandBuffer& cmd_buf, unsigned font_width, unsigned font_height, const Array<FontGlyph, 128>& font_glyphs, const uint8_t* font_pixels_data, size_t font_pixels_size) {
 		sampler = create_sampler(device.get());
 		font.width = font_width;
 		font.height = font_height;
 		font.glyphs = font_glyphs;
 		font.image = create_image(gpu, device.get(), font_width, font_height);
 		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
-		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels, sizeof(font_pixels), font_width);
+		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels_data, font_pixels_size, font_width);
 		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image.get());
 		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
 	}
 
-	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
+	const FontGlyph* find_glyph(const Array<FontGlyph, 128>& glyphs, uint16_t id) {
 		for (auto& glyph : glyphs) {
 			if (glyph.id == id)
 				return &glyph;
@@ -914,7 +914,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font.image) upload_font(cmd);
+		if (!font.image) upload_font(cmd, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);

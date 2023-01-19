@@ -1,3 +1,5 @@
+use font name with size
+font sizes
 better actual parser
 support &nbsp
 support nested <a> tag

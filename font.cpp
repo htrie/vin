@@ -215,10 +215,8 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	out << "		: id(id), x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}" << std::endl;
 	out << "};" << std::endl;
 	out << std::endl;
-	out << "typedef Array<FontGlyph, 128> FontGlyphs;" << std::endl;
-	out << std::endl;
 
-	out << "const FontGlyphs " << font_filename << "_glyphs  = {" << std::endl;
+	out << "const Array<FontGlyph, 128> " << font_filename << "_glyphs  = {" << std::endl;
 	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
 		const auto& c = fnt.chars.values[i];
 		out << "\t{ " << c.id << ", " <<
@@ -243,8 +241,6 @@ void process(const std::string_view font_filename) {
 }
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
-	process("font_regular");
-	process("font_bold");
-	process("font_italic");
+	process("font_20");
 	return 0;
 }
