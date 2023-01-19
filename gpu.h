@@ -815,8 +815,9 @@ class Device {
 	}
 
 	void pick_font(const vk::CommandBuffer& cmd_buf) {
-		//upload_font(cmd_buf, 9.0f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
-		upload_font(cmd_buf, 18.0f, 40.0f, font_40_width, font_40_height, font_40_glyphs, font_40_pixels, sizeof(font_40_pixels));
+		const auto dpi = get_window_dpi(hWnd);
+		if (dpi <= 96) upload_font(cmd_buf, 9.0f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		else upload_font(cmd_buf, 18.0f, 40.0f, font_40_width, font_40_height, font_40_glyphs, font_40_pixels, sizeof(font_40_pixels));
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {

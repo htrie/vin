@@ -64,6 +64,11 @@ void resize_window(HWND hWnd, int dw, int dh) {
 	}
 }
 
+unsigned get_window_dpi(HWND hWnd) {
+	const auto dpi = GetDpiForWindow(hWnd);
+	return dpi == 0 ? 96 : dpi;
+}
+
 
 class Timer {
 	LARGE_INTEGER frequency;
