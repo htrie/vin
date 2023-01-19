@@ -22,6 +22,7 @@ const unsigned version_minor = 8;
 #include "win.h"
 #include "matrix.h"
 #include "font_20.h"
+#include "font_40.h"
 #include "config.h"
 #include "html.h"
 #include "index.h"

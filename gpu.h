@@ -770,9 +770,11 @@ class Device {
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
 		vk::UniqueDescriptorSet descriptor_set;
+		float col_size = 1.0f;
+		float row_size = 1.0f;
 		unsigned width = 0;
 		unsigned height = 0;
-		Array<FontGlyph, 128> glyphs;
+		FontGlyphs glyphs;
 	};
 	Font font;
 
@@ -792,8 +794,14 @@ class Device {
 	unsigned width = 0;
 	unsigned height = 0;
 
-	void upload_font(const vk::CommandBuffer& cmd_buf, unsigned font_width, unsigned font_height, const Array<FontGlyph, 128>& font_glyphs, const uint8_t* font_pixels_data, size_t font_pixels_size) {
+	void upload_font(const vk::CommandBuffer& cmd_buf,
+		float font_col_size, float font_row_size, 
+		unsigned font_width, unsigned font_height, 
+		const FontGlyphs& font_glyphs,
+		const uint8_t* font_pixels_data, size_t font_pixels_size) {
 		sampler = create_sampler(device.get());
+		font.col_size = font_col_size;
+		font.row_size = font_row_size;
 		font.width = font_width;
 		font.height = font_height;
 		font.glyphs = font_glyphs;
@@ -806,7 +814,12 @@ class Device {
 		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
 	}
 
-	const FontGlyph* find_glyph(const Array<FontGlyph, 128>& glyphs, uint16_t id) {
+	void pick_font(const vk::CommandBuffer& cmd_buf) {
+		//upload_font(cmd_buf, 9.0f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		upload_font(cmd_buf, 18.0f, 40.0f, font_40_width, font_40_height, font_40_glyphs, font_40_pixels, sizeof(font_40_pixels));
+	}
+
+	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
 		for (auto& glyph : glyphs) {
 			if (glyph.id == id)
 				return &glyph;
@@ -832,8 +845,8 @@ class Device {
 				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width),
-					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height),
+					spacing().zoom * (character.col * spacing().character * font.col_size + glyph.x_off * font.width),
+					spacing().zoom * (character.row * spacing().line * font.row_size + glyph.y_off * font.height),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -914,7 +927,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font.image) upload_font(cmd, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		if (!font.image) pick_font(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
@@ -934,8 +947,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / (spacing().zoom * spacing().character)),
-			(unsigned)((float)height / (spacing().zoom * spacing().line)) - 1 // Remove 1 line for half-lines.
+			(unsigned)((float)width / (spacing().zoom * spacing().character * font.col_size)),
+			(unsigned)((float)height / (spacing().zoom * spacing().line * font.row_size)) - 1 // Remove 1 line for half-lines.
 		};
 	}
 
