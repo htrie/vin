@@ -169,6 +169,7 @@ class Html {
 
 public:
 	HugeString process(const HugeString& text) {
+		// TODO: Better parser.
 		for (size_t i = 0; i < text.size(); ++i) {
 			process_chars(text, i);
 		}

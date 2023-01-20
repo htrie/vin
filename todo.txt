@@ -1,5 +1,4 @@
-use font name with size
-font sizes
 better actual parser
+add archive.org to link blacklist
 support &nbsp
 support nested <a> tag
