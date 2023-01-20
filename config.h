@@ -58,8 +58,8 @@ HSB& hsb() {
 
 
 struct Spacing {
-	float character = 1.0f;
-	float line = 1.0f;
+	float character = 0.9f;
+	float line = 1.1f;
 	float zoom = 1.0f;
 
 	SmallString increase_char_width() { character = clamp(character + 0.01f, 0.0f, 2.0f); return SmallString("char_width = ") + SmallString(character); }
