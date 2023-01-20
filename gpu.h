@@ -816,9 +816,9 @@ class Device {
 	void pick_font(const vk::CommandBuffer& cmd_buf) {
 		const auto dpi = get_window_dpi(hWnd);
 		if (dpi <= 96) upload_font(cmd_buf, 10.0f * 0.9f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
-		else if (dpi <= 96) upload_font(cmd_buf, 11.0f * 0.9f, 22.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
-		else if (dpi <= 120) upload_font(cmd_buf, 12.0f * 0.9f, 24.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
-		else if (dpi <= 144) upload_font(cmd_buf, 13.0f * 0.9f, 26.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
+		else if (dpi <= 120) upload_font(cmd_buf, 11.0f * 0.9f, 22.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		else if (dpi <= 144) upload_font(cmd_buf, 12.0f * 0.9f, 24.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
+		else if (dpi <= 168) upload_font(cmd_buf, 13.0f * 0.9f, 26.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
 		else /*if (dpi <= 192)*/ upload_font(cmd_buf, 14.0f * 0.9f, 28.0f, font_28_width, font_28_height, font_28_glyphs, font_28_pixels, sizeof(font_28_pixels));
 	}
 
