@@ -763,9 +763,8 @@ class Device {
 	vk::UniquePipelineLayout pipeline_layout;
 	vk::UniquePipeline pipeline;
 
-    vk::UniqueSampler sampler;
-
 	struct Font {
+		vk::UniqueSampler sampler;
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
@@ -799,29 +798,28 @@ class Device {
 		unsigned font_width, unsigned font_height, 
 		const FontGlyphs& font_glyphs,
 		const uint8_t* font_pixels_data, size_t font_pixels_size) {
-		sampler = create_sampler(device.get());
 		font.col_size = font_col_size;
 		font.row_size = font_row_size;
 		font.width = font_width;
 		font.height = font_height;
 		font.glyphs = font_glyphs;
+		font.sampler = create_sampler(device.get());
 		font.image = create_image(gpu, device.get(), font_width, font_height);
 		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
 		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels_data, font_pixels_size, font_width);
 		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image.get());
 		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), font.image_view.get());
+		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), font.sampler.get(), font.image_view.get());
 	}
 
 	void pick_font(const vk::CommandBuffer& cmd_buf) {
 		const auto dpi = get_window_dpi(hWnd);
-		if (dpi <= 96) upload_font(cmd_buf, 9.0f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
-		else if (dpi <= 144) upload_font(cmd_buf, 10.8f, 24.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
-		else if (dpi <= 192) upload_font(cmd_buf, 12.6f, 28.0f, font_28_width, font_28_height, font_28_glyphs, font_28_pixels, sizeof(font_28_pixels));
-		else if (dpi <= 288) upload_font(cmd_buf, 14.4f, 32.0f, font_32_width, font_32_height, font_32_glyphs, font_32_pixels, sizeof(font_32_pixels));
-		else if (dpi <= 384) upload_font(cmd_buf, 16.2f, 36.0f, font_36_width, font_36_height, font_36_glyphs, font_36_pixels, sizeof(font_36_pixels));
-		else upload_font(cmd_buf, 18.0f, 40.0f, font_40_width, font_40_height, font_40_glyphs, font_40_pixels, sizeof(font_40_pixels));
+		if (dpi <= 96) upload_font(cmd_buf, 10.0f * 0.9f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		else if (dpi <= 96) upload_font(cmd_buf, 11.0f * 0.9f, 22.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
+		else if (dpi <= 120) upload_font(cmd_buf, 12.0f * 0.9f, 24.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
+		else if (dpi <= 144) upload_font(cmd_buf, 13.0f * 0.9f, 26.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
+		else /*if (dpi <= 192)*/ upload_font(cmd_buf, 14.0f * 0.9f, 28.0f, font_28_width, font_28_height, font_28_glyphs, font_28_pixels, sizeof(font_28_pixels));
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
