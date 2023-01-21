@@ -43,32 +43,12 @@ enum Glyph {
 	UNKNOWN = 9633,
 };
 
-Vec3 hsv_to_rgb(float H, float S, float V) {
-  const float C = V * S; // Chroma
-  const float HPrime = fmod(H / 60.0f, 6.0f);
-  const float X = C * (1.0f - fabs(fmod(HPrime, 2.0f) - 1.0f));
-  const float M = V - C;
-  
-  float R, G, B;
-  if(0.0f <= HPrime && HPrime < 1.0f) { R = C; G = X; B = 0.0f; } 
-  else if(1.0f <= HPrime && HPrime < 2.0f) { R = X; G = C; B = 0.0f; } 
-  else if(2.0f <= HPrime && HPrime < 3.0f) { R = 0.0f; G = C; B = X; } 
-  else if(3.0f <= HPrime && HPrime < 4.0f) { R = 0.0f; G = X; B = C; } 
-  else if(4.0f <= HPrime && HPrime < 5.0f) { R = X; G = 0.0f; B = C; } 
-  else if(5.0f <= HPrime && HPrime < 6.0f) { R = C; G = 0.0f; B = X; } 
-  else { R = 0.0f; G = 0.0f; B = 0.0f; }
-  
-  R += M; G += M; B += M;
-  return Vec3(R, G, B);
-}
-
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
 constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 constexpr bool is_lowercase_letter(uint16_t c) { return (c >= 'a' && c <= 'z'); }
 constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
-constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
 constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
 constexpr bool is_punctuation(char c) { return 
@@ -88,8 +68,8 @@ bool is_code_extension(const PathString& filename) {
 }
 
 Color bracket_color(unsigned nesting) {
-	const auto h = fmod(hsb().hue_start + (float)nesting * 40.0f, hsb().hue_range); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
-	const auto rgb = hsv_to_rgb(h, hsb().saturation, hsb().brightness);
+	const auto h = fmod((float)nesting * 40.0f, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
+	const auto rgb = hsv_to_rgb(h, 0.8f, 0.8f);
 	return Color::rgba(
 		unsigned(rgb.x * 255.0f),
 		unsigned(rgb.y * 255.0f),
@@ -223,34 +203,6 @@ public:
 
 	bool check_class(const HugeString& text) const {
 		return is_uppercase_letter(text[start]);
-	}
-
-	float generate_channel(const HugeString& text, unsigned offset) const {
-		const size_t len = finish - start;
-		if (len < offset) return 0.0f;
-		const char c = text[start + offset];
-		if (c == '_') return 1.0f;
-		if (!is_letter(c)) return 1.0f;
-		const unsigned a = std::tolower(c);
-		return (float)(a - 'a') / 26.0f; 
-	}
-
-	Color generate_color(const HugeString& text) const {
-		const auto x = generate_channel(text, 0);
-		const auto y = generate_channel(text, 1);
-		const auto z = generate_channel(text, 2);
-		const auto i = generate_channel(text, 4);
-		const auto j = generate_channel(text, 5);
-		const auto k = generate_channel(text, 6);
-		const auto rand0 = (x * 1000.0f + y * 100.0f + z * 10.0f) / 1000.0f;
-		const auto rand1 = (i * 1000.0f + j * 100.0f + k * 10.0f) / 1000.0f;
-		const auto h = std::fmod(hsb().hue_start + rand0 * hsb().hue_range + rand1 * hsb().hue_adjust, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
-		const auto rgb = hsv_to_rgb(h, hsb().saturation, hsb().brightness);
-		return Color::rgba(
-			unsigned(rgb.x * 255.0f),
-			unsigned(rgb.y * 255.0f),
-			unsigned(rgb.z * 255.0f),
-			255u);
 	}
 };
 
@@ -1519,13 +1471,12 @@ class Buffer {
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
-		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
+		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
 		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
 		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
-		else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {

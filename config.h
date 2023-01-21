@@ -1,59 +1,33 @@
 #pragma once
 
+uint8_t channel(float c) { return (uint8_t)clamp(c, 0.0f, 255.0f); }
+
+Color base_color(float f) { return Color::rgba(channel(244.0f * f), channel(240.0f * f), channel(222.0f * f), 255); }
+Color text_color(float f) { return Color::rgba(channel(68.0f * f), channel(68.0f * f), channel(68.0f * f), 255); }
+
 struct Colors {
-	Color clear = Color::rgba(32, 32, 18, 255);
-	Color overlay = Color::rgba(31, 52, 69, 255);
-	Color cursor = Color::rgba(255, 255, 0, 255);
-	Color cursor_line = Color::rgba(65, 80, 29, 255);
-	Color whitespace = Color::rgba(11, 32, 42, 255);
-	Color text = Color::rgba(200, 200, 200, 255);
-	Color text_cursor = Color::rgba(5, 5, 5, 255);
-	Color line_number = Color::rgba(75, 100, 121, 255);
-	Color column_indicator = Color::rgba(37, 37, 23, 255);
-	Color highlight = Color::rgba(192, 0, 192, 255);
-	Color diff_note = Color::rgba(255, 192, 0, 255);
-	Color diff_add = Color::rgba(0, 192, 0, 255);
-	Color diff_remove = Color::rgba(192, 0, 0, 255);
-	Color keyword = Color::rgba(199, 146, 234, 255);
-	Color clas = Color::rgba(180, 180, 180, 255);
-	Color comment = Color::rgba(255, 255, 0, 255);
-	Color url = Color::rgba(0, 128, 255, 255);
-	Color punctuation = Color::rgba(127, 219, 202, 255);
-	Color quote = Color::rgba(247, 140, 108, 255);
+	Color clear = base_color(1.0f);
+	Color column_indicator = base_color(0.99f);
+	Color cursor_line = base_color(0.9f);
+	Color cursor = base_color(0.5f);
+	Color highlight = base_color(0.7f);
+	Color overlay = base_color(0.8f);
+	Color whitespace = base_color(1.0f);
+	Color text = text_color(1.0f);
+	Color text_cursor = text_color(4.0f);
+	Color keyword = text_color(0.5f);
+	Color clas = text_color(0.75f);
+	Color punctuation = text_color(1.2f);
+	Color line_number = text_color(1.4f);
+	Color comment = text_color(1.5f);
+	Color diff_note = text_color(1.8f);
+	Color diff_add = text_color(1.0f);
+	Color diff_remove = text_color(2.4f);
 };
 
 Colors& colors() {
 	static Colors colors;
 	return colors;
-}
-
-
-struct HSB {
-	float hue_start = 0.0f;
-	float hue_range = 360.0f;
-	float hue_adjust = 45.0f;
-	float saturation = 0.50f;
-	float brightness = 0.85f;
-
-	SmallString increase_hue_start() { hue_start = clamp(hue_start + 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + SmallString(hue_start); }
-	SmallString decrease_hue_start() { hue_start = clamp(hue_start - 5.0f, 0.0f, 360.0f); return SmallString("hue_start = ") + SmallString(hue_start); }
-
-	SmallString increase_hue_range() { hue_range = clamp(hue_range + 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + SmallString(hue_range); }
-	SmallString decrease_hue_range() { hue_range = clamp(hue_range - 5.0f, 0.0f, 360.0f); return SmallString("hue_range = ") + SmallString(hue_range); }
-
-	SmallString increase_hue_adjust() { hue_adjust = clamp(hue_adjust + 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + SmallString(hue_adjust); }
-	SmallString decrease_hue_adjust() { hue_adjust = clamp(hue_adjust - 5.0f, 0.0f, 360.0f); return SmallString("hue_adjust = ") + SmallString(hue_adjust); }
-
-	SmallString increase_saturation() { saturation = clamp(saturation + 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + SmallString(saturation); }
-	SmallString decrease_saturation() { saturation = clamp(saturation - 0.05f, 0.0f, 1.0f); return SmallString("saturation = ") + SmallString(saturation); }
-
-	SmallString increase_brightness() { brightness = clamp(brightness + 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + SmallString(brightness); }
-	SmallString decrease_brightness() { brightness = clamp(brightness - 0.05f, 0.0f, 1.0f); return SmallString("brightness = ") + SmallString(brightness); }
-};
-
-HSB& hsb() {
-	static HSB hsb;
-	return hsb;
 }
 
 

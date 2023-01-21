@@ -121,16 +121,6 @@ class App {
 		else if (key == '_') { resize_window(device.get_hwnd(), 0, -40); }
 		else if (key == '=') { resize_window(device.get_hwnd(), 40, 0); }
 		else if (key == '+') { resize_window(device.get_hwnd(), -40, 0); }
-		else if (key == '1') { notify(hsb().decrease_hue_start()); }
-		else if (key == '2') { notify(hsb().increase_hue_start()); }
-		else if (key == '3') { notify(hsb().decrease_hue_range()); }
-		else if (key == '4') { notify(hsb().increase_hue_range()); }
-		else if (key == '5') { notify(hsb().decrease_hue_adjust()); }
-		else if (key == '6') { notify(hsb().increase_hue_adjust()); }
-		else if (key == '7') { notify(hsb().decrease_saturation()); }
-		else if (key == '8') { notify(hsb().increase_saturation()); }
-		else if (key == '9') { notify(hsb().decrease_brightness()); }
-		else if (key == '0') { notify(hsb().increase_brightness()); }
 		else if (key == '[') { notify(spacing().decrease_char_width()); }
 		else if (key == ']') { notify(spacing().increase_char_width()); }
 		else if (key == '{') { notify(spacing().decrease_char_height()); }

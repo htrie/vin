@@ -1,4 +1,1 @@
-better actual parser
-add archive.org to link blacklist
-support &nbsp
-support nested <a> tag
+use bold/italic fonts
