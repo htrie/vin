@@ -1,1 +1,2 @@
-
+better use of dark background color like in ref image
+status bar?

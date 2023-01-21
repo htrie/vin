@@ -248,7 +248,7 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, 1024, 768) {
+		: device(proc, hInstance, 1280, 960) {
 		show_window(device.get_hwnd(), nCmdShow);
 	}
 
