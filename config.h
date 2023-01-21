@@ -20,7 +20,7 @@ struct Colors {
 	Color punctuation = text_color(1.2f);
 	Color number = text_color(1.0f);
 	Color line_number = text_color(1.4f);
-	Color comment = text_color(1.5f);
+	Color comment = text_color(2.0f);
 	Color diff_note = text_color(1.0f);
 	Color diff_add = text_color(1.0f);
 	Color diff_remove = text_color(2.4f);
