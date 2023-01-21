@@ -1472,7 +1472,7 @@ class Buffer {
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0) { push_column_indicator(characters, row, 100);}
+					if (col == 0) { push_column_indicator(characters, row, 80);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (state().test(index, highlight)) { push_highlight(characters, row, col); }
@@ -1490,6 +1490,36 @@ class Buffer {
 			}
 			index++;
 		}
+	}
+
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
+		characters.emplace_back((uint16_t)c, color, row, col, bold);
+	};
+
+	void push_string(Characters& characters, unsigned row, unsigned col, const SmallString& s, bool bold, Color color) const {
+		for (auto& c : s) {
+			push_char(characters, row, col++, c, bold, color);
+		}
+	}
+
+	void push_line(Characters& characters, float row, unsigned col_count, Color color) const {
+		for (unsigned i = 0; i <= col_count; ++i) {
+			characters.emplace_back(Glyph::BLOCK, color, row, float(i));
+			characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
+		}
+	}
+
+	size_t location_percentage() const {
+		if (const auto size = get_size())
+			return 1 + state().get_cursor() * 100 / size;
+		return 0;
+	}
+
+	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
+		push_line(characters, float(row_count), col_count, colors().text);
+		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
+		push_string(characters, row_count, 0, filename + (is_dirty() ? "*" : ""), true, colors().clear);
+		push_string(characters, row_count, 80, SmallString(location_percentage()) + "%", true, colors().clear);
 	}
 
 	void init(const HugeString& text) {
@@ -1536,6 +1566,7 @@ public:
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_text(characters, col_count, row_count);
+		push_status(characters, col_count, row_count);
 	}
 
 	void jump(size_t position, unsigned row_count) { state().set_cursor(position); state().cursor_center(row_count); } 
@@ -1549,12 +1580,6 @@ public:
 	Mode get_mode() const { return mode; }
 
 	SmallString get_word() const { return state().get_word(); }
-
-	size_t location_percentage() const {
-		if (const auto size = get_size())
-			return 1 + state().get_cursor() * 100 / size;
-		return 0;
-	}
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }

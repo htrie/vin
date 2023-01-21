@@ -1,3 +1,4 @@
 bottom status bar
 display name on left
 display location at 100 col
+replace HugeString with std::string

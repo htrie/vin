@@ -61,11 +61,8 @@ class App {
 
 	SmallString status() {
 		return SmallString("Vin ") + 
-			SmallString(version_major) + "." + SmallString(version_minor) + " " +
-			SmallString(switcher.current().get_filename()) + 
-			(switcher.current().is_dirty() ? "*" : "") + "  " +
-			SmallString(switcher.current().location_percentage()) + "%  " +
-			notification.c_str();
+			SmallString(version_major) + "." + SmallString(version_minor) +
+			"          " + notification.c_str();
 	}
 
 	Characters cull() {
@@ -109,8 +106,8 @@ class App {
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'o') { switcher.current().state().window_up(row_count); }
-		else if (key == 'i') { switcher.current().state().window_down(row_count); }
+		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
+		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
@@ -128,7 +125,7 @@ class App {
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		switcher.current().process(clipboard, key, col_count, row_count);
+		switcher.current().process(clipboard, key, col_count, row_count - 1);
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
@@ -156,7 +153,7 @@ class App {
 		case Menu::switcher: process_switcher(key, viewport.w, viewport.h); break;
 		case Menu::finder: process_finder(key, viewport.w, viewport.h); break;
 		}
-		switcher.current().state().cursor_clamp(viewport.h);
+		switcher.current().state().cursor_clamp(viewport.h - 1);
 	}
 
 	void update(bool space_down) {
