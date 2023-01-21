@@ -147,38 +147,6 @@ struct Character {
 const size_t CharacterMaxCount = 8192;
 typedef Array<Character, CharacterMaxCount> Characters;
 
-class Url{
-	size_t start = 0;
-	size_t finish = 0;
-
-	bool test(const HugeString& text, size_t pos) {
-		if (pos < text.size()) {
-			return is_number(text[pos]) || is_letter(text[pos]) || is_punctuation(text[pos]);
-		}
-		return false;
-	}
-
-public:
-	Url(const HugeString& text, size_t pos) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
-			start = pos;
-			finish = pos;
-			while(test(text, finish + 1)) { finish++; }
-			while(test(text, start - 1)) { start--; }
-			verify(start <= finish);
-			if (!text.substr(start, 4).starts_with("http"))
-				start = finish = 0; // Reset.
-		}
-	}
-
-	bool valid() const { return start < finish; }
-	bool contains(size_t pos) const { return start <= pos && pos <= finish; }
-
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
-};
-
 class Word {
 	size_t start = 0;
 	size_t finish = 0;
@@ -533,13 +501,6 @@ public:
 		if (res != c) {
 			text[cursor] = res;
 		}
-	}
-
-	PathString get_url() const {
-		const Url current(text, cursor);
-		if (!is_whitespace(text[current.begin()]))
-			return text.substr(current.begin(), current.end() - current.begin() + 1);
-		return "";
 	}
 
 	SmallString get_word() const {
@@ -1539,9 +1500,7 @@ class Buffer {
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
 		const Line line(state().get_text(), index);
-		const Url url(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (url.valid() && url.contains(index)) { characters.emplace_back((uint16_t)c, colors().url, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
@@ -1608,9 +1567,6 @@ class Buffer {
 			map(filename, [&](const char* mem, size_t size) {
 				text = HugeString(mem, size);
 			});
-			if (text.empty()) {
-				text = Html().process(request(filename));
-			}
 		}
 		return text;
 	}
@@ -1656,7 +1612,6 @@ public:
 
 	Mode get_mode() const { return mode; }
 
-	PathString get_url() const { return state().get_url(); }
 	SmallString get_word() const { return state().get_word(); }
 
 	size_t location_percentage() const {

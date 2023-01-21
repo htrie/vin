@@ -2,7 +2,6 @@ const unsigned version_major = 0;
 const unsigned version_minor = 8;
 
 #pragma comment(lib, "dwmapi.lib")
-#pragma comment(lib, "Wininet.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 #define NOMINMAX
@@ -14,7 +13,6 @@ const unsigned version_minor = 8;
 #include <stdio.h>
 #include <stdlib.h>
 #include <dwmapi.h>
-#include <wininet.h>
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
@@ -27,7 +25,6 @@ const unsigned version_minor = 8;
 #include "font_26.h"
 #include "font_28.h"
 #include "config.h"
-#include "html.h"
 #include "index.h"
 #include "text.h"
 #include "gpu.h"
@@ -112,7 +109,6 @@ class App {
 		else if (key == 'e') { notify(index.populate()); picker.reset(); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'l') { menu = Menu::finder; }
-		else if (key == 'u') { notify(switcher.load(switcher.current().get_url())); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count); }
