@@ -1597,7 +1597,7 @@ public:
 		filtered.clear();
 		pattern = pattern.tolower();
 		index.process([&](const auto& path) {
-			if (filtered.size() > row_count - 2)
+			if (filtered.size() > row_count - 1)
 				return false;
 			if (path.tolower().find(pattern) != SmallString::npos)
 				filtered.push_back(path.c_str());
@@ -1842,7 +1842,7 @@ public:
 	void filter(const Database& database, unsigned row_count) {
 		filtered.clear();
 		database.process([&](const auto& file, const auto& location) {
-			if (filtered.size() > row_count - 2)
+			if (filtered.size() > row_count - 1)
 				return false;
 			map(file.name, [&](const char* mem, size_t size) {
 				const auto context = SmallString(&mem[location.position], min((size_t)60, size - location.position));
