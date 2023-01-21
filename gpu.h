@@ -104,7 +104,7 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
 }
 
 vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
-	Array<vk::DescriptorSetLayoutBinding, 2> const layout_bindings = {
+	Array<vk::DescriptorSetLayoutBinding, 4> const layout_bindings = {
 		vk::DescriptorSetLayoutBinding()
 		   .setBinding(0)
 		   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -113,6 +113,18 @@ vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device)
 		   .setPImmutableSamplers(nullptr),
 		vk::DescriptorSetLayoutBinding()
 			.setBinding(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+			.setPImmutableSamplers(nullptr),
+		vk::DescriptorSetLayoutBinding()
+			.setBinding(2)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+			.setPImmutableSamplers(nullptr),
+		vk::DescriptorSetLayoutBinding()
+			.setBinding(3)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(1)
 			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -574,18 +586,29 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
 	return std::move(handles.value[0]);
 }
 
-void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range, const vk::Sampler& sampler, const vk::ImageView& image_view) {
+void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range,
+	const vk::Sampler& sampler0, const vk::ImageView& image_view0,
+	const vk::Sampler& sampler1, const vk::ImageView& image_view1,
+	const vk::Sampler& sampler2, const vk::ImageView& image_view2) {
 	const auto buffer_info = vk::DescriptorBufferInfo()
 		.setOffset(0)
 		.setRange(range)
 		.setBuffer(buffer);
 
-    const auto image_info = vk::DescriptorImageInfo()
-        .setSampler(sampler)
-        .setImageView(image_view)
-        .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	const auto image_info0 = vk::DescriptorImageInfo()
+		.setSampler(sampler0)
+		.setImageView(image_view0)
+		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	const auto image_info1 = vk::DescriptorImageInfo()
+		.setSampler(sampler1)
+		.setImageView(image_view1)
+		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	const auto image_info2 = vk::DescriptorImageInfo()
+		.setSampler(sampler2)
+		.setImageView(image_view2)
+		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-	const Array<vk::WriteDescriptorSet, 2> writes = {
+	const Array<vk::WriteDescriptorSet, 4> writes = {
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -594,8 +617,20 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setPImageInfo(&image_info)
+			.setPImageInfo(&image_info0)
 			.setDstBinding(1)
+			.setDstSet(desc_set),
+		vk::WriteDescriptorSet()
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setPImageInfo(&image_info1)
+			.setDstBinding(2)
+			.setDstSet(desc_set),
+		vk::WriteDescriptorSet()
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setPImageInfo(&image_info2)
+			.setDstBinding(3)
 			.setDstSet(desc_set) };
 
 	device.updateDescriptorSets((uint32_t)writes.size(), writes.data(), 0, nullptr);
@@ -739,6 +774,7 @@ struct Uniforms {
 	Vec4 color[CharacterMaxCount];
 	Vec4 uv_origin[CharacterMaxCount];
 	Vec4 uv_sizes[CharacterMaxCount];
+	Vec4 font_index[CharacterMaxCount];
 };
 
 struct Viewport {
@@ -760,6 +796,7 @@ class Device {
 	vk::UniqueDescriptorPool desc_pool;
 	vk::UniqueRenderPass render_pass;
 	vk::UniqueDescriptorSetLayout desc_layout;
+	vk::UniqueDescriptorSet descriptor_set;
 	vk::UniquePipelineLayout pipeline_layout;
 	vk::UniquePipeline pipeline;
 
@@ -768,7 +805,6 @@ class Device {
 		vk::UniqueImage image;
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
-		vk::UniqueDescriptorSet descriptor_set;
 		unsigned width = 0;
 		unsigned height = 0;
 		FontGlyphs glyphs;
@@ -806,14 +842,17 @@ class Device {
 		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels_data, font_pixels_size, font_width);
 		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, font.image.get());
-		font.descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), font.sampler.get(), font.image_view.get());
 	}
 
 	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
 		upload_font(cmd_buf, font_regular, font_regular_width, font_regular_height, font_regular_glyphs, font_regular_pixels, sizeof(font_regular_pixels));
 		upload_font(cmd_buf, font_bold, font_bold_width, font_bold_height, font_bold_glyphs, font_bold_pixels, sizeof(font_bold_pixels));
 		upload_font(cmd_buf, font_italic, font_italic_width, font_italic_height, font_italic_glyphs, font_italic_pixels, sizeof(font_italic_pixels));
+		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
+		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms),
+ 			font_regular.sampler.get(), font_regular.image_view.get(),
+ 			font_bold.sampler.get(), font_bold.image_view.get(),
+ 			font_italic.sampler.get(), font_italic.image_view.get());
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -836,7 +875,7 @@ class Device {
 
 		unsigned index = 0;
 
-		const auto add = [&](const auto& font, const auto& character, const auto& glyph) {
+		const auto add = [&](const auto& font, float font_index, const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
 				{ spacing().zoom * glyph.w * font.width, 0.0f, 0.0f, 0.0f },
 				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
@@ -849,15 +888,17 @@ class Device {
 			uniforms.color[index] = character.color.rgba();
 			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
 			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
+			uniforms.font_index[index] = { font_index, 0.0f, 0.0f, 0.0f };
 			index++;
 		};
 
 		for (auto& character : characters) {
-			const auto& font = font_regular;//character.bold ? font_bold : character.italic ? font_italic : font_regular;
+			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
+			const float font_index = character.bold ? 1.0f : character.italic ? 2.0f : 0.0f;
 			const auto* glyph = find_glyph(font.glyphs, character.index);
 			if (glyph == nullptr)
 				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
-			add(font, character, *glyph);
+			add(font, font_index, character, *glyph);
 		}
 
 		return index;
@@ -932,7 +973,7 @@ public:
 		set_scissor(cmd, width, height);
 
 		bind_pipeline(cmd, pipeline.get());
-		bind_descriptor_set(cmd, pipeline_layout.get(), font_regular.descriptor_set.get());
+		bind_descriptor_set(cmd, pipeline_layout.get(), descriptor_set.get());
 
 		draw(cmd, 6, accumulate_uniforms(characters));
 

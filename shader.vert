@@ -27,13 +27,16 @@ layout (binding = 0) uniform Uniforms {
 	vec4 color[8192];
 	vec4 uv_origin[8192];
 	vec4 uv_sizes[8192];
+	vec4 font_index[8192];
 } uniforms;
 
 layout (location = 0) out vec2 uv;
 layout (location = 1) out vec4 color;
+layout (location = 2) out float font;
 
 void main() {
 	gl_Position = uniforms.view_proj * uniforms.model[gl_InstanceIndex] * vec4(vertices[gl_VertexIndex], -1.0f, 1.0f);
 	uv = uniforms.uv_origin[gl_InstanceIndex].xy + uvs[gl_VertexIndex] * uniforms.uv_sizes[gl_InstanceIndex].xy;
 	color = uniforms.color[gl_InstanceIndex];
+	font = uniforms.font_index[gl_InstanceIndex].r;
 }

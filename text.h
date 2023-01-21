@@ -68,6 +68,7 @@ bool is_code_extension(const PathString& filename) {
 }
 
 Color bracket_color(unsigned nesting) {
+	return colors().punctuation; // Skip HSV for now.
 	const auto h = fmod((float)nesting * 40.0f, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
 	const auto rgb = hsv_to_rgb(h, 0.8f, 0.8f);
 	return Color::rgba(
@@ -1460,7 +1461,7 @@ class Buffer {
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
@@ -1477,6 +1478,7 @@ class Buffer {
 		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
 		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
+		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
@@ -1587,13 +1589,13 @@ class Picker {
 	Array<PathString, 64> filtered;
 	unsigned selected = 0; 
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
-		characters.emplace_back((uint16_t)c, colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold) const {
+		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c);
+			push_char(characters, row, col++, c, bold);
 		}
 	}
 
@@ -1647,8 +1649,8 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_string(characters, row, col, "open: ");
-		push_string(characters, row, col, pattern);
+		push_string(characters, row, col, "open: ", true);
+		push_string(characters, row, col, pattern, false);
 		push_cursor(characters, row, col);
 		row++;
 
@@ -1657,7 +1659,7 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row++, col, path);
+			push_string(characters, row++, col, path, false);
 			displayed++;
 		}
 	}
@@ -1676,13 +1678,13 @@ class Switcher {
 		return longest;
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c) const {
-		characters.emplace_back((uint16_t)c, colors().text, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold) const {
+		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c);
+			push_char(characters, row, col++, c, bold);
 		}
 	}
 
@@ -1802,9 +1804,9 @@ public:
 			push_background_line(characters, row, left_col, right_col);
 			if (i == active)
 				push_cursor_line(characters, row, left_col, right_col);
-			push_string(characters, row, col, buffers[i].get_filename());
+			push_string(characters, row, col, buffers[i].get_filename(), buffers[i].is_dirty());
 			if (buffers[i].is_dirty()) 
-				push_string(characters, row, col, "*");
+				push_string(characters, row, col, "*", true);
 			row++;
 		}
 	}
@@ -1821,13 +1823,13 @@ class Finder {
 	Array<Entry, 64> filtered;
 	unsigned selected = 0; 
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color) const {
-		characters.emplace_back((uint16_t)c, color, row, col);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) const {
+		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, Color color = colors().text) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color = colors().text) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c, color);
+			push_char(characters, row, col++, c, color, bold);
 		}
 	}
 
@@ -1895,8 +1897,8 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_string(characters, row, col, "find: ");
-		push_string(characters, row, col, pattern);
+		push_string(characters, row, col, "find: ", true);
+		push_string(characters, row, col, pattern, false);
 		push_cursor(characters, row, col);
 		row++;
 
@@ -1905,8 +1907,8 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_cursor_line(characters, row, col_count);
-			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ");
-			push_string(characters, row, col, entry.context, colors().comment);
+			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ", true);
+			push_string(characters, row, col, entry.context, false, colors().comment);
 			row++;
 			displayed++;
 		}

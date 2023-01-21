@@ -7,20 +7,21 @@ Color text_color(float f) { return Color::rgba(channel(68.0f * f), channel(68.0f
 
 struct Colors {
 	Color clear = base_color(1.0f);
-	Color column_indicator = base_color(0.99f);
+	Color column_indicator = base_color(0.97f);
+	Color overlay = base_color(0.95f);
 	Color cursor_line = base_color(0.9f);
 	Color cursor = base_color(0.5f);
-	Color highlight = base_color(0.7f);
-	Color overlay = base_color(0.8f);
+	Color highlight = base_color(0.8f);
 	Color whitespace = base_color(1.0f);
 	Color text = text_color(1.0f);
 	Color text_cursor = text_color(4.0f);
 	Color keyword = text_color(0.5f);
 	Color clas = text_color(0.75f);
 	Color punctuation = text_color(1.2f);
+	Color number = text_color(1.0f);
 	Color line_number = text_color(1.4f);
 	Color comment = text_color(1.5f);
-	Color diff_note = text_color(1.8f);
+	Color diff_note = text_color(1.0f);
 	Color diff_add = text_color(1.0f);
 	Color diff_remove = text_color(2.4f);
 };
