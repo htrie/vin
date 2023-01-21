@@ -1565,24 +1565,24 @@ class Picker {
 	Array<PathString, 64> filtered;
 	unsigned selected = 0; 
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold) const {
-		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
+		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c, bold);
+			push_char(characters, row, col++, c, bold, color);
 		}
 	}
 
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+	void push_line(Characters& characters, unsigned row, unsigned col_count, Color color) const {
 		for (unsigned i = 0; i < col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, color, row, i);
+			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
+	void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) const {
 		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
 	};
 
@@ -1625,17 +1625,18 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_string(characters, row, col, "open: ", true);
-		push_string(characters, row, col, pattern, false);
-		push_cursor(characters, row, col);
+		push_line(characters, row, col_count, colors().text);
+		push_string(characters, row, col, "open: ", true, colors().clear);
+		push_string(characters, row, col, pattern, false, colors().clear);
+		push_cursor(characters, row, col, colors().clear);
 		row++;
 
 		unsigned displayed = 0;
 		for (auto& path : filtered) {
 			col = 0;
 			if (selected == displayed)
-				push_cursor_line(characters, row, col_count);
-			push_string(characters, row++, col, path, false);
+				push_line(characters, row, col_count, colors().cursor_line);
+			push_string(characters, row++, col, path, false, colors().text);
 			displayed++;
 		}
 	}
@@ -1808,21 +1809,21 @@ class Finder {
 		characters.emplace_back(index, final_color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color = colors().text) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, color, bold);
 		}
 	}
 
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
+	void push_line(Characters& characters, unsigned row, unsigned col_count, Color color) const {
 		for (unsigned i = 0; i < col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, color, row, i);
+			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
+	void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) const {
+		characters.emplace_back(Glyph::LINE, color, row, col);
 	};
 
 public:
@@ -1878,17 +1879,18 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_string(characters, row, col, "find: ", true);
-		push_string(characters, row, col, pattern, false);
-		push_cursor(characters, row, col);
+		push_line(characters, row, col_count, colors().text);
+		push_string(characters, row, col, "find: ", true, colors().clear);
+		push_string(characters, row, col, pattern, false, colors().clear);
+		push_cursor(characters, row, col, colors().clear);
 		row++;
 
 		unsigned displayed = 0;
 		for (auto& entry : filtered) {
 			col = 0;
 			if (selected == displayed)
-				push_cursor_line(characters, row, col_count);
-			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ", true);
+				push_line(characters, row, col_count, colors().cursor_line);
+			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ", true, colors().text);
 			push_string(characters, row, col, entry.context, false, colors().comment);
 			row++;
 			displayed++;
