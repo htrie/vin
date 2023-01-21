@@ -8,8 +8,8 @@ struct Colors {
 	Color whitespace = Color::rgba(11, 32, 42, 255);
 	Color text = Color::rgba(200, 200, 200, 255);
 	Color text_cursor = Color::rgba(5, 5, 5, 255);
-	Color long_line = Color::rgba(255, 0, 0, 255);
 	Color line_number = Color::rgba(75, 100, 121, 255);
+	Color column_indicator = Color::rgba(37, 37, 23, 255);
 	Color highlight = Color::rgba(192, 0, 192, 255);
 	Color diff_note = Color::rgba(255, 192, 0, 255);
 	Color diff_add = Color::rgba(0, 192, 0, 255);

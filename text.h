@@ -1471,6 +1471,11 @@ class Buffer {
 		}
 	};
 
+	void push_column_indicator(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col);
+		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, float(row) + 0.5f, float(col)); // Fill in gaps.
+	};
+
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
@@ -1512,7 +1517,6 @@ class Buffer {
 		const Line line(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (col > 120) { characters.emplace_back((uint16_t)c, colors().long_line, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, word.generate_color(state().get_text()), row, col); }
@@ -1536,6 +1540,7 @@ class Buffer {
 			if (is_closing(c)) nesting--;
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
+					if (col == 0) { push_column_indicator(characters, row, 120);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (state().test(index, highlight)) { push_highlight(characters, row, col); }

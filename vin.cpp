@@ -116,7 +116,7 @@ class App {
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
-		else if (key == 'm') { ShowWindow(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
+		else if (key == 'm') { show_window(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
 		else if (key == '-') { resize_window(device.get_hwnd(), 0, 40); }
 		else if (key == '_') { resize_window(device.get_hwnd(), 0, -40); }
 		else if (key == '=') { resize_window(device.get_hwnd(), 40, 0); }
@@ -261,7 +261,7 @@ class App {
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, 1024, 768) {
-		ShowWindow(device.get_hwnd(), nCmdShow);
+		show_window(device.get_hwnd(), nCmdShow);
 	}
 
 	void notify(const SmallString& s) {

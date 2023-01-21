@@ -55,6 +55,10 @@ void destroy_window(HWND hWnd) {
 	DestroyWindow(hWnd);
 }
 
+void show_window(HWND hWnd, int nCmdShow) {
+	ShowWindow(hWnd, nCmdShow);
+}
+
 void resize_window(HWND hWnd, int dw, int dh) {
 	RECT rect;
 	if (GetWindowRect(hWnd, &rect)) {
