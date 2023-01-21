@@ -49,8 +49,6 @@ constexpr bool is_lowercase_letter(uint16_t c) { return (c >= 'a' && c <= 'z'); 
 constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
-constexpr bool is_opening(char c) { return c == '[' || c == '{' || c == '('; }
-constexpr bool is_closing(char c) { return c == ']' || c == '}' || c == ')'; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
@@ -65,17 +63,6 @@ bool is_code_extension(const PathString& filename) {
 	if (filename.ends_with(".c")) return true;
 	if (filename.ends_with(".h")) return true;
 	return false;
-}
-
-Color bracket_color(unsigned nesting) {
-	return colors().punctuation; // Skip HSV for now.
-	const auto h = fmod((float)nesting * 40.0f, 360.0f); // [0:60:120:180:240:300:360] (red-yellow-green-cyan-blue-magenta-red)
-	const auto rgb = hsv_to_rgb(h, 0.8f, 0.8f);
-	return Color::rgba(
-		unsigned(rgb.x * 255.0f),
-		unsigned(rgb.y * 255.0f),
-		unsigned(rgb.z * 255.0f),
-		255u);
 }
 
 static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
@@ -1458,7 +1445,7 @@ class Buffer {
 		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
 	};
 
-	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
+	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
@@ -1467,16 +1454,13 @@ class Buffer {
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
-	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index, unsigned nesting) const {
+	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Word word(state().get_text(), index);
-		const Line line(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true, false); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
-		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
-		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
@@ -1490,9 +1474,7 @@ class Buffer {
 		unsigned index = 0;
 		unsigned row = 0;
 		unsigned col = 0;
-		unsigned nesting = 0;
 		for (auto& c : state().get_text()) {
-			if (is_closing(c)) nesting--;
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
 					if (col == 0) { push_column_indicator(characters, row, 120);}
@@ -1503,15 +1485,14 @@ class Buffer {
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
-					else if (is_code) { push_char_code(characters, row, col, c, index, nesting); col++; }
-					else { push_char_text(characters, row, col, c, index, nesting); col++; }
+					else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
+					else { push_char_text(characters, row, col, c, index); col++; }
 				} else {
 					if (c == '\n') { absolute_row++; row++; col = 0; }
 				}
 			} else {
 				if (c == '\n') { absolute_row++; }
 			}
-			if (is_opening(c)) nesting++;
 			index++;
 		}
 	}
