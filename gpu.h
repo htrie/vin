@@ -986,8 +986,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / (spacing().zoom * spacing().character)),
-			(unsigned)((float)height / (spacing().zoom * spacing().line)) - 1 // Remove 1 line for half-lines.
+			(unsigned)((float)width / (spacing().zoom * spacing().character) - 0.5f),
+			(unsigned)((float)height / (spacing().zoom * spacing().line) - 0.5f)
 		};
 	}
 
