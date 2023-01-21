@@ -1458,8 +1458,8 @@ class Buffer {
 		const Word word(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
-		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true, false); }
+		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col, false, true); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
