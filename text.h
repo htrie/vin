@@ -1477,7 +1477,7 @@ class Buffer {
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0) { push_column_indicator(characters, row, 120);}
+					if (col == 0) { push_column_indicator(characters, row, 100);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (state().test(index, highlight)) { push_highlight(characters, row, col); }
@@ -1805,7 +1805,12 @@ class Finder {
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) const {
-		characters.emplace_back((uint16_t)c, color, row, col, bold);
+		const uint16_t index = 
+			c == '\t' ? (uint16_t)Glyph::TABSIGN :
+			c == '\n' ? (uint16_t)Glyph::RETURN :
+			(uint16_t)c;
+		const auto final_color = c == '\t' || c == '\n' ? colors().whitespace : color;
+		characters.emplace_back(index, final_color, row, col, bold);
 	};
 
 	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color = colors().text) const {
