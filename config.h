@@ -14,7 +14,7 @@ struct Colors {
 	Color highlight = base_color(0.8f);
 	Color whitespace = base_color(1.0f);
 	Color text = text_color(1.0f);
-	Color text_cursor = text_color(4.0f);
+	Color text_cursor = base_color(1.0f);
 	Color keyword = text_color(0.5f);
 	Color clas = text_color(0.75f);
 	Color punctuation = text_color(1.2f);
