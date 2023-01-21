@@ -32,8 +32,8 @@ Colors& colors() {
 
 
 struct Spacing {
-	float character = 14.4f;
-	float line = 33.0f;
+	float character = 13.0f;
+	float line = 32.0f;
 	float zoom = 1.0f;
 
 	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 20.0f); return SmallString("char_width = ") + SmallString(character); }

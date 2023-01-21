@@ -836,14 +836,14 @@ class Device {
 
 		unsigned index = 0;
 
-		const auto add = [&](const auto& character, const auto& glyph) {
+		const auto add = [&](const auto& font, const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ spacing().zoom * glyph.w * font_regular.width, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, spacing().zoom * glyph.h * font_regular.height, 0.0f, 0.0f },
+				{ spacing().zoom * glyph.w * font.width, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character + glyph.x_off * font_regular.width),
-					spacing().zoom * (character.row * spacing().line + glyph.y_off * font_regular.height),
+					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width),
+					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -853,10 +853,11 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			const auto* glyph = find_glyph(font_regular.glyphs, character.index);
+			const auto& font = font_regular;//character.bold ? font_bold : character.italic ? font_italic : font_regular;
+			const auto* glyph = find_glyph(font.glyphs, character.index);
 			if (glyph == nullptr)
-				glyph = find_glyph(font_regular.glyphs, Glyph::UNKNOWN);
-			add(character, *glyph);
+				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
+			add(font, character, *glyph);
 		}
 
 		return index;

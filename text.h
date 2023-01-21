@@ -116,12 +116,14 @@ struct Character {
 	Color color = Color::rgba(255, 0, 0, 255);
 	float row = 0.0f;
 	float col = 0.0f;
+	bool bold = false;
+	bool italic = false;
 
 	Character() {}
-	Character(uint16_t index, Color color, float row, float col)
-		: index(index), color(color), row(row), col(col) {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col)
-		: index(index), color(color), row((float)row), col((float)col) {}
+	Character(uint16_t index, Color color, float row, float col, bool bold = false, bool italic = false)
+		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, bool italic = false)
+		: index(index), color(color), row((float)row), col((float)col), bold(bold), italic(italic) {}
 };
 
 const size_t CharacterMaxCount = 8192;
@@ -1470,11 +1472,11 @@ class Buffer {
 		const Comment comment(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
-		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true, false); }
 		else if (word.check_class(state().get_text())) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
-		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
-		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		else if (is_opening(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
+		else if (is_closing(c)) { characters.emplace_back((uint16_t)c, bracket_color(nesting), row, col, true); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
