@@ -769,13 +769,13 @@ class Device {
 		vk::UniqueDeviceMemory image_memory;
 		vk::UniqueImageView image_view;
 		vk::UniqueDescriptorSet descriptor_set;
-		float col_size = 1.0f;
-		float row_size = 1.0f;
 		unsigned width = 0;
 		unsigned height = 0;
 		FontGlyphs glyphs;
 	};
-	Font font;
+	Font font_regular;
+	Font font_bold;
+	Font font_italic;
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -793,13 +793,10 @@ class Device {
 	unsigned width = 0;
 	unsigned height = 0;
 
-	void upload_font(const vk::CommandBuffer& cmd_buf,
-		float font_col_size, float font_row_size, 
+	void upload_font(const vk::CommandBuffer& cmd_buf, Font& font,
 		unsigned font_width, unsigned font_height, 
 		const FontGlyphs& font_glyphs,
 		const uint8_t* font_pixels_data, size_t font_pixels_size) {
-		font.col_size = font_col_size;
-		font.row_size = font_row_size;
 		font.width = font_width;
 		font.height = font_height;
 		font.glyphs = font_glyphs;
@@ -813,13 +810,10 @@ class Device {
 		update_descriptor_set(device.get(), font.descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), font.sampler.get(), font.image_view.get());
 	}
 
-	void pick_font(const vk::CommandBuffer& cmd_buf) {
-		const auto dpi = get_window_dpi(hWnd);
-		if (dpi <= 96) upload_font(cmd_buf, 10.0f, 20.0f, font_20_width, font_20_height, font_20_glyphs, font_20_pixels, sizeof(font_20_pixels));
-		else if (dpi <= 120) upload_font(cmd_buf, 11.0f, 22.0f, font_22_width, font_22_height, font_22_glyphs, font_22_pixels, sizeof(font_22_pixels));
-		else if (dpi <= 144) upload_font(cmd_buf, 12.0f, 24.0f, font_24_width, font_24_height, font_24_glyphs, font_24_pixels, sizeof(font_24_pixels));
-		else if (dpi <= 168) upload_font(cmd_buf, 13.0f, 26.0f, font_26_width, font_26_height, font_26_glyphs, font_26_pixels, sizeof(font_26_pixels));
-		else /*if (dpi <= 192)*/ upload_font(cmd_buf, 14.0f, 28.0f, font_28_width, font_28_height, font_28_glyphs, font_28_pixels, sizeof(font_28_pixels));
+	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
+		upload_font(cmd_buf, font_regular, font_regular_width, font_regular_height, font_regular_glyphs, font_regular_pixels, sizeof(font_regular_pixels));
+		upload_font(cmd_buf, font_bold, font_bold_width, font_bold_height, font_bold_glyphs, font_bold_pixels, sizeof(font_bold_pixels));
+		upload_font(cmd_buf, font_italic, font_italic_width, font_italic_height, font_italic_glyphs, font_italic_pixels, sizeof(font_italic_pixels));
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -844,12 +838,12 @@ class Device {
 
 		const auto add = [&](const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ spacing().zoom * glyph.w * font.width, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
+				{ spacing().zoom * glyph.w * font_regular.width, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, spacing().zoom * glyph.h * font_regular.height, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character * font.col_size + glyph.x_off * font.width),
-					spacing().zoom * (character.row * spacing().line * font.row_size + glyph.y_off * font.height),
+					spacing().zoom * (character.col * spacing().character + glyph.x_off * font_regular.width),
+					spacing().zoom * (character.row * spacing().line + glyph.y_off * font_regular.height),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -859,9 +853,9 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			const auto* glyph = find_glyph(font.glyphs, character.index);
+			const auto* glyph = find_glyph(font_regular.glyphs, character.index);
 			if (glyph == nullptr)
-				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
+				glyph = find_glyph(font_regular.glyphs, Glyph::UNKNOWN);
 			add(character, *glyph);
 		}
 
@@ -930,14 +924,14 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font.image) pick_font(cmd);
+		if (!font_regular.image) upload_fonts(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
 		set_scissor(cmd, width, height);
 
 		bind_pipeline(cmd, pipeline.get());
-		bind_descriptor_set(cmd, pipeline_layout.get(), font.descriptor_set.get());
+		bind_descriptor_set(cmd, pipeline_layout.get(), font_regular.descriptor_set.get());
 
 		draw(cmd, 6, accumulate_uniforms(characters));
 
@@ -950,8 +944,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / (spacing().zoom * spacing().character * font.col_size)),
-			(unsigned)((float)height / (spacing().zoom * spacing().line * font.row_size)) - 1 // Remove 1 line for half-lines.
+			(unsigned)((float)width / (spacing().zoom * spacing().character)),
+			(unsigned)((float)height / (spacing().zoom * spacing().line)) - 1 // Remove 1 line for half-lines.
 		};
 	}
 
