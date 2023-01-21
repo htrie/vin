@@ -1576,7 +1576,7 @@ class Picker {
 	}
 
 	void push_line(Characters& characters, unsigned row, unsigned col_count, Color color) const {
-		for (unsigned i = 0; i < col_count; ++i) {
+		for (unsigned i = 0; i <= col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);
 			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
@@ -1816,7 +1816,7 @@ class Finder {
 	}
 
 	void push_line(Characters& characters, unsigned row, unsigned col_count, Color color) const {
-		for (unsigned i = 0; i < col_count; ++i) {
+		for (unsigned i = 0; i <= col_count; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);
 			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
