@@ -1822,7 +1822,7 @@ public:
 		unsigned row = top_row;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			col = left_col;
-			push_line(characters, row, left_col, right_col, i == active ? colors().text : colors().overlay);
+			push_line(characters, row, left_col, right_col + 1, i == active ? colors().text : colors().overlay);
 			const auto name = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
 			push_string(characters, row, col, name, buffers[i].is_dirty(), i == active ? colors().overlay : colors().text);
 			row++;
