@@ -57,7 +57,7 @@ constexpr bool is_punctuation(char c) { return
 	c == '?' || c == '"' || c == '#' || c == '\'';
 }
 
-bool is_code_extension(const PathString& filename) {
+bool is_code_extension(const std::string& filename) {
 	if (filename.ends_with(".cpp")) return true;
 	if (filename.ends_with(".hpp")) return true;
 	if (filename.ends_with(".c")) return true;
@@ -94,6 +94,12 @@ static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
 	{ }
 };
 
+std::string to_lower(const std::string_view s) {
+	auto res = std::string(s);
+	std::transform(res.begin(), res.end(), res.begin(), [](const auto c){ return std::tolower(c); });
+	return res;
+}
+
 static unsigned compute_letter_index(const uint16_t c) {
 	if (c >= 'a' && c <= 'z') return c - 'a';
 	return (unsigned)-1;
@@ -125,21 +131,21 @@ class Word {
 	bool has_whitespace = false;
 	bool has_punctuation = false;
 
-	bool test_letter_or_number(const HugeString& text, size_t pos) {
+	bool test_letter_or_number(const std::string& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_number(text[pos]) || is_letter(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_whitespace(const HugeString& text, size_t pos) {
+	bool test_whitespace(const std::string& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_line_whitespace(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_punctuation(const HugeString& text, size_t pos) {
+	bool test_punctuation(const std::string& text, size_t pos) {
 		if (pos < text.size()) {
 			return is_punctuation(text[pos]);
 		}
@@ -147,7 +153,7 @@ class Word {
 	}
 
 public:
-	Word(const HugeString& text, size_t pos) {
+	Word(const std::string& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -179,10 +185,10 @@ public:
 	bool check_punctuation() const { return has_punctuation; }
 	bool check_whitespace() const { return has_whitespace; }
 
-	bool check_keyword(const HugeString& text) const {
+	bool check_keyword(const std::string& text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
 			const auto& keywords = cpp_keywords[letter_index];
-			const SmallString word(text.substr(start, finish - start + 1));
+			const std::string word(text.substr(start, finish - start + 1));
 			for (const auto& keyword : keywords) {
 				if (strcmp(word.data(), keyword) == 0)
 					return true;
@@ -196,7 +202,7 @@ class Enclosure {
 	size_t start = 0;
 	size_t finish = 0;
 
-	size_t find_prev(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_prev(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -205,10 +211,10 @@ class Enclosure {
 			if (count > 0)
 				index--;
 		}
-		return count == 0 ? index : SmallString::npos;
+		return count == 0 ? index : std::string::npos;
 	}
 
-	size_t find_next(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_next(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = text[pos] == left ? pos + 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -217,20 +223,20 @@ class Enclosure {
 			if (count > 0)
 				index++;
 		}
-		return count == 0 ? index : SmallString::npos;
+		return count == 0 ? index : std::string::npos;
 	}
 
 public:
-	Enclosure(const HugeString& text, size_t pos, uint16_t left, uint16_t right) {
+	Enclosure(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
 			finish = pos;
 			const auto prev = find_prev(text, pos, left, right);
 			const auto next = find_next(text, pos, left, right);
-			if (prev != SmallString::npos && next != SmallString::npos) {
-				start = prev != SmallString::npos ? prev : pos;
-				finish = next != SmallString::npos ? next : pos;
+			if (prev != std::string::npos && next != std::string::npos) {
+				start = prev != std::string::npos ? prev : pos;
+				finish = next != std::string::npos ? next : pos;
 			}
 			verify(start <= finish);
 		}
@@ -247,32 +253,32 @@ class Line {
 	size_t finish = 0;
 
 public:
-	Line(const HugeString& text, size_t pos) {
+	Line(const std::string& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
-			start = pn != SmallString::npos ? (pn < pos ? pn + 1 : pn) : 0;
-			finish = nn != SmallString::npos ? nn : text.size() - 1;
+			start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
+			finish = nn != std::string::npos ? nn : text.size() - 1;
 			verify(start <= finish);
 		}
 	}
 
 	size_t to_relative(size_t pos) const {
-		verify(pos != SmallString::npos);
+		verify(pos != std::string::npos);
 		verify(pos >= start && pos <= finish);
 		return pos - start;
 	}
 
 	size_t to_absolute(size_t pos) const {
-		verify(pos != SmallString::npos);
+		verify(pos != std::string::npos);
 		return min(start + pos, finish);
 	}
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
 
-	bool check_string(const HugeString& text, const SmallString& s) const {
+	bool check_string(const std::string& text, const std::string& s) const {
 		if (start + s.size() <= text.size())
 			return strncmp(&text[start], s.data(), s.size()) == 0;
 		return false;
@@ -284,15 +290,15 @@ class Comment {
 	size_t finish = 0;
 
 public:
-	Comment(const HugeString& text, size_t pos) {
+	Comment(const std::string& text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
-			const auto n = text.find_range("//", pn != HugeString::npos ? pn : 0, nn != HugeString::npos ? nn : text.size() - 1);
-			if (n != SmallString::npos) {
+			const auto n = text.find("//", pn != std::string::npos ? pn : 0, nn != std::string::npos ? nn : text.size() - 1);
+			if (n != std::string::npos) {
 				start = n;
-				finish = nn != SmallString::npos ? nn : text.size() - 1;
+				finish = nn != std::string::npos ? nn : text.size() - 1;
 				verify(start <= finish);
 			}
 		}
@@ -303,13 +309,13 @@ public:
 };
 
 class State {
-	HugeString text;
+	std::string text;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
 
 public:
-	const HugeString& get_text() const { return text; }
-	void set_text(const HugeString& t) { text = t; }
+	const std::string& get_text() const { return text; }
+	void set_text(const std::string& t) { text = t; }
 
 	size_t get_cursor() const { return cursor; }
 	void set_cursor(size_t u) { cursor = u; }
@@ -322,7 +328,7 @@ public:
 	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
 
-	bool test(size_t index, const SmallString& s) const {
+	bool test(size_t index, const std::string& s) const {
 		if (index + s.size() <= text.size())
 			return strncmp(&text[index], s.data(), s.size()) == 0;
 		return false;
@@ -349,7 +355,7 @@ public:
 			}
 			if (found) return pos;
 		}
-		return SmallString::npos;
+		return std::string::npos;
 	}
 
 	size_t rfind_char(unsigned key) {
@@ -364,41 +370,41 @@ public:
 			}
 			if (found) return pos;
 		}
-		return SmallString::npos;
+		return std::string::npos;
 	}
 
 	void line_find(unsigned key) {
-		if (const auto pos = find_char(key); pos != SmallString::npos) {
+		if (const auto pos = find_char(key); pos != std::string::npos) {
 			cursor = pos;
 		}
 	}
 
 	void line_rfind(unsigned key) {
-		if (const auto pos = rfind_char(key); pos != SmallString::npos) {
+		if (const auto pos = rfind_char(key); pos != std::string::npos) {
 			cursor = pos;
 		}
 	}
 
-	void word_find(const SmallString& s) {
-		if (const auto pos = text.find(s, cursor); pos != SmallString::npos) {
+	void word_find(const std::string& s) {
+		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && (cursor + 1 < text.size())) {
-				if (const auto pos = text.find(s, cursor + 1); pos != SmallString::npos) { cursor = pos; }
-				else if (const auto pos = text.find(s, 0); pos != SmallString::npos) { cursor = pos; }
+				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
-		else if (const auto pos = text.find(s, 0); pos != SmallString::npos) { cursor = pos; }
+		else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
 	}
 
-	void word_rfind(const SmallString& s) {
-		if (const auto pos = text.rfind(s, cursor); pos != SmallString::npos) {
+	void word_rfind(const std::string& s) {
+		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && cursor > 0) {
-				if (const auto pos = text.rfind(s, cursor - 1); pos != SmallString::npos) { cursor = pos; }
-				else if (const auto pos = text.rfind(s, text.size() - 1); pos != SmallString::npos) { cursor = pos; }
+				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
-		else if (const auto pos = text.rfind(s, text.size() - 1); pos != SmallString::npos) { cursor = pos; }
+		else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
 	}
 
 	void next_char() {
@@ -441,14 +447,14 @@ public:
 		}
 	}
 
-	SmallString get_word() const {
+	std::string get_word() const {
 		const Word current(text, cursor);
 		if (!is_whitespace(text[current.begin()]))
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
 		return "";
 	}
 
-	SmallString current_word() {
+	std::string current_word() {
 		const Word current(text, cursor);
 		if (is_whitespace(text[current.begin()])) {
 			const Word next = incr(current);
@@ -583,25 +589,25 @@ public:
 		}
 	}
 
-	HugeString yank_to(unsigned key) {
+	std::string yank_to(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != SmallString::npos) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
 				return text.substr(cursor, pos - cursor + 1);
 			}
 		}
 		return {};
 	}
 
-	HugeString yank_until(unsigned key) {
+	std::string yank_until(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != SmallString::npos) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
 				return text.substr(cursor, pos - cursor);
 			}
 		}
 		return {};
 	}
 
-	HugeString yank_line() {
+	std::string yank_line() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -609,21 +615,21 @@ public:
 		return {};
 	}
 
-	HugeString yank_all_up() {
+	std::string yank_all_up() {
 		if (text.size() > 0) {
 			return text.substr(0, cursor);
 		}
 		return {};
 	}
 
-	HugeString yank_all_down() {
+	std::string yank_all_down() {
 		if (text.size() > 0) {
 			return text.substr(cursor, text.size() - cursor);
 		}
 		return {};
 	}
 
-	HugeString yank_word() {
+	std::string yank_word() {
 		if (text.size() > 0) {
 			Word current(text, cursor);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -631,8 +637,8 @@ public:
 		return {};
 	}
 
-	HugeString yank_words(unsigned count) {
-		HugeString s;
+	std::string yank_words(unsigned count) {
+		std::string s;
 		if (text.size() > 0) {
 			Word current(text, cursor);
 			const size_t begin = cursor;
@@ -647,7 +653,7 @@ public:
 		return s;
 	}
 
-	HugeString yank_enclosure(uint16_t left, uint16_t right, bool inclusive) {
+	std::string yank_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
@@ -659,8 +665,8 @@ public:
 		return {};
 	}
 
-	HugeString yank_lines_down(unsigned count) {
-		HugeString s;
+	std::string yank_lines_down(unsigned count) {
+		std::string s;
 		if (text.size() > 0) {
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
@@ -674,8 +680,8 @@ public:
 		return s;
 	}
 
-	HugeString yank_lines_up(unsigned count) {
-		HugeString s;
+	std::string yank_lines_up(unsigned count) {
+		std::string s;
 		if (text.size() > 0) {
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
@@ -690,7 +696,7 @@ public:
 		return s;
 	}
 
-	void insert(const HugeString& s) {
+	void insert(const std::string& s) {
 		text.insert(cursor, s);
 		cursor = min(cursor + s.length(), text.size() - 1);
 	}
@@ -702,7 +708,7 @@ public:
 		}
 	}
 
-	HugeString erase() {
+	std::string erase() {
 		if (text.size() > 0) {
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
@@ -712,7 +718,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_if(char c) {
+	std::string erase_if(char c) {
 		if (text.size() > 0 && text[cursor] == c) {
 			const auto s = text.substr(cursor, 1);
 			text.erase(cursor, 1);
@@ -722,7 +728,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_all_up() {
+	std::string erase_all_up() {
 		if (text.size() > 0) {
 			const auto s = text.substr(0, cursor);
 			text.erase(0, cursor);
@@ -732,7 +738,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_all_down() {
+	std::string erase_all_down() {
 		if (text.size() > 0) {
 			const auto s = text.substr(cursor, text.size() - cursor);
 			text.erase(cursor, text.size() - cursor);
@@ -742,9 +748,9 @@ public:
 		return {};
 	}
 
-	HugeString erase_to(unsigned key) {
+	std::string erase_to(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != SmallString::npos) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor + 1);
 				text.erase(cursor, pos - cursor + 1);
 				return s;
@@ -753,9 +759,9 @@ public:
 		return {};
 	}
 
-	HugeString erase_until(unsigned key) {
+	std::string erase_until(unsigned key) {
 		if (text.size() > 0) {
-			if (const auto pos = find_char(key); pos != SmallString::npos) {
+			if (const auto pos = find_char(key); pos != std::string::npos) {
 				const auto s = text.substr(cursor, pos - cursor);
 				text.erase(cursor, pos - cursor);
 				return s;
@@ -764,7 +770,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_line() {
+	std::string erase_line() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
@@ -775,7 +781,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_line_contents() {
+	std::string erase_line_contents() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
@@ -786,7 +792,7 @@ public:
 		return {};
 	}
 
-	HugeString erase_to_line_end() {
+	std::string erase_to_line_end() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
 			const auto s = text.substr(cursor, current.end() - cursor);
@@ -797,16 +803,16 @@ public:
 		return {};
 	}
 
-	HugeString erase_lines_down(unsigned count) {
-		HugeString s;
+	std::string erase_lines_down(unsigned count) {
+		std::string s;
 		for (unsigned i = 0; i <= count; i++) {
 			s += erase_line();
 		}
 		return s;
 	}
 
-	HugeString erase_lines_up(unsigned count) {
-		HugeString s;
+	std::string erase_lines_up(unsigned count) {
+		std::string s;
 		bool first_line = false;
 		for (unsigned i = 0; i <= count; i++) {
 			if (first_line) break; // Don't erase twice.
@@ -817,7 +823,7 @@ public:
 		return s;
 	}
 
-	HugeString erase_word(bool from_cursor) {
+	std::string erase_word(bool from_cursor) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Word current(text, cursor);
 			const auto begin = from_cursor ? cursor : current.begin();
@@ -830,15 +836,15 @@ public:
 		return {};
 	}
 
-	HugeString erase_words(unsigned count) {
-		HugeString s;
+	std::string erase_words(unsigned count) {
+		std::string s;
 		for (unsigned i = 0; i < count; i++) {
 			s += erase_word(i == 0);
 		}
 		return s;
 	}
 
-	HugeString erase_enclosure(uint16_t left, uint16_t right, bool inclusive) {
+	std::string erase_enclosure(uint16_t left, uint16_t right, bool inclusive) {
 		if (text.size() > 0 && cursor < text.size()) {
 			const Enclosure current(text, cursor, left, right);
 			if (current.valid()) {
@@ -853,8 +859,8 @@ public:
 		return {};
 	}
 
-	void paste_before(const HugeString& s) {
-		if (s.find("\n") != SmallString::npos) {
+	void paste_before(const std::string& s) {
+		if (s.find("\n") != std::string::npos) {
 			line_start(); insert(s); prev_line();
 		}
 		else {
@@ -862,8 +868,8 @@ public:
 		}
 	}
 
-	void paste_after(const HugeString& s) {
-		if (s.find("\n") != SmallString::npos) {
+	void paste_after(const std::string& s) {
+		if (s.find("\n") != std::string::npos) {
 			next_line(); line_start(); insert(s); prev_line();
 		}
 		else {
@@ -950,8 +956,8 @@ public:
 	State& state() { return states.back(); }
 	const State& state() const { return states.back(); }
 
-	const HugeString& get_text() const { return states.back().get_text(); }
-	void set_text(const HugeString& t) { states.back().set_text(t); }
+	const std::string& get_text() const { return states.back().get_text(); }
+	void set_text(const std::string& t) { states.back().set_text(t); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }
@@ -993,8 +999,8 @@ class Buffer {
 	Array<unsigned, 64> temp_record;
 	bool repeat = false;
 
-	PathString filename;
-	SmallString highlight;
+	std::string filename;
+	std::string highlight;
 
 	unsigned accu = 0;
 
@@ -1039,7 +1045,7 @@ class Buffer {
 		end_record(key);
 	}
 
-	void replay(HugeString& clipboard, unsigned col_count, unsigned row_count) {
+	void replay(std::string& clipboard, unsigned col_count, unsigned row_count) {
 		const auto s = record; // Cache since process_key will modify it.
 		for (const auto& c : s) {
 			process_key(clipboard, c, col_count, row_count);
@@ -1107,7 +1113,7 @@ class Buffer {
 		state().cursor_center(row_count);
 	}
 
-	void process_key(HugeString& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
+	void process_key(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
 		if (mode != Mode::insert) {
 			stack.push();
 		}
@@ -1151,10 +1157,10 @@ class Buffer {
 		else if (key == Glyph::BS) { append_record(key); state().erase_back(); }
 		else if (key == Glyph::TAB) { append_record(key); state().insert("\t"); }
 		else if (key == Glyph::CR) { append_record(key); state().insert("\n"); }
-		else { append_record(key); state().insert(SmallString((char*)&key, 1)); }
+		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
-	void process_normal(HugeString& clipboard, unsigned key, unsigned row_count) {
+	void process_normal(std::string& clipboard, unsigned key, unsigned row_count) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
@@ -1241,9 +1247,9 @@ class Buffer {
 		else { state().line_rfind(key); f_key = key; char_forward = false; mode = Mode::normal; }
 	}
 
-	void process_normal_r(HugeString& clipboard, unsigned key) {
+	void process_normal_r(std::string& clipboard, unsigned key) {
 		if (key == Glyph::ESC) { mode = Mode::normal; }
-		else { end_record(key); clipboard = state().erase(); state().insert(SmallString((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
+		else { end_record(key); clipboard = state().erase(); state().insert(std::string((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
 	}
 
 	void process_normal_z(unsigned key, unsigned row_count) {
@@ -1253,7 +1259,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_y(HugeString& clipboard, unsigned key) {
+	void process_normal_y(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'y') { end_record(key); clipboard = state().yank_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().yank_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
@@ -1268,15 +1274,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_yf(HugeString& clipboard, unsigned key) {
+	void process_normal_yf(std::string& clipboard, unsigned key) {
 		end_record(key); clipboard = state().yank_to(key); mode = Mode::normal;
 	}
 
-	void process_normal_yt(HugeString& clipboard, unsigned key) {
+	void process_normal_yt(std::string& clipboard, unsigned key) {
 		end_record(key); clipboard = state().yank_until(key); mode = Mode::normal;
 	}
 
-	void process_normal_yi(HugeString& clipboard, unsigned key) {
+	void process_normal_yi(std::string& clipboard, unsigned key) {
 		if (key == 'w') { end_record(key); clipboard = state().yank_word(); mode = Mode::normal; }
 		else if (key == '(' || key == ')') { end_record(key); clipboard = state().yank_enclosure('(', ')', false); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().yank_enclosure('{', '}', false); mode = Mode::normal; }
@@ -1284,7 +1290,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_ya(HugeString& clipboard, unsigned key) {
+	void process_normal_ya(std::string& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clipboard = state().yank_enclosure('(', ')', true); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().yank_enclosure('{', '}', true); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clipboard = state().yank_enclosure('[', ']', true); mode = Mode::normal; }
@@ -1307,7 +1313,7 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_c(HugeString& clipboard, unsigned key) {
+	void process_normal_c(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clipboard = state().erase_line_contents(); accu = 0; mode = Mode::insert; }
 		else if (key == 'w') { append_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::insert; }
@@ -1322,15 +1328,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_cf(HugeString& clipboard, unsigned key) {
+	void process_normal_cf(std::string& clipboard, unsigned key) {
 		append_record(key); clipboard = state().erase_to(key); mode = Mode::insert;
 	}
 
-	void process_normal_ct(HugeString& clipboard, unsigned key) {
+	void process_normal_ct(std::string& clipboard, unsigned key) {
 		append_record(key); clipboard = state().erase_until(key); mode = Mode::insert;
 	}
 
-	void process_normal_ci(HugeString& clipboard, unsigned key) {
+	void process_normal_ci(std::string& clipboard, unsigned key) {
 		if (key == 'w') { append_record(key); clipboard = state().erase_word(false); mode = Mode::insert; }
 		else if (key == '(' || key == ')') { append_record(key); clipboard = state().erase_enclosure('(', ')', false); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clipboard = state().erase_enclosure('{', '}', false); mode = Mode::insert; }
@@ -1338,14 +1344,14 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_ca(HugeString& clipboard, unsigned key) {
+	void process_normal_ca(std::string& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { append_record(key); clipboard = state().erase_enclosure('(', ')', true); mode = Mode::insert; }
 		else if (key == '{' || key == '}') { append_record(key); clipboard = state().erase_enclosure('{', '}', true); mode = Mode::insert; }
 		else if (key == '[' || key == ']') { append_record(key); clipboard = state().erase_enclosure('[', ']', true); mode = Mode::insert; }
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_d(HugeString& clipboard, unsigned key) {
+	void process_normal_d(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'd') { end_record(key); clipboard = state().erase_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
@@ -1360,15 +1366,15 @@ class Buffer {
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_df(HugeString& clipboard, unsigned key) {
+	void process_normal_df(std::string& clipboard, unsigned key) {
 		end_record(key); clipboard = state().erase_to(key); mode = Mode::normal;
 	}
 
-	void process_normal_dt(HugeString& clipboard, unsigned key) {
+	void process_normal_dt(std::string& clipboard, unsigned key) {
 		end_record(key); clipboard = state().erase_until(key); mode = Mode::normal;
 	}
 
-	void process_normal_di(HugeString& clipboard, unsigned key) {
+	void process_normal_di(std::string& clipboard, unsigned key) {
 		if (key == 'w') { end_record(key); clipboard = state().erase_word(false); mode = Mode::normal; }
 		else if (key == '(' || key == ')') { end_record(key); clipboard = state().erase_enclosure('(', ')', false); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().erase_enclosure('{', '}', false); mode = Mode::normal; }
@@ -1376,7 +1382,7 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_da(HugeString& clipboard, unsigned key) {
+	void process_normal_da(std::string& clipboard, unsigned key) {
 		if (key == '(' || key == ')') { end_record(key); clipboard = state().erase_enclosure('(', ')', true); mode = Mode::normal; }
 		else if (key == '{' || key == '}') { end_record(key); clipboard = state().erase_enclosure('{', '}', true); mode = Mode::normal; }
 		else if (key == '[' || key == ']') { end_record(key); clipboard = state().erase_enclosure('[', ']', true); mode = Mode::normal; }
@@ -1496,7 +1502,7 @@ class Buffer {
 		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned col, const SmallString& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned col, const std::string& s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold, color);
 		}
@@ -1519,19 +1525,19 @@ class Buffer {
 		push_line(characters, float(row_count), col_count, colors().text);
 		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
 		push_string(characters, row_count, 0, filename + (is_dirty() ? "*" : ""), true, colors().clear);
-		push_string(characters, row_count, 80, SmallString(location_percentage()) + "%", true, colors().clear);
+		push_string(characters, row_count, 80, std::to_string(location_percentage()) + "%", true, colors().clear);
 	}
 
-	void init(const HugeString& text) {
+	void init(const std::string& text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
 	}
 
-	HugeString load() {
-		HugeString text;
+	std::string load() {
+		std::string text;
 		if (!filename.empty()) {
 			map(filename, [&](const char* mem, size_t size) {
-				text = HugeString(mem, size);
+				text = std::string(mem, size);
 			});
 		}
 		return text;
@@ -1539,7 +1545,7 @@ class Buffer {
 
 public:
 	Buffer() {}
-	Buffer(const PathString& filename)
+	Buffer(const std::string& filename)
 		: filename(filename)
 		, is_code(is_code_extension(filename)) {
 		init(load());
@@ -1559,7 +1565,7 @@ public:
 
 	void clear_highlight() { highlight.clear(); }
 
-	void process(HugeString& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
+	void process(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
 		process_key(clipboard, key, col_count, row_count);
 		if (repeat) { repeat = false; replay(clipboard, col_count, row_count); }
 	}
@@ -1574,27 +1580,27 @@ public:
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
 
-	const PathString& get_filename() const { return filename; }
+	const std::string& get_filename() const { return filename; }
 	size_t get_size() const { return state().get_text().size(); }
 
 	Mode get_mode() const { return mode; }
 
-	SmallString get_word() const { return state().get_word(); }
+	std::string get_word() const { return state().get_word(); }
 
 	bool is_normal() const { return mode == Mode::normal; }
 	bool is_dirty() const { return needs_save; }
 };
 
 class Picker {
-	SmallString pattern;
-	Array<PathString, 64> filtered;
+	std::string pattern;
+	Array<std::string, 64> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
 		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold, color);
 		}
@@ -1620,18 +1626,18 @@ public:
 
 	void filter(const Index& index, unsigned row_count) {
 		filtered.clear();
-		pattern = pattern.tolower();
+		pattern = to_lower(pattern);
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 1)
 				return false;
-			if (path.tolower().find(pattern) != SmallString::npos)
+			if (to_lower(path).find(pattern) != std::string::npos)
 				filtered.push_back(path.c_str());
 			return true;
 		});
 		selected = min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	PathString selection() const {
+	std::string selection() const {
 		if (selected < filtered.size())
 			return filtered[selected];
 		return {};
@@ -1684,7 +1690,7 @@ class Switcher {
 		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold);
 		}
@@ -1704,7 +1710,7 @@ class Switcher {
 		}
 	}
 
-	size_t find_buffer(const PathString& filename) {
+	size_t find_buffer(const std::string& filename) {
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			if (buffers[i].get_filename() == filename)
 				return i;
@@ -1713,50 +1719,50 @@ class Switcher {
 	}
 
 public:
-	SmallString load(const PathString& filename) {
+	std::string load(const std::string& filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
-				return SmallString("switch ") + SmallString(filename);
+				return std::string("switch ") + std::string(filename);
 			}
 			else if (!buffers.full()) {
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
-				return SmallString("load ") + SmallString(buffers[active].get_filename()) + " (" + SmallString(buffers[active].get_size()) + " bytes) in " + timer.us();
+				return std::string("load ") + std::string(buffers[active].get_filename()) + " (" + std::to_string(buffers[active].get_size()) + " bytes) in " + timer.us();
 			}
 			else {
-				return SmallString("too many files open");
+				return std::string("too many files open");
 			}
 		}
 		return {};
 	}
 
-	SmallString reload() {
+	std::string reload() {
 		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].reload();
-			return SmallString("reload ") + SmallString(buffers[active].get_filename()) + " in " + timer.us();
+			return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
 		}
 		return {};
 	}
 
-	SmallString save() {
+	std::string save() {
 		if (active != (size_t)-1) {
 			const Timer timer;
 			buffers[active].save();
-			return SmallString("save ") + SmallString(buffers[active].get_filename()) + " (" + SmallString(buffers[active].get_size()) + " bytes) in " + timer.us();
+			return std::string("save ") + std::string(buffers[active].get_filename()) + " (" + std::to_string(buffers[active].get_size()) + " bytes) in " + timer.us();
 		}
 		return {};
 	}
 
-	SmallString close() {
+	std::string close() {
 		if (active != (size_t)-1) {
 			const Timer timer;
-			const auto filename = SmallString(buffers[active].get_filename());
+			const auto filename = std::string(buffers[active].get_filename());
 			buffers.erase(buffers.begin() + active);
 			select_previous();
-			return SmallString("close ") + filename + " in " + timer.us();
+			return std::string("close ") + filename + " in " + timer.us();
 		}
 		return {};
 	}
@@ -1816,12 +1822,12 @@ public:
 
 class Finder {
 	struct Entry {
-		PathString filename;
+		std::string filename;
 		size_t position;
-		SmallString context;
+		std::string context;
 	};
 
-	SmallString pattern;
+	std::string pattern;
 	Array<Entry, 64> filtered;
 	unsigned selected = 0; 
 
@@ -1834,7 +1840,7 @@ class Finder {
 		characters.emplace_back(index, final_color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const SmallString& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, color, bold);
 		}
@@ -1858,11 +1864,11 @@ public:
 		selected = 0;
 	}
 
-	void seed(const SmallString& word) {
+	void seed(const std::string& word) {
 		pattern = word;
 	}
 
-	const SmallString& get_pattern() const { return pattern; }
+	const std::string& get_pattern() const { return pattern; }
 
 	void filter(const Database& database, unsigned row_count) {
 		filtered.clear();
@@ -1870,7 +1876,7 @@ public:
 			if (filtered.size() > row_count - 1)
 				return false;
 			map(file.name, [&](const char* mem, size_t size) {
-				const auto context = SmallString(&mem[location.position], min((size_t)60, size - location.position));
+				const auto context = std::string(&mem[location.position], min((size_t)60, size - location.position));
 				filtered.emplace_back(file.name.c_str(), location.position, context);
 			});
 			return true;
@@ -1878,7 +1884,7 @@ public:
 		selected = min(selected, (unsigned)filtered.size() - 1);
 	}
 
-	PathString selection() const {
+	std::string selection() const {
 		if (selected < filtered.size())
 			return filtered[selected].filename;
 		return {};
@@ -1915,7 +1921,7 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_line(characters, row, col_count, colors().cursor_line);
-			push_string(characters, row, col, entry.filename + " (" + SmallString(entry.position) + "): ", true, colors().text);
+			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ", true, colors().text);
 			push_string(characters, row, col, entry.context, false, colors().comment);
 			row++;
 			displayed++;

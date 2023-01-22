@@ -47,8 +47,8 @@ class App {
 
 	Characters characters;
 
-	HugeString clipboard;
-	SmallString notification;
+	std::string clipboard;
+	std::string notification;
 
 	bool maximized = false;
 	bool minimized = false;
@@ -59,9 +59,9 @@ class App {
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 
-	SmallString status() {
-		return SmallString("Vin ") + 
-			SmallString(version_major) + "." + SmallString(version_minor) +
+	std::string status() {
+		return std::string("Vin ") + 
+			std::to_string(version_major) + "." + std::to_string(version_minor) +
 			"          " + notification.c_str();
 	}
 
@@ -249,7 +249,7 @@ public:
 		show_window(device.get_hwnd(), nCmdShow);
 	}
 
-	void notify(const SmallString& s) {
+	void notify(const std::string& s) {
 		notification = s;
 	}
 
@@ -265,7 +265,7 @@ public:
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
 	const Timer timer;
 	App app(hInstance, nCmdShow);
-	app.notify(SmallString("init in ") + timer.us());
+	app.notify(std::string("init in ") + timer.us());
 	app.run();
 	return 0;
 }

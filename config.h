@@ -36,14 +36,14 @@ struct Spacing {
 	float line = 32.0f;
 	float zoom = 1.0f;
 
-	SmallString increase_char_width() { character = clamp(character + 0.05f, 0.0f, 20.0f); return SmallString("char_width = ") + SmallString(character); }
-	SmallString decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 20.0f); return SmallString("char_width = ") + SmallString(character); }
+	std::string increase_char_width() { character = clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
+	std::string decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
 
-	SmallString increase_char_height() { line = clamp(line + 0.05f, 0.0f, 40.0f); return SmallString("char_height = ") + SmallString(line); }
-	SmallString decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 40.0f); return SmallString("char_height = ") + SmallString(line); }
+	std::string increase_char_height() { line = clamp(line + 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
+	std::string decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 
-	SmallString increase_char_zoom() { zoom = clamp(zoom + 0.01f, 0.0f, 2.0f); return SmallString("char_zoom = ") + SmallString(zoom); }
-	SmallString decrease_char_zoom() { zoom = clamp(zoom - 0.01f, 0.0f, 2.0f); return SmallString("char_zoom = ") + SmallString(zoom); }
+	std::string increase_char_zoom() { zoom = clamp(zoom + 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string decrease_char_zoom() { zoom = clamp(zoom - 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 };
 
 Spacing& spacing() {

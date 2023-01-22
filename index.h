@@ -1,6 +1,6 @@
 #pragma once
 
-bool accept(const PathString& filename) {
+bool accept(const std::string& filename) {
 	if (filename.ends_with(".c")) return true;
 	if (filename.ends_with(".h")) return true;
 	if (filename.ends_with(".cpp")) return true;
@@ -15,19 +15,19 @@ bool accept(const PathString& filename) {
 }
 
 class Index {
-	Array<PathString, 1024> paths;
+	Array<std::string, 1024> paths;
 
 public:
-	SmallString populate() {
+	std::string populate() {
 		const Timer timer;
 		paths.clear();
 		process_files(".", [&](const auto& path) {
-			const PathString filename(path);
+			const std::string filename(path);
 			if (accept(filename))
 				paths.push_back(filename);
 		});
-		return SmallString("populate index (") + 
-			SmallString(paths.size()) + " paths) in " + timer.us();
+		return std::string("populate index (") + 
+			std::to_string(paths.size()) + " paths) in " + timer.us();
 	}
 
 	template <typename F>
@@ -41,7 +41,7 @@ public:
 
 class Database {
 	struct File {
-		PathString name;
+		std::string name;
 		size_t size;
 	};
 
@@ -53,7 +53,7 @@ class Database {
 	Array<File, 1024> files;
 	Array<Location, 128 * 1024> locations;
 
-	void scan(const PathString& filename, const SmallString& pattern) {
+	void scan(const std::string& filename, const std::string& pattern) {
 		map(filename, [&](const char* mem, size_t size) {
 			files.emplace_back(filename, size);
 			for (size_t i = 0; i < size; ++i) {
@@ -67,20 +67,20 @@ class Database {
 	}
 
 public:
-	SmallString search(const SmallString& pattern) {
+	std::string search(const std::string& pattern) {
 		const Timer timer;
 		files.clear();
 		locations.clear();
 		if (!pattern.empty()) {
 			process_files(".", [&](const auto& path) {
-				const PathString filename(path);
+				const std::string filename(path);
 				if (accept(filename))
 					scan(filename, pattern);
 			});
 		}
-		return SmallString("search database (") + 
-			SmallString(files.size()) + " files, " + 
-			SmallString(locations.size()) + " symbols) in " + timer.us();
+		return std::string("search database (") + 
+			std::to_string(files.size()) + " files, " + 
+			std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
 
 	template <typename F>

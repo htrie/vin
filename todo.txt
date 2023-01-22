@@ -1,1 +1,4 @@
-replace HugeString with std::string
+replace String with std::string
+replace Array with std::vector
+remove mem.h
+replace const std::string& with std::string_view

@@ -4,12 +4,12 @@
 	#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
-SmallString get_error_string() {
+std::string get_error_string() {
 	const DWORD error = GetLastError();
-	SmallString res = SmallString("(error ") + SmallString((unsigned)error);
+	std::string res = std::string("(error ") + std::to_string((unsigned)error);
 	char* message = NULL;
 	if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&message, 0, NULL)) {
-		res += SmallString(": ") + message;
+		res += std::string(": ") + message;
 		LocalFree(message);
 	}
 	res += ")";
@@ -94,13 +94,13 @@ public:
 		start = now();
 	}
 
-	SmallString us() const {
-		return SmallString((unsigned)(duration() * 1000.0f)) + "us";
+	std::string us() const {
+		return std::to_string((unsigned)(duration() * 1000.0f)) + "us";
 	}
 };
 
 template <typename F>
-void map(const PathString& filename, F func) {
+void map(const std::string& filename, F func) {
 	if (const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr); file != INVALID_HANDLE_VALUE) {
 		if (size_t size = 0; GetFileSizeEx(file, (PLARGE_INTEGER)&size)) {
 			if (const auto mapping = CreateFileMapping(file, nullptr, PAGE_READONLY, 0, 0, nullptr); mapping != INVALID_HANDLE_VALUE) {
@@ -115,7 +115,7 @@ void map(const PathString& filename, F func) {
 	}
 }
 
-bool write(const PathString& filename, const HugeString& text) {
+bool write(const std::string& filename, const std::string& text) {
 	bool res = false;
 	if (const auto file = CreateFileA(filename.data(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr); file != INVALID_HANDLE_VALUE) {
 		res = WriteFile(file, text.data(), (DWORD)text.size(), nullptr, nullptr);
@@ -126,19 +126,19 @@ bool write(const PathString& filename, const HugeString& text) {
 
 template<typename F>
 void process_files(const char* path, F func) {
-	const auto filter = PathString(path) + "/*";
+	const auto filter = std::string(path) + "/*";
 	WIN32_FIND_DATA find_data;
 	HANDLE handle = FindFirstFile(filter.c_str(), &find_data);
 	do {
 		if (handle != INVALID_HANDLE_VALUE) {
 			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
 				if (find_data.cFileName[0] != '.') {
-					const auto dir = PathString(path) + "/" + find_data.cFileName;
+					const auto dir = std::string(path) + "/" + find_data.cFileName;
 					process_files(dir.c_str(), func);
 				}
 			}
 			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-				const auto file = PathString(path) + "/" + find_data.cFileName;
+				const auto file = std::string(path) + "/" + find_data.cFileName;
 				func(file);
 			}
 		}
