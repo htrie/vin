@@ -1,5 +1,5 @@
 const unsigned version_major = 0;
-const unsigned version_minor = 8;
+const unsigned version_minor = 9;
 
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -245,7 +245,7 @@ class App {
 
 public:
 	App(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, 1280, 960) {
+		: device(proc, hInstance, 1280, 952) {
 		show_window(device.get_hwnd(), nCmdShow);
 	}
 
