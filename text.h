@@ -1706,27 +1706,20 @@ class Switcher {
 		return longest;
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold) const {
-		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
+	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
+		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c, bold);
+			push_char(characters, row, col++, c, bold, color);
 		}
 	}
 
-	void push_background_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
+	void push_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end, Color color) const {
 		for (unsigned i = col_begin; i < col_end; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().overlay, row, i);
-			characters.emplace_back(Glyph::BLOCK, colors().overlay, float(row), float(i) + 0.5f); // Fill in gaps.
-		}
-	}
-
-	void push_cursor_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end) const {
-		for (unsigned i = col_begin; i < col_end; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, i);
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(i) + 0.5f); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, color, row, i);
+			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
 		}
 	}
 
@@ -1829,12 +1822,9 @@ public:
 		unsigned row = top_row;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			col = left_col;
-			push_background_line(characters, row, left_col, right_col);
-			if (i == active)
-				push_cursor_line(characters, row, left_col, right_col);
-			push_string(characters, row, col, buffers[i].get_filename(), buffers[i].is_dirty());
-			if (buffers[i].is_dirty()) 
-				push_string(characters, row, col, "*", true);
+			push_line(characters, row, left_col, right_col, i == active ? colors().text : colors().overlay);
+			const auto name = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
+			push_string(characters, row, col, name, buffers[i].is_dirty(), i == active ? colors().overlay : colors().text);
 			row++;
 		}
 	}
