@@ -1,6 +1,6 @@
 #pragma once
 
-uint8_t channel(float c) { return (uint8_t)clamp(c, 0.0f, 255.0f); }
+uint8_t channel(float c) { return (uint8_t)std::clamp(c, 0.0f, 255.0f); }
 
 Color base_color(float f) { return Color::rgba(channel(244.0f * f), channel(240.0f * f), channel(222.0f * f), 255); }
 Color text_color(float f) { return Color::rgba(channel(68.0f * f), channel(68.0f * f), channel(68.0f * f), 255); }
@@ -36,14 +36,14 @@ struct Spacing {
 	float line = 32.0f;
 	float zoom = 1.0f;
 
-	std::string increase_char_width() { character = clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
-	std::string decrease_char_width() { character = clamp(character - 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
+	std::string increase_char_width() { character = std::clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
+	std::string decrease_char_width() { character = std::clamp(character - 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
 
-	std::string increase_char_height() { line = clamp(line + 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
-	std::string decrease_char_height() { line = clamp(line - 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
+	std::string increase_char_height() { line = std::clamp(line + 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
+	std::string decrease_char_height() { line = std::clamp(line - 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 
-	std::string increase_char_zoom() { zoom = clamp(zoom + 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
-	std::string decrease_char_zoom() { zoom = clamp(zoom - 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 };
 
 Spacing& spacing() {

@@ -271,7 +271,7 @@ public:
 
 	size_t to_absolute(size_t pos) const {
 		verify(pos != std::string::npos);
-		return min(start + pos, finish);
+		return std::min(start + pos, finish);
 	}
 
 	size_t begin() const { return start; }
@@ -410,12 +410,12 @@ public:
 
 	void next_char() {
 		const Line current(text, cursor);
-		cursor = clamp(cursor + 1, current.begin(), current.end());
+		cursor = std::clamp(cursor + 1, current.begin(), current.end());
 	}
 
 	void prev_char() {
 		const Line current(text, cursor);
-		cursor = clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
+		cursor = std::clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
 	}
 
 	void line_start() {
@@ -564,7 +564,7 @@ public:
 
 	void cursor_clamp(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+		begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
 	}
 
 	void cursor_center(unsigned row_count) {
@@ -648,7 +648,7 @@ public:
 				end = current.end();
 				current = incr(current);
 			}
-			const auto count = min(end + 1, text.size() - 1) - begin;
+			const auto count = std::min(end + 1, text.size() - 1) - begin;
 			s += text.substr(begin, count);
 		}
 		return s;
@@ -699,7 +699,7 @@ public:
 
 	void insert(const std::string_view s) {
 		text.insert(cursor, s);
-		cursor = min(cursor + s.length(), text.size() - 1);
+		cursor = std::min(cursor + s.length(), text.size() - 1);
 	}
 
 	void erase_back() {
@@ -743,7 +743,7 @@ public:
 		if (text.size() > 0) {
 			const auto s = text.substr(cursor, text.size() - cursor);
 			text.erase(cursor, text.size() - cursor);
-			cursor = min(cursor, text.size() - 1);
+			cursor = std::min(cursor, text.size() - 1);
 			return s;
 		}
 		return {};
@@ -776,7 +776,7 @@ public:
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
 			text.erase(current.begin(), current.end() - current.begin() + 1);
-			cursor = min(current.begin(), text.size() - 1);
+			cursor = std::min(current.begin(), text.size() - 1);
 			return s;
 		}
 		return {};
@@ -787,7 +787,7 @@ public:
 			const Line current(text, cursor);
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
 			text.erase(current.begin(), current.end() - current.begin());
-			cursor = min(current.begin(), text.size() - 1);
+			cursor = std::min(current.begin(), text.size() - 1);
 			return s;
 		}
 		return {};
@@ -798,7 +798,7 @@ public:
 			const Line current(text, cursor);
 			const auto s = text.substr(cursor, current.end() - cursor);
 			text.erase(cursor, current.end() - cursor);
-			cursor = min(cursor, text.size() - 1);
+			cursor = std::min(cursor, text.size() - 1);
 			return s;
 		}
 		return {};
@@ -828,7 +828,7 @@ public:
 		if (text.size() > 0 && cursor < text.size()) {
 			const Word current(text, cursor);
 			const auto begin = from_cursor ? cursor : current.begin();
-			const auto count = min(current.end() + 1, text.size() - 1) - begin;
+			const auto count = std::min(current.end() + 1, text.size() - 1) - begin;
 			const auto s = text.substr(begin, count);
 			text.erase(begin, count);
 			cursor = begin;
@@ -1263,11 +1263,11 @@ class Buffer {
 	void process_normal_y(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'y') { end_record(key); clipboard = state().yank_line(); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { end_record(key); clipboard = state().yank_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { end_record(key); clipboard = state().yank_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { end_record(key); clipboard = state().yank_all_up(); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { end_record(key); clipboard = state().yank_all_down(); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); clipboard = state().yank_lines_down(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); clipboard = state().yank_lines_up(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); clipboard = state().yank_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clipboard = state().yank_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_yf; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_yt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_yi; }
@@ -1300,28 +1300,28 @@ class Buffer {
 
 	void process_normal_gt(unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
-		else if (key == '>') { end_record(key); state().indent_right(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_right_down(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_right_up(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == '>') { end_record(key); state().indent_right(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
 	void process_normal_lt(unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
-		else if (key == '<') { end_record(key); state().indent_left(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_left_down(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_left_up(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == '<') { end_record(key); state().indent_left(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
 	void process_normal_c(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clipboard = state().erase_line_contents(); accu = 0; mode = Mode::insert; }
-		else if (key == 'w') { append_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::insert; }
+		else if (key == 'w') { append_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
 		else if (key == 'g') { append_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::insert; }
 		else if (key == 'G') { append_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::insert; }
-		else if (key == 'j') { append_record(key); clipboard = state().erase_lines_down(max(1u, accu)); accu = 0; mode = Mode::insert; }
-		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(max(1u, accu)); accu = 0; mode = Mode::insert; }
+		else if (key == 'j') { append_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
+		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_cf; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_ct; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_ci; }
@@ -1355,11 +1355,11 @@ class Buffer {
 	void process_normal_d(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'd') { end_record(key); clipboard = state().erase_line(); accu = 0; mode = Mode::normal; }
-		else if (key == 'w') { end_record(key); clipboard = state().erase_words(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'w') { end_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { end_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { end_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); clipboard = state().erase_lines_down(max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_df; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_dt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_di; }
@@ -1635,7 +1635,7 @@ public:
 				filtered.push_back(path.c_str());
 			return true;
 		});
-		selected = min(selected, (unsigned)filtered.size() - 1);
+		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
 	std::string selection() const {
@@ -1682,7 +1682,7 @@ class Switcher {
 	unsigned longest_filename() const {
 		unsigned longest = 0;
 		for (auto& buffer : buffers) {
-			longest = max(longest, (unsigned)buffer.get_filename().size());
+			longest = std::max(longest, (unsigned)buffer.get_filename().size());
 		}
 		return longest;
 	}
@@ -1798,8 +1798,8 @@ public:
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		unsigned width = min(longest_filename(), col_count);
-		unsigned height = min((unsigned)buffers.size(), row_count);
+		unsigned width = std::min(longest_filename(), col_count);
+		unsigned height = std::min((unsigned)buffers.size(), row_count);
 
 		unsigned left_col = (col_count - width) / 2;
 		unsigned right_col = left_col + width;
@@ -1877,12 +1877,12 @@ public:
 			if (filtered.size() > row_count - 1)
 				return false;
 			map(file.name, [&](const char* mem, size_t size) {
-				const auto context = std::string(&mem[location.position], min((size_t)60, size - location.position));
+				const auto context = std::string(&mem[location.position], std::min((size_t)60, size - location.position));
 				filtered.emplace_back(file.name.c_str(), location.position, context);
 			});
 			return true;
 		});
-		selected = min(selected, (unsigned)filtered.size() - 1);
+		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
 	std::string selection() const {
