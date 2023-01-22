@@ -106,11 +106,11 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
 vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
 	std::array<vk::DescriptorSetLayoutBinding, 4> const layout_bindings = {
 		vk::DescriptorSetLayoutBinding()
-		   .setBinding(0)
-		   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		   .setDescriptorCount(1)
-		   .setStageFlags(vk::ShaderStageFlagBits::eVertex)
-		   .setPImmutableSamplers(nullptr),
+			.setBinding(0)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(1)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+			.setPImmutableSamplers(nullptr),
 		vk::DescriptorSetLayoutBinding()
 			.setBinding(1)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)

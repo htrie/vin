@@ -1,2 +1,5 @@
++underline
 +quotes italic
++word wrap
++windows end delimiter
 -status bar
