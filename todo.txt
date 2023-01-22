@@ -1,1 +1,2 @@
-use italic for quotes
++quotes italic
+-status bar

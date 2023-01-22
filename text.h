@@ -1404,15 +1404,15 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
-		characters.emplace_back((uint16_t)(48 + digit), colors().line_number, row, col);
+	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit, bool bold) const {
+		characters.emplace_back((uint16_t)(48 + digit), bold ? colors().text : colors().line_number, row, col, bold);
 	}
 
-	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
-		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
-		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
-		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
-		push_digit(characters, row, col + 3, line % 10);
+	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line, bool bold) const {
+		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000, bold); }
+		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100, bold); }
+		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10, bold); }
+		push_digit(characters, row, col + 3, line % 10, bold);
 	}
 
 	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned absolute_row, unsigned cursor_row) const {
@@ -1420,7 +1420,7 @@ class Buffer {
 		const unsigned line = absolute_row == cursor_row ? absolute_row :
 			absolute_row < cursor_row ? cursor_row - absolute_row :
 			absolute_row - cursor_row;
-		push_number(characters, row, column, line);
+		push_number(characters, row, column, line, absolute_row == cursor_row);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
