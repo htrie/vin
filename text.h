@@ -65,7 +65,7 @@ bool is_code_extension(const std::string_view filename) {
 	return false;
 }
 
-static inline const Array<Array<const char*, 16>, 32> cpp_keywords = {
+static inline const std::vector<std::vector<const char*>> cpp_keywords = {
 	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
 	{ "bitand", "bitor", "bool", "break" },
 	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
@@ -120,8 +120,7 @@ struct Character {
 		: index(index), color(color), row((float)row), col((float)col), bold(bold), italic(italic) {}
 };
 
-const size_t CharacterMaxCount = 8192;
-typedef Array<Character, CharacterMaxCount> Characters;
+typedef std::vector<Character> Characters;
 
 class Word {
 	size_t start = 0;
@@ -941,7 +940,7 @@ public:
 };
 
 class Stack {
-	Array<State, 40> states;
+	std::vector<State> states;
 	bool undo = false;
 
 public:
@@ -967,7 +966,7 @@ public:
 	void set_undo() { undo = true; }
 
 	void push() {
-		if (states.full()) { states.pop_front(); }
+		if (states.size() > 100) { states.erase(states.begin()); }
 		if (states.size() > 0) { states.push_back(states.back()); }
 	}
 
@@ -997,8 +996,8 @@ class Buffer {
 
 	Mode mode = Mode::normal;
 
-	Array<unsigned, 64> record;
-	Array<unsigned, 64> temp_record;
+	std::vector<unsigned> record;
+	std::vector<unsigned> temp_record;
 	bool repeat = false;
 
 	std::string filename;
@@ -1595,7 +1594,7 @@ public:
 
 class Picker {
 	std::string pattern;
-	Array<std::string, 64> filtered;
+	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
@@ -1677,7 +1676,7 @@ public:
 
 class Switcher {
 	Buffer empty_buffer;
-	Array<Buffer, 8> buffers;
+	std::vector<Buffer> buffers;
 	size_t active = (size_t)-1;
 
 	unsigned longest_filename() const {
@@ -1727,7 +1726,7 @@ public:
 				active = index;
 				return std::string("switch ") + std::string(filename);
 			}
-			else if (!buffers.full()) {
+			else if (buffers.size() < 16) {
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
@@ -1830,7 +1829,7 @@ class Finder {
 	};
 
 	std::string pattern;
-	Array<Entry, 64> filtered;
+	std::vector<Entry> filtered;
 	unsigned selected = 0; 
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) const {

@@ -15,7 +15,7 @@ bool accept(const std::string_view filename) {
 }
 
 class Index {
-	Array<std::string, 1024> paths;
+	std::vector<std::string> paths;
 
 public:
 	std::string populate() {
@@ -50,8 +50,8 @@ class Database {
 		size_t position = 0;
 	};
 
-	Array<File, 1024> files;
-	Array<Location, 128 * 1024> locations;
+	std::vector<File> files;
+	std::vector<Location> locations;
 
 	void scan(const std::string_view filename, const std::string_view pattern) {
 		map(filename, [&](const char* mem, size_t size) {

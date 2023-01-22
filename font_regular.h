@@ -277,7 +277,7 @@ struct FontGlyph {
 		: id(id), x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}
 };
 
-typedef Array<FontGlyph, 128> FontGlyphs;
+typedef std::vector<FontGlyph> FontGlyphs;
 #endif
 
 const FontGlyphs font_regular_glyphs  = {

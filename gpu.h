@@ -1,12 +1,12 @@
 #pragma once
 
 vk::UniqueInstance create_instance() {
-	Array<const char*, 4> layers;
+	std::vector<const char*> layers;
 #if !defined(NDEBUG)
 	layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
 
-	Array<const char*, 4> extensions = {
+	std::array<const char*, 3> extensions = {
 		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
@@ -56,14 +56,14 @@ uint32_t find_queue_family(const vk::PhysicalDevice& gpu, const vk::SurfaceKHR& 
 }
 
 vk::UniqueDevice create_device(const vk::PhysicalDevice& gpu, uint32_t family_index) {
-	Array<float, 1> const priorities = { 0.0 };
+	std::array<float, 1> const priorities = { 0.0 };
 
-	Array<vk::DeviceQueueCreateInfo, 1> queues = { vk::DeviceQueueCreateInfo()
+	std::array<vk::DeviceQueueCreateInfo, 1> queues = { vk::DeviceQueueCreateInfo()
 		.setQueueFamilyIndex(family_index)
 		.setQueueCount((uint32_t)priorities.size())
 		.setPQueuePriorities(priorities.data()) };
 
-	Array<const char*, 1> extensions = {
+	std::array<const char*, 1> extensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 	const auto device_info = vk::DeviceCreateInfo()
@@ -104,7 +104,7 @@ vk::UniqueCommandPool create_command_pool(const vk::Device& device, uint32_t fam
 }
 
 vk::UniqueDescriptorSetLayout create_descriptor_layout(const vk::Device& device) {
-	Array<vk::DescriptorSetLayoutBinding, 4> const layout_bindings = {
+	std::array<vk::DescriptorSetLayoutBinding, 4> const layout_bindings = {
 		vk::DescriptorSetLayoutBinding()
 		   .setBinding(0)
 		   .setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -150,7 +150,7 @@ vk::UniquePipelineLayout create_pipeline_layout(const vk::Device& device, const 
 }
 
 vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::SurfaceFormatKHR& surface_format) {
-	const Array<vk::AttachmentDescription, 1> attachments = {
+	const std::array<vk::AttachmentDescription, 1> attachments = {
 		vk::AttachmentDescription()
 			.setFormat(surface_format.format)
 			.setSamples(vk::SampleCountFlagBits::e1)
@@ -161,7 +161,7 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
 			.setInitialLayout(vk::ImageLayout::eUndefined)
 			.setFinalLayout(vk::ImageLayout::ePresentSrcKHR) };
 
-	Array<vk::AttachmentReference, 1> const color_references = {
+	std::array<vk::AttachmentReference, 1> const color_references = {
 		vk::AttachmentReference()
 			.setAttachment(0)
 			.setLayout(vk::ImageLayout::eColorAttachmentOptimal) };
@@ -176,7 +176,7 @@ vk::UniqueRenderPass create_render_pass(const vk::Device& device, const vk::Surf
 		.setPreserveAttachmentCount(0)
 		.setPPreserveAttachments(nullptr);
 
-	Array<vk::SubpassDependency, 1> const dependencies = {
+	std::array<vk::SubpassDependency, 1> const dependencies = {
 		vk::SubpassDependency()
 			.setSrcSubpass(VK_SUBPASS_EXTERNAL)
 			.setDstSubpass(0)
@@ -220,7 +220,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 	const auto vert_shader_module = create_module(device, vert_bytecode, sizeof(vert_bytecode));
 	const auto frag_shader_module = create_module(device, frag_bytecode, sizeof(frag_bytecode));
 
-	Array<vk::PipelineShaderStageCreateInfo, 2> const shader_stage_infos = {
+	std::array<vk::PipelineShaderStageCreateInfo, 2> const shader_stage_infos = {
 		vk::PipelineShaderStageCreateInfo()
 			.setStage(vk::ShaderStageFlagBits::eVertex)
 			.setModule(vert_shader_module.get())
@@ -256,7 +256,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 		.setDepthBoundsTestEnable(VK_FALSE)
 		.setStencilTestEnable(VK_FALSE);
 
-	Array<vk::PipelineColorBlendAttachmentState, 1> const color_blend_attachments = {
+	std::array<vk::PipelineColorBlendAttachmentState, 1> const color_blend_attachments = {
 		vk::PipelineColorBlendAttachmentState()
 			.setBlendEnable(true)
 			.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
@@ -271,7 +271,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 		.setAttachmentCount((uint32_t)color_blend_attachments.size())
 		.setPAttachments(color_blend_attachments.data());
 
-	Array<vk::DynamicState, 2> const dynamic_states = {
+	std::array<vk::DynamicState, 2> const dynamic_states = {
 		vk::DynamicState::eViewport,
 		vk::DynamicState::eScissor };
 
@@ -299,7 +299,7 @@ vk::UniquePipeline create_pipeline(const vk::Device& device, const vk::PipelineL
 }
 
 vk::UniqueDescriptorPool create_descriptor_pool(const vk::Device& device) {
-	Array<vk::DescriptorPoolSize, 2> const pool_sizes = {
+	std::array<vk::DescriptorPoolSize, 2> const pool_sizes = {
 		vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(16),
@@ -422,7 +422,7 @@ vk::UniqueImageView create_image_view(const vk::Device& device, const vk::Image&
 }
 
 vk::UniqueFramebuffer create_framebuffer(const vk::Device& device, const vk::RenderPass& render_pass, const vk::ImageView& image_view, int32_t window_width, int32_t window_height) {
-	const Array<vk::ImageView, 1> attachments = { image_view };
+	const std::array<vk::ImageView, 1> attachments = { image_view };
 
 	const auto fb_info = vk::FramebufferCreateInfo()
 		.setRenderPass(render_pass)
@@ -608,7 +608,7 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 		.setImageView(image_view2)
 		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-	const Array<vk::WriteDescriptorSet, 4> writes = {
+	const std::array<vk::WriteDescriptorSet, 4> writes = {
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -755,18 +755,19 @@ void draw(const vk::CommandBuffer& cmd_buf, uint32_t vertex_count, uint32_t inst
 	cmd_buf.draw(vertex_count, instance_count, 0, 0);
 }
 
-Array<vk::Image, 3> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
+std::vector<vk::Image> get_swapchain_images(const vk::Device& device, const vk::SwapchainKHR& swapchain) {
 	uint32_t count = 0;
 	auto result = device.getSwapchainImagesKHR(swapchain, &count, static_cast<vk::Image*>(nullptr));
 	verify(result == vk::Result::eSuccess);
 
-	Array<vk::Image, 3> images(count);
+	std::vector<vk::Image> images(count);
 	result = device.getSwapchainImagesKHR(swapchain, &count, images.data());
 	verify(result == vk::Result::eSuccess);
 
 	return images;
 }
 
+static const unsigned CharacterMaxCount = 8192;
 
 struct Uniforms {
 	Matrix view_proj;
@@ -822,9 +823,9 @@ class Device {
 	vk::UniqueSemaphore draw_complete_semaphore;
 
 	vk::UniqueSwapchainKHR swapchain;
-	Array<vk::UniqueImageView, 3> image_views;
-	Array<vk::UniqueFramebuffer, 3> framebuffers;
-	Array<vk::UniqueCommandBuffer, 3> cmds;
+	std::vector<vk::UniqueImageView> image_views;
+	std::vector<vk::UniqueFramebuffer> framebuffers;
+	std::vector<vk::UniqueCommandBuffer> cmds;
 
 	unsigned width = 0;
 	unsigned height = 0;
