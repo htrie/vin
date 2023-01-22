@@ -345,6 +345,20 @@ public:
 		return number;
 	}
 
+	std::pair<unsigned, size_t> find_cursor_row_and_col() const {
+		unsigned number = 0;
+		size_t last = 0;
+		size_t index = 0;
+		while (index < text.size() && index < cursor) {
+			if (text[index++] == '\n')
+			{
+				last = index;
+				number++;
+			}
+		}
+		return { number, cursor - last };
+	}
+
 	size_t find_char(unsigned key) {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
@@ -1479,7 +1493,7 @@ class Buffer {
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0) { push_column_indicator(characters, row, 80);}
+					if (col == 0) { push_column_indicator(characters, row, 87);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (state().test(index, highlight)) { push_highlight(characters, row, col); }
@@ -1525,8 +1539,13 @@ class Buffer {
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_line(characters, float(row_count), col_count, colors().text);
 		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
-		push_string(characters, row_count, 0, filename + (is_dirty() ? "*" : ""), true, colors().clear);
-		push_string(characters, row_count, 80, std::to_string(location_percentage()) + "%", true, colors().clear);
+		const auto name = filename + (is_dirty() ? "*" : "");
+		push_string(characters, row_count, 0, name, true, colors().clear);
+		const auto percentage = std::to_string(location_percentage()) + "%";
+		push_string(characters, row_count, 73, percentage, true, colors().clear);
+		const auto col_and_row = state().find_cursor_row_and_col();
+		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
+		push_string(characters, row_count, 82, locations, true, colors().clear);
 	}
 
 	void init(const std::string_view text) {
