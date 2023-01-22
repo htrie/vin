@@ -249,7 +249,7 @@ public:
 		show_window(device.get_hwnd(), nCmdShow);
 	}
 
-	void notify(const std::string& s) {
+	void notify(const std::string_view s) {
 		notification = s;
 	}
 

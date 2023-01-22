@@ -57,7 +57,7 @@ constexpr bool is_punctuation(char c) { return
 	c == '?' || c == '"' || c == '#' || c == '\'';
 }
 
-bool is_code_extension(const std::string& filename) {
+bool is_code_extension(const std::string_view filename) {
 	if (filename.ends_with(".cpp")) return true;
 	if (filename.ends_with(".hpp")) return true;
 	if (filename.ends_with(".c")) return true;
@@ -131,21 +131,21 @@ class Word {
 	bool has_whitespace = false;
 	bool has_punctuation = false;
 
-	bool test_letter_or_number(const std::string& text, size_t pos) {
+	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
 			return is_number(text[pos]) || is_letter(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_whitespace(const std::string& text, size_t pos) {
+	bool test_whitespace(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
 			return is_line_whitespace(text[pos]);
 		}
 		return false;
 	}
 
-	bool test_punctuation(const std::string& text, size_t pos) {
+	bool test_punctuation(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
 			return is_punctuation(text[pos]);
 		}
@@ -153,7 +153,7 @@ class Word {
 	}
 
 public:
-	Word(const std::string& text, size_t pos) {
+	Word(const std::string_view text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -185,7 +185,7 @@ public:
 	bool check_punctuation() const { return has_punctuation; }
 	bool check_whitespace() const { return has_whitespace; }
 
-	bool check_keyword(const std::string& text) const {
+	bool check_keyword(const std::string_view text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
 			const auto& keywords = cpp_keywords[letter_index];
 			const std::string word(text.substr(start, finish - start + 1));
@@ -202,7 +202,7 @@ class Enclosure {
 	size_t start = 0;
 	size_t finish = 0;
 
-	size_t find_prev(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_prev(const std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -214,7 +214,7 @@ class Enclosure {
 		return count == 0 ? index : std::string::npos;
 	}
 
-	size_t find_next(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
+	size_t find_next(const std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = text[pos] == left ? pos + 1 : pos;
 		while (index < text.size() && count > 0) {
@@ -227,7 +227,7 @@ class Enclosure {
 	}
 
 public:
-	Enclosure(const std::string& text, size_t pos, uint16_t left, uint16_t right) {
+	Enclosure(const std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			start = pos;
@@ -253,7 +253,7 @@ class Line {
 	size_t finish = 0;
 
 public:
-	Line(const std::string& text, size_t pos) {
+	Line(const std::string_view text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
@@ -278,7 +278,7 @@ public:
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
 
-	bool check_string(const std::string& text, const std::string& s) const {
+	bool check_string(const std::string_view text, const std::string_view s) const {
 		if (start + s.size() <= text.size())
 			return strncmp(&text[start], s.data(), s.size()) == 0;
 		return false;
@@ -290,7 +290,7 @@ class Comment {
 	size_t finish = 0;
 
 public:
-	Comment(const std::string& text, size_t pos) {
+	Comment(const std::string_view text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
@@ -314,8 +314,8 @@ class State {
 	unsigned begin_row = 0;
 
 public:
-	const std::string& get_text() const { return text; }
-	void set_text(const std::string& t) { text = t; }
+	const std::string_view get_text() const { return text; }
+	void set_text(const std::string_view t) { text = t; }
 
 	size_t get_cursor() const { return cursor; }
 	void set_cursor(size_t u) { cursor = u; }
@@ -328,7 +328,7 @@ public:
 	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
 
-	bool test(size_t index, const std::string& s) const {
+	bool test(size_t index, const std::string_view s) const {
 		if (index + s.size() <= text.size())
 			return strncmp(&text[index], s.data(), s.size()) == 0;
 		return false;
@@ -385,7 +385,7 @@ public:
 		}
 	}
 
-	void word_find(const std::string& s) {
+	void word_find(const std::string_view s) {
 		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && (cursor + 1 < text.size())) {
 				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) { cursor = pos; }
@@ -396,7 +396,7 @@ public:
 		else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
 	}
 
-	void word_rfind(const std::string& s) {
+	void word_rfind(const std::string_view s) {
 		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
 			if (pos == cursor && cursor > 0) {
 				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) { cursor = pos; }
@@ -696,7 +696,7 @@ public:
 		return s;
 	}
 
-	void insert(const std::string& s) {
+	void insert(const std::string_view s) {
 		text.insert(cursor, s);
 		cursor = min(cursor + s.length(), text.size() - 1);
 	}
@@ -859,7 +859,7 @@ public:
 		return {};
 	}
 
-	void paste_before(const std::string& s) {
+	void paste_before(const std::string_view s) {
 		if (s.find("\n") != std::string::npos) {
 			line_start(); insert(s); prev_line();
 		}
@@ -868,7 +868,7 @@ public:
 		}
 	}
 
-	void paste_after(const std::string& s) {
+	void paste_after(const std::string_view s) {
 		if (s.find("\n") != std::string::npos) {
 			next_line(); line_start(); insert(s); prev_line();
 		}
@@ -956,8 +956,8 @@ public:
 	State& state() { return states.back(); }
 	const State& state() const { return states.back(); }
 
-	const std::string& get_text() const { return states.back().get_text(); }
-	void set_text(const std::string& t) { states.back().set_text(t); }
+	const std::string_view get_text() const { return states.back().get_text(); }
+	void set_text(const std::string_view t) { states.back().set_text(t); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }
@@ -1502,7 +1502,7 @@ class Buffer {
 		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned col, const std::string& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned col, const std::string_view s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold, color);
 		}
@@ -1528,7 +1528,7 @@ class Buffer {
 		push_string(characters, row_count, 80, std::to_string(location_percentage()) + "%", true, colors().clear);
 	}
 
-	void init(const std::string& text) {
+	void init(const std::string_view text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
 	}
@@ -1545,7 +1545,7 @@ class Buffer {
 
 public:
 	Buffer() {}
-	Buffer(const std::string& filename)
+	Buffer(const std::string_view filename)
 		: filename(filename)
 		, is_code(is_code_extension(filename)) {
 		init(load());
@@ -1580,7 +1580,7 @@ public:
 	State& state() { return stack.state(); }
 	const State& state() const { return stack.state(); }
 
-	const std::string& get_filename() const { return filename; }
+	const std::string_view get_filename() const { return filename; }
 	size_t get_size() const { return state().get_text().size(); }
 
 	Mode get_mode() const { return mode; }
@@ -1600,7 +1600,7 @@ class Picker {
 		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold, color);
 		}
@@ -1690,7 +1690,7 @@ class Switcher {
 		characters.emplace_back((uint16_t)c, colors().text, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, bold);
 		}
@@ -1710,7 +1710,7 @@ class Switcher {
 		}
 	}
 
-	size_t find_buffer(const std::string& filename) {
+	size_t find_buffer(const std::string_view filename) {
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			if (buffers[i].get_filename() == filename)
 				return i;
@@ -1719,7 +1719,7 @@ class Switcher {
 	}
 
 public:
-	std::string load(const std::string& filename) {
+	std::string load(const std::string_view filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
 				active = index;
@@ -1840,7 +1840,7 @@ class Finder {
 		characters.emplace_back(index, final_color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string& s, bool bold, Color color) const {
+	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) const {
 		for (auto& c : s) {
 			push_char(characters, row, col++, c, color, bold);
 		}
@@ -1864,11 +1864,11 @@ public:
 		selected = 0;
 	}
 
-	void seed(const std::string& word) {
+	void seed(const std::string_view word) {
 		pattern = word;
 	}
 
-	const std::string& get_pattern() const { return pattern; }
+	const std::string_view get_pattern() const { return pattern; }
 
 	void filter(const Database& database, unsigned row_count) {
 		filtered.clear();

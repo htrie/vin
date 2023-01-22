@@ -1,6 +1,6 @@
 #pragma once
 
-bool accept(const std::string& filename) {
+bool accept(const std::string_view filename) {
 	if (filename.ends_with(".c")) return true;
 	if (filename.ends_with(".h")) return true;
 	if (filename.ends_with(".cpp")) return true;
@@ -53,9 +53,9 @@ class Database {
 	Array<File, 1024> files;
 	Array<Location, 128 * 1024> locations;
 
-	void scan(const std::string& filename, const std::string& pattern) {
+	void scan(const std::string_view filename, const std::string_view pattern) {
 		map(filename, [&](const char* mem, size_t size) {
-			files.emplace_back(filename, size);
+			files.emplace_back(std::string(filename), size);
 			for (size_t i = 0; i < size; ++i) {
 				if (mem[i] == pattern[0]) {
 					if (strncmp(&mem[i], pattern.data(), pattern.size()) == 0) {
@@ -67,7 +67,7 @@ class Database {
 	}
 
 public:
-	std::string search(const std::string& pattern) {
+	std::string search(const std::string_view pattern) {
 		const Timer timer;
 		files.clear();
 		locations.clear();

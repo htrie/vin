@@ -100,7 +100,7 @@ public:
 };
 
 template <typename F>
-void map(const std::string& filename, F func) {
+void map(const std::string_view filename, F func) {
 	if (const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, nullptr); file != INVALID_HANDLE_VALUE) {
 		if (size_t size = 0; GetFileSizeEx(file, (PLARGE_INTEGER)&size)) {
 			if (const auto mapping = CreateFileMapping(file, nullptr, PAGE_READONLY, 0, 0, nullptr); mapping != INVALID_HANDLE_VALUE) {
@@ -115,7 +115,7 @@ void map(const std::string& filename, F func) {
 	}
 }
 
-bool write(const std::string& filename, const std::string& text) {
+bool write(const std::string_view filename, const std::string_view text) {
 	bool res = false;
 	if (const auto file = CreateFileA(filename.data(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr); file != INVALID_HANDLE_VALUE) {
 		res = WriteFile(file, text.data(), (DWORD)text.size(), nullptr, nullptr);

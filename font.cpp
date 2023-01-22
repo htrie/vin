@@ -13,15 +13,15 @@
 #include <string>
 #include <Windows.h>
 
-unsigned parse_unsigned(const std::string& s, const std::string& name) {
+unsigned parse_unsigned(const std::string_view s, const std::string_view name) {
 	unsigned u = 0;
-	std::sscanf(s.c_str(), std::string(name + "=%u").c_str(), &u);
+	std::sscanf(s.data(), (std::string(name) + "=%u").c_str(), &u);
 	return u;
 }
 
-std::string parse_string(const std::string& s, const std::string& name) {
+std::string parse_string(const std::string_view s, const std::string_view name) {
 	const size_t offset = name.size() + 1;
-	return s.substr(offset, s.size() - offset);
+	return std::string(s.substr(offset, s.size() - offset));
 }
 
 struct Char {
