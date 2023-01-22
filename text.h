@@ -295,10 +295,12 @@ public:
 			verify(pos < text.size());
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
-			const auto n = text.find("//", pn != std::string::npos ? pn : 0, nn != std::string::npos ? nn : text.size() - 1);
-			if (n != std::string::npos) {
+			const auto begin = pn != std::string::npos && pn < pos ? pn : 0;
+			const auto end = nn != std::string::npos && nn > pos ? nn : text.size() - 1; 
+			const auto n = text.find("//", begin);
+			if (n != std::string::npos && n < end) {
 				start = n;
-				finish = nn != std::string::npos ? nn : text.size() - 1;
+				finish = end;
 				verify(start <= finish);
 			}
 		}
