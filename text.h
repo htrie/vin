@@ -180,6 +180,10 @@ public:
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
 
+	std::string_view to_string(const std::string_view text) const {
+		return text.substr(start, finish - start + 1);
+	}
+
 	bool check_letter_or_number() const { return has_letter_or_number; }
 	bool check_punctuation() const { return has_punctuation; }
 	bool check_whitespace() const { return has_whitespace; }
@@ -394,26 +398,56 @@ public:
 		}
 	}
 
-	void word_find(const std::string_view s) {
-		if (const auto pos = text.find(s, cursor); pos != std::string::npos) {
-			if (pos == cursor && (cursor + 1 < text.size())) {
-				if (const auto pos = text.find(s, cursor + 1); pos != std::string::npos) { cursor = pos; }
-				else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
-			}
-			else { cursor = pos; }
+	size_t match(const std::string_view s, size_t index, bool strict) {
+		size_t pos = index;
+		do {
+			pos = text.find(s, pos);
+			if (strict && pos != std::string::npos)
+				if (Word(text, pos).to_string(text) == s)
+					break;
+				else 
+					pos += 1;
 		}
-		else if (const auto pos = text.find(s, 0); pos != std::string::npos) { cursor = pos; }
+		while (strict && pos != std::string::npos);
+		return pos;
 	}
 
-	void word_rfind(const std::string_view s) {
-		if (const auto pos = text.rfind(s, cursor); pos != std::string::npos) {
-			if (pos == cursor && cursor > 0) {
-				if (const auto pos = text.rfind(s, cursor - 1); pos != std::string::npos) { cursor = pos; }
-				else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
+	size_t rmatch(const std::string_view s, size_t index, bool strict) {
+		size_t pos = index;
+		do {
+			pos = text.rfind(s, pos);
+			if (strict && pos != std::string::npos)
+				if (Word(text, pos).to_string(text) == s)
+					break;
+				else if (pos > 0) 
+					pos -= 1;
+				else
+					break;
+		}
+		while (strict && pos != std::string::npos);
+		return pos;
+	}
+
+	void word_find(const std::string_view s, bool strict) {
+		if (const auto pos = match(s, cursor, strict); pos != std::string::npos) {
+			if (pos == cursor && (cursor + 1 < text.size())) {
+				if (const auto pos = match(s, cursor + 1, strict); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = match(s, 0, strict); pos != std::string::npos) { cursor = pos; }
 			}
 			else { cursor = pos; }
 		}
-		else if (const auto pos = text.rfind(s, text.size() - 1); pos != std::string::npos) { cursor = pos; }
+		else if (const auto pos = match(s, 0, strict); pos != std::string::npos) { cursor = pos; }
+	}
+
+	void word_rfind(const std::string_view s, bool strict) {
+		if (const auto pos = rmatch(s, cursor, strict); pos != std::string::npos) {
+			if (pos == cursor && cursor > 0) {
+				if (const auto pos = rmatch(s, cursor - 1, strict); pos != std::string::npos) { cursor = pos; }
+				else if (const auto pos = rmatch(s, text.size() - 1, strict); pos != std::string::npos) { cursor = pos; }
+			}
+			else { cursor = pos; }
+		}
+		else if (const auto pos = rmatch(s, text.size() - 1, strict); pos != std::string::npos) { cursor = pos; }
 	}
 
 	void next_char() {
@@ -1018,6 +1052,7 @@ class Buffer {
 
 	bool char_forward = false;
 	bool word_forward = false;
+	bool word_strict = false;
 
 	bool needs_save = false;
 	bool is_code = false;
@@ -1068,6 +1103,17 @@ class Buffer {
 		accu += digit;
 	}
 
+	std::pair<bool, bool> check_highlight_strict(size_t index) const {
+		Word current(state().get_text(), index);
+		if (current.to_string(state().get_text()) == highlight)
+			return { true, index == current.end() };
+		return { false, false };
+	}
+
+	bool check_highlight_loose(size_t index) const {
+		return state().get_text().substr(index, highlight.size()) == highlight;
+	}
+
 	void line_find() {
 		if(char_forward) { state().line_find(f_key); }
 		else { state().line_rfind(f_key); }
@@ -1083,42 +1129,46 @@ class Buffer {
 	void word_find_under_cursor(unsigned row_count) {
 		highlight = state().current_word();
 		word_forward = true;
-		state().word_find(highlight);
+		word_strict = true;
+		state().word_find(highlight, word_strict);
 		state().cursor_center(row_count);
 	}
 
 	void word_rfind_under_cursor(unsigned row_count) {
 		highlight = state().current_word();
 		word_forward = false;
-		state().word_rfind(highlight);
+		word_strict = true;
+		state().word_rfind(highlight, word_strict);
 		state().cursor_center(row_count);
 	}
 
 	void word_find_partial(unsigned row_count) {
 		word_forward = true;
+		word_strict = false;
 		if (!state().current_word().starts_with(highlight)) {
-			state().word_find(highlight);
+			state().word_find(highlight, word_strict);
 			state().cursor_center(row_count);
 		}
 	}
 
 	void word_rfind_partial(unsigned row_count) {
 		word_forward = false;
+		word_strict = false;
 		if (!state().current_word().starts_with(highlight)) {
-			state().word_rfind(highlight);
+			state().word_rfind(highlight, word_strict);
 			state().cursor_center(row_count);
 		}
 	}
 
 	void word_find_again(unsigned row_count) {
-		if (word_forward) { state().word_find(highlight); }
-		else { state().word_rfind(highlight); }
+		if (word_forward) { state().word_find(highlight, word_strict); }
+		else { state().word_rfind(highlight, word_strict); }
 		state().cursor_center(row_count);
 	}
 
 	void word_rfind_again(unsigned row_count) {
-		if (word_forward) { state().word_rfind(highlight); }
-		else { state().word_find(highlight); }
+		if (word_forward) { state().word_rfind(highlight, word_strict); }
+		else { state().word_find(highlight, word_strict); }
 		state().cursor_center(row_count);
 	}
 
@@ -1417,6 +1467,11 @@ class Buffer {
 		push_number(characters, row, column, line, absolute_row == cursor_row);
 	}
 
+	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
+		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col);
+		characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col) + (last ? 0.0f : 0.5f)); // Fill in gaps.
+	}
+
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i);
@@ -1490,7 +1545,8 @@ class Buffer {
 					if (col == 0) { push_column_indicator(characters, row, 87);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
-					if (state().get_text().substr(index, highlight.size()) == highlight) { push_highlight(characters, row, col); }
+					if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
+					else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }
 					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
