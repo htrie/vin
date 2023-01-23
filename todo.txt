@@ -1,6 +1,4 @@
-+strict match when highlighting under cursor
 +underline
-+quotes italic
 +word wrap
++quotes italic
 +windows end delimiter
--status bar
