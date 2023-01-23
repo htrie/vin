@@ -329,12 +329,6 @@ public:
 	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
 
-	bool test(size_t index, const std::string_view s) const {
-		if (index + s.size() <= text.size())
-			return strncmp(&text[index], s.data(), s.size()) == 0;
-		return false;
-	}
-
 	unsigned find_cursor_row() const {
 		unsigned number = 0;
 		size_t index = 0;
@@ -1496,7 +1490,7 @@ class Buffer {
 					if (col == 0) { push_column_indicator(characters, row, 87);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
-					if (state().test(index, highlight)) { push_highlight(characters, row, col); }
+					if (state().get_text().substr(index, highlight.size()) == highlight) { push_highlight(characters, row, col); }
 					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
