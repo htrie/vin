@@ -1057,7 +1057,6 @@ class Buffer {
 	bool needs_save = false;
 	bool is_code = false;
 
-
 	size_t last_cursor = 0;
 
 	void save_cursor() {
@@ -1610,6 +1609,7 @@ class Buffer {
 				text = std::string(mem, size);
 			});
 		}
+		needs_save = false;
 		return text;
 	}
 

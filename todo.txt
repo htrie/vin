@@ -1,4 +1,4 @@
-+underline
 +word wrap
-+quotes italic
-+windows end delimiter
++windows line endings
++better comments
++quotes
