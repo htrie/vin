@@ -1596,7 +1596,7 @@ class Buffer {
 		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, row_count, 0, name, true, colors().clear);
-		push_string(characters, row_count, 64, readable_size(get_size()), true, colors().clear);
+		push_string(characters, row_count, 62, readable_size(get_size()), true, colors().clear);
 		const auto percentage = std::to_string(location_percentage()) + "%";
 		push_string(characters, row_count, 74, percentage, true, colors().clear);
 		const auto col_and_row = state().find_cursor_row_and_col();
