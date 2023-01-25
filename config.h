@@ -32,8 +32,8 @@ Colors& colors() {
 
 
 struct Spacing {
-	float character = 9.0f;
-	float line = 22.0f;
+	float character = 12.8f;
+	float line = 32.0f;
 	float zoom = 1.0f;
 
 	std::string increase_char_width() { character = std::clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
