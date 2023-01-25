@@ -1596,8 +1596,9 @@ class Buffer {
 		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, row_count, 0, name, true, colors().clear);
+		push_string(characters, row_count, 64, readable_size(get_size()), true, colors().clear);
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, row_count, 73, percentage, true, colors().clear);
+		push_string(characters, row_count, 74, percentage, true, colors().clear);
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
 		push_string(characters, row_count, 82, locations, true, colors().clear);
@@ -1909,10 +1910,12 @@ class Finder {
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) const {
 		const uint16_t index = 
+			c == ' ' ? (uint16_t)Glyph::SPACESIGN :
 			c == '\t' ? (uint16_t)Glyph::TABSIGN :
+			c == CR ? (uint16_t)Glyph::CARRIAGE :
 			c == '\n' ? (uint16_t)Glyph::RETURN :
 			(uint16_t)c;
-		const auto final_color = c == '\t' || c == '\n' ? colors().whitespace : color;
+		const auto final_color = c == ' ' || c == '\t' || c == CR || c == '\n' ? colors().whitespace : color;
 		characters.emplace_back(index, final_color, row, col, bold);
 	};
 
