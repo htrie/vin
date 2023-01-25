@@ -36,11 +36,12 @@ enum Glyph {
 	ESC = 27,
 	BLOCK = 9608,
 	LINE = 9615,
-	RETURN = 9166,
 	BOTTOM_BLOCK = 9601,
-	TABSIGN = 8594,
 	SPACESIGN = 8901,
-	UNKNOWN = 9633,
+	TABSIGN = 9205,
+	CARRIAGE = 9204,
+	RETURN = 9207,
+	UNKNOWN = 65533,
 };
 
 constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
@@ -1498,6 +1499,10 @@ class Buffer {
 			colors().cursor, row, col);
 	};
 
+	void push_carriage(Characters& characters, unsigned row, unsigned col) const {
+		characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col);
+	};
+
 	void push_return(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
 	};
@@ -1550,6 +1555,7 @@ class Buffer {
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
+					else if (c == CR) { push_carriage(characters, row, col); col++; }
 					else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
 					else { push_char_text(characters, row, col, c, index); col++; }
 				} else {
