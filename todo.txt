@@ -1,4 +1,3 @@
-+CR glyph
 +word wrap
 +windows line endings
 +better comments
