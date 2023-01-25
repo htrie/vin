@@ -32,7 +32,7 @@ Colors& colors() {
 
 
 struct Spacing {
-	float character = 12.8f;
+	float character = 13.8f;
 	float line = 32.0f;
 	float zoom = 1.0f;
 
