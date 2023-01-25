@@ -1687,6 +1687,16 @@ class Picker {
 		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
 	};
 
+	bool match_pattern(const std::string_view path) {
+		const auto s = to_lower(path);
+		size_t pos = 0;
+		for (auto& c : pattern) {
+			if (pos = s.find(c, pos); pos == std::string::npos)
+				return false;
+		}
+		return true;
+	}
+
 public:
 	void reset() {
 		pattern.clear();
@@ -1700,7 +1710,7 @@ public:
 		index.process([&](const auto& path) {
 			if (filtered.size() > row_count - 1)
 				return false;
-			if (to_lower(path).find(pattern) != std::string::npos)
+			if (match_pattern(path))
 				filtered.push_back(path.c_str());
 			return true;
 		});
