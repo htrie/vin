@@ -1,5 +1,34 @@
 #pragma once
 
+enum class Mode {
+	normal,
+	normal_number,
+	normal_slash,
+	normal_question,
+	normal_gt,
+	normal_lt,
+	normal_c,
+	normal_cf,
+	normal_ct,
+	normal_ci,
+	normal_ca,
+	normal_d,
+	normal_df,
+	normal_dt,
+	normal_di,
+	normal_da,
+	normal_f,
+	normal_F,
+	normal_r,
+	normal_y,
+	normal_yf,
+	normal_yt,
+	normal_yi,
+	normal_ya,
+	normal_z,
+	insert,
+};
+
 class Buffer {
 	Stack stack;
 
