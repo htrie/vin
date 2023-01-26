@@ -9,6 +9,8 @@ const unsigned version_minor = 9;
 #define _HAS_EXCEPTIONS 0
 #define VULKAN_HPP_NO_EXCEPTIONS
 
+#include <iostream>
+#include <sstream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,3 +1,4 @@
++separate text and gpu into device/buffer/finder/picker/switcher/text/vulkan
 +use common line ending instead of direct \n
 +detect line endings and use major one
 +display in status bar [unix] or [windows]
