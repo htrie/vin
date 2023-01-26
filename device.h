@@ -1,3 +1,4 @@
+#pragma once
 
 static const unsigned CharacterMaxCount = 8192;
 
