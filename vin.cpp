@@ -27,6 +27,7 @@ const unsigned version_minor = 9;
 #include "config.h"
 #include "index.h"
 #include "text.h"
+#include "buffer.h"
 #include "picker.h"
 #include "vulkan.h"
 #include "device.h"
