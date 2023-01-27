@@ -65,7 +65,7 @@ public:
 		unsigned col = 0;
 		unsigned row = 0;
 		push_line(characters, float(row), 0, col_count, colors().text);
-		push_string(characters, row, col, "find: ", true, colors().clear);
+		push_string(characters, row, col, "find:", true, colors().clear);
 		push_string(characters, row, col, pattern, false, colors().clear);
 		push_cursor(characters, row, col, colors().clear);
 		row++;
