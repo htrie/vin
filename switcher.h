@@ -95,8 +95,6 @@ public:
 	}
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == 'j') { select_next(); }
-		else if (key == 'k') { select_previous(); }
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {

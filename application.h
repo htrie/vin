@@ -77,11 +77,11 @@ class Application {
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
+		else if (key == 'r') { notify(switcher.reload()); }
+		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'e') { notify(index.populate()); picker.reset(); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'l') { menu = Menu::finder; }
-		else if (key == 'r') { notify(switcher.reload()); }
-		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
@@ -111,7 +111,12 @@ class Application {
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
-		 switcher.process(key, col_count, row_count);
+		if (key == 'j') { switcher.select_next(); }
+		else if (key == 'k') { switcher.select_previous(); }
+		else if (key == 'w') { notify(switcher.close()); }
+		else if (key == 'r') { notify(switcher.reload()); }
+		else if (key == 's') { notify(switcher.save()); }
+		else { switcher.process(key, col_count, row_count); }
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
