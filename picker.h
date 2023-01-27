@@ -5,13 +5,6 @@ class Picker {
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
-	void push_line(Characters& characters, unsigned row, unsigned col_count, Color color) const {
-		for (unsigned i = 0; i <= col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, color, row, i);
-			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
-		}
-	}
-
 	void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) const {
 		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
 	};
@@ -65,7 +58,7 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_line(characters, row, col_count, colors().text);
+		push_line(characters, float(row), 0, col_count, colors().text);
 		push_string(characters, row, col, "open: ", true, colors().clear);
 		push_string(characters, row, col, pattern, false, colors().clear);
 		push_cursor(characters, row, col, colors().clear);
@@ -75,7 +68,7 @@ public:
 		for (auto& path : filtered) {
 			col = 0;
 			if (selected == displayed)
-				push_line(characters, row, col_count, colors().cursor_line);
+				push_line(characters, float(row), 0, col_count, colors().cursor_line);
 			push_string(characters, row++, col, path, false, colors().text);
 			displayed++;
 		}

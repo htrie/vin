@@ -573,13 +573,6 @@ class Buffer {
 		}
 	}
 
-	void push_line(Characters& characters, float row, unsigned col_count, Color color) const {
-		for (unsigned i = 0; i <= col_count; ++i) {
-			characters.emplace_back(Glyph::BLOCK, color, row, float(i));
-			characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
-		}
-	}
-
 	size_t location_percentage() const {
 		if (const auto size = get_size())
 			return 1 + state().get_cursor() * 100 / size;
@@ -587,8 +580,8 @@ class Buffer {
 	}
 
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_line(characters, float(row_count), col_count, colors().text);
-		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
+		push_line(characters, float(row_count), 0, col_count, colors().text);
+		push_line(characters, float(row_count) + 0.5f, 0, col_count, colors().text); // Hide extra pixel lines.
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, row_count, 0, name, true, colors().clear);
 		push_string(characters, row_count, 62, readable_size(get_size()), true, colors().clear);

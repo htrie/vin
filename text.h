@@ -299,3 +299,11 @@ void push_string(Characters& characters, unsigned row, unsigned& col, const std:
 	}
 }
 
+void push_line(Characters& characters, float row, unsigned col_begin, unsigned col_end, Color color) {
+	for (unsigned i = col_begin; i <= col_end; ++i) {
+		characters.emplace_back(Glyph::BLOCK, color, row, float(i));
+		characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
+	}
+}
+
+

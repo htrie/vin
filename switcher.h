@@ -13,13 +13,6 @@ class Switcher {
 		return longest;
 	}
 
-	void push_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end, Color color) const {
-		for (unsigned i = col_begin; i < col_end; ++i) {
-			characters.emplace_back(Glyph::BLOCK, color, row, i);
-			characters.emplace_back(Glyph::BLOCK, color, float(row), float(i) + 0.5f); // Fill in gaps.
-		}
-	}
-
 	size_t find_buffer(const std::string_view filename) {
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			if (buffers[i].get_filename() == filename)
@@ -119,7 +112,7 @@ public:
 		unsigned row = top_row;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			col = left_col;
-			push_line(characters, row, left_col, right_col + 1, i == active ? colors().text : colors().overlay);
+			push_line(characters, float(row), left_col, right_col + 1, i == active ? colors().text : colors().overlay);
 			const auto name = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
 			push_string(characters, row, col, name, buffers[i].is_dirty(), i == active ? colors().overlay : colors().text);
 			row++;
