@@ -2,23 +2,27 @@
 
 class State {
 	std::string text;
+	std::string endl = unix_endl;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
 
 public:
 	const std::string_view get_text() const { return text; }
-	void set_text(const std::string_view t) { text = t; }
+	void set_text(const std::string_view text) { this->text = text; }
+
+	const std::string_view get_endl() const { return endl; }
+	void set_endl(const std::string_view endl) { this->endl = endl; }
 
 	size_t get_cursor() const { return cursor; }
-	void set_cursor(size_t u) { cursor = u; }
+	void set_cursor(size_t cursor) { this->cursor = cursor; }
 
 	unsigned get_begin_row() const { return begin_row; }
 
 	Word incr(const Word& w) { return Word(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Word decr(const Word& w) { return Word(text, w.begin() > 0 ? w.begin() - 1 : 0); }
 
-	Line incr(const Line& w) { return Line(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
-	Line decr(const Line& w) { return Line(text, w.begin() > 0 ? w.begin() - 1 : 0); }
+	Line incr(const Line& l) { return Line(text, l.end() < text.size() - endl.size() ? l.end() + endl.size() : l.end(), endl); }
+	Line decr(const Line& l) { return Line(text, l.begin() > 0 ? l.begin() - endl.size() : 0, endl); }
 
 	unsigned find_cursor_row() const {
 		unsigned number = 0;
@@ -46,7 +50,7 @@ public:
 
 	size_t find_char(unsigned key) {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			size_t pos = text[cursor] == key ? cursor + 1 : cursor;
 			bool found = false;
 			while (pos < current.end()) {
@@ -60,7 +64,7 @@ public:
 
 	size_t rfind_char(unsigned key) {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			size_t pos = text[cursor] == key && cursor > current.begin() ? cursor - 1 : cursor;
 			bool found = false;
 			while (pos >= current.begin()) {
@@ -138,27 +142,27 @@ public:
 	}
 
 	void next_char() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		cursor = std::clamp(cursor + 1, current.begin(), current.end());
 	}
 
 	void prev_char() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		cursor = std::clamp(cursor > 0 ? cursor - 1 : 0, current.begin(), current.end());
 	}
 
 	void line_start() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		cursor = current.begin();
 	}
 
 	void line_end() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		cursor = current.end();
 	}
 
 	void line_start_whitespace() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		cursor = current.begin();
 		while (cursor <= current.end()) {
 			if (!is_line_whitespace(text[cursor]))
@@ -220,31 +224,31 @@ public:
 	}
 
 	bool is_first_line() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		return current.begin() == 0;
 	}
 
 	void next_line() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		const Line next = incr(current);
 		cursor = next.to_absolute(current.to_relative(cursor));
 	}
 
 	void prev_line() {
-		const Line current(text, cursor);
+		const Line current(text, cursor, endl);
 		const Line prev = decr(current);
 		cursor = prev.to_absolute(current.to_relative(cursor));
 	}
 
 	void buffer_end() {
-		const Line current(text, cursor);
-		const Line last(text, text.size() - 1);
+		const Line current(text, cursor, endl);
+		const Line last(text, text.size() - 1, endl);
 		cursor = last.to_absolute(current.to_relative(cursor));
 	}
 
 	void buffer_start() {
-		const Line current(text, cursor);
-		const Line first(text, 0);
+		const Line current(text, cursor, endl);
+		const Line first(text, 0, endl);
 		cursor = first.to_absolute(current.to_relative(cursor));
 	}
 
@@ -339,7 +343,7 @@ public:
 
 	std::string yank_line() {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			return text.substr(current.begin(), current.end() - current.begin() + 1);
 		}
 		return {};
@@ -401,7 +405,7 @@ public:
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
 				if (begin < text.size() - 1) {
-					const Line current(text, begin);
+					const Line current(text, begin, endl);
 					s += text.substr(current.begin(), current.end() - current.begin() + 1);
 					begin = current.end() + 1;
 				}
@@ -416,7 +420,7 @@ public:
 			size_t begin = cursor;
 			for (unsigned i = 0; i <= count; i++) {
 				if (begin < text.size() - 1) {
-					const Line current(text, begin);
+					const Line current(text, begin, endl);
 					s.insert(0, text.substr(current.begin(), current.end() - current.begin() + 1));
 					if (current.begin() == 0) break;
 					begin = current.begin() - 1;
@@ -502,7 +506,7 @@ public:
 
 	std::string erase_line() {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			const auto s = text.substr(current.begin(), current.end() - current.begin() + 1);
 			text.erase(current.begin(), current.end() - current.begin() + 1);
 			cursor = std::min(current.begin(), text.size() - 1);
@@ -513,7 +517,7 @@ public:
 
 	std::string erase_line_contents() {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			const auto s = text.substr(current.begin(), current.end() - current.begin());
 			text.erase(current.begin(), current.end() - current.begin());
 			cursor = std::min(current.begin(), text.size() - 1);
@@ -524,7 +528,7 @@ public:
 
 	std::string erase_to_line_end() {
 		if (text.size() > 0) {
-			const Line current(text, cursor);
+			const Line current(text, cursor, endl);
 			const auto s = text.substr(cursor, current.end() - cursor);
 			text.erase(cursor, current.end() - cursor);
 			cursor = std::min(cursor, text.size() - 1);
@@ -659,13 +663,6 @@ public:
 			erase_if('\t');
 		}
 	}
-
-	void fix_eof() {
-		const auto size = text.size();
-		if (size == 0 || (size > 0 && text[size - 1] != '\n')) {
-			text += '\n';
-		}
-	}
 };
 
 class Stack {
@@ -680,17 +677,19 @@ public:
 	void reset() {
 		states.clear();
 		states.emplace_back();
-		states.back().fix_eof();
 	}
 
 	State& state() { return states.back(); }
 	const State& state() const { return states.back(); }
 
 	const std::string_view get_text() const { return states.back().get_text(); }
-	void set_text(const std::string_view t) { states.back().set_text(t); }
+	void set_text(const std::string_view text) { states.back().set_text(text); }
+
+	const std::string_view get_endl() const { return states.back().get_endl(); }
+	void set_endl(const std::string_view endl) { states.back().set_endl(endl); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
-	void set_cursor(size_t u) { states.back().set_cursor(u); }
+	void set_cursor(size_t cursor) { states.back().set_cursor(cursor); }
 
 	void set_undo() { undo = true; }
 
@@ -715,7 +714,6 @@ public:
 			if (states.size() > 1)
 				states.pop_back();
 		}
-		states.back().fix_eof();
 		return modified;
 	}
 };
