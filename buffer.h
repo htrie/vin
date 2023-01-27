@@ -208,9 +208,9 @@ class Buffer {
 
 	void process_insert(unsigned key) {
 		if (key == Glyph::ESC) { end_record(key); mode = Mode::normal; }
-		else if (key == Glyph::BS) { append_record(key); state().erase_back(); }
-		else if (key == Glyph::TAB) { append_record(key); state().insert("\t"); }
-		else if (key == Glyph::CR) { append_record(key); state().insert("\n"); }
+		else if (key == '\b') { append_record(key); state().erase_back(); }
+		else if (key == '\t') { append_record(key); state().insert("\t"); }
+		else if (key == '\r') { append_record(key); state().insert("\n"); }
 		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
@@ -280,15 +280,15 @@ class Buffer {
 
 	void process_normal_slash(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
-		else if (key == Glyph::CR) { word_find_partial(row_count); mode = Mode::normal; }
-		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
+		else if (key == '\r') { word_find_partial(row_count); mode = Mode::normal; }
+		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
 		else { highlight += key; word_find_partial(row_count); }
 	}
 
 	void process_normal_question(unsigned key, unsigned row_count) {
 		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
-		else if (key == Glyph::CR) { word_rfind_partial(row_count); mode = Mode::normal; }
-		else if (key == Glyph::BS) { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
+		else if (key == '\r') { word_rfind_partial(row_count); mode = Mode::normal; }
+		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
 		else { highlight += key; word_rfind_partial(row_count); }
 	}
 	void process_normal_f(unsigned key) {

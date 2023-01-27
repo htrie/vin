@@ -105,7 +105,7 @@ class Application {
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(picker.selection())); menu = Menu::normal; }
+		if (key == '\r') { notify(switcher.load(picker.selection())); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { menu = Menu::normal; }
 		else { picker.process(key, col_count, row_count); picker.filter(index, row_count); }
 	}
@@ -115,7 +115,7 @@ class Application {
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
+		if (key == '\r') { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
 		else if (key == Glyph::ESC) { menu = Menu::normal; }
 		else { if (finder.process(key, col_count, row_count)) { notify(database.search(finder.get_pattern())); } finder.filter(database, row_count); }
 	}

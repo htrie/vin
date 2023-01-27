@@ -1,10 +1,7 @@
 #pragma once
 
 enum Glyph {
-	BS = 8,
-	TAB = 9,
-	CR = 13,
-	ESC = 27,
+	ESC = 27, // TODO: Remove.
 	BLOCK = 9608,
 	LINE = 9615,
 	BOTTOM_BLOCK = 9601,

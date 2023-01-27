@@ -79,10 +79,10 @@ public:
 	}
 
 	bool process(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == Glyph::CR) { return false; }
+		if (key == '\r') { return false; }
 		else if (key == Glyph::ESC) { return false; }
-		else if (key == Glyph::TAB) { return false; }
-		else if (key == Glyph::BS) { if (pattern.size() > 0) { pattern.pop_back(); return true; } }
+		else if (key == '\t') { return false; }
+		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); return true; } }
 		else if (key == '<') { selected++; }
 		else if (key == '>') { if (selected > 0) selected--; }
 		else { pattern += (char)key; return true; }
