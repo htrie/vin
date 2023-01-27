@@ -52,7 +52,7 @@ public:
 
 	bool process(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == '\r') { return false; }
-		else if (key == Glyph::ESC) { return false; }
+		else if (key == Glyph::ESCAPE) { return false; }
 		else if (key == '\t') { return false; }
 		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); return true; } }
 		else if (key == '<') { selected++; }

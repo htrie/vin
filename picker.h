@@ -43,7 +43,7 @@ public:
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == '\r') { return; }
-		else if (key == Glyph::ESC) { return; }
+		else if (key == Glyph::ESCAPE) { return; }
 		else if (key == '\t') { return; }
 		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); } }
 		else if (key == '<') { selected++; }

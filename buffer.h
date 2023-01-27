@@ -207,7 +207,7 @@ class Buffer {
 	}
 
 	void process_insert(unsigned key) {
-		if (key == Glyph::ESC) { end_record(key); mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { end_record(key); mode = Mode::normal; }
 		else if (key == '\b') { append_record(key); state().erase_back(); }
 		else if (key == '\t') { append_record(key); state().insert("\t"); }
 		else if (key == '\r') { append_record(key); state().insert("\n"); }
@@ -279,30 +279,30 @@ class Buffer {
 	}
 
 	void process_normal_slash(unsigned key, unsigned row_count) {
-		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
 		else if (key == '\r') { word_find_partial(row_count); mode = Mode::normal; }
 		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
 		else { highlight += key; word_find_partial(row_count); }
 	}
 
 	void process_normal_question(unsigned key, unsigned row_count) {
-		if (key == Glyph::ESC) { highlight.clear(); mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
 		else if (key == '\r') { word_rfind_partial(row_count); mode = Mode::normal; }
 		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
 		else { highlight += key; word_rfind_partial(row_count); }
 	}
 	void process_normal_f(unsigned key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
 		else { state().line_find(key); f_key = key; char_forward = true; mode = Mode::normal; }
 	}
 
 	void process_normal_F(unsigned key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
 		else { state().line_rfind(key); f_key = key; char_forward = false; mode = Mode::normal; }
 	}
 
 	void process_normal_r(std::string& clipboard, unsigned key) {
-		if (key == Glyph::ESC) { mode = Mode::normal; }
+		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
 		else { end_record(key); clipboard = state().erase(); state().insert(std::string((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
 	}
 

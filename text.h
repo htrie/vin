@@ -1,7 +1,7 @@
 #pragma once
 
 enum Glyph {
-	ESC = 27, // TODO: Remove.
+	ESCAPE = 27,
 	SPACE = 9251,
 	TAB = 10230,
 	CARRIAGE = 10232,
