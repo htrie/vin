@@ -11,7 +11,7 @@ enum class Menu {
 	finder,
 };
 
-class App {
+class Application {
 	Device device;
 	Index index;
 	Database database;
@@ -163,21 +163,21 @@ class App {
 		case WM_MOVING:
 		case WM_KILLFOCUS:
 		case WM_SETFOCUS: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
 			}
 			break;
 		}
 		case WM_SETREDRAW:
 		case WM_PAINT: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->redraw();
 			}
 			break;
 		}
 		case WM_SIZING:
 		case WM_SIZE: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_maximized(wParam == SIZE_MAXIMIZED);
 				app->set_minimized(wParam == SIZE_MINIMIZED);
 				app->set_dirty(true);
@@ -188,7 +188,7 @@ class App {
 			break;
 		}
 		case WM_KEYDOWN: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->set_dirty(true);
 					app->update(true);
@@ -197,7 +197,7 @@ class App {
 			break;
 		}
 		case WM_KEYUP: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->set_dirty(true);
 					app->update(false);
@@ -206,7 +206,7 @@ class App {
 			break;
 		}
 		case WM_CHAR: {
-			if (auto* app = reinterpret_cast<App*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
 				app->process((unsigned)wParam);
 			}
@@ -220,7 +220,7 @@ class App {
 	}
 
 public:
-	App(HINSTANCE hInstance, int nCmdShow)
+	Application(HINSTANCE hInstance, int nCmdShow)
 		: device(proc, hInstance, 1280, 952) {
 		show_window(device.get_hwnd(), nCmdShow);
 	}

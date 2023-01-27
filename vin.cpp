@@ -31,13 +31,13 @@
 #include "finder.h"
 #include "vulkan.h"
 #include "device.h"
-#include "app.h"
+#include "application.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
 	const Timer timer;
-	App app(hInstance, nCmdShow);
-	app.notify(std::string("init in ") + timer.us());
-	app.run();
+	Application application(hInstance, nCmdShow);
+	application.notify(std::string("init in ") + timer.us());
+	application.run();
 	return 0;
 }
 
