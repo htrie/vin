@@ -13,16 +13,6 @@ class Switcher {
 		return longest;
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
-		characters.emplace_back((uint16_t)c, color, row, col, bold);
-	};
-
-	void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) const {
-		for (auto& c : s) {
-			push_char(characters, row, col++, c, bold, color);
-		}
-	}
-
 	void push_line(Characters& characters, unsigned row, unsigned col_begin, unsigned col_end, Color color) const {
 		for (unsigned i = col_begin; i < col_end; ++i) {
 			characters.emplace_back(Glyph::BLOCK, color, row, i);

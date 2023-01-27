@@ -282,3 +282,20 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
+void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) {
+	const uint16_t index = 
+		c == ' ' ? (uint16_t)Glyph::SPACE :
+		c == '\t' ? (uint16_t)Glyph::TAB :
+		c == '\r' ? (uint16_t)Glyph::CARRIAGE :
+		c == '\n' ? (uint16_t)Glyph::RETURN :
+		(uint16_t)c;
+	const auto final_color = c == ' ' || c == '\t' || c == '\r' || c == '\n' ? colors().whitespace : color;
+	characters.emplace_back(index, final_color, row, col, bold);
+};
+
+void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) {
+	for (auto& c : s) {
+		push_char(characters, row, col++, c, color, bold);
+	}
+}
+
