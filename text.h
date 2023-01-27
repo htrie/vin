@@ -1,8 +1,5 @@
 #pragma once
 
-const auto unix_endl = "\n";
-const auto windows_endl = "\r\n";
-
 enum Glyph {
 	BS = 8,
 	TAB = 9,
@@ -22,7 +19,7 @@ constexpr bool is_number(char c) { return (c >= '0' && c <= '9'); }
 constexpr bool is_letter(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_'); }
 constexpr bool is_lowercase_letter(uint16_t c) { return (c >= 'a' && c <= 'z'); }
 constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); }
-constexpr bool is_whitespace(char c) { return c == '\r' || c == '\n' || c == '\t' || c == ' '; }
+constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
@@ -38,24 +35,6 @@ bool is_code_extension(const std::string_view filename) {
 	if (filename.ends_with(".c")) return true;
 	if (filename.ends_with(".h")) return true;
 	return false;
-}
-
-unsigned count(const std::string_view text, const std::string_view s) {
-	unsigned count = 0;
-	size_t pos = text.find(s);
-	while (pos != std::string::npos) {
-		count++;
-		pos = text.find(s, pos + 1);
-	}
-	return count;
-}
-
-std::string_view detect_endl(const std::string_view text) {
-	unsigned unix_count = count(text, unix_endl);
-	unsigned windows_count = count(text, windows_endl);
-	if (windows_count > 0 && unix_count < windows_count * 2)
-		return windows_endl;
-	return unix_endl;
 }
 
 static inline const std::vector<std::vector<const char*>> cpp_keywords = {
@@ -235,8 +214,6 @@ public:
 				finish = next != std::string::npos ? next : pos;
 			}
 			verify(start <= finish);
-			verify(start < text.size());
-			verify(finish < text.size());
 		}
 	}
 
@@ -251,16 +228,14 @@ class Line {
 	size_t finish = 0;
 
 public:
-	Line(const std::string_view text, size_t pos, const std::string_view endl) {
+	Line(const std::string_view text, size_t pos) {
 		if (text.size() > 0) {
 			verify(pos < text.size());
-			const auto pn = text.rfind(endl, pos > 0 && text.substr(pos, endl.size()) == endl ? pos - endl.size() : pos);
-			const auto nn = text.find(endl, pos);
-			start = pn != std::string::npos ? (pn < pos ? pn + endl.size() : pn) : 0;
+			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
+			const auto nn = text.find("\n", pos);
+			start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
 			finish = nn != std::string::npos ? nn : text.size() - 1;
 			verify(start <= finish);
-			verify(start < text.size());
-			verify(finish < text.size());
 		}
 	}
 

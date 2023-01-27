@@ -210,7 +210,7 @@ class Buffer {
 		if (key == Glyph::ESC) { end_record(key); mode = Mode::normal; }
 		else if (key == Glyph::BS) { append_record(key); state().erase_back(); }
 		else if (key == Glyph::TAB) { append_record(key); state().insert("\t"); }
-		else if (key == Glyph::CR) { append_record(key); state().insert(state().get_endl()); }
+		else if (key == Glyph::CR) { append_record(key); state().insert("\n"); }
 		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
@@ -230,8 +230,8 @@ class Buffer {
 		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
 		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
-		else if (key == 'o') { begin_record(key); state().line_end(); state().insert(state().get_endl()); mode = Mode::insert; }
-		else if (key == 'O') { begin_record(key); state().line_start(); state().insert(state().get_endl()); state().prev_line(); mode = Mode::insert; }
+		else if (key == 'o') { begin_record(key); state().line_end(); state().insert("\n"); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); state().line_start(); state().insert("\n"); state().prev_line(); mode = Mode::insert; }
 		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { begin_record(key); clipboard = state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { begin_record(key); clipboard = state().erase_to_line_end(); mode = Mode::insert; }
@@ -511,7 +511,7 @@ class Buffer {
 	};
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
-		const Line line(state().get_text(), index, state().get_endl());
+		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
@@ -549,8 +549,8 @@ class Buffer {
 					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
 					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
-					else if (c == '\r') { push_carriage(characters, row, col); col++; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
+					else if (c == CR) { push_carriage(characters, row, col); col++; }
 					else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
 					else { push_char_text(characters, row, col, c, index); col++; }
 				} else {
@@ -591,19 +591,17 @@ class Buffer {
 		push_line(characters, float(row_count) + 0.5f, col_count, colors().text); // Hide extra pixel lines.
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, row_count, 0, name, true, colors().clear);
-		push_string(characters, row_count, 56, state().get_endl() == windows_endl ? "[win]" : "[unix]", true, colors().clear);
-		push_string(characters, row_count, 66, readable_size(get_size()), true, colors().clear);
+		push_string(characters, row_count, 62, readable_size(get_size()), true, colors().clear);
 		const auto percentage = std::to_string(location_percentage()) + "%";
+		push_string(characters, row_count, 74, percentage, true, colors().clear);
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, row_count, 76, percentage + " (" + locations + ")", true, colors().clear);
+		push_string(characters, row_count, 82, locations, true, colors().clear);
 	}
 
 	void init(const std::string_view text) {
-		const auto endl = detect_endl(text);
 		stack.set_cursor(0);
 		stack.set_text(text);
-		stack.set_endl(endl);
 	}
 
 	std::string load() {

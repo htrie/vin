@@ -15,10 +15,10 @@ class Finder {
 		const uint16_t index = 
 			c == ' ' ? (uint16_t)Glyph::SPACESIGN :
 			c == '\t' ? (uint16_t)Glyph::TABSIGN :
-			c == '\r' ? (uint16_t)Glyph::CARRIAGE :
+			c == CR ? (uint16_t)Glyph::CARRIAGE :
 			c == '\n' ? (uint16_t)Glyph::RETURN :
 			(uint16_t)c;
-		const auto final_color = c == ' ' || c == '\t' || c == '\r' || c == '\n' ? colors().whitespace : color;
+		const auto final_color = c == ' ' || c == '\t' || c == CR || c == '\n' ? colors().whitespace : color;
 		characters.emplace_back(index, final_color, row, col, bold);
 	};
 

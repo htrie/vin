@@ -1,1 +1,4 @@
++use common line ending instead of direct \n
++detect line endings and use major one
++display in status bar [unix] or [windows]
 +word wrap
