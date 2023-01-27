@@ -306,4 +306,7 @@ void push_line(Characters& characters, float row, unsigned col_begin, unsigned c
 	}
 }
 
+void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) {
+	characters.emplace_back(Glyph::LINE, color, row, col);
+};
 

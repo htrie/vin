@@ -5,10 +5,6 @@ class Picker {
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) const {
-		characters.emplace_back(Glyph::LINE, colors().cursor, row, col);
-	};
-
 	bool match_pattern(const std::string_view path) {
 		const auto s = to_lower(path);
 		size_t pos = 0;

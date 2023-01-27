@@ -11,10 +11,6 @@ class Finder {
 	std::vector<Entry> filtered;
 	unsigned selected = 0; 
 
-	void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) const {
-		characters.emplace_back(Glyph::LINE, color, row, col);
-	};
-
 public:
 	void reset() {
 		pattern.clear();
