@@ -490,7 +490,7 @@ class Buffer {
 		characters.emplace_back(
 			get_mode() == Mode::insert ? Glyph::LINE :
 			get_mode() == Mode::normal ? Glyph::BLOCK :
-			Glyph::BOTTOM_BLOCK,
+			Glyph::BOTTOM,
 			colors().cursor, row, col);
 	};
 
@@ -503,11 +503,11 @@ class Buffer {
 	};
 
 	void push_tab(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::TABSIGN, colors().whitespace, row, col);
+		characters.emplace_back(Glyph::TAB, colors().whitespace, row, col);
 	};
 
 	void push_space(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::SPACESIGN, colors().whitespace, row, col);
+		characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col);
 	};
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {

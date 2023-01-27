@@ -13,8 +13,8 @@ class Finder {
 
 	void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) const {
 		const uint16_t index = 
-			c == ' ' ? (uint16_t)Glyph::SPACESIGN :
-			c == '\t' ? (uint16_t)Glyph::TABSIGN :
+			c == ' ' ? (uint16_t)Glyph::SPACE :
+			c == '\t' ? (uint16_t)Glyph::TAB :
 			c == '\r' ? (uint16_t)Glyph::CARRIAGE :
 			c == '\n' ? (uint16_t)Glyph::RETURN :
 			(uint16_t)c;
