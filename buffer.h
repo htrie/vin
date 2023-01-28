@@ -525,10 +525,11 @@ class Buffer {
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col, false, true); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
+		else if (word.check_class() || word.check_std()) { characters.emplace_back((uint16_t)c, colors().text, row, col, false, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, colors().text, row, col, word.check_class() || word.check_std()); }
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {

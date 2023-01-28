@@ -129,20 +129,17 @@ public:
 			start = pos;
 			finish = pos;
 			const auto c = text[pos];
-			if (is_number(c) || is_letter(c)) {
+			if (is_number(c) || is_letter(c) || c == ':') {
 				while(test_letter_or_number(text, finish + 1)) { finish++; }
 				while(test_letter_or_number(text, start - 1)) { start--; }
-				has_letter_or_number = true;
 			}
 			else if (is_whitespace(c)) {
 				while(test_whitespace(text, finish + 1)) { finish++; }
 				while(test_whitespace(text, start - 1)) { start--; }
-				has_whitespace = true;
 			}
 			else if (is_punctuation(c)) {
 				while(test_punctuation(text, finish + 1)) { finish++; }
 				while(test_punctuation(text, start - 1)) { start--; }
-				has_punctuation = true;
 			}
 			verify(start <= finish);
 			is_class = is_uppercase_letter(text[start]);
@@ -157,9 +154,6 @@ public:
 		return text.substr(start, finish - start + 1);
 	}
 
-	bool check_letter_or_number() const { return has_letter_or_number; }
-	bool check_punctuation() const { return has_punctuation; }
-	bool check_whitespace() const { return has_whitespace; }
 	bool check_class() const { return is_class; }
 	bool check_std() const { return is_std; }
 
