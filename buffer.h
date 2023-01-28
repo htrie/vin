@@ -528,7 +528,7 @@ class Buffer {
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
-		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col, word.check_class() || word.check_std()); }
 	};
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {

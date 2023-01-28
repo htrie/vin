@@ -20,7 +20,7 @@ constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
-	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
+	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || /*c == ':' ||*/ // Do not consider as word separator (so that std:: get detected as one word).
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' ||
 	c == '?' || c == '"' || c == '#' || c == '\'';
@@ -98,10 +98,12 @@ class Word {
 	bool has_letter_or_number = false;
 	bool has_whitespace = false;
 	bool has_punctuation = false;
+	bool is_class = false;
+	bool is_std = false;
 
 	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
-			return is_number(text[pos]) || is_letter(text[pos]);
+			return is_number(text[pos]) || is_letter(text[pos]) || text[pos] == ':';
 		}
 		return false;
 	}
@@ -143,6 +145,8 @@ public:
 				has_punctuation = true;
 			}
 			verify(start <= finish);
+			is_class = is_uppercase_letter(text[start]);
+			is_std = to_string(text).starts_with("std::");
 		}
 	}
 
@@ -156,6 +160,8 @@ public:
 	bool check_letter_or_number() const { return has_letter_or_number; }
 	bool check_punctuation() const { return has_punctuation; }
 	bool check_whitespace() const { return has_whitespace; }
+	bool check_class() const { return is_class; }
+	bool check_std() const { return is_std; }
 
 	bool check_keyword(const std::string_view text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
