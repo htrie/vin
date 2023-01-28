@@ -286,30 +286,30 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
-void push_char(Characters& characters, unsigned row, unsigned& col, char c, const Color& color, bool bold) {
+void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c, bool bold, bool italic) {
 	switch (c) {
-		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold); break;
-		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold); break;
-		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold); break;
-		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold); break;
-		default: characters.emplace_back(c, color, row, col++, bold); break;
+		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold, italic); break;
+		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold, italic); break;
+		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold, italic); break;
+		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold, italic); break;
+		default: characters.emplace_back(c, color, row, col++, bold, italic); break;
 	}
 }
 
-void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) {
+void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s, bool bold = false, bool italic = false) {
 	for (auto& c : s) {
-		push_char(characters, row, col, c, color, bold);
+		push_char(characters, color, row, col, c, bold, italic);
 	}
 }
 
-void push_line(Characters& characters, float row, unsigned col_begin, unsigned col_end, Color color) {
+void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
 	for (unsigned i = col_begin; i <= col_end; ++i) {
 		characters.emplace_back(Glyph::BLOCK, color, row, float(i));
 		characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
 	}
 }
 
-void push_cursor(Characters& characters, unsigned row, unsigned col, Color color) {
+void push_cursor(Characters& characters, Color color, unsigned row, unsigned col) {
 	characters.emplace_back(Glyph::LINE, color, row, col);
 };
 

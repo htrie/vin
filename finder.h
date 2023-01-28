@@ -72,24 +72,25 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_line(characters, float(row), 0, col_count, colors().text);
-		push_string(characters, row, col, "find:", true, colors().clear);
-		push_string(characters, row, col, pattern, false, colors().clear);
-		push_cursor(characters, row, col, colors().clear);
+		push_line(characters, colors().text, float(row), 0, col_count);
+		push_string(characters, colors().clear, row, col, "find:", true);
+		push_string(characters, colors().clear, row, col, pattern);
+		push_cursor(characters, colors().clear, row, col);
 		row++;
 
 		unsigned displayed = 0;
 		for (auto& entry : filtered) {
 			col = 0;
 			if (selected == displayed)
-				push_line(characters, float(row), 0, col_count, colors().cursor_line);
-			push_string(characters, row, col, entry.filename + "(" + std::to_string(entry.position) + "):", true, colors().text);
+				push_line(characters, colors().cursor_line, float(row), 0, col_count);
+			const auto location = entry.filename + "(" + std::to_string(entry.position) + "):";
+			push_string(characters, colors().text, row, col, location);
 			const auto pos = entry.context.find(pattern);
 			const auto pre_context = entry.context.substr(0, pos);
 			const auto post_context = entry.context.substr(pos + pattern.size());
-			push_string(characters, row, col, pre_context, false, colors().comment);
-			push_string(characters, row, col, pattern, true, colors().text);
-			push_string(characters, row, col, post_context, false, colors().comment);
+			push_string(characters, colors().comment, row, col, pre_context);
+			push_string(characters, colors().text, row, col, pattern, true);
+			push_string(characters, colors().comment, row, col, post_context);
 			row++;
 			displayed++;
 		}

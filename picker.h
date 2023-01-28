@@ -54,18 +54,18 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned col = 0;
 		unsigned row = 0;
-		push_line(characters, float(row), 0, col_count, colors().text);
-		push_string(characters, row, col, "open:", true, colors().clear);
-		push_string(characters, row, col, pattern, false, colors().clear);
-		push_cursor(characters, row, col, colors().clear);
+		push_line(characters, colors().text, float(row), 0, col_count);
+		push_string(characters, colors().clear, row, col, "open:", true);
+		push_string(characters, colors().clear, row, col, pattern, false);
+		push_cursor(characters, colors().clear, row, col);
 		row++;
 
 		unsigned displayed = 0;
 		for (auto& path : filtered) {
 			col = 0;
 			if (selected == displayed)
-				push_line(characters, float(row), 0, col_count, colors().cursor_line);
-			push_string(characters, row++, col, path, false, colors().text);
+				push_line(characters, colors().cursor_line, float(row), 0, col_count);
+			push_string(characters, colors().text, row++, col, path);
 			displayed++;
 		}
 	}

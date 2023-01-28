@@ -564,13 +564,13 @@ class Buffer {
 		}
 	}
 
-	void push_char(Characters& characters, unsigned row, unsigned col, char c, bool bold, Color color) const {
+	void push_char(Characters& characters, Color color, unsigned row, unsigned col, char c, bool bold) const {
 		characters.emplace_back((uint16_t)c, color, row, col, bold);
 	};
 
-	void push_string(Characters& characters, unsigned row, unsigned col, const std::string_view s, bool bold, Color color) const {
+	void push_string(Characters& characters, Color color, unsigned row, unsigned col, const std::string_view s, bool bold) const {
 		for (auto& c : s) {
-			push_char(characters, row, col++, c, bold, color);
+			push_char(characters, color, row, col++, c, bold);
 		}
 	}
 
@@ -581,16 +581,16 @@ class Buffer {
 	}
 
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_line(characters, float(row_count), 0, col_count, colors().text);
-		push_line(characters, float(row_count) + 0.5f, 0, col_count, colors().text); // Hide extra pixel lines.
+		push_line(characters, colors().text, float(row_count), 0, col_count);
+		push_line(characters, colors().text, float(row_count) + 0.5f, 0, col_count); // Hide extra pixel lines.
 		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, row_count, 0, name, true, colors().clear);
-		push_string(characters, row_count, 62, readable_size(get_size()), true, colors().clear);
+		push_string(characters, colors().clear, row_count, 0, name, true);
+		push_string(characters, colors().clear, row_count, 62, readable_size(get_size()), true);
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, row_count, 74, percentage, true, colors().clear);
+		push_string(characters, colors().clear, row_count, 74, percentage, true);
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, row_count, 82, locations, true, colors().clear);
+		push_string(characters, colors().clear, row_count, 82, locations, true);
 	}
 
 	void init(const std::string_view text) {
