@@ -95,9 +95,7 @@ class Word {
 	size_t start = 0;
 	size_t finish = 0;
 
-	bool has_letter_or_number = false;
-	bool has_whitespace = false;
-	bool has_punctuation = false;
+	bool is_namespace = false;
 	bool is_class = false;
 	bool is_std = false;
 
@@ -142,6 +140,7 @@ public:
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
+			is_namespace = to_string(text).find("::") != std::string::npos;
 			is_class = is_uppercase_letter(text[start]);
 			is_std = to_string(text).starts_with("std::");
 		}
@@ -154,6 +153,7 @@ public:
 		return text.substr(start, finish - start + 1);
 	}
 
+	bool check_namespace() const { return is_namespace; }
 	bool check_class() const { return is_class; }
 	bool check_std() const { return is_std; }
 
