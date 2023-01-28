@@ -83,8 +83,13 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_line(characters, float(row), 0, col_count, colors().cursor_line);
-			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "):", true, colors().text);
-			push_string(characters, row, col, entry.context, false, colors().comment);
+			push_string(characters, row, col, entry.filename + "(" + std::to_string(entry.position) + "):", true, colors().text);
+			const auto pos = entry.context.find(pattern);
+			const auto pre_context = entry.context.substr(0, pos);
+			const auto post_context = entry.context.substr(pos + pattern.size());
+			push_string(characters, row, col, pre_context, false, colors().comment);
+			push_string(characters, row, col, pattern, true, colors().text);
+			push_string(characters, row, col, post_context, false, colors().comment);
 			row++;
 			displayed++;
 		}
