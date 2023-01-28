@@ -225,23 +225,3 @@ struct Matrix {
 	}
 };
 
-Vec3 hsv_to_rgb(float H, float S, float V) {
-  const float C = V * S; // Chroma
-  const float HPrime = fmod(H / 60.0f, 6.0f);
-  const float X = C * (1.0f - fabs(fmod(HPrime, 2.0f) - 1.0f));
-  const float M = V - C;
-  
-  float R, G, B;
-  if(0.0f <= HPrime && HPrime < 1.0f) { R = C; G = X; B = 0.0f; } 
-  else if(1.0f <= HPrime && HPrime < 2.0f) { R = X; G = C; B = 0.0f; } 
-  else if(2.0f <= HPrime && HPrime < 3.0f) { R = 0.0f; G = C; B = X; } 
-  else if(3.0f <= HPrime && HPrime < 4.0f) { R = 0.0f; G = X; B = C; } 
-  else if(4.0f <= HPrime && HPrime < 5.0f) { R = X; G = 0.0f; B = C; } 
-  else if(5.0f <= HPrime && HPrime < 6.0f) { R = C; G = 0.0f; B = X; } 
-  else { R = 0.0f; G = 0.0f; B = 0.0f; }
-  
-  R += M; G += M; B += M;
-  return Vec3(R, G, B);
-}
-
-
