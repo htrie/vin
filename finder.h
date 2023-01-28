@@ -11,6 +11,11 @@ class Finder {
 	std::vector<Entry> filtered;
 	unsigned selected = 0; 
 
+	std::string_view cut_line(const std::string_view text, size_t pos) {
+		Line line(text, pos);
+		return line.to_string(text);
+	}
+
 public:
 	void reset() {
 		pattern.clear();
@@ -30,8 +35,11 @@ public:
 			if (filtered.size() > row_count - 1)
 				return false;
 			map(file.name, [&](const char* mem, size_t size) {
-				const auto context = std::string(&mem[location.position], std::min((size_t)60, size - location.position));
-				filtered.emplace_back(file.name.c_str(), location.position, context);
+				const auto pos = location.position;
+				const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
+				const auto count = std::min((size_t)200, size - start);
+				const auto context = std::string(&mem[start], count);
+				filtered.emplace_back(file.name.c_str(), pos, std::string(cut_line(context, pos - start)));
 			});
 			return true;
 		});
@@ -75,7 +83,7 @@ public:
 			col = 0;
 			if (selected == displayed)
 				push_line(characters, float(row), 0, col_count, colors().cursor_line);
-			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "): ", true, colors().text);
+			push_string(characters, row, col, entry.filename + " (" + std::to_string(entry.position) + "):", true, colors().text);
 			push_string(characters, row, col, entry.context, false, colors().comment);
 			row++;
 			displayed++;

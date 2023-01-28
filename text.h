@@ -250,6 +250,10 @@ public:
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
 
+	std::string_view to_string(const std::string_view text) const {
+		return text.substr(start, finish - start + 1);
+	}
+
 	bool check_string(const std::string_view text, const std::string_view s) const {
 		if (start + s.size() <= text.size())
 			return strncmp(&text[start], s.data(), s.size()) == 0;
@@ -282,20 +286,19 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
-void push_char(Characters& characters, unsigned row, unsigned col, char c, const Color& color, bool bold) {
-	const uint16_t index = 
-		c == ' ' ? (uint16_t)Glyph::SPACE :
-		c == '\t' ? (uint16_t)Glyph::TAB :
-		c == '\r' ? (uint16_t)Glyph::CARRIAGE :
-		c == '\n' ? (uint16_t)Glyph::RETURN :
-		(uint16_t)c;
-	const auto final_color = c == ' ' || c == '\t' || c == '\r' || c == '\n' ? colors().whitespace : color;
-	characters.emplace_back(index, final_color, row, col, bold);
-};
+void push_char(Characters& characters, unsigned row, unsigned& col, char c, const Color& color, bool bold) {
+	switch (c) {
+		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold); break;
+		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold); break;
+		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold); break;
+		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold); break;
+		default: characters.emplace_back(c, color, row, col++, bold); break;
+	}
+}
 
 void push_string(Characters& characters, unsigned row, unsigned& col, const std::string_view s, bool bold, Color color) {
 	for (auto& c : s) {
-		push_char(characters, row, col++, c, color, bold);
+		push_char(characters, row, col, c, color, bold);
 	}
 }
 
