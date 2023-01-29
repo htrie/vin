@@ -45,7 +45,6 @@ class Device {
 	};
 	Font font_regular;
 	Font font_bold;
-	Font font_italic;
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -81,12 +80,10 @@ class Device {
 	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
 		upload_font(cmd_buf, font_regular, font_regular_width, font_regular_height, font_regular_glyphs, font_regular_pixels, sizeof(font_regular_pixels));
 		upload_font(cmd_buf, font_bold, font_bold_width, font_bold_height, font_bold_glyphs, font_bold_pixels, sizeof(font_bold_pixels));
-		upload_font(cmd_buf, font_italic, font_italic_width, font_italic_height, font_italic_glyphs, font_italic_pixels, sizeof(font_italic_pixels));
 		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms),
  			font_regular.sampler.get(), font_regular.image_view.get(),
- 			font_bold.sampler.get(), font_bold.image_view.get(),
- 			font_italic.sampler.get(), font_italic.image_view.get());
+ 			font_bold.sampler.get(), font_bold.image_view.get());
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -127,8 +124,8 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			const auto& font = character.bold ? font_bold : character.italic ? font_italic : font_regular;
-			const float font_index = character.bold ? 1.0f : character.italic ? 2.0f : 0.0f;
+			const auto& font = character.bold ? font_bold : font_regular;
+			const float font_index = character.bold ? 1.0f : 0.0f;
 			const auto* glyph = find_glyph(font.glyphs, character.index);
 			if (glyph == nullptr)
 				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);

@@ -588,8 +588,7 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
 
 void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range,
 	const vk::Sampler& sampler0, const vk::ImageView& image_view0,
-	const vk::Sampler& sampler1, const vk::ImageView& image_view1,
-	const vk::Sampler& sampler2, const vk::ImageView& image_view2) {
+	const vk::Sampler& sampler1, const vk::ImageView& image_view1) {
 	const auto buffer_info = vk::DescriptorBufferInfo()
 		.setOffset(0)
 		.setRange(range)
@@ -603,12 +602,8 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 		.setSampler(sampler1)
 		.setImageView(image_view1)
 		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-	const auto image_info2 = vk::DescriptorImageInfo()
-		.setSampler(sampler2)
-		.setImageView(image_view2)
-		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-	const std::array<vk::WriteDescriptorSet, 4> writes = {
+	const std::array<vk::WriteDescriptorSet, 3> writes = {
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -625,12 +620,6 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setPImageInfo(&image_info1)
 			.setDstBinding(2)
-			.setDstSet(desc_set),
-		vk::WriteDescriptorSet()
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setPImageInfo(&image_info2)
-			.setDstBinding(3)
 			.setDstSet(desc_set) };
 
 	device.updateDescriptorSets((uint32_t)writes.size(), writes.data(), 0, nullptr);

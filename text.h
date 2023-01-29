@@ -80,13 +80,12 @@ struct Character {
 	float row = 0.0f;
 	float col = 0.0f;
 	bool bold = false;
-	bool italic = false;
 
 	Character() {}
-	Character(uint16_t index, Color color, float row, float col, bool bold = false, bool italic = false)
-		: index(index), color(color), row(row), col(col), bold(bold), italic(italic) {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, bool italic = false)
-		: index(index), color(color), row((float)row), col((float)col), bold(bold), italic(italic) {}
+	Character(uint16_t index, Color color, float row, float col, bool bold = false)
+		: index(index), color(color), row(row), col(col), bold(bold) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false)
+		: index(index), color(color), row((float)row), col((float)col), bold(bold) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -279,19 +278,19 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
-void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c, bool bold, bool italic) {
+void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c, bool bold) {
 	switch (c) {
-		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold, italic); break;
-		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold, italic); break;
-		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold, italic); break;
-		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold, italic); break;
-		default: characters.emplace_back(c, color, row, col++, bold, italic); break;
+		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold); break;
+		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold); break;
+		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold); break;
+		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold); break;
+		default: characters.emplace_back(c, color, row, col++, bold); break;
 	}
 }
 
-void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s, bool bold = false, bool italic = false) {
+void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s, bool bold = false) {
 	for (auto& c : s) {
-		push_char(characters, color, row, col, c, bold, italic);
+		push_char(characters, color, row, col, c, bold);
 	}
 }
 

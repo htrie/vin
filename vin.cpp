@@ -20,7 +20,6 @@
 #include "math.h"
 #include "font_regular.h"
 #include "font_bold.h"
-#include "font_italic.h"
 #include "config.h"
 #include "index.h"
 #include "text.h"
