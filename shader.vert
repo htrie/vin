@@ -21,13 +21,15 @@ const vec2 uvs[6] = {
 	{ 1.0f, 1.0f },
 };
 
+const uint CharacterMaxCount = 8192;
+
 layout (binding = 0) uniform Uniforms {
 	mat4 view_proj;
-	mat4 model[8192];
-	vec4 color[8192];
-	vec4 uv_origin[8192];
-	vec4 uv_sizes[8192];
-	vec4 font_index[8192];
+	mat4 model[CharacterMaxCount];
+	vec4 color[CharacterMaxCount];
+	vec4 uv_origin[CharacterMaxCount];
+	vec4 uv_sizes[CharacterMaxCount];
+	vec4 font_index[CharacterMaxCount];
 } uniforms;
 
 layout (location = 0) out vec2 uv;
