@@ -95,13 +95,26 @@ class Application {
 		dirty = false;
 	}
 
+	void process_space_e() {
+		notify(index.populate());
+		picker.filter(index, window().search_height - 1);
+		menu = Menu::picker;
+	}
+
+	void process_space_f() {
+		finder.seed(switcher.current().get_word());
+		notify(database.search(finder.get_pattern()));
+		finder.filter(database, window().search_height - 1);
+		menu = Menu::finder;
+	}
+
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'e') { notify(index.populate()); picker.filter(index, window().search_height - 1); menu = Menu::picker; }
-		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, window().search_height - 1); menu = Menu::finder; }
+		else if (key == 'e') { process_space_e(); }
+		else if (key == 'f') { process_space_f(); }
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
@@ -142,10 +155,23 @@ class Application {
 		else { switcher.process(key, col_count, row_count); }
 	}
 
+	void process_finder_return(unsigned row_count) {
+		notify(switcher.load(finder.selection()));
+		switcher.current().jump(finder.position(), row_count);
+		menu = Menu::normal;
+	}
+
+	void process_finder_key(unsigned key) {
+		if (finder.process(key)) {
+			notify(database.search(finder.get_pattern()));
+		}
+		finder.filter(database, window().search_height - 1);
+	}
+
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == '\r') { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
+		if (key == '\r') { process_finder_return(row_count); }
 		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
-		else { if (finder.process(key)) { notify(database.search(finder.get_pattern())); } finder.filter(database, window().search_height - 1); }
+		else { process_finder_key(key); }
 	}
 
 	void process(unsigned key) {
