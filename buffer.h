@@ -537,7 +537,7 @@ class Buffer {
 		const unsigned end_row = state().get_begin_row() + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
-		unsigned row = 0;
+		unsigned row = 1;
 		unsigned col = 0;
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
@@ -571,19 +571,21 @@ class Buffer {
 	}
 
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_line(characters, colors().text, float(row_count), 0, col_count);
+		unsigned row = 0;
 		unsigned col = 0;
+		push_line(characters, colors().text, float(row), col, col_count);
+		col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, colors().clear, row_count, col, name, true);
+		push_string(characters, colors().clear, row, col, name, true);
 		col = 62;
-		push_string(characters, colors().clear, row_count, col, readable_size(get_size()), true);
+		push_string(characters, colors().clear, row, col, readable_size(get_size()), true);
 		col = 74;
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, colors().clear, row_count, col, percentage, true);
+		push_string(characters, colors().clear, row, col, percentage, true);
 		col = 82;
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, colors().clear, row_count, col, locations, true);
+		push_string(characters, colors().clear, row, col, locations, true);
 	}
 
 	void init(const std::string_view text) {
@@ -630,8 +632,8 @@ public:
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_text(characters, col_count, row_count);
 		push_status(characters, col_count, row_count);
+		push_text(characters, col_count, row_count);
 	}
 
 	void jump(size_t position, unsigned row_count) {
