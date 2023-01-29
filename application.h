@@ -36,9 +36,11 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
-		return std::string("Vin ") + 
-			std::to_string(version_major) + "." + std::to_string(version_minor) +
-			"          " + notification.c_str();
+		return std::string("Vin ") +  std::to_string(version_major) + "." + std::to_string(version_minor)
+		#ifndef NDEBUG
+			+ "          " + notification.c_str()
+		#endif
+			;
 	}
 
 	void cull_normal(Characters& characters, unsigned col_count, unsigned row_count) {
