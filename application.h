@@ -43,13 +43,18 @@ class Application {
 			;
 	}
 
+	unsigned adjust_search(unsigned row_count) {
+		return std::max(unsigned(float(row_count) * 0.45f), 1u);
+	}
+
 	void cull_normal(Characters& characters, unsigned col_count, unsigned row_count) {
 		switcher.current().cull(characters, col_count, row_count);
 	}
 
 	void cull_picker(Characters& characters, unsigned col_count, unsigned row_count) {
-		switcher.current().cull(characters, col_count, row_count - window().search_height);
-		picker.cull(characters, col_count, window().search_height, row_count - window().search_height + 1);
+		const auto search_height = adjust_search(row_count);
+		switcher.current().cull(characters, col_count, row_count - search_height);
+		picker.cull(characters, col_count, search_height, row_count - search_height + 1);
 	}
 
 	void cull_switcher(Characters& characters, unsigned col_count, unsigned row_count) {
@@ -58,8 +63,9 @@ class Application {
 	}
 
 	void cull_finder(Characters& characters, unsigned col_count, unsigned row_count) {
-		switcher.current().cull(characters, col_count, row_count - window().search_height);
-		finder.cull(characters, col_count, window().search_height, row_count - window().search_height + 1);
+		const auto search_height = adjust_search(row_count);
+		switcher.current().cull(characters, col_count, row_count - search_height);
+		finder.cull(characters, col_count, search_height, row_count - search_height + 1);
 	}
 
 	Characters cull() {
