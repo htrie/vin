@@ -129,7 +129,7 @@ class Device {
 			const auto* glyph = find_glyph(font.glyphs, character.index);
 			if (glyph == nullptr)
 				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
-			if (glyph)
+			if (glyph && index < CharacterMaxCount)
 				add(font, font_index, character, *glyph);
 		}
 

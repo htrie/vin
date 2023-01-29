@@ -16,12 +16,10 @@ class Picker {
 	}
 
 public:
-	void filter(const Index& index, unsigned row_count) {
+	void filter(const Index& index) {
 		filtered.clear();
 		pattern = to_lower(pattern);
 		index.process([&](const auto& path) {
-			if (filtered.size() > row_count - 1)
-				return false;
 			if (match_pattern(path))
 				filtered.push_back(path.c_str());
 			return true;
@@ -54,13 +52,14 @@ public:
 		push_cursor(characters, colors().text, row, col);
 		row++;
 
-		unsigned displayed = 0;
-		for (auto& path : filtered) {
-			col = 0;
-			if (selected == displayed)
+		const unsigned begin = selected > row_count / 2 ? selected - row_count / 2 : 0;
+		const unsigned end = std::clamp(std::max(selected + row_count / 2, row_count), 0u, (unsigned)filtered.size());
+		for (unsigned i = begin; i < end; ++i) {
+			const auto& path = filtered[i];
+			if (i == selected)
 				push_line(characters, colors().cursor_line, float(row), 0, col_count);
+			col = 0;
 			push_string(characters, colors().text, row++, col, path);
-			displayed++;
 		}
 	}
 };

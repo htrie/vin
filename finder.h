@@ -23,11 +23,9 @@ public:
 
 	const std::string_view get_pattern() const { return pattern; }
 
-	void filter(const Database& database, unsigned row_count) {
+	void filter(const Database& database) {
 		filtered.clear();
 		database.process([&](const auto& file, const auto& location) {
-			if (filtered.size() > row_count - 1)
-				return false;
 			map(file.name, [&](const char* mem, size_t size) {
 				const auto pos = location.position;
 				const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
@@ -72,11 +70,13 @@ public:
 		push_cursor(characters, colors().text, row, col);
 		row++;
 
-		unsigned displayed = 0;
-		for (auto& entry : filtered) {
-			col = 0;
-			if (selected == displayed)
+		const unsigned begin = selected > row_count / 2 ? selected - row_count / 2 : 0;
+		const unsigned end = std::clamp(std::max(selected + row_count / 2, row_count), 0u, (unsigned)filtered.size());
+		for (unsigned i = begin; i < end; ++i) {
+			const auto& entry = filtered[i];
+			if (i == selected)
 				push_line(characters, colors().cursor_line, float(row), 0, col_count);
+			col = 0;
 			const auto location = entry.filename + "(" + std::to_string(entry.position) + "):";
 			push_string(characters, colors().text, row, col, location);
 			const auto pos = entry.context.find(pattern);
@@ -86,7 +86,6 @@ public:
 			push_string(characters, colors().text, row, col, pattern, true);
 			push_string(characters, colors().comment, row, col, post_context);
 			row++;
-			displayed++;
 		}
 	}
 };

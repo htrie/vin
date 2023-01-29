@@ -97,14 +97,14 @@ class Application {
 
 	void process_space_e() {
 		notify(index.populate());
-		picker.filter(index, window().search_height - 1);
+		picker.filter(index);
 		menu = Menu::picker;
 	}
 
 	void process_space_f() {
 		finder.seed(switcher.current().get_word());
 		notify(database.search(finder.get_pattern()));
-		finder.filter(database, window().search_height - 1);
+		finder.filter(database);
 		menu = Menu::finder;
 	}
 
@@ -141,7 +141,7 @@ class Application {
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == '\r') { notify(switcher.load(picker.selection())); menu = Menu::normal; }
 		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
-		else { picker.process(key); picker.filter(index, window().search_height - 1); }
+		else { picker.process(key); picker.filter(index); }
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
@@ -165,7 +165,7 @@ class Application {
 		if (finder.process(key)) {
 			notify(database.search(finder.get_pattern()));
 		}
-		finder.filter(database, window().search_height - 1);
+		finder.filter(database);
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
