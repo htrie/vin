@@ -38,6 +38,14 @@ public:
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
 	}
 
+	void select_next() {
+		selected = std::min(selected + 1, (unsigned)filtered.size() - 1);
+	}
+
+	void select_previous() {
+		selected = selected > 0 ? selected - 1 : selected;
+	}
+
 	std::string selection() const {
 		if (selected < filtered.size())
 			return filtered[selected].filename;
