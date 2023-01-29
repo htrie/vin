@@ -525,7 +525,7 @@ class Buffer {
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col, false, true); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
-		else if (word.check_namespace() || word.check_class() || word.check_std()) { characters.emplace_back((uint16_t)c, colors().text, row, col, false, true); }
+		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().text, row, col, false, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
@@ -564,16 +564,6 @@ class Buffer {
 		}
 	}
 
-	void push_char(Characters& characters, Color color, unsigned row, unsigned col, char c, bool bold) const {
-		characters.emplace_back((uint16_t)c, color, row, col, bold);
-	};
-
-	void push_string(Characters& characters, Color color, unsigned row, unsigned col, const std::string_view s, bool bold) const {
-		for (auto& c : s) {
-			push_char(characters, color, row, col++, c, bold);
-		}
-	}
-
 	size_t location_percentage() const {
 		if (const auto size = get_size())
 			return 1 + state().get_cursor() * 100 / size;
@@ -583,14 +573,18 @@ class Buffer {
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_line(characters, colors().text, float(row_count), 0, col_count);
 		push_line(characters, colors().text, float(row_count) + 0.5f, 0, col_count); // Hide extra pixel lines.
+		unsigned col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, colors().clear, row_count, 0, name, true);
-		push_string(characters, colors().clear, row_count, 62, readable_size(get_size()), true);
+		push_string(characters, colors().clear, row_count, col, name, true);
+		col = 62;
+		push_string(characters, colors().clear, row_count, col, readable_size(get_size()), true);
+		col = 74;
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, colors().clear, row_count, 74, percentage, true);
+		push_string(characters, colors().clear, row_count, col, percentage, true);
+		col = 82;
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, colors().clear, row_count, 82, locations, true);
+		push_string(characters, colors().clear, row_count, col, locations, true);
 	}
 
 	void init(const std::string_view text) {

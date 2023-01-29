@@ -20,7 +20,7 @@ constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
-	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || /*c == ':' ||*/ // Do not consider as word separator (so that std:: get detected as one word).
+	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||
 	c == '[' || c == ']' || c == '{' || c == '}' || c == '(' || c == ')' ||
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' ||
 	c == '?' || c == '"' || c == '#' || c == '\'';
@@ -95,13 +95,11 @@ class Word {
 	size_t start = 0;
 	size_t finish = 0;
 
-	bool is_namespace = false;
 	bool is_class = false;
-	bool is_std = false;
 
 	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
-			return is_number(text[pos]) || is_letter(text[pos]) || text[pos] == ':';
+			return is_number(text[pos]) || is_letter(text[pos]);
 		}
 		return false;
 	}
@@ -127,7 +125,7 @@ public:
 			start = pos;
 			finish = pos;
 			const auto c = text[pos];
-			if (is_number(c) || is_letter(c) || c == ':') {
+			if (is_number(c) || is_letter(c)) {
 				while(test_letter_or_number(text, finish + 1)) { finish++; }
 				while(test_letter_or_number(text, start - 1)) { start--; }
 			}
@@ -140,9 +138,7 @@ public:
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
-			is_namespace = to_string(text).find("::") != std::string::npos;
 			is_class = is_uppercase_letter(text[start]);
-			is_std = to_string(text).starts_with("std::");
 		}
 	}
 
@@ -153,10 +149,7 @@ public:
 		return text.substr(start, finish - start + 1);
 	}
 
-	bool check_namespace() const { return is_namespace; }
 	bool check_class() const { return is_class; }
-	bool check_std() const { return is_std; }
-
 	bool check_keyword(const std::string_view text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
 			const auto& keywords = cpp_keywords[letter_index];
