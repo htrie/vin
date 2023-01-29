@@ -17,12 +17,6 @@ class Finder {
 	}
 
 public:
-	void reset() {
-		pattern.clear();
-		filtered.clear();
-		selected = 0;
-	}
-
 	void seed(const std::string_view word) {
 		pattern = word;
 	}

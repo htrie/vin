@@ -16,12 +16,6 @@ class Picker {
 	}
 
 public:
-	void reset() {
-		pattern.clear();
-		filtered.clear();
-		selected = 0;
-	}
-
 	void filter(const Index& index, unsigned row_count) {
 		filtered.clear();
 		pattern = to_lower(pattern);

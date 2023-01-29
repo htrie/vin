@@ -79,7 +79,7 @@ class Application {
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'e') { notify(index.populate()); picker.reset(); picker.filter(index, row_count); menu = Menu::picker; }
+		else if (key == 'e') { notify(index.populate()); picker.filter(index, row_count); menu = Menu::picker; }
 		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, row_count); menu = Menu::finder; }
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }

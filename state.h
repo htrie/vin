@@ -674,10 +674,6 @@ class Stack {
 
 public:
 	Stack() {
-		reset();
-	}
-
-	void reset() {
 		states.clear();
 		states.emplace_back();
 		states.back().fix_eof();
