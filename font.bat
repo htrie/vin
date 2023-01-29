@@ -1,2 +1,2 @@
-.\x64\Debug\font.exe
+".\x64\Debug\font.exe"
 pause
