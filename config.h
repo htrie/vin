@@ -13,6 +13,7 @@ struct Colors {
 	Color cursor = base_color(0.5f);
 	Color highlight = base_color(0.8f);
 	Color whitespace = base_color(1.0f);
+	Color search = base_color(0.8f);
 	Color text = text_color(1.0f);
 	Color text_cursor = base_color(1.0f);
 	Color keyword = text_color(0.5f);
@@ -33,7 +34,7 @@ Colors& colors() {
 
 struct Spacing {
 	float character = 13.8f;
-	float line = 32.0f;
+	float line = 30.0f;
 	float zoom = 1.0f;
 
 	std::string increase_char_width() { character = std::clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
