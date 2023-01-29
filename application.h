@@ -41,15 +41,34 @@ class Application {
 			"          " + notification.c_str();
 	}
 
+	void cull_normal(Characters& characters, unsigned col_count, unsigned row_count) {
+		switcher.current().cull(characters, col_count, row_count);
+	}
+
+	void cull_picker(Characters& characters, unsigned col_count, unsigned row_count) {
+		switcher.current().cull(characters, col_count, row_count - window().search_height);
+		picker.cull(characters, col_count, window().search_height, row_count - window().search_height + 1);
+	}
+
+	void cull_switcher(Characters& characters, unsigned col_count, unsigned row_count) {
+		switcher.current().cull(characters, col_count, row_count);
+		switcher.cull(characters, col_count, row_count);
+	}
+
+	void cull_finder(Characters& characters, unsigned col_count, unsigned row_count) {
+		switcher.current().cull(characters, col_count, row_count - window().search_height);
+		finder.cull(characters, col_count, window().search_height, row_count - window().search_height + 1);
+	}
+
 	Characters cull() {
 		const auto vp = device.viewport();
 		Characters characters;
 		switch (menu) {
 		case Menu::space: // pass-through.
-		case Menu::normal: switcher.current().cull(characters, vp.w, vp.h); break;
-		case Menu::picker: switcher.current().cull(characters, vp.w, vp.h); picker.cull(characters, vp.w, vp.h); break;
-		case Menu::switcher: switcher.current().cull(characters, vp.w, vp.h); switcher.cull(characters, vp.w, vp.h); break;
-		case Menu::finder: switcher.current().cull(characters, vp.w, vp.h); finder.cull(characters, vp.w, vp.h); break;
+		case Menu::normal: cull_normal(characters, vp.w, vp.h); break;
+		case Menu::picker: cull_picker(characters, vp.w, vp.h); break;
+		case Menu::switcher: cull_switcher(characters, vp.w, vp.h); break;
+		case Menu::finder: cull_finder(characters, vp.w, vp.h); break;
 		}
 		return characters;
 	}
@@ -79,8 +98,8 @@ class Application {
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'e') { notify(index.populate()); picker.filter(index, row_count); menu = Menu::picker; }
-		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, row_count); menu = Menu::finder; }
+		else if (key == 'e') { notify(index.populate()); picker.filter(index, window().search_height - 1); menu = Menu::picker; }
+		else if (key == 'f') { finder.seed(switcher.current().get_word()); notify(database.search(finder.get_pattern())); finder.filter(database, window().search_height - 1); menu = Menu::finder; }
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
@@ -107,7 +126,7 @@ class Application {
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == '\r') { notify(switcher.load(picker.selection())); menu = Menu::normal; }
 		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
-		else { picker.process(key, col_count, row_count); picker.filter(index, row_count); }
+		else { picker.process(key); picker.filter(index, window().search_height - 1); }
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
@@ -124,7 +143,7 @@ class Application {
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
 		if (key == '\r') { notify(switcher.load(finder.selection())); switcher.current().jump(finder.position(), row_count); menu = Menu::normal; }
 		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
-		else { if (finder.process(key, col_count, row_count)) { notify(database.search(finder.get_pattern())); } finder.filter(database, row_count); }
+		else { if (finder.process(key)) { notify(database.search(finder.get_pattern())); } finder.filter(database, window().search_height - 1); }
 	}
 
 	void process(unsigned key) {
@@ -228,7 +247,7 @@ class Application {
 
 public:
 	Application(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, 1200, 900) {
+		: device(proc, hInstance, 1200, 894) {
 		show_window(device.get_hwnd(), nCmdShow);
 	}
 

@@ -35,7 +35,7 @@ public:
 		return {};
 	}
 
-	void process(unsigned key, unsigned col_count, unsigned row_count) {
+	void process(unsigned key) {
 		if (key == '\r') { return; }
 		else if (key == Glyph::ESCAPE) { return; }
 		else if (key == '\t') { return; }
@@ -45,15 +45,16 @@ public:
 		else { pattern += (char)key; }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count, unsigned row_start) const {
 		unsigned col = 0;
-		unsigned row = 0;
+		unsigned row = row_start + row_count - 1;
 		push_line(characters, colors().text, float(row), 0, col_count);
 		push_string(characters, colors().clear, row, col, "open:", true);
 		push_string(characters, colors().clear, row, col, pattern, false);
 		push_cursor(characters, colors().clear, row, col);
 		row++;
 
+		row = row_start + row_count -1 - (unsigned)filtered.size();
 		unsigned displayed = 0;
 		for (auto& path : filtered) {
 			col = 0;

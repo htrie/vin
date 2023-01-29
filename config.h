@@ -51,3 +51,14 @@ Spacing& spacing() {
 	return spacing;
 }
 
+
+struct Window {
+	unsigned search_height = 10;
+};
+
+Window& window() {
+	static Window window;
+	return window;
+}
+
+

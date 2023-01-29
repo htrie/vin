@@ -572,7 +572,6 @@ class Buffer {
 
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
 		push_line(characters, colors().text, float(row_count), 0, col_count);
-		push_line(characters, colors().text, float(row_count) + 0.5f, 0, col_count); // Hide extra pixel lines.
 		unsigned col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, colors().clear, row_count, col, name, true);

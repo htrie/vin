@@ -52,7 +52,7 @@ public:
 		return 0;
 	}
 
-	bool process(unsigned key, unsigned col_count, unsigned row_count) {
+	bool process(unsigned key) {
 		if (key == '\r') { return false; }
 		else if (key == Glyph::ESCAPE) { return false; }
 		else if (key == '\t') { return false; }
@@ -63,15 +63,16 @@ public:
 		return false;
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void cull(Characters& characters, unsigned col_count, unsigned row_count, unsigned row_start) const {
 		unsigned col = 0;
-		unsigned row = 0;
+		unsigned row = row_start + row_count - 1;
 		push_line(characters, colors().text, float(row), 0, col_count);
 		push_string(characters, colors().clear, row, col, "find:", true);
 		push_string(characters, colors().clear, row, col, pattern);
 		push_cursor(characters, colors().clear, row, col);
 		row++;
 
+		row = row_start + row_count -1 - (unsigned)filtered.size();
 		unsigned displayed = 0;
 		for (auto& entry : filtered) {
 			col = 0;
