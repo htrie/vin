@@ -47,9 +47,9 @@ class Application {
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: switcher.current().cull(characters, vp.w, vp.h); break;
-		case Menu::picker: picker.cull(characters, vp.w, vp.h); break;
+		case Menu::picker: switcher.current().cull(characters, vp.w, vp.h); picker.cull(characters, vp.w, vp.h); break;
 		case Menu::switcher: switcher.current().cull(characters, vp.w, vp.h); switcher.cull(characters, vp.w, vp.h); break;
-		case Menu::finder: finder.cull(characters, vp.w, vp.h); break;
+		case Menu::finder: switcher.current().cull(characters, vp.w, vp.h); finder.cull(characters, vp.w, vp.h); break;
 		}
 		return characters;
 	}
