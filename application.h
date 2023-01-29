@@ -42,14 +42,14 @@ class Application {
 	}
 
 	Characters cull() {
-		const auto viewport = device.viewport();
+		const auto vp = device.viewport();
 		Characters characters;
 		switch (menu) {
 		case Menu::space: // pass-through.
-		case Menu::normal: switcher.current().cull(characters, viewport.w, viewport.h); break;
-		case Menu::picker: picker.cull(characters, viewport.w, viewport.h); break;
-		case Menu::switcher: switcher.current().cull(characters, viewport.w, viewport.h); switcher.cull(characters, viewport.w, viewport.h); break;
-		case Menu::finder: finder.cull(characters, viewport.w, viewport.h); break;
+		case Menu::normal: switcher.current().cull(characters, vp.w, vp.h); break;
+		case Menu::picker: picker.cull(characters, vp.w, vp.h); break;
+		case Menu::switcher: switcher.current().cull(characters, vp.w, vp.h); switcher.cull(characters, vp.w, vp.h); break;
+		case Menu::finder: finder.cull(characters, vp.w, vp.h); break;
 		}
 		return characters;
 	}
@@ -128,15 +128,15 @@ class Application {
 	}
 
 	void process(unsigned key) {
-		const auto viewport = device.viewport();
+		const auto vp = device.viewport();
 		switch (menu) {
-		case Menu::space: process_space(key, viewport.h); break;
-		case Menu::normal: process_normal(key, viewport.w, viewport.h); break;
-		case Menu::picker: process_picker(key, viewport.w, viewport.h); break;
-		case Menu::switcher: process_switcher(key, viewport.w, viewport.h); break;
-		case Menu::finder: process_finder(key, viewport.w, viewport.h); break;
+		case Menu::space: process_space(key, vp.h); break;
+		case Menu::normal: process_normal(key, vp.w, vp.h); break;
+		case Menu::picker: process_picker(key, vp.w, vp.h); break;
+		case Menu::switcher: process_switcher(key, vp.w, vp.h); break;
+		case Menu::finder: process_finder(key, vp.w, vp.h); break;
 		}
-		switcher.current().state().cursor_clamp(viewport.h - 1);
+		switcher.current().state().cursor_clamp(vp.h - 1);
 	}
 
 	void update(bool space_down) {
