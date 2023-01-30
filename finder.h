@@ -39,11 +39,11 @@ public:
 	}
 
 	void select_next() {
-		selected = std::min(selected + 1, (unsigned)filtered.size() - 1);
+		selected = selected < (unsigned)filtered.size() - 1 ? selected + 1 : 0;
 	}
 
 	void select_previous() {
-		selected = selected > 0 ? selected - 1 : selected;
+		selected = selected > 0 ? selected - 1 : (unsigned)filtered.size() - 1;
 	}
 
 	std::string selection() const {
