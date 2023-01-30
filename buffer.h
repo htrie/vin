@@ -513,6 +513,7 @@ class Buffer {
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
