@@ -59,6 +59,10 @@ void show_window(HWND hWnd, int nCmdShow) {
 	ShowWindow(hWnd, nCmdShow);
 }
 
+void size_window(HWND hWnd, int w, int h) {
+	SetWindowPos(hWnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
+}
+
 void resize_window(HWND hWnd, int dw, int dh) {
 	RECT rect;
 	if (GetWindowRect(hWnd, &rect)) {
