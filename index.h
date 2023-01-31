@@ -42,7 +42,7 @@ public:
 class Database {
 	struct File {
 		std::string name;
-		size_t size;
+		std::vector<char> contents;
 	};
 
 	struct Location {
@@ -53,33 +53,43 @@ class Database {
 	std::vector<File> files;
 	std::vector<Location> locations;
 
-	void scan(const std::string_view filename, const std::string_view pattern) {
-		map(filename, [&](const char* mem, size_t size) {
-			files.emplace_back(std::string(filename), size);
-			for (size_t i = 0; i < size; ++i) {
-				if (mem[i] == pattern[0]) {
-					if (strncmp(&mem[i], pattern.data(), pattern.size()) == 0) {
-						locations.emplace_back(files.size() - 1, i);
-					}
+	void scan(unsigned file_index, const std::vector<char>& contents, const std::string_view pattern) {
+		for (size_t i = 0; i < contents.size(); ++i) {
+			if (contents[i] == pattern[0]) {
+				if (strncmp(&contents[i], pattern.data(), pattern.size()) == 0) {
+					locations.emplace_back(file_index, i);
 				}
 			}
-		});
+		}
 	}
 
 public:
-	std::string search(const std::string_view pattern) {
+	std::string populate() {
 		const Timer timer;
 		files.clear();
+		process_files(".", [&](const auto& path) {
+			const std::string filename(path);
+			if (accept(filename)) {
+				map(filename, [&](const char* mem, size_t size) {
+					std::vector<char> contents(size);
+					memcpy(contents.data(), mem, contents.size());
+					files.emplace_back(filename, std::move(contents));
+				});
+			}
+		});
+		return std::string("populate database (") + 
+			std::to_string(files.size()) + " files) in " + timer.us();
+	}
+
+	std::string search(const std::string_view pattern) {
+		const Timer timer;
 		locations.clear();
 		if (!pattern.empty() && pattern.size() > 2) {
-			process_files(".", [&](const auto& path) {
-				const std::string filename(path);
-				if (accept(filename))
-					scan(filename, pattern);
-			});
+			for (unsigned i = 0; i < files.size(); i++) {
+				scan(i, files[i].contents, pattern);
+			}
 		}
 		return std::string("search database (") + 
-			std::to_string(files.size()) + " files, " + 
 			std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
 
