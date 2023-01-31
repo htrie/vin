@@ -36,11 +36,9 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 
 	std::string status() {
-		return std::string("Vin ") +  std::to_string(version_major) + "." + std::to_string(version_minor)
-		#ifndef NDEBUG
-			+ "          " + notification.c_str()
-		#endif
-			;
+		return std::string("Vin ") +
+			std::to_string(version_major) + "." + std::to_string(version_minor)
+			+ " | " + notification.c_str();
 	}
 
 	unsigned adjust_search(unsigned row_count) {
