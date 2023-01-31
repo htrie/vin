@@ -71,7 +71,7 @@ public:
 		const Timer timer;
 		files.clear();
 		locations.clear();
-		if (!pattern.empty()) {
+		if (!pattern.empty() && pattern.size() > 2) {
 			process_files(".", [&](const auto& path) {
 				const std::string filename(path);
 				if (accept(filename))
