@@ -252,12 +252,14 @@ class Application {
 		case WM_SIZING:
 		case WM_SIZE: {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				app->set_maximized(wParam == SIZE_MAXIMIZED);
-				app->set_minimized(wParam == SIZE_MINIMIZED);
-				app->set_dirty(true);
 				const unsigned width = lParam & 0xffff;
 				const unsigned height = (lParam & 0xffff0000) >> 16;
-				app->resize(width, height);
+				if (width < 10000 && height < 10000) { // Sometimes get a crazy high value when resizing manually, just ignore it.
+					app->set_maximized(wParam == SIZE_MAXIMIZED);
+					app->set_minimized(wParam == SIZE_MINIMIZED);
+					app->set_dirty(true);
+					app->resize(width, height);
+				}
 			}
 			break;
 		}
