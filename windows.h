@@ -129,20 +129,20 @@ bool write(const std::string_view filename, const std::string_view text) {
 }
 
 template<typename F>
-void process_files(const char* path, F func) {
-	const auto filter = std::string(path) + "/*";
+void process_files(const std::string& path, F func) {
+	const auto filter = path + "/*";
 	WIN32_FIND_DATA find_data;
 	HANDLE handle = FindFirstFile(filter.c_str(), &find_data);
 	do {
 		if (handle != INVALID_HANDLE_VALUE) {
 			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
 				if (find_data.cFileName[0] != '.') {
-					const auto dir = std::string(path) + "/" + find_data.cFileName;
+					const auto dir = path + "/" + find_data.cFileName;
 					process_files(dir.c_str(), func);
 				}
 			}
 			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-				const auto file = std::string(path) + "/" + find_data.cFileName;
+				const auto file = path + "/" + find_data.cFileName;
 				func(file);
 			}
 		}
