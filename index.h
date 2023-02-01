@@ -53,6 +53,16 @@ class Database {
 	std::vector<File> files;
 	std::vector<Location> locations;
 
+	void add(const std::string& filename) {
+		if (accept(filename)) {
+			map(filename, [&](const char* mem, size_t size) {
+				std::vector<char> contents(size);
+				memcpy(contents.data(), mem, contents.size());
+				files.emplace_back(filename, std::move(contents));
+			});
+		}
+	}
+
 	void scan(unsigned file_index, const std::vector<char>& contents, const std::string_view pattern) {
 		for (size_t i = 0; i < contents.size(); ++i) {
 			if (contents[i] == pattern[0]) {
@@ -68,14 +78,7 @@ public:
 		const Timer timer;
 		files.clear();
 		process_files(".", [&](const auto& path) {
-			const std::string filename(path);
-			if (accept(filename)) {
-				map(filename, [&](const char* mem, size_t size) {
-					std::vector<char> contents(size);
-					memcpy(contents.data(), mem, contents.size());
-					files.emplace_back(filename, std::move(contents));
-				});
-			}
+			add(path);
 		});
 		return std::string("populate database (") + 
 			std::to_string(files.size()) + " files) in " + timer.us();
