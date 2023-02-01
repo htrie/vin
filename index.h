@@ -29,7 +29,7 @@ public:
 				paths.push_back(filename);
 			}
 		});
-		return std::string("populate index (") + 
+		return std::string("populate (") + 
 			std::to_string(paths.size()) + " paths) in " + timer.us();
 	}
 
@@ -89,7 +89,7 @@ public:
 				add(path);
 			}
 		});
-		return std::string("populate database (") + 
+		return std::string("populate (") + 
 			std::to_string(files.size()) + " files) in " + timer.us();
 	}
 
@@ -101,7 +101,7 @@ public:
 				scan(i, files[i].contents, pattern);
 			}
 		}
-		return std::string("search database (") + 
+		return std::string("search (") + 
 			std::to_string(locations.size()) + " symbols) in " + timer.us();
 	}
 
