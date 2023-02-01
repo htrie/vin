@@ -106,9 +106,9 @@ class Application {
 	}
 
 	void process_space_f() {
-		notify(database.populate());
+		const auto note = database.populate();
 		finder.seed(switcher.current().get_word());
-		database.search(finder.get_pattern());
+		notify(note + ", " + database.search(finder.get_pattern()));
 		finder.filter(database);
 		menu = Menu::finder;
 	}
