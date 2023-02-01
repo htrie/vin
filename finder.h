@@ -26,13 +26,11 @@ public:
 	void filter(const Database& database) {
 		filtered.clear();
 		database.process([&](const auto& file, const auto& location) {
-			map(file.name, [&](const char* mem, size_t size) {
-				const auto pos = location.position;
-				const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
-				const auto count = std::min((size_t)200, size - start);
-				const auto context = std::string(&mem[start], count);
-				filtered.emplace_back(file.name.c_str(), pos, std::string(cut_line(context, pos - start)));
-			});
+			const auto pos = location.position;
+			const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
+			const auto count = std::min((size_t)200, file.contents.size() - start);
+			const auto context = std::string(&file.contents[start], count);
+			filtered.emplace_back(file.name.c_str(), pos, std::string(cut_line(context, pos - start)));
 			return true;
 		});
 		selected = std::min(selected, (unsigned)filtered.size() - 1);
