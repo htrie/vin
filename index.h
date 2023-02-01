@@ -16,6 +16,7 @@ bool accept(const std::string_view filename) {
 
 class Index {
 	std::vector<std::string> paths;
+	std::mutex paths_mutex;
 
 public:
 	std::string populate() {
@@ -23,8 +24,10 @@ public:
 		paths.clear();
 		process_files(".", [&](const auto& path) {
 			const std::string filename(path);
-			if (accept(filename))
+			if (accept(filename)) {
+				std::unique_lock lock(paths_mutex);
 				paths.push_back(filename);
+			}
 		});
 		return std::string("populate index (") + 
 			std::to_string(paths.size()) + " paths) in " + timer.us();

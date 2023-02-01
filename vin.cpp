@@ -7,6 +7,7 @@
 #define VULKAN_HPP_NO_EXCEPTIONS
 
 #include <iostream>
+#include <future>
 #include <mutex>
 #include <sstream>
 #include <math.h>
