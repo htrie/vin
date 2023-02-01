@@ -1,0 +1,151 @@
+#include "MathModule.h"
+
+#if PYTHON_ENABLED
+
+#include "Visual/Python/pybind11/pybind11_inc.h"
+
+namespace Python
+{
+	namespace Modules
+	{
+		void MathModule::Initialise( pybind11::module& mod )
+		{
+			py::class_<simd::vector2>( mod, "vector2" )
+				.def( py::init<float, float>() )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				.def( py::self += py::self )
+				.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				.def( py::self *= float() )
+				.def( py::self /= float() )
+				.def( "__repr__", []( const simd::vector2& v ) { return Utility::format( "{}, {}", v.x, v.y ); } )
+				.method( simd::vector2, abs )
+				.method( simd::vector2, dot, pyarg( other ) )
+				.method( simd::vector2, sqrlen )
+				.method( simd::vector2, len )
+				.write( simd::vector2, x )
+				.write( simd::vector2, y );
+
+			py::class_<simd::vector3>( mod, "vector3" )
+				.def( py::init<float, float, float>() )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				.def( py::self += py::self )
+				.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				.def( py::self *= float() )
+				.def( py::self /= float() )
+				.def( "__repr__", []( const simd::vector3& v ) { return Utility::format( "{}, {}, {}", v.x, v.y, v.z ); } )
+				.method( simd::vector3, dot, pyarg( other ) )
+				.method( simd::vector3, sqrlen )
+				.method( simd::vector3, len )
+				.write( simd::vector3, x )
+				.write( simd::vector3, y )
+				.write( simd::vector3, z );
+
+			py::class_<simd::vector4>( mod, "vector4" )
+				.def( py::init<float, float, float, float>() )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				//.def( py::self += py::self )  NOT IMPLEMENTED
+				//.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				//.def( py::self *= float() )  NOT IMPLEMENTED
+				//.def( py::self /= float() )
+				.def( "__repr__", []( const simd::vector4_int& v ) { return Utility::format( "{}, {}, {}, {}", v.x, v.y, v.z, v.w ); } )
+				.method( simd::vector4, dot, pyarg( other ) )
+				.method( simd::vector4, sqrlen )
+				.method( simd::vector4, len )
+				.write( simd::vector4, x )
+				.write( simd::vector4, y )
+				.write( simd::vector4, z )
+				.write( simd::vector4, w );
+
+			py::class_<simd::vector2_int>( mod, "vector2_int" )
+				.def( py::init<int, int>() )
+				.def( py::self == py::self )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				.def( py::self += py::self )
+				.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				.def( py::self *= float() )
+				.def( py::self /= float() )
+				.def( py::self * int() )
+				.def( py::self / int() )
+				.def( py::self *= int() )
+				.def( py::self /= int() )
+				.def( "__repr__", []( const simd::vector2_int& v ) { return Utility::format( "{}, {}", v.x, v.y ); } )
+				.write( simd::vector2_int, x )
+				.write( simd::vector2_int, y );
+
+			py::class_<simd::vector3_int>( mod, "vector3_int" )
+				.def( py::init<int, int, int>() )
+				.def( py::self == py::self )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				.def( py::self += py::self )
+				.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				.def( py::self *= float() )
+				.def( py::self /= float() )
+				.def( py::self * int() )
+				.def( py::self / int() )
+				.def( py::self *= int() )
+				.def( py::self /= int() )
+				.def( "__repr__", []( const simd::vector3_int& v ) { return Utility::format( "{}, {}, {}", v.x, v.y, v.z ); } )
+				.method( simd::vector3_int, abs )
+				.method( simd::vector3_int, dot, pyarg( other ) )
+				.method( simd::vector3_int, sqrlen )
+				.method( simd::vector3_int, len )
+				.write( simd::vector3_int, x )
+				.write( simd::vector3_int, y )
+				.write( simd::vector3_int, z );
+
+			py::class_<simd::vector4_int>( mod, "vector4_int" )
+				.def( py::init<int, int, int, int>() )
+				.def( py::self == py::self )
+				.def( py::self + py::self )
+				.def( py::self - py::self )
+				.def( py::self * py::self )
+				.def( py::self / py::self )
+				.def( py::self += py::self )
+				.def( py::self -= py::self )
+				.def( py::self * float() )
+				.def( py::self / float() )
+				.def( py::self *= float() )
+				.def( py::self /= float() )
+				.def( py::self * int() )
+				.def( py::self / int() )
+				.def( py::self *= int() )
+				.def( py::self /= int() )
+				.def( "__repr__", []( const simd::vector4_int& v ) { return Utility::format( "{}, {}, {}, {}", v.x, v.y, v.z, v.w ); } )
+				.method( simd::vector4_int, abs )
+				.method( simd::vector4_int, dot, pyarg( other ) )
+				.method( simd::vector4_int, sqrlen )
+				.method( simd::vector4_int, len )
+				.write( simd::vector4_int, x )
+				.write( simd::vector4_int, y )
+				.write( simd::vector4_int, z )
+				.write( simd::vector4_int, w );
+		}
+	}
+}
+#include "Visual/Python/pybind11/pybind11_undef.h"
+#endif //PYTHON_ENABLED

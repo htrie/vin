@@ -130,6 +130,7 @@ bool write(const std::string_view filename, const std::string_view text) {
 
 template<typename F>
 void process_files(const std::string& path, F func) {
+	std::vector<std::future<void>> futures;
 	const auto filter = path + "/*";
 	WIN32_FIND_DATA find_data;
 	HANDLE handle = FindFirstFile(filter.c_str(), &find_data);
@@ -138,7 +139,9 @@ void process_files(const std::string& path, F func) {
 			if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
 				if (find_data.cFileName[0] != '.') {
 					const auto dir = path + "/" + find_data.cFileName;
-					process_files(dir.c_str(), func);
+					futures.emplace_back(std::async([=]() {
+						process_files(dir, func);
+					}));
 				}
 			}
 			else if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
