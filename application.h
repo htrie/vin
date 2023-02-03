@@ -1,7 +1,7 @@
 #pragma once
 
-const unsigned version_major = 0;
-const unsigned version_minor = 9;
+const unsigned version_major = 1;
+const unsigned version_minor = 0;
 
 enum class Menu {
 	space,
