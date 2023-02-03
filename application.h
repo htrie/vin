@@ -227,8 +227,10 @@ class Application {
 			break;
 		}
 		case WM_GETMINMAXINFO: {
-			// Window client area size must be at least 1 pixel high, to prevent crash.
-			((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
+			((MINMAXINFO*)lParam)->ptMinTrackSize = {
+				GetSystemMetrics(SM_CXMINTRACK),
+				GetSystemMetrics(SM_CYMINTRACK) + 1 // Must be at least 1 pixel high.
+			};
 			break;
 		}
 		case WM_SIZING:
