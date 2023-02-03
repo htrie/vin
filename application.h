@@ -232,6 +232,9 @@ class Application {
 			((MINMAXINFO*)lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) + 1 };
 			break;
 		}
+		case WM_SIZING:
+		case WM_MOUSEMOVE:
+		case WM_MOUSELEAVE:
 		case WM_MOVE:
 		case WM_MOVING:
 		case WM_KILLFOCUS:
@@ -248,17 +251,14 @@ class Application {
 			}
 			break;
 		}
-		case WM_SIZING:
 		case WM_SIZE: {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				const unsigned width = lParam & 0xffff;
 				const unsigned height = (lParam & 0xffff0000) >> 16;
-				if (width < 10000 && height < 10000) { // Sometimes get a crazy high value when resizing manually, just ignore it.
-					app->set_maximized(wParam == SIZE_MAXIMIZED);
-					app->set_minimized(wParam == SIZE_MINIMIZED);
-					app->set_dirty(true);
-					app->resize(width, height);
-				}
+				app->set_maximized(wParam == SIZE_MAXIMIZED);
+				app->set_minimized(wParam == SIZE_MINIMIZED);
+				app->set_dirty(true);
+				app->resize(width, height);
 			}
 			break;
 		}
