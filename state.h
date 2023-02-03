@@ -337,6 +337,19 @@ public:
 		return {};
 	}
 
+	std::string copy_line_whitespace() {
+		std::string res;
+		if (text.size() > 0) {
+			const Line current(text, cursor);
+			size_t pos = current.begin();
+			while (pos < text.size() && is_line_whitespace(text[pos])) {
+				res += text[pos];
+				pos++;
+			}
+		}
+		return res;
+	}
+
 	std::string yank_line() {
 		if (text.size() > 0) {
 			const Line current(text, cursor);
