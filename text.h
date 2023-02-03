@@ -295,6 +295,7 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 }
 
 void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
+	characters.emplace_back(Glyph::BLOCK, color, row, float(col_begin) - 0.5f); // Fill in gaps.
 	for (unsigned i = col_begin; i <= col_end; ++i) {
 		characters.emplace_back(Glyph::BLOCK, color, row, float(i));
 		characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
