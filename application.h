@@ -110,7 +110,6 @@ class Application {
 		finder.seed(switcher.current().get_word());
 		notify(note + ", " + database.search(finder.get_pattern()));
 		finder.filter(database);
-		menu = Menu::finder;
 	}
 
 	void process_space_less(unsigned row_count) {
@@ -131,7 +130,7 @@ class Application {
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'e') { process_space_e(); }
-		else if (key == 'f') { process_space_f(); }
+		else if (key == 'f') { process_space_f(); menu = Menu::finder; }
 		else if (key == '<') { process_space_less(row_count); }
 		else if (key == '>') { process_space_greated(row_count); }
 		else if (key == 'l') { menu = Menu::finder; }

@@ -217,7 +217,6 @@ class Buffer {
 	void process_normal_o() {
 		state().line_end();
 		state().insert("\n" + state().copy_line_whitespace());
-		mode = Mode::insert;
 	}
 
 	void process_normal_O() {
@@ -225,7 +224,6 @@ class Buffer {
 		state().insert(state().copy_line_whitespace() + "\n");
 		state().prev_line();
 		state().line_end();
-		mode = Mode::insert;
 	}
 
 	void process_normal_J() {
@@ -252,8 +250,8 @@ class Buffer {
 		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
 		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
-		else if (key == 'o') { begin_record(key); process_normal_o(); }
-		else if (key == 'O') { begin_record(key); process_normal_O();}
+		else if (key == 'o') { begin_record(key); process_normal_o(); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); process_normal_O(); mode = Mode::insert; }
 		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { begin_record(key); clipboard = state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { begin_record(key); clipboard = state().erase_to_line_end(); mode = Mode::insert; }
