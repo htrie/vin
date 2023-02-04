@@ -617,6 +617,7 @@ class Buffer {
 	std::string load() {
 		std::string text;
 		if (!filename.empty()) {
+			text = "\n"; // EOF
 			needs_save = true;
 			if (std::filesystem::exists(filename)) {
 				map(filename, [&](const char* mem, size_t size) {
