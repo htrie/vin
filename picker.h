@@ -5,10 +5,10 @@ class Picker {
 	std::vector<std::string> filtered;
 	unsigned selected = 0; 
 
-	bool match_pattern(const std::string_view path) {
+	bool match_pattern(const std::string_view path, const std::string_view lowercase_pattern) {
 		const auto s = to_lower(path);
 		size_t pos = 0;
-		for (auto& c : pattern) {
+		for (auto& c : lowercase_pattern) {
 			if (pos = s.find(c, pos); pos == std::string::npos)
 				return false;
 		}
@@ -18,9 +18,9 @@ class Picker {
 public:
 	void filter(const Index& index) {
 		filtered.clear();
-		pattern = to_lower(pattern);
+		const auto lowercase_pattern = to_lower(pattern);
 		index.process([&](const auto& path) {
-			if (match_pattern(path))
+			if (match_pattern(path, lowercase_pattern))
 				filtered.push_back(path.c_str());
 			return true;
 		});
@@ -28,6 +28,8 @@ public:
 	}
 
 	std::string selection() const {
+		if (filtered.size() == 0)
+			return pattern;
 		if (selected < filtered.size())
 			return filtered[selected];
 		return {};

@@ -617,11 +617,14 @@ class Buffer {
 	std::string load() {
 		std::string text;
 		if (!filename.empty()) {
-			map(filename, [&](const char* mem, size_t size) {
-				text = std::string(mem, size);
-			});
+			needs_save = true;
+			if (std::filesystem::exists(filename)) {
+				map(filename, [&](const char* mem, size_t size) {
+					text = std::string(mem, size);
+					needs_save = false;
+				});
+			}
 		}
-		needs_save = false;
 		return text;
 	}
 
