@@ -43,8 +43,8 @@ struct Spacing {
 	std::string increase_char_height() { line = std::clamp(line + 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 	std::string decrease_char_height() { line = std::clamp(line - 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 
-	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
-	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.01f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 };
 
 Spacing& spacing() {
