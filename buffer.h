@@ -630,7 +630,6 @@ class Buffer {
 	}
 
 public:
-	Buffer() {}
 	Buffer(const std::string_view filename)
 		: filename(filename)
 		, is_code(is_code_extension(filename)) {

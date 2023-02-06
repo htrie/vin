@@ -1,9 +1,8 @@
 #pragma once
 
 class Switcher {
-	Buffer empty_buffer;
 	std::vector<Buffer> buffers;
-	size_t active = (size_t)-1;
+	size_t active = 0;
 
 	unsigned longest_filename() const {
 		unsigned longest = 0;
@@ -22,6 +21,10 @@ class Switcher {
 	}
 
 public:
+	Switcher() {
+		buffers.emplace_back("scratch");
+	}
+
 	std::string load(const std::string_view filename) {
 		if (!filename.empty()) {
 			if (auto index = find_buffer(filename); index != (size_t)-1) {
@@ -42,57 +45,32 @@ public:
 	}
 
 	std::string reload() {
-		if (active != (size_t)-1) {
-			const Timer timer;
-			buffers[active].reload();
-			return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
-		}
-		return {};
+		const Timer timer;
+		buffers[active].reload();
+		return std::string("reload ") + std::string(buffers[active].get_filename()) + " in " + timer.us();
 	}
 
 	std::string save() {
-		if (active != (size_t)-1) {
-			const Timer timer;
-			buffers[active].save();
-			return std::string("save ") + std::string(buffers[active].get_filename()) + " (" + std::to_string(buffers[active].get_size()) + " bytes) in " + timer.us();
-		}
-		return {};
+		const Timer timer;
+		buffers[active].save();
+		return std::string("save ") + std::string(buffers[active].get_filename()) + " (" + std::to_string(buffers[active].get_size()) + " bytes) in " + timer.us();
 	}
 
 	std::string close() {
-		if (active != (size_t)-1) {
-			const Timer timer;
-			const auto filename = std::string(buffers[active].get_filename());
+		const Timer timer;
+		const auto filename = std::string(buffers[active].get_filename());
+		if (active != 0) { // Don't close scratch.
 			buffers.erase(buffers.begin() + active);
 			select_previous();
 			return std::string("close ") + filename + " in " + timer.us();
 		}
-		return {};
+		return std::string("can't close ") + filename + " in " + timer.us();
 	}
 
-	Buffer& current() {
-		if (active != (size_t)-1)
-			return buffers[active];
-		return empty_buffer;
-	}
+	Buffer& current() { return buffers[active]; }
 
-	void select_previous() {
-		if (active != (size_t)-1) {
-			active = active > 0 ? active - 1 : buffers.size() - 1;
-		} else {
-			if (buffers.size() > 0)
-				active = 0;
-		}
-	}
-
-	void select_next() {
-		if (active != (size_t)-1) {
-			active = (active + 1) % buffers.size();
-		} else {
-			if (buffers.size() > 0)
-				active = 0;
-		}
-	}
+	void select_previous() { active = active > 0 ? active - 1 : buffers.size() - 1; }
+	void select_next() { active = (active + 1) % buffers.size(); }
 
 	void process(unsigned key, unsigned col_count, unsigned row_count) {
 	}
