@@ -178,7 +178,6 @@ class Application {
 	void process_finder_return(unsigned row_count) {
 		notify(switcher.load(finder.selection()));
 		switcher.current().jump(finder.position(), row_count);
-		menu = Menu::normal;
 	}
 
 	void process_finder_key(unsigned key) {
@@ -189,7 +188,7 @@ class Application {
 	}
 
 	void process_finder(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == '\r') { process_finder_return(row_count); }
+		if (key == '\r') { process_finder_return(row_count); menu = Menu::normal; }
 		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
 		else { process_finder_key(key); }
 	}
