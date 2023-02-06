@@ -103,7 +103,6 @@ class Application {
 	void process_space_e() {
 		notify(index.populate());
 		picker.filter(index);
-		menu = Menu::picker;
 	}
 
 	void process_space_f() {
@@ -130,7 +129,7 @@ class Application {
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'e') { process_space_e(); }
+		else if (key == 'e') { process_space_e(); menu = Menu::picker; }
 		else if (key == 'f') { process_space_f(); menu = Menu::finder; }
 		else if (key == '<') { process_space_less(row_count); }
 		else if (key == '>') { process_space_greater(row_count); }
