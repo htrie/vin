@@ -137,10 +137,10 @@ class Device {
 	}
 
 public:
-	Device(WNDPROC proc, HINSTANCE hInstance, unsigned width, unsigned height) {
+	Device(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width, unsigned height) {
 		instance = create_instance();
 		gpu = pick_gpu(instance.get());
-		hWnd = create_window(proc, hInstance, this, width, height);
+		hWnd = create_window(proc, hInstance, data, width, height);
 		surface = create_surface(instance.get(), hInstance, hWnd);
 		surface_format = select_format(gpu, surface.get());
 		auto family_index = find_queue_family(gpu, surface.get());

@@ -298,7 +298,7 @@ class Application {
 
 public:
 	Application(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, 800, 600) {
+		: device(proc, hInstance, this, 800, 600) {
 		const auto dpi = get_window_dpi(device.get_hwnd());
 		size_window(device.get_hwnd(), 7 * dpi, 6 * dpi);
 		show_window(device.get_hwnd(), nCmdShow);
