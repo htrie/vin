@@ -17,8 +17,6 @@ struct Viewport {
 };
 
 class Device {
-	HWND hWnd = NULL;
-
 	vk::UniqueInstance instance;
 	vk::PhysicalDevice gpu;
 	vk::UniqueSurfaceKHR surface;
@@ -137,10 +135,9 @@ class Device {
 	}
 
 public:
-	Device(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width, unsigned height) {
+	Device(HINSTANCE hInstance, HWND hWnd, unsigned width, unsigned height) {
 		instance = create_instance();
 		gpu = pick_gpu(instance.get());
-		hWnd = create_window(proc, hInstance, data, width, height);
 		surface = create_surface(instance.get(), hInstance, hWnd);
 		surface_format = select_format(gpu, surface.get());
 		auto family_index = find_queue_family(gpu, surface.get());
@@ -168,8 +165,6 @@ public:
 
 	~Device() {
 		wait_idle(device.get());
-
-		destroy_window(hWnd);
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -222,7 +217,5 @@ public:
 			(unsigned)((float)height / (spacing().zoom * spacing().line) - 0.5f)
 		};
 	}
-
-	HWND get_hwnd() const { return hWnd; }
 };
 

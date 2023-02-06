@@ -12,6 +12,8 @@ enum class Menu {
 };
 
 class Application {
+	HWND hWnd = NULL;
+
 	Device device;
 	Index index;
 	Database database;
@@ -91,7 +93,7 @@ class Application {
 		}
 		if (!minimized && dirty) {
 			device.redraw(characters);
-			SetWindowTextA(device.get_hwnd(), status().data());
+			SetWindowTextA(hWnd, status().data());
 		}
 		else {
 			Sleep(1); // Avoid busy loop when minimized.
@@ -139,11 +141,11 @@ class Application {
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
-		else if (key == 'm') { show_window(device.get_hwnd(), maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else if (key == '-') { resize_window(device.get_hwnd(), 0, 40); }
-		else if (key == '_') { resize_window(device.get_hwnd(), 0, -40); }
-		else if (key == '=') { resize_window(device.get_hwnd(), 40, 0); }
-		else if (key == '+') { resize_window(device.get_hwnd(), -40, 0); }
+		else if (key == 'm') { show_window(hWnd, maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
+		else if (key == '-') { resize_window(hWnd, 0, 40); }
+		else if (key == '_') { resize_window(hWnd, 0, -40); }
+		else if (key == '=') { resize_window(hWnd, 40, 0); }
+		else if (key == '+') { resize_window(hWnd, -40, 0); }
 		else if (key == '[') { notify(spacing().decrease_char_width()); }
 		else if (key == ']') { notify(spacing().increase_char_width()); }
 		else if (key == '{') { notify(spacing().decrease_char_height()); }
@@ -298,10 +300,15 @@ class Application {
 
 public:
 	Application(HINSTANCE hInstance, int nCmdShow)
-		: device(proc, hInstance, this, 800, 600) {
-		const auto dpi = get_window_dpi(device.get_hwnd());
-		size_window(device.get_hwnd(), 7 * dpi, 6 * dpi);
-		show_window(device.get_hwnd(), nCmdShow);
+		: hWnd(create_window(proc, hInstance, this, 800, 600))
+		, device(hInstance, hWnd, 800, 600) {
+		const auto dpi = get_window_dpi(hWnd);
+		size_window(hWnd, 7 * dpi, 6 * dpi);
+		show_window(hWnd, nCmdShow);
+	}
+	
+	~Application() {
+		destroy_window(hWnd);
 	}
 
 	void notify(const std::string_view s) {
