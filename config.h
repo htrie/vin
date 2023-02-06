@@ -35,6 +35,7 @@ struct Spacing {
 	float character = 9.0f;
 	float line = 20.0f;
 	float zoom = 1.0f;
+	unsigned tab = 3;
 
 	std::string increase_char_width() { character = std::clamp(character + 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
 	std::string decrease_char_width() { character = std::clamp(character - 0.05f, 0.0f, 20.0f); return std::string("char_width = ") + std::to_string(character); }
@@ -44,6 +45,9 @@ struct Spacing {
 
 	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+
+	std::string increase_tab_size() { tab = std::clamp(tab + 1, 0u, 8u); return std::string("char_zoom = ") + std::to_string(tab); }
+	std::string decrease_tab_size() { tab = std::clamp(tab > 0 ? tab - 1 : 0u, 0u, 8u); return std::string("char_zoom = ") + std::to_string(tab); }
 };
 
 Spacing& spacing() {

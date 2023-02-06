@@ -570,7 +570,7 @@ class Buffer {
 					else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }
 					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
 					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
-					else if (c == '\t') { push_tab(characters, row, col); col += 4; }
+					else if (c == '\t') { push_tab(characters, row, col); col += spacing().tab; }
 					else if (c == '\r') { push_carriage(characters, row, col); col++; }
 					else if (c == ' ') { push_space(characters, row, col); col++; }
 					else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
