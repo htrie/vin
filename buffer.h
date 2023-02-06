@@ -112,13 +112,11 @@ class Buffer {
 	void line_find() {
 		if(char_forward) { state().line_find(f_key); }
 		else { state().line_rfind(f_key); }
-		mode = Mode::normal;
 	}
 
 	void line_rfind() {
 		if(char_forward) { state().line_rfind(f_key); }
 		else { state().line_find(f_key); }
-		mode = Mode::normal;
 	}
 
 	void word_find_under_cursor(unsigned row_count) {
@@ -278,8 +276,8 @@ class Buffer {
 		else if (key == 'L') { save_cursor(); state().window_bottom(row_count); }
 		else if (key == '+') { save_cursor(); state().next_line(); state().line_start_whitespace(); }
 		else if (key == '-') { save_cursor(); state().prev_line(); state().line_start_whitespace(); }
-		else if (key == ';') { line_find(); }
-		else if (key == ',') { line_rfind(); }
+		else if (key == ';') { line_find(); mode = Mode::normal; }
+		else if (key == ',') { line_rfind(); mode = Mode::normal; }
 		else if (key == '*') { save_cursor(); word_find_under_cursor(row_count); }
 		else if (key == '#') { save_cursor(); word_rfind_under_cursor(row_count); }
 		else if (key == '/') { highlight.clear(); mode = Mode::normal_slash; }
