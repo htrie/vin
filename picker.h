@@ -48,10 +48,10 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count, unsigned row_start) const {
 		unsigned col = 0;
 		unsigned row = row_start;
-		push_line(characters, colors().search, float(row), 0, col_count);
-		push_string(characters, colors().text, row, col, "open:", true);
-		push_string(characters, colors().text, row, col, pattern, false);
-		push_cursor(characters, colors().text, row, col);
+		push_line(characters, colors().text, float(row), 0, col_count);
+		push_string(characters, colors().clear, row, col, "open:", true);
+		push_string(characters, colors().clear, row, col, pattern, false);
+		push_cursor(characters, colors().clear, row, col);
 		row++;
 
 		const unsigned begin = selected > row_count / 2 ? selected - row_count / 2 : 0;

@@ -13,7 +13,6 @@ struct Colors {
 	Color cursor = base_color(0.5f);
 	Color highlight = base_color(0.8f);
 	Color whitespace = base_color(1.0f);
-	Color search = base_color(0.8f);
 	Color text = text_color(1.0f);
 	Color text_cursor = base_color(1.0f);
 	Color keyword = text_color(0.5f);
