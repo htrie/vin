@@ -135,7 +135,7 @@ class Device {
 	}
 
 public:
-	Device(HINSTANCE hInstance, HWND hWnd, unsigned width, unsigned height) {
+	Device(HINSTANCE hInstance, HWND hWnd) {
 		instance = create_instance();
 		gpu = pick_gpu(instance.get());
 		surface = create_surface(instance.get(), hInstance, hWnd);
@@ -159,8 +159,6 @@ public:
 		fence = create_fence(device.get());
 		image_acquired_semaphore = create_semaphore(device.get());
 		draw_complete_semaphore = create_semaphore(device.get());
-
-		resize(width, height);
 	}
 
 	~Device() {

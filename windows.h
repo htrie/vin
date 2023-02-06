@@ -16,67 +16,75 @@ std::string get_error_string() {
 	return res;
 }
 
-HWND create_window(WNDPROC proc, HINSTANCE hInstance, void* data, unsigned width, unsigned height) {
-	const char* name = "vin";
-	const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+class Window {
+	HWND hWnd = nullptr;
 
-	WNDCLASSEX win_class;
-	win_class.cbSize = sizeof(WNDCLASSEX);
-	win_class.style = CS_HREDRAW | CS_VREDRAW;
-	win_class.lpfnWndProc = proc;
-	win_class.cbClsExtra = 0;
-	win_class.cbWndExtra = 0;
-	win_class.hInstance = hInstance;
-	win_class.hIcon = hIcon;
-	win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	win_class.hbrBackground = CreateSolidBrush(0);
-	win_class.lpszMenuName = nullptr;
-	win_class.lpszClassName = name;
-	win_class.hIconSm = hIcon;
-
-	RegisterClassEx(&win_class);
-
-	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-
-	RECT wr = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
-	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
-
-	const auto hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
-		nullptr, nullptr, hInstance, data);
-
-	BOOL value = TRUE;
-	DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-
-	return hWnd;
-}
-
-void destroy_window(HWND hWnd) {
-	DestroyWindow(hWnd);
-}
-
-void show_window(HWND hWnd, int nCmdShow) {
-	ShowWindow(hWnd, nCmdShow);
-}
-
-void size_window(HWND hWnd, int w, int h) {
-	SetWindowPos(hWnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
-}
-
-void resize_window(HWND hWnd, int dw, int dh) {
-	RECT rect;
-	if (GetWindowRect(hWnd, &rect)) {
-		const auto w = rect.right - rect.left;
-		const auto h = rect.bottom - rect.top;
-		SetWindowPos(hWnd, 0, 0, 0, w + dw, h + dh, SWP_NOMOVE | SWP_NOOWNERZORDER);
+public:
+	Window(HINSTANCE hInstance, WNDPROC proc, void* data) {
+		const char* name = "vin";
+		const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	
+		WNDCLASSEX win_class;
+		win_class.cbSize = sizeof(WNDCLASSEX);
+		win_class.style = CS_HREDRAW | CS_VREDRAW;
+		win_class.lpfnWndProc = proc;
+		win_class.cbClsExtra = 0;
+		win_class.cbWndExtra = 0;
+		win_class.hInstance = hInstance;
+		win_class.hIcon = hIcon;
+		win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
+		win_class.hbrBackground = CreateSolidBrush(0);
+		win_class.lpszMenuName = nullptr;
+		win_class.lpszClassName = name;
+		win_class.hIconSm = hIcon;
+	
+		RegisterClassEx(&win_class);
+	
+		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+	
+		RECT wr = { 0, 0, 1, 1 };
+		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+	
+		hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
+			CW_USEDEFAULT, CW_USEDEFAULT, wr.right - wr.left, wr.bottom - wr.top,
+			nullptr, nullptr, hInstance, data);
+	
+		BOOL value = TRUE;
+		DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 	}
-}
 
-unsigned get_window_dpi(HWND hWnd) {
-	const auto dpi = GetDpiForWindow(hWnd);
-	return dpi == 0 ? 96 : dpi;
-}
+	~Window() {
+		DestroyWindow(hWnd);
+	}
+	
+	void show(int nCmdShow) {
+		ShowWindow(hWnd, nCmdShow);
+	}
+	
+	void set_title(const std::string_view text) {
+		SetWindowTextA(hWnd, text.data());
+	}
+	
+	void set_size(int w, int h) {
+		SetWindowPos(hWnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
+	}
+	
+	void resize(int dw, int dh) {
+		RECT rect;
+		if (GetWindowRect(hWnd, &rect)) {
+			const auto w = rect.right - rect.left;
+			const auto h = rect.bottom - rect.top;
+			SetWindowPos(hWnd, 0, 0, 0, w + dw, h + dh, SWP_NOMOVE | SWP_NOOWNERZORDER);
+		}
+	}
 
+	unsigned get_dpi() {
+		const auto dpi = GetDpiForWindow(hWnd);
+		return dpi == 0 ? 96 : dpi;
+	}
+	
+	HWND get() const { return hWnd; }
+};
 
 class Timer {
 	LARGE_INTEGER frequency;
