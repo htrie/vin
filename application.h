@@ -118,7 +118,7 @@ class Application {
 		switcher.current().jump(finder.position(), row_count);
 	}
 
-	void process_space_greated(unsigned row_count) {
+	void process_space_greater(unsigned row_count) {
 		finder.select_previous();
 		switcher.load(finder.selection());
 		switcher.current().jump(finder.position(), row_count);
@@ -132,7 +132,7 @@ class Application {
 		else if (key == 'e') { process_space_e(); }
 		else if (key == 'f') { process_space_f(); menu = Menu::finder; }
 		else if (key == '<') { process_space_less(row_count); }
-		else if (key == '>') { process_space_greated(row_count); }
+		else if (key == '>') { process_space_greater(row_count); }
 		else if (key == 'l') { menu = Menu::finder; }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
