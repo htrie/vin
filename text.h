@@ -135,6 +135,7 @@ public:
 			}
 			else if (is_punctuation(c)) {
 				while(test_punctuation(text, finish + 1)) { finish++; }
+				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
