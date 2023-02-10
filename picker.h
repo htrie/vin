@@ -40,8 +40,8 @@ public:
 		else if (key == Glyph::ESCAPE) { return; }
 		else if (key == '\t') { return; }
 		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); } }
-		else if (key == '<') { selected++; }
-		else if (key == '>') { if (selected > 0) selected--; }
+		else if (key == 10/*j*/ && is_ctrl_down()) { selected++; }
+		else if (key == 11/*k*/ && is_ctrl_down()) { if (selected > 0) selected--; }
 		else { pattern += (char)key; }
 	}
 

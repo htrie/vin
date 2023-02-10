@@ -16,6 +16,10 @@ std::string get_error_string() {
 	return res;
 }
 
+bool is_ctrl_down() {
+	return GetAsyncKeyState(VK_CONTROL);
+}
+
 class Window {
 	HWND hWnd = nullptr;
 
