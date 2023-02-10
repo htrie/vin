@@ -126,6 +126,7 @@ public:
 			const auto c = text[pos];
 			if (is_number(c) || is_letter(c)) {
 				while(test_letter_or_number(text, finish + 1)) { finish++; }
+				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_letter_or_number(text, start - 1)) { start--; }
 			}
 			else if (is_whitespace(c)) {
