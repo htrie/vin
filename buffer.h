@@ -481,26 +481,22 @@ class Buffer {
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
-		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col);
-		characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col) + (last ? 0.0f : 0.5f)); // Fill in gaps.
+		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col, false, 1.2f, 1.0f, -1.0f, 0.0f);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i);
-			characters.emplace_back(Glyph::BLOCK, colors().highlight, float(row), float(col + i) + (i < (unsigned)highlight.size() - 1 ? 0.5f : 0.0f)); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i, false, 1.2f, 1.0f, -1.0f, 0.0f);
 		}
 	};
 
 	void push_column_indicator(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col);
-		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, float(row) + 0.5f, float(col)); // Fill in gaps.
+		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col, false, 1.0f, 1.2f, 0.0f, -1.0f);
 	};
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, float(row), float(7 + i) + 0.5f); // Fill in gaps.
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i, false, 1.2f, 1.0f, -1.0f, 0.0f);
 		}
 	}
 
@@ -562,8 +558,8 @@ class Buffer {
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0) { push_column_indicator(characters, row, 87);}
 					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+					if (col == 0) { push_column_indicator(characters, row, 87);}
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
 					else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }

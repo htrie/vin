@@ -106,12 +106,12 @@ class Device {
 
 		const auto add = [&](const auto& font, float font_index, const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ spacing().zoom * glyph.w * font.width, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, spacing().zoom * glyph.h * font.height, 0.0f, 0.0f },
+				{ spacing().zoom * glyph.w * font.width * character.scale_x, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, spacing().zoom * glyph.h * font.height * character.scale_y, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width),
-					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height),
+					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width + character.offset_x),
+					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height + character.offset_y),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();

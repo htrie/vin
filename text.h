@@ -79,13 +79,17 @@ struct Character {
 	Color color = Color::rgba(255, 0, 0, 255);
 	float row = 0.0f;
 	float col = 0.0f;
+	float scale_x = 1.0f;
+	float scale_y = 1.0f;
+	float offset_x = 0.0f;
+	float offset_y = 0.0f;
 	bool bold = false;
 
 	Character() {}
-	Character(uint16_t index, Color color, float row, float col, bool bold = false)
-		: index(index), color(color), row(row), col(col), bold(bold) {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false)
-		: index(index), color(color), row((float)row), col((float)col), bold(bold) {}
+	Character(uint16_t index, Color color, float row, float col, bool bold = false, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
+		: index(index), color(color), row(row), col(col), bold(bold), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
+		: index(index), color(color), row((float)row), col((float)col), bold(bold), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -304,10 +308,8 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 }
 
 void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
-	characters.emplace_back(Glyph::BLOCK, color, row, float(col_begin) - 0.5f); // Fill in gaps.
 	for (unsigned i = col_begin; i <= col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, float(i));
-		characters.emplace_back(Glyph::BLOCK, color, row, float(i) + 0.5f); // Fill in gaps.
+		characters.emplace_back(Glyph::BLOCK, color, row, float(i), false, 1.2f, 1.0f, -1.0f, 0.0f);
 	}
 }
 
