@@ -46,8 +46,8 @@ struct Spacing {
 	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 
-	std::string increase_tab_size() { tab = std::clamp(tab + 1, 0u, 8u); return std::string("char_zoom = ") + std::to_string(tab); }
-	std::string decrease_tab_size() { tab = std::clamp(tab > 0 ? tab - 1 : 0u, 0u, 8u); return std::string("char_zoom = ") + std::to_string(tab); }
+	std::string increase_tab_size() { tab = std::clamp(tab + 1, 0u, 8u); return std::string("tab_size = ") + std::to_string(tab); }
+	std::string decrease_tab_size() { tab = std::clamp(tab > 0 ? tab - 1 : 0u, 0u, 8u); return std::string("tab_size = ") + std::to_string(tab); }
 };
 
 Spacing& spacing() {
