@@ -71,9 +71,9 @@ public:
 		unsigned col = 0;
 		unsigned row = row_start;
 		push_line(characters, colors().bar, float(row), 0, col_count);
-		push_string(characters, colors().clear, row, col, "find:", true);
-		push_string(characters, colors().clear, row, col, pattern);
-		push_cursor(characters, colors().clear, row, col);
+		push_string(characters, colors().bar_text, row, col, "find:", true);
+		push_string(characters, colors().bar_text, row, col, pattern);
+		push_cursor(characters, colors().bar_text, row, col);
 		row++;
 
 		const unsigned begin = selected > row_count / 2 ? selected - row_count / 2 : 0;

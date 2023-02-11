@@ -9,6 +9,7 @@ struct Colors {
 	Color highlight = Color::rgba(180, 0, 180, 255);
 	Color whitespace = Color::gray(30);
 	Color bar = Color::rgba(244, 240, 222, 255);
+	Color bar_text = Color::gray(10);
 	Color text = Color::rgba(244, 240, 222, 255);
 	Color text_cursor = Color::gray(30);
 	Color keyword = Color::rgba(199, 146, 234, 255);

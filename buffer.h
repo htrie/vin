@@ -594,16 +594,16 @@ class Buffer {
 		push_line(characters, colors().bar, float(row), col, col_count);
 		col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, colors().clear, row, col, name, true);
+		push_string(characters, colors().bar_text, row, col, name, true);
 		col = 62;
-		push_string(characters, colors().clear, row, col, readable_size(get_size()), true);
+		push_string(characters, colors().bar_text, row, col, readable_size(get_size()), true);
 		col = 74;
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, colors().clear, row, col, percentage, true);
+		push_string(characters, colors().bar_text, row, col, percentage, true);
 		col = 82;
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, colors().clear, row, col, locations, true);
+		push_string(characters, colors().bar_text, row, col, locations, true);
 	}
 
 	void init(const std::string_view text) {
