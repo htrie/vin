@@ -61,7 +61,7 @@ public:
 		const auto filename = std::string(buffers[active].get_filename());
 		if (active != 0) { // Don't close scratch.
 			buffers.erase(buffers.begin() + active);
-			select_previous();
+			active = active % buffers.size();
 			return std::string("close ") + filename + " in " + timer.us();
 		}
 		return std::string("can't close ") + filename + " in " + timer.us();
