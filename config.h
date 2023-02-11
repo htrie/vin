@@ -13,6 +13,8 @@ struct Colors {
 	Color text = Color::rgba(229, 218, 184, 255);
 	Color text_cursor = Color::gray(30);
 	Color keyword = Color::rgba(199, 146, 234, 255);
+	Color clas = Color::rgba(255, 203, 139, 255);
+	Color function = Color::rgba(130, 170, 255, 255);
 	Color punctuation = Color::rgba(127, 219, 202, 255);
 	Color number = Color::rgba(247, 140, 84, 255);
 	Color line_number = Color::gray(80);

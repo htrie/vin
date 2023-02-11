@@ -94,6 +94,8 @@ class Word {
 	size_t start = 0;
 	size_t finish = 0;
 	size_t finish_no_whitespace = 0;
+	bool is_class = false;
+	bool is_function = false;
 
 	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
@@ -141,15 +143,20 @@ public:
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
+			is_class = is_uppercase_letter(text[start]);
+			is_function = finish < text.size() - 1 ? text[finish + 1] == '(' : false;
 		}
 	}
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
-
+	
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
 	}
+
+	bool check_class() const { return is_class; }
+	bool check_function() const { return is_function; }
 
 	bool check_keyword(const std::string_view text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
