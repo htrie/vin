@@ -70,7 +70,7 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count, unsigned row_start) const {
 		unsigned col = 0;
 		unsigned row = row_start;
-		push_line(characters, colors().text, float(row), 0, col_count);
+		push_line(characters, colors().bar, float(row), 0, col_count);
 		push_string(characters, colors().clear, row, col, "find:", true);
 		push_string(characters, colors().clear, row, col, pattern);
 		push_cursor(characters, colors().clear, row, col);
@@ -88,9 +88,9 @@ public:
 			const auto pos = entry.context.find(pattern);
 			const auto pre_context = entry.context.substr(0, pos);
 			const auto post_context = entry.context.substr(pos + pattern.size());
-			push_string(characters, colors().comment, row, col, pre_context);
+			push_string(characters, colors().context, row, col, pre_context);
 			push_string(characters, colors().text, row, col, pattern, true);
-			push_string(characters, colors().comment, row, col, post_context);
+			push_string(characters, colors().context, row, col, post_context);
 			row++;
 		}
 	}

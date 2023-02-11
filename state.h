@@ -180,7 +180,7 @@ public:
 	std::string get_word() const {
 		const Word current(text, cursor);
 		if (!is_whitespace(text[current.begin()]))
-			return text.substr(current.begin(), current.end() - current.begin() + 1);
+			return std::string(current.to_string(text));
 		return "";
 	}
 
@@ -189,9 +189,9 @@ public:
 		if (is_whitespace(text[current.begin()])) {
 			const Word next = incr(current);
 			cursor = next.begin();
-			return text.substr(next.begin(), next.end() - next.begin() + 1);
+			return std::string(next.to_string(text));
 		}
-		return text.substr(current.begin(), current.end() - current.begin() + 1);
+		return std::string(current.to_string(text));
 	}
 
 	void word_end() {

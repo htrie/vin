@@ -148,7 +148,7 @@ public:
 	size_t end() const { return finish; }
 
 	std::string_view to_string(const std::string_view text) const {
-		return text.substr(start, finish - start + 1);
+		return text.substr(start, finish_no_whitespace - start + 1);
 	}
 
 	bool check_keyword(const std::string_view text) const {

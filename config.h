@@ -1,28 +1,25 @@
 #pragma once
 
-uint8_t channel(float c) { return (uint8_t)std::clamp(c, 0.0f, 255.0f); }
-
-Color base_color(float f) { return Color::rgba(channel(244.0f * f), channel(240.0f * f), channel(222.0f * f), 255); }
-Color text_color(float f) { return Color::rgba(channel(68.0f * f), channel(68.0f * f), channel(68.0f * f), 255); }
-
 struct Colors {
-	Color clear = base_color(1.0f);
-	Color column_indicator = base_color(0.97f);
-	Color overlay = base_color(0.95f);
-	Color cursor_line = base_color(0.9f);
-	Color cursor = base_color(0.5f);
-	Color highlight = base_color(0.8f);
-	Color whitespace = base_color(1.0f);
-	Color text = text_color(1.0f);
-	Color text_cursor = base_color(1.0f);
-	Color keyword = text_color(0.5f);
-	Color punctuation = text_color(1.0f);
-	Color number = text_color(1.0f);
-	Color line_number = text_color(2.4f);
-	Color comment = text_color(2.0f);
-	Color diff_note = text_color(1.0f);
-	Color diff_add = text_color(1.0f);
-	Color diff_remove = text_color(2.4f);
+	Color clear = Color::gray(30);
+	Color column_indicator = Color::gray(50);
+	Color overlay = Color::gray(60);
+	Color cursor_line = Color::rgba(80, 80, 0, 255);
+	Color cursor = Color::rgba(255, 255, 0, 255);
+	Color highlight = Color::rgba(180, 0, 180, 255);
+	Color whitespace = Color::gray(30);
+	Color bar = Color::gray(220);
+	Color text = Color::gray(240);
+	Color text_cursor = Color::gray(30);
+	Color keyword = Color::rgba(199, 146, 234, 255);
+	Color punctuation = Color::rgba(127, 219, 202, 255);
+	Color number = Color::rgba(247, 140, 84, 255);
+	Color line_number = Color::gray(80);
+	Color context = Color::gray(140);
+	Color comment = Color::rgba(255, 255, 0, 255);
+	Color diff_note = Color::rgba(255, 200, 0, 255);
+	Color diff_add = Color::rgba(0, 200, 0, 255);
+	Color diff_remove = Color::rgba(200, 0, 0, 255);
 };
 
 Colors& colors() {
@@ -43,8 +40,8 @@ struct Spacing {
 	std::string increase_char_height() { line = std::clamp(line + 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 	std::string decrease_char_height() { line = std::clamp(line - 0.05f, 0.0f, 40.0f); return std::string("char_height = ") + std::to_string(line); }
 
-	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
-	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.05f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string increase_char_zoom() { zoom = std::clamp(zoom + 0.1f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
+	std::string decrease_char_zoom() { zoom = std::clamp(zoom - 0.1f, 0.0f, 2.0f); return std::string("char_zoom = ") + std::to_string(zoom); }
 
 	std::string increase_tab_size() { tab = std::clamp(tab + 1, 0u, 8u); return std::string("tab_size = ") + std::to_string(tab); }
 	std::string decrease_tab_size() { tab = std::clamp(tab > 0 ? tab - 1 : 0u, 0u, 8u); return std::string("tab_size = ") + std::to_string(tab); }

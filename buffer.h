@@ -462,7 +462,7 @@ class Buffer {
 	}
 
 	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit, bool bold) const {
-		characters.emplace_back((uint16_t)(48 + digit), bold ? colors().text : colors().line_number, row, col, bold);
+		characters.emplace_back((uint16_t)(48 + digit), colors().line_number, row, col, bold);
 	}
 
 	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line, bool bold) const {
@@ -591,7 +591,7 @@ class Buffer {
 	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned row = 0;
 		unsigned col = 0;
-		push_line(characters, colors().text, float(row), col, col_count);
+		push_line(characters, colors().bar, float(row), col, col_count);
 		col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
 		push_string(characters, colors().clear, row, col, name, true);

@@ -48,7 +48,7 @@ public:
 	void cull(Characters& characters, unsigned col_count, unsigned row_count, unsigned row_start) const {
 		unsigned col = 0;
 		unsigned row = row_start;
-		push_line(characters, colors().text, float(row), 0, col_count);
+		push_line(characters, colors().bar, float(row), 0, col_count);
 		push_string(characters, colors().clear, row, col, "open:", true);
 		push_string(characters, colors().clear, row, col, pattern, false);
 		push_cursor(characters, colors().clear, row, col);
