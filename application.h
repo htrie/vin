@@ -123,7 +123,7 @@ class Application {
 		switcher.load(finder.selection());
 		switcher.current().jump(finder.position(), row_count);
 	}
-
+	
 	void process_space(unsigned key, unsigned row_count) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'w') { notify(switcher.close()); }
