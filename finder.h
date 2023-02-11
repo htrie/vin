@@ -89,7 +89,7 @@ public:
 			const auto pre_context = entry.context.substr(0, pos);
 			const auto post_context = entry.context.substr(pos + pattern.size());
 			push_string(characters, colors().context, row, col, pre_context);
-			push_string(characters, colors().text, row, col, pattern, true);
+			push_string(characters, colors().comment, row, col, pattern, true);
 			push_string(characters, colors().context, row, col, post_context);
 			row++;
 		}
