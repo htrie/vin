@@ -34,7 +34,7 @@ bool is_code_extension(const std::string_view filename) {
 	return false;
 }
 
-static inline const std::vector<std::vector<const char*>> cpp_keywords = {
+static inline const std::vector<std::vector<std::string_view>> cpp_keywords = {
 	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
 	{ "bitand", "bitor", "bool", "break" },
 	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
@@ -93,8 +93,7 @@ typedef std::vector<Character> Characters;
 class Word {
 	size_t start = 0;
 	size_t finish = 0;
-
-	bool is_class = false;
+	size_t finish_no_whitespace = 0;
 
 	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
@@ -126,20 +125,22 @@ public:
 			const auto c = text[pos];
 			if (is_number(c) || is_letter(c)) {
 				while(test_letter_or_number(text, finish + 1)) { finish++; }
+				finish_no_whitespace = finish;
 				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_letter_or_number(text, start - 1)) { start--; }
 			}
 			else if (is_whitespace(c)) {
 				while(test_whitespace(text, finish + 1)) { finish++; }
+				finish_no_whitespace = finish;
 				while(test_whitespace(text, start - 1)) { start--; }
 			}
 			else if (is_punctuation(c)) {
 				while(test_punctuation(text, finish + 1)) { finish++; }
+				finish_no_whitespace = finish;
 				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
-			is_class = is_uppercase_letter(text[start]);
 		}
 	}
 
@@ -150,13 +151,12 @@ public:
 		return text.substr(start, finish - start + 1);
 	}
 
-	bool check_class() const { return is_class; }
 	bool check_keyword(const std::string_view text) const {
 		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
 			const auto& keywords = cpp_keywords[letter_index];
-			const std::string word(text.substr(start, finish - start + 1));
+			const std::string word(text.substr(start, finish_no_whitespace - start + 1));
 			for (const auto& keyword : keywords) {
-				if (strcmp(word.data(), keyword) == 0)
+				if (word == keyword)
 					return true;
 			}
 		}
