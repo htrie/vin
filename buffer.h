@@ -491,7 +491,7 @@ class Buffer {
 	};
 
 	void push_column_indicator(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col, false, 1.0f, 1.2f, 0.0f, -1.0f);
+		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col);
 	};
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
@@ -558,8 +558,8 @@ class Buffer {
 		for (auto& c : state().get_text()) {
 			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_column_indicator(characters, row, 87);}
+					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
 					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
 					if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
 					else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }
