@@ -168,13 +168,15 @@ public:
 	}
 
 	void enclosure_start() {
-		const Enclosure current(text, cursor, '{', '}');
+		const auto pos = text[cursor] == '{' && cursor > 1 ? cursor - 1 : cursor;
+		const Enclosure current(text, pos, '{', '}');
 		if (current.valid())
 			cursor = current.begin();
 	}
 
 	void enclosure_end() {
-		const Enclosure current(text, cursor, '{', '}');
+		const auto pos = text[cursor] == '}' && cursor < text.size() - 1 ? cursor - 1 : cursor;
+		const Enclosure current(text, pos, '{', '}');
 		if (current.valid())
 			cursor = current.end();
 	}
