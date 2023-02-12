@@ -167,6 +167,18 @@ public:
 		}
 	}
 
+	void enclosure_start() {
+		const Enclosure current(text, cursor, '{', '}');
+		if (current.valid())
+			cursor = current.begin();
+	}
+
+	void enclosure_end() {
+		const Enclosure current(text, cursor, '{', '}');
+		if (current.valid())
+			cursor = current.end();
+	}
+
 	void change_case() {
 		const char c = text[cursor];
 		char res = c;

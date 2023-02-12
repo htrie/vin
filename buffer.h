@@ -269,6 +269,8 @@ class Buffer {
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
 		else if (key == 'e') { state().word_end(); }
+		else if (key == '[') { state().enclosure_start(); }
+		else if (key == ']') { state().enclosure_end(); }
 		else if (key == 'g') { save_cursor(); state().buffer_start(); }
 		else if (key == 'G') { save_cursor(); state().buffer_end(); }
 		else if (key == 'H') { save_cursor(); state().window_top(row_count); }
