@@ -49,8 +49,8 @@ public:
 		unsigned col = 0;
 		unsigned row = row_start;
 		push_line(characters, colors().bar, float(row), 0, col_count);
-		push_string(characters, colors().bar_text, row, col, "open:", true);
-		push_string(characters, colors().bar_text, row, col, pattern, false);
+		push_string(characters, colors().bar_text, row, col, "open:");
+		push_string(characters, colors().bar_text, row, col, pattern);
 		push_cursor(characters, colors().bar_text, row, col);
 		row++;
 

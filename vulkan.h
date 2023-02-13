@@ -586,24 +586,18 @@ vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk
 	return std::move(handles.value[0]);
 }
 
-void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range,
-	const vk::Sampler& sampler0, const vk::ImageView& image_view0,
-	const vk::Sampler& sampler1, const vk::ImageView& image_view1) {
+void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& desc_set, const vk::Buffer& buffer, size_t range, const vk::Sampler& sampler, const vk::ImageView& image_view) {
 	const auto buffer_info = vk::DescriptorBufferInfo()
 		.setOffset(0)
 		.setRange(range)
 		.setBuffer(buffer);
 
-	const auto image_info0 = vk::DescriptorImageInfo()
-		.setSampler(sampler0)
-		.setImageView(image_view0)
-		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-	const auto image_info1 = vk::DescriptorImageInfo()
-		.setSampler(sampler1)
-		.setImageView(image_view1)
+	const auto image_info = vk::DescriptorImageInfo()
+		.setSampler(sampler)
+		.setImageView(image_view)
 		.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
-	const std::array<vk::WriteDescriptorSet, 3> writes = {
+	const std::array<vk::WriteDescriptorSet, 2> writes = {
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -612,15 +606,9 @@ void update_descriptor_set(const vk::Device& device, const vk::DescriptorSet& de
 		vk::WriteDescriptorSet()
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setPImageInfo(&image_info0)
+			.setPImageInfo(&image_info)
 			.setDstBinding(1)
-			.setDstSet(desc_set),
-		vk::WriteDescriptorSet()
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setPImageInfo(&image_info1)
-			.setDstBinding(2)
-			.setDstSet(desc_set) };
+			.setDstSet(desc_set), };
 
 	device.updateDescriptorSets((uint32_t)writes.size(), writes.data(), 0, nullptr);
 }

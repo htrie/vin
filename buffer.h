@@ -483,12 +483,12 @@ class Buffer {
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
-		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col, false, 1.2f, 1.0f, -1.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col, 1.2f, 1.0f, -1.0f, 0.0f);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i, false, 1.2f, 1.0f, -1.0f, 0.0f);
+			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i, 1.2f, 1.0f, -1.0f, 0.0f);
 		}
 	};
 
@@ -498,7 +498,7 @@ class Buffer {
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i, false, 1.2f, 1.0f, -1.0f, 0.0f);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i, 1.2f, 1.0f, -1.0f, 0.0f);
 		}
 	}
 
@@ -594,16 +594,16 @@ class Buffer {
 		push_line(characters, colors().bar, float(row), col, col_count);
 		col = 0;
 		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, colors().bar_text, row, col, name, true);
+		push_string(characters, colors().bar_text, row, col, name);
 		col = 62;
-		push_string(characters, colors().bar_text, row, col, readable_size(get_size()), true);
+		push_string(characters, colors().bar_text, row, col, readable_size(get_size()));
 		col = 74;
 		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, colors().bar_text, row, col, percentage, true);
+		push_string(characters, colors().bar_text, row, col, percentage);
 		col = 82;
 		const auto col_and_row = state().find_cursor_row_and_col();
 		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, colors().bar_text, row, col, locations, true);
+		push_string(characters, colors().bar_text, row, col, locations);
 	}
 
 	void init(const std::string_view text) {

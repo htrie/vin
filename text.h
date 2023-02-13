@@ -83,13 +83,12 @@ struct Character {
 	float scale_y = 1.0f;
 	float offset_x = 0.0f;
 	float offset_y = 0.0f;
-	bool bold = false;
 
 	Character() {}
-	Character(uint16_t index, Color color, float row, float col, bool bold = false, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
-		: index(index), color(color), row(row), col(col), bold(bold), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col, bool bold = false, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
-		: index(index), color(color), row((float)row), col((float)col), bold(bold), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
+	Character(uint16_t index, Color color, float row, float col, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
+		: index(index), color(color), row(row), col(col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
+		: index(index), color(color), row((float)row), col((float)col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -291,25 +290,25 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
-void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c, bool bold) {
+void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c) {
 	switch (c) {
-		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++, bold); break;
-		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++, bold); break;
-		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col, bold); break;
-		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++, bold); break;
-		default: characters.emplace_back(c, color, row, col++, bold); break;
+		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++); break;
+		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++); break;
+		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col); break;
+		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++); break;
+		default: characters.emplace_back(c, color, row, col++); break;
 	}
 }
 
-void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s, bool bold = false) {
+void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s) {
 	for (auto& c : s) {
-		push_char(characters, color, row, col, c, bold);
+		push_char(characters, color, row, col, c);
 	}
 }
 
 void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
 	for (unsigned i = col_begin; i <= col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, float(i), false, 1.2f, 1.0f, -1.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, color, row, float(i), 1.2f, 1.0f, -1.0f, 0.0f);
 	}
 }
 

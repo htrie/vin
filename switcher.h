@@ -90,7 +90,7 @@ public:
 			col = left_col;
 			push_line(characters, i == active ? colors().text : colors().overlay, float(row), left_col, right_col + 1);
 			const auto name = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
-			push_string(characters, i == active ? colors().overlay : colors().text, row, col, name, buffers[i].is_dirty());
+			push_string(characters, i == active ? colors().overlay : colors().text, row, col, name);
 			row++;
 		}
 	}

@@ -8,7 +8,6 @@ struct Uniforms {
 	Vec4 color[CharacterMaxCount];
 	Vec4 uv_origin[CharacterMaxCount];
 	Vec4 uv_sizes[CharacterMaxCount];
-	Vec4 font_index[CharacterMaxCount];
 };
 
 struct Viewport {
@@ -41,8 +40,7 @@ class Device {
 		unsigned height = 0;
 		FontGlyphs glyphs;
 	};
-	Font font_regular;
-	Font font_bold;
+	Font font;
 
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
@@ -76,12 +74,9 @@ class Device {
 	}
 
 	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
-		upload_font(cmd_buf, font_regular, font_regular_width, font_regular_height, font_regular_glyphs, font_regular_pixels, sizeof(font_regular_pixels));
-		upload_font(cmd_buf, font_bold, font_bold_width, font_bold_height, font_bold_glyphs, font_bold_pixels, sizeof(font_bold_pixels));
+		upload_font(cmd_buf, font, font_width, font_height, font_glyphs, font_pixels, sizeof(font_pixels));
 		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms),
- 			font_regular.sampler.get(), font_regular.image_view.get(),
- 			font_bold.sampler.get(), font_bold.image_view.get());
+		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), font.sampler.get(), font.image_view.get());
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -104,7 +99,7 @@ class Device {
 
 		unsigned index = 0;
 
-		const auto add = [&](const auto& font, float font_index, const auto& character, const auto& glyph) {
+		const auto add = [&](const auto& font, const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
 				{ spacing().zoom * glyph.w * font.width * character.scale_x, 0.0f, 0.0f, 0.0f },
 				{ 0.0f, spacing().zoom * glyph.h * font.height * character.scale_y, 0.0f, 0.0f },
@@ -117,18 +112,15 @@ class Device {
 			uniforms.color[index] = character.color.rgba();
 			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
 			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
-			uniforms.font_index[index] = { font_index, 0.0f, 0.0f, 0.0f };
 			index++;
 		};
 
 		for (auto& character : characters) {
-			const auto& font = character.bold ? font_bold : font_regular;
-			const float font_index = character.bold ? 1.0f : 0.0f;
 			const auto* glyph = find_glyph(font.glyphs, character.index);
 			if (glyph == nullptr)
 				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
 			if (glyph && index < CharacterMaxCount)
-				add(font, font_index, character, *glyph);
+				add(font, character, *glyph);
 		}
 
 		return index;
@@ -191,7 +183,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font_regular.image) upload_fonts(cmd);
+		if (!font.image) upload_fonts(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
