@@ -504,8 +504,8 @@ class Buffer {
 
 	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(
-			get_mode() == Mode::insert ? Glyph::LINE :
-			get_mode() == Mode::normal ? Glyph::BLOCK :
+			mode == Mode::insert ? Glyph::LINE :
+			mode == Mode::normal ? Glyph::BLOCK :
 			Glyph::BOTTOM,
 			colors().cursor, row, col);
 	};
@@ -528,7 +528,7 @@ class Buffer {
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Line line(state().get_text(), index);
-		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
@@ -539,7 +539,7 @@ class Buffer {
 	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Word word(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
-		if (index == state().get_cursor() && get_mode() == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
+		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
 		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
@@ -667,8 +667,6 @@ public:
 
 	const std::string_view get_filename() const { return filename; }
 	size_t get_size() const { return state().get_text().size(); }
-
-	Mode get_mode() const { return mode; }
 
 	std::string get_word() const { return state().get_word(); }
 
