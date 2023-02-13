@@ -575,6 +575,7 @@ void copy_image_data(const vk::Device& device, const vk::Image& image, const vk:
 	memcpy(image_ptr, image_pixels, image_size);
 	unmap_memory(device, image_memory);
 }
+
 vk::UniqueDescriptorSet create_descriptor_set(const vk::Device& device, const vk::DescriptorPool& desc_pool, const vk::DescriptorSetLayout& desc_layout) {
 	const auto alloc_info = vk::DescriptorSetAllocateInfo()
 		.setDescriptorPool(desc_pool)
