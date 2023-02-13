@@ -31,17 +31,6 @@ class Device {
 	vk::UniquePipelineLayout pipeline_layout;
 	vk::UniquePipeline pipeline;
 
-	struct Font {
-		vk::UniqueSampler sampler;
-		vk::UniqueImage image;
-		vk::UniqueDeviceMemory image_memory;
-		vk::UniqueImageView image_view;
-		unsigned width = 0;
-		unsigned height = 0;
-		FontGlyphs glyphs;
-	};
-	Font font;
-
 	vk::UniqueBuffer uniform_buffer;
 	vk::UniqueDeviceMemory uniform_memory;
 	void* uniform_ptr = nullptr;
@@ -55,28 +44,24 @@ class Device {
 	std::vector<vk::UniqueFramebuffer> framebuffers;
 	std::vector<vk::UniqueCommandBuffer> cmds;
 
+	vk::UniqueSampler sampler;
+	vk::UniqueImage image;
+	vk::UniqueDeviceMemory image_memory;
+	vk::UniqueImageView image_view;
+
+	FontGlyphs glyphs;
 	unsigned width = 0;
 	unsigned height = 0;
 
-	void upload_font(const vk::CommandBuffer& cmd_buf, Font& font,
-		unsigned font_width, unsigned font_height, 
-		const FontGlyphs& font_glyphs,
-		const uint8_t* font_pixels_data, size_t font_pixels_size) {
-		font.width = font_width;
-		font.height = font_height;
-		font.glyphs = font_glyphs;
-		font.sampler = create_sampler(device.get());
-		font.image = create_image(gpu, device.get(), font_width, font_height);
-		font.image_memory = create_image_memory(gpu, device.get(), font.image.get());
-		copy_image_data(device.get(), font.image.get(), font.image_memory.get(), font_pixels_data, font_pixels_size, font_width);
-		font.image_view = create_image_view(device.get(), font.image.get(), vk::Format::eR8Unorm);
-		add_image_barrier(cmd_buf, font.image.get());
-	}
-
-	void upload_fonts(const vk::CommandBuffer& cmd_buf) {
-		upload_font(cmd_buf, font, font_width, font_height, font_glyphs, font_pixels, sizeof(font_pixels));
+	void upload_font(const vk::CommandBuffer& cmd_buf) {
+		sampler = create_sampler(device.get());
+		image = create_image(gpu, device.get(), font_width, font_height);
+		image_memory = create_image_memory(gpu, device.get(), image.get());
+		copy_image_data(device.get(), image.get(), image_memory.get(), font_pixels, sizeof(font_pixels), font_width);
+		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
+		add_image_barrier(cmd_buf, image.get());
 		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
-		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), font.sampler.get(), font.image_view.get());
+		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), image_view.get());
 	}
 
 	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
@@ -99,14 +84,14 @@ class Device {
 
 		unsigned index = 0;
 
-		const auto add = [&](const auto& font, const auto& character, const auto& glyph) {
+		const auto add = [&](const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ spacing().zoom * glyph.w * font.width * character.scale_x, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, spacing().zoom * glyph.h * font.height * character.scale_y, 0.0f, 0.0f },
+				{ spacing().zoom * glyph.w * font_width * character.scale_x, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, spacing().zoom * glyph.h * font_height * character.scale_y, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character + glyph.x_off * font.width + character.offset_x),
-					spacing().zoom * (character.row * spacing().line + glyph.y_off * font.height + character.offset_y),
+					spacing().zoom * (character.col * spacing().character + glyph.x_off * font_width + character.offset_x),
+					spacing().zoom * (character.row * spacing().line + glyph.y_off * font_height + character.offset_y),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -116,11 +101,11 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			const auto* glyph = find_glyph(font.glyphs, character.index);
+			const auto* glyph = find_glyph(font_glyphs, character.index);
 			if (glyph == nullptr)
-				glyph = find_glyph(font.glyphs, Glyph::UNKNOWN);
+				glyph = find_glyph(font_glyphs, Glyph::UNKNOWN);
 			if (glyph && index < CharacterMaxCount)
-				add(font, character, *glyph);
+				add(character, *glyph);
 		}
 
 		return index;
@@ -183,7 +168,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!font.image) upload_fonts(cmd);
+		if (!image) upload_font(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
