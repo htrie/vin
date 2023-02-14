@@ -152,7 +152,7 @@ public:
 	}
 
 	size_t begin() const { return start; }
-	size_t end() const { return finish_no_whitespace; }
+	size_t end() const { return finish; }
 	
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
