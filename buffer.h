@@ -208,7 +208,7 @@ class Buffer {
 		if (key == Glyph::ESCAPE) { end_record(key); mode = Mode::normal; }
 		else if (key == '\b') { append_record(key); state().erase_back(); }
 		else if (key == '\t') { append_record(key); state().insert("\t"); }
-		else if (key == '\r') { append_record(key); state().insert("\n"); }
+		else if (key == '\r') { append_record(key); state().insert("\n" + state().copy_line_whitespace()); }
 		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
