@@ -111,55 +111,6 @@ public:
 	}
 };
 
-class File {
-	std::string name;
-	HANDLE file = INVALID_HANDLE_VALUE;
-	HANDLE mapping = INVALID_HANDLE_VALUE;
-	const char* mem = nullptr;
-	size_t size = 0;
-
-public:
-	File(const std::string_view filename)
-		: name(filename) {
-		file = CreateFileA(name.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-		if (file != INVALID_HANDLE_VALUE) {
-			GetFileSizeEx(file, (PLARGE_INTEGER)&size);
-			mapping = CreateFileMapping(file, nullptr, PAGE_READONLY, 0, 0, nullptr);
-		}
-		if (mapping != INVALID_HANDLE_VALUE) {
-			mem = (char*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-		}
-	}
-
-	~File() {
-		if (mem)
-			UnmapViewOfFile(mem);
-		if (mapping)
-			CloseHandle(mapping);
-		if (file)
-			CloseHandle(file);
-	}
-
-	File(const File& other) = delete;
-
-	File(File&& other)
-		: name(std::move(other.name))
-		, file(other.file)
-		, mapping(other.mapping)
-		, mem(other.mem)
-		, size(other.size)
-	{
-		other.file = INVALID_HANDLE_VALUE;
-		other.mapping = INVALID_HANDLE_VALUE;
-		other.mem = nullptr;
-		other.size = 0;
-	}
-
-	std::string_view get_name() const { return name; }
-	const char* get_mem() const { return mem; }
-	size_t get_size() const { return size; }
-};
-
 template <typename F>
 void map(const std::string_view filename, F func) {
 	if (const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, 
