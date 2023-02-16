@@ -539,8 +539,12 @@ class Buffer {
 	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Word word(state().get_text(), index);
 		const Comment comment(state().get_text(), index);
+		const Quote single_quote(state().get_text(), index, '\'');
+		const Quote double_quote(state().get_text(), index, '"');
 		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
+		else if (single_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
+		else if (double_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
 		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
 		else if (word.check_function()) { characters.emplace_back((uint16_t)c, colors().function, row, col, true); }

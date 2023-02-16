@@ -19,6 +19,7 @@ struct Colors {
 	Color number = Color::rgba(247, 140, 84, 255);
 	Color line_number = Color::gray(80);
 	Color context = Color::gray(140);
+	Color quote = Color::rgba(255, 0, 128, 255);
 	Color comment = Color::rgba(255, 255, 0, 255);
 	Color diff_note = Color::rgba(255, 200, 0, 255);
 	Color diff_add = Color::rgba(0, 200, 0, 255);

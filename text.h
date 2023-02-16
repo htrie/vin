@@ -146,7 +146,7 @@ public:
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
 			verify(start <= finish);
-			is_class = is_uppercase_letter(text[start]);
+			is_class = is_uppercase_letter(text[start]) || text[start] == '_';
 			is_function = finish < text.size() - 1 ? text[finish + 1] == '(' : false;
 		}
 	}
@@ -210,6 +210,60 @@ public:
 			finish = pos;
 			const auto prev = find_prev(text, pos, left, right);
 			const auto next = find_next(text, pos, left, right);
+			if (prev != std::string::npos && next != std::string::npos) {
+				start = prev != std::string::npos ? prev : pos;
+				finish = next != std::string::npos ? next : pos;
+			}
+			verify(start <= finish);
+		}
+	}
+
+	bool valid() const { return start < finish; }
+
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+};
+
+class Quote{
+	size_t start = 0;
+	size_t finish = 0;
+
+	size_t find_prev(const std::string_view text, size_t pos, uint16_t quote) {
+		unsigned count = 0;
+		size_t last = pos;
+		size_t index = pos;
+		while (index < text.size() && text[index] != '\n') {
+			if (text[index] == quote) {
+				last = index;
+				count++;
+			}
+			index--;
+		}
+		return count % 2 != 0 ? last : std::string::npos;
+	}
+
+	size_t find_next(const std::string_view text, size_t pos, uint16_t quote) {
+		unsigned count = 0;
+		size_t last = pos;
+		size_t index = pos;
+		while (index < text.size() && text[index] != '\n') {
+			if (text[index] == quote) {
+				last = index;
+				count++;
+			}
+			index++;
+		}
+		return count % 2 != 0 ? last : std::string::npos;
+	}
+
+public:
+	Quote(const std::string_view text, size_t pos, uint16_t quote) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			start = pos;
+			finish = pos;
+			const auto prev = find_prev(text, pos, quote);
+			const auto next = find_next(text, pos, quote);
 			if (prev != std::string::npos && next != std::string::npos) {
 				start = prev != std::string::npos ? prev : pos;
 				finish = next != std::string::npos ? next : pos;
