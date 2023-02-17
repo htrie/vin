@@ -546,8 +546,8 @@ class Buffer {
 		else if (single_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (double_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
-		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
 		else if (word.check_function()) { characters.emplace_back((uint16_t)c, colors().function, row, col, true); }
+		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
 		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
 		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
