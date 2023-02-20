@@ -159,7 +159,3 @@ void process_files(const std::string& path, F func) {
 	} while (FindNextFile(handle, &find_data) != 0);
 	FindClose(handle);
 }
-
-bool is_ctrl_down() {
-	return GetAsyncKeyState(VK_CONTROL);
-}
