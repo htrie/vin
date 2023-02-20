@@ -556,27 +556,28 @@ class Buffer {
 
 	void push_text(Characters& characters, unsigned col_count, unsigned row_count) const {
 		const unsigned cursor_row = state().find_cursor_row();
-		const unsigned end_row = state().get_begin_row() + row_count;
+		const unsigned begin_row = state().get_begin_row();
+		const unsigned end_row = begin_row + row_count;
 		unsigned absolute_row = 0;
 		unsigned index = 0;
 		unsigned row = 1;
 		unsigned col = 0;
 		for (auto& c : state().get_text()) {
-			if (absolute_row >= state().get_begin_row() && absolute_row <= end_row) {
+			if (absolute_row >= begin_row && absolute_row <= end_row) {
 				if (col <= col_count) {
-					if (col == 0) { push_column_indicator(characters, row, 87);}
-					if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
-					if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
-					if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
-					else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }
-					if (index == state().get_cursor()) { push_cursor(characters, row, col); }
-					if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
-					else if (c == '\t') { push_tab(characters, row, col); col += spacing().tab; }
-					else if (c == '\r') { push_carriage(characters, row, col); col++; }
-					else if (c == ' ') { push_space(characters, row, col); col++; }
-					else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
-					else { push_char_text(characters, row, col, c, index); col++; }
-				} else {
+				if (col == 0) { push_column_indicator(characters, row, 87);}
+				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 7; }
+				if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
+				else { if (check_highlight_loose(index)) { push_highlight(characters, row, col); } }
+				if (index == state().get_cursor()) { push_cursor(characters, row, col); }
+				if (c == '\n') { push_return(characters, row, col); absolute_row++; row++; col = 0; }
+				else if (c == '\t') { push_tab(characters, row, col); col += spacing().tab; }
+				else if (c == '\r') { push_carriage(characters, row, col); col++; }
+				else if (c == ' ') { push_space(characters, row, col); col++; }
+				else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
+				else { push_char_text(characters, row, col, c, index); col++; }
+			} else {
 					if (c == '\n') { absolute_row++; row++; col = 0; }
 				}
 			} else {
