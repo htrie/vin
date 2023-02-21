@@ -296,9 +296,8 @@ class Application {
 public:
 	Application(HINSTANCE hInstance, int nCmdShow)
 		: window(hInstance, proc, this)
-		, device(hInstance, window.get()) {
-		const auto dpi = window.get_dpi();
-		window.set_size(7 * dpi, 6 * dpi);
+		, device(hInstance, window.get(), window.get_dpi()) {
+		window.set_size(800, 600);
 		window.show(nCmdShow);
 	}
 	

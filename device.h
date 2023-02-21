@@ -49,23 +49,75 @@ class Device {
 	vk::UniqueDeviceMemory image_memory;
 	vk::UniqueImageView image_view;
 
-	FontGlyphs glyphs;
+	FontGlyphs font_glyphs;
+	unsigned font_width = 0;
+	unsigned font_height = 0;
+	const uint8_t* font_pixels = nullptr;
+	unsigned font_pixels_size = 0;
+	float spacing_ratio = 0.0f;
+
 	unsigned width = 0;
 	unsigned height = 0;
+
+	void select_font(unsigned dpi) {
+		if (dpi <= 96) {
+			font_glyphs = font_16_glyphs;
+			font_width = font_16_width;
+			font_height = font_16_height;
+			font_pixels = font_16_pixels;
+			font_pixels_size = sizeof(font_16_pixels);
+		}
+		else if (dpi <= 120) {
+			font_glyphs = font_20_glyphs;
+			font_width = font_20_width;
+			font_height = font_20_height;
+			font_pixels = font_20_pixels;
+			font_pixels_size = sizeof(font_20_pixels);
+		}
+		else if (dpi <= 144) {
+			font_glyphs = font_24_glyphs;
+			font_width = font_24_width;
+			font_height = font_24_height;
+			font_pixels = font_24_pixels;
+			font_pixels_size = sizeof(font_24_pixels);
+		}
+		else if (dpi <= 168) {
+			font_glyphs = font_28_glyphs;
+			font_width = font_28_width;
+			font_height = font_28_height;
+			font_pixels = font_28_pixels;
+			font_pixels_size = sizeof(font_28_pixels);
+		}
+		else if (dpi <= 192) {
+			font_glyphs = font_32_glyphs;
+			font_width = font_32_width;
+			font_height = font_32_height;
+			font_pixels = font_32_pixels;
+			font_pixels_size = sizeof(font_32_pixels);
+		}
+		else {
+			font_glyphs = font_32_glyphs;
+			font_width = font_32_width;
+			font_height = font_32_height;
+			font_pixels = font_32_pixels;
+			font_pixels_size = sizeof(font_32_pixels);
+		}
+		spacing_ratio = dpi / 120.0f;
+	}
 
 	void upload(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
 		image = create_image(gpu, device.get(), font_width, font_height);
 		image_memory = create_image_memory(gpu, device.get(), image.get());
-		copy_image_data(device.get(), image.get(), image_memory.get(), font_pixels, sizeof(font_pixels), font_width);
+		copy_image_data(device.get(), image.get(), image_memory.get(), font_pixels, font_pixels_size, font_width);
 		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, image.get());
 		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
 		update_descriptor_set(device.get(), descriptor_set.get(), uniform_buffer.get(), sizeof(Uniforms), sampler.get(), image_view.get());
 	}
 
-	const FontGlyph* find_glyph(const FontGlyphs& glyphs, uint16_t id) {
-		for (auto& glyph : glyphs) {
+	const FontGlyph* find_glyph(uint16_t id) {
+		for (auto& glyph : font_glyphs) {
 			if (glyph.id == id)
 				return &glyph;
 		}
@@ -90,8 +142,8 @@ class Device {
 				{ 0.0f, spacing().zoom * glyph.h * font_height * character.scale_y, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing().character + glyph.x_off * font_width + character.offset_x),
-					spacing().zoom * (character.row * spacing().line + glyph.y_off * font_height + character.offset_y),
+					spacing().zoom * (character.col * spacing_ratio * spacing().character + glyph.x_off * font_width + character.offset_x),
+					spacing().zoom * (character.row * spacing_ratio * spacing().line + glyph.y_off * font_height + character.offset_y),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -101,9 +153,9 @@ class Device {
 		};
 
 		for (auto& character : characters) {
-			const auto* glyph = find_glyph(font_glyphs, character.index);
+			const auto* glyph = find_glyph(character.index);
 			if (glyph == nullptr)
-				glyph = find_glyph(font_glyphs, Glyph::UNKNOWN);
+				glyph = find_glyph(Glyph::UNKNOWN);
 			if (glyph && index < CharacterMaxCount)
 				add(character, *glyph);
 		}
@@ -112,7 +164,7 @@ class Device {
 	}
 
 public:
-	Device(HINSTANCE hInstance, HWND hWnd) {
+	Device(HINSTANCE hInstance, HWND hWnd, unsigned dpi) {
 		instance = create_instance();
 		gpu = pick_gpu(instance.get());
 		surface = create_surface(instance.get(), hInstance, hWnd);
@@ -136,6 +188,8 @@ public:
 		fence = create_fence(device.get());
 		image_acquired_semaphore = create_semaphore(device.get());
 		draw_complete_semaphore = create_semaphore(device.get());
+
+		select_font(dpi);
 	}
 
 	~Device() {
@@ -188,8 +242,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / (spacing().zoom * spacing().character) - 0.5f),
-			(unsigned)((float)height / (spacing().zoom * spacing().line) - 0.5f)
+			(unsigned)((float)width / (spacing().zoom * spacing_ratio * spacing().character) - 0.5f),
+			(unsigned)((float)height / (spacing().zoom * spacing_ratio * spacing().line) - 0.5f)
 		};
 	}
 };
