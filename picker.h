@@ -48,8 +48,9 @@ public:
 		unsigned row = row_start;
 		push_line(characters, colors().bar, float(row), 0, col_count);
 		push_string(characters, colors().bar_text, row, col, "open:");
-		push_string(characters, colors().bar_text, row, col, pattern);
+		push_string(characters, colors().bar_pattern, row, col, pattern);
 		push_cursor(characters, colors().bar_text, row, col);
+		push_string(characters, colors().bar_text, row, col, "   (" + std::to_string(filtered.size()) + " found)");
 		row++;
 
 		const unsigned begin = selected > row_count / 2 ? selected - row_count / 2 : 0;
