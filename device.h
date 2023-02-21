@@ -53,7 +53,7 @@ class Device {
 	unsigned width = 0;
 	unsigned height = 0;
 
-	void upload_font(const vk::CommandBuffer& cmd_buf) {
+	void upload(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
 		image = create_image(gpu, device.get(), font_width, font_height);
 		image_memory = create_image_memory(gpu, device.get(), image.get());
@@ -168,7 +168,7 @@ public:
 		const auto& cmd = cmds[frame_index].get();
 
 		begin(cmd);
-		if (!image) upload_font(cmd);
+		if (!image) upload(cmd);
 		begin_pass(cmd, render_pass.get(), framebuffers[frame_index].get(), colors().clear, width, height);
 
 		set_viewport(cmd, (float)width, (float)height);
