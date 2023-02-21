@@ -102,7 +102,7 @@ class Device {
 			font_pixels = font_32_pixels;
 			font_pixels_size = sizeof(font_32_pixels);
 		}
-		spacing_ratio = dpi / 120.0f;
+		spacing_ratio = (float)dpi / 120.0f;
 	}
 
 	void upload(const vk::CommandBuffer& cmd_buf) {
