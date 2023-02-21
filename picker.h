@@ -38,10 +38,8 @@ public:
 	void process(unsigned key) {
 		if (key == '\r') { return; }
 		else if (key == Glyph::ESCAPE) { return; }
-		else if (key == '\t') { return; }
 		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); } }
-		else if (key == '<') { selected++; }
-		else if (key == '>') { if (selected > 0) selected--; }
+		else if (key == '\t') { if (is_shift_down()) { if (selected > 0) { selected--; } } else { selected++; } }
 		else { pattern += (char)key; }
 	}
 

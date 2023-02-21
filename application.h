@@ -112,13 +112,13 @@ class Application {
 		finder.filter(database);
 	}
 
-	void process_space_J(unsigned row_count) {
+	void process_space_l(unsigned row_count) {
 		finder.select_next();
 		switcher.load(finder.selection());
 		switcher.current().jump(finder.position(), row_count);
 	}
 
-	void process_space_K(unsigned row_count) {
+	void process_space_h(unsigned row_count) {
 		finder.select_previous();
 		switcher.load(finder.selection());
 		switcher.current().jump(finder.position(), row_count);
@@ -131,27 +131,23 @@ class Application {
 		else if (key == 's') { notify(switcher.save()); }
 		else if (key == 'e') { process_space_e(); menu = Menu::picker; }
 		else if (key == 'f') { process_space_f(); menu = Menu::finder; }
-		else if (key == 'J') { process_space_J(row_count); }
-		else if (key == 'K') { process_space_K(row_count); }
-		else if (key == 'l') { menu = Menu::finder; }
+		else if (key == 'h') { process_space_h(row_count); }
+		else if (key == 'l') { process_space_l(row_count); }
+		else if (key == 'g') { menu = Menu::finder; }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else if (key == '-') { window.resize(0, 40); }
-		else if (key == '_') { window.resize(0, -40); }
-		else if (key == '=') { window.resize(40, 0); }
-		else if (key == '+') { window.resize(-40, 0); }
 		else if (key == '[') { notify(spacing().decrease_char_width()); }
 		else if (key == ']') { notify(spacing().increase_char_width()); }
 		else if (key == '{') { notify(spacing().decrease_char_height()); }
 		else if (key == '}') { notify(spacing().increase_char_height()); }
-		else if (key == '(') { notify(spacing().decrease_char_zoom()); }
-		else if (key == ')') { notify(spacing().increase_char_zoom()); }
-		else if (key == ',') { notify(spacing().decrease_tab_size()); }
-		else if (key == '.') { notify(spacing().increase_tab_size()); }
+		else if (key == ',') { notify(spacing().decrease_char_zoom()); }
+		else if (key == '.') { notify(spacing().increase_char_zoom()); }
+		else if (key == '(') { notify(spacing().decrease_tab_size()); }
+		else if (key == ')') { notify(spacing().increase_tab_size()); }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {

@@ -69,15 +69,6 @@ public:
 		SetWindowPos(hWnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
 	}
 	
-	void resize(int dw, int dh) {
-		RECT rect;
-		if (GetWindowRect(hWnd, &rect)) {
-			const auto w = rect.right - rect.left;
-			const auto h = rect.bottom - rect.top;
-			SetWindowPos(hWnd, 0, 0, 0, w + dw, h + dh, SWP_NOMOVE | SWP_NOOWNERZORDER);
-		}
-	}
-
 	unsigned get_dpi() {
 		const auto dpi = GetDpiForWindow(hWnd);
 		return dpi == 0 ? 96 : dpi;
@@ -158,4 +149,12 @@ void process_files(const std::string& path, F func) {
 		}
 	} while (FindNextFile(handle, &find_data) != 0);
 	FindClose(handle);
+}
+
+bool is_shift_down() {
+	return GetAsyncKeyState(VK_SHIFT);
+}
+
+bool is_ctrl_down() {
+	return GetAsyncKeyState(VK_CONTROL);
 }

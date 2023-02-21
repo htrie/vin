@@ -59,10 +59,8 @@ public:
 	bool process(unsigned key) {
 		if (key == '\r') { return false; }
 		else if (key == Glyph::ESCAPE) { return false; }
-		else if (key == '\t') { return false; }
 		else if (key == '\b') { if (pattern.size() > 0) { pattern.pop_back(); return true; } }
-		else if (key == '<') { selected++; }
-		else if (key == '>') { if (selected > 0) selected--; }
+		else if (key == '\t') { if (is_shift_down()) { if (selected > 0) { selected--; } } else { selected++; } }
 		else { pattern += (char)key; return true; }
 		return false;
 	}
