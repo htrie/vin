@@ -518,7 +518,7 @@ vk::UniqueDeviceMemory create_image_memory(const vk::PhysicalDevice& gpu, const 
 		.setAllocationSize(mem_reqs.size)
 		.setMemoryTypeIndex(0);
 
-	auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
+	const auto pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass == true);
 
 	auto handle = device.allocateMemoryUnique(mem_info);
@@ -534,7 +534,7 @@ vk::UniqueDeviceMemory create_uniform_memory(const vk::PhysicalDevice& gpu, cons
 		.setAllocationSize(mem_reqs.size)
 		.setMemoryTypeIndex(0);
 
-	bool const pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
+	const bool pass = memory_type_from_properties(gpu, mem_reqs.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, &mem_info.memoryTypeIndex);
 	verify(pass);
 
 	auto handle = device.allocateMemoryUnique(mem_info);
