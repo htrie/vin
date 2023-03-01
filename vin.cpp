@@ -19,6 +19,7 @@
 #include "memory.h"
 #include "windows.h"
 #include "math.h"
+#include "font_12.h"
 #include "font_16.h"
 #include "font_20.h"
 #include "font_24.h"

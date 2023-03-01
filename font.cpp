@@ -246,10 +246,10 @@ void process(const std::string_view font_filename) {
 }
 
 int APIENTRY WinMain(HINSTANCE hCurrentInst, HINSTANCE hPreviousInst, LPSTR lpszCmdLine, int nCmdShow) {
+	process("font_12");
 	process("font_16");
 	process("font_20");
 	process("font_24");
 	process("font_28");
-	process("font_32");
 	return 0;
 }
