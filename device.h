@@ -60,40 +60,33 @@ class Device {
 	unsigned height = 0;
 
 	void select_font(unsigned dpi) {
-		if (dpi <= 96) {
+		if (dpi <= 120) {
 			font_glyphs = font_16_glyphs;
 			font_width = font_16_width;
 			font_height = font_16_height;
 			font_pixels = font_16_pixels;
 			font_pixels_size = sizeof(font_16_pixels);
 		}
-		else if (dpi <= 120) {
+		else if (dpi <= 144) {
 			font_glyphs = font_20_glyphs;
 			font_width = font_20_width;
 			font_height = font_20_height;
 			font_pixels = font_20_pixels;
 			font_pixels_size = sizeof(font_20_pixels);
 		}
-		else if (dpi <= 144) {
+		else if (dpi <= 168) {
 			font_glyphs = font_24_glyphs;
 			font_width = font_24_width;
 			font_height = font_24_height;
 			font_pixels = font_24_pixels;
 			font_pixels_size = sizeof(font_24_pixels);
 		}
-		else if (dpi <= 168) {
+		else if (dpi <= 192) {
 			font_glyphs = font_28_glyphs;
 			font_width = font_28_width;
 			font_height = font_28_height;
 			font_pixels = font_28_pixels;
 			font_pixels_size = sizeof(font_28_pixels);
-		}
-		else if (dpi <= 192) {
-			font_glyphs = font_32_glyphs;
-			font_width = font_32_width;
-			font_height = font_32_height;
-			font_pixels = font_32_pixels;
-			font_pixels_size = sizeof(font_32_pixels);
 		}
 		else {
 			font_glyphs = font_32_glyphs;
