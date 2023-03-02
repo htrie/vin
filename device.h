@@ -54,48 +54,31 @@ class Device {
 	unsigned font_height = 0;
 	const uint8_t* font_pixels = nullptr;
 	unsigned font_pixels_size = 0;
-	float spacing_ratio = 0.0f;
+	float spacing_character = 0.0f;
+	float spacing_line = 0.0f;
 
 	unsigned width = 0;
 	unsigned height = 0;
 
 	void select_font(unsigned dpi) {
-		if (dpi <= 96) {
-			font_glyphs = font_12_glyphs;
-			font_width = font_12_width;
-			font_height = font_12_height;
-			font_pixels = font_12_pixels;
-			font_pixels_size = sizeof(font_12_pixels);
-		}
-		else if (dpi <= 120) {
-			font_glyphs = font_16_glyphs;
-			font_width = font_16_width;
-			font_height = font_16_height;
-			font_pixels = font_16_pixels;
-			font_pixels_size = sizeof(font_16_pixels);
-		}
-		else if (dpi <= 144) {
+		if (dpi <= 120) {
 			font_glyphs = font_20_glyphs;
 			font_width = font_20_width;
 			font_height = font_20_height;
 			font_pixels = font_20_pixels;
 			font_pixels_size = sizeof(font_20_pixels);
+			spacing_character = 9.0f;
+			spacing_line = 20.0f;
 		}
-		else if (dpi <= 168) {
-			font_glyphs = font_24_glyphs;
-			font_width = font_24_width;
-			font_height = font_24_height;
-			font_pixels = font_24_pixels;
-			font_pixels_size = sizeof(font_24_pixels);
-		}
-		else /*if (dpi <= 192)*/ {
+		else {
 			font_glyphs = font_28_glyphs;
 			font_width = font_28_width;
 			font_height = font_28_height;
 			font_pixels = font_28_pixels;
 			font_pixels_size = sizeof(font_28_pixels);
+			spacing_character = 13.0f;
+			spacing_line = 30.0f;
 		}
-		spacing_ratio = (float)dpi / 120.0f;
 	}
 
 	void upload(const vk::CommandBuffer& cmd_buf) {
@@ -131,12 +114,12 @@ class Device {
 
 		const auto add = [&](const auto& character, const auto& glyph) {
 			uniforms.model[index] = {
-				{ spacing().zoom * glyph.w * font_width * character.scale_x, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, spacing().zoom * glyph.h * font_height * character.scale_y, 0.0f, 0.0f },
+				{ glyph.w * font_width * character.scale_x, 0.0f, 0.0f, 0.0f },
+				{ 0.0f, glyph.h * font_height * character.scale_y, 0.0f, 0.0f },
 				{ 0.0f, 0.0f, 1.0f, 0.0f },
 				{
-					spacing().zoom * (character.col * spacing_ratio * spacing().character + glyph.x_off * font_width + character.offset_x),
-					spacing().zoom * (character.row * spacing_ratio * spacing().line + glyph.y_off * font_height + character.offset_y),
+					(character.col * spacing_character + glyph.x_off * font_width + character.offset_x),
+					(character.row * spacing_line + glyph.y_off * font_height + character.offset_y),
 					0.0f, 1.0f }
 			};
 			uniforms.color[index] = character.color.rgba();
@@ -235,8 +218,8 @@ public:
 
 	Viewport viewport() const {
 		return {
-			(unsigned)((float)width / (spacing().zoom * spacing_ratio * spacing().character) - 0.5f),
-			(unsigned)((float)height / (spacing().zoom * spacing_ratio * spacing().line) - 0.5f)
+			(unsigned)((float)width / spacing_character - 0.5f),
+			(unsigned)((float)height / spacing_line - 0.5f)
 		};
 	}
 };

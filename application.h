@@ -140,14 +140,6 @@ class Application {
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else if (key == '[') { notify(spacing().decrease_char_width()); }
-		else if (key == ']') { notify(spacing().increase_char_width()); }
-		else if (key == '{') { notify(spacing().decrease_char_height()); }
-		else if (key == '}') { notify(spacing().increase_char_height()); }
-		else if (key == ',') { notify(spacing().decrease_char_zoom()); }
-		else if (key == '.') { notify(spacing().increase_char_zoom()); }
-		else if (key == '(') { notify(spacing().decrease_tab_size()); }
-		else if (key == ')') { notify(spacing().increase_tab_size()); }
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
