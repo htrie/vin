@@ -93,6 +93,32 @@ struct Character {
 
 typedef std::vector<Character> Characters;
 
+void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c) {
+	switch (c) {
+		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++); break;
+		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++); break;
+		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col); break;
+		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++); break;
+		default: characters.emplace_back(c, color, row, col++); break;
+	}
+}
+
+void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s) {
+	for (auto& c : s) {
+		push_char(characters, color, row, col, c);
+	}
+}
+
+void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
+	for (unsigned i = col_begin; i <= col_end; ++i) {
+		characters.emplace_back(Glyph::BLOCK, color, row, float(i), 1.2f, 1.0f, -1.0f, 0.0f);
+	}
+}
+
+void push_cursor(Characters& characters, Color color, unsigned row, unsigned col) {
+	characters.emplace_back(Glyph::LINE, color, row, col);
+};
+
 class Word {
 	size_t start = 0;
 	size_t finish = 0;
@@ -342,31 +368,5 @@ public:
 
 	bool valid() const { return start < finish; }
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
-};
-
-void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c) {
-	switch (c) {
-		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++); break;
-		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++); break;
-		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col); break;
-		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++); break;
-		default: characters.emplace_back(c, color, row, col++); break;
-	}
-}
-
-void push_string(Characters& characters, Color color, unsigned row, unsigned& col, const std::string_view s) {
-	for (auto& c : s) {
-		push_char(characters, color, row, col, c);
-	}
-}
-
-void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
-	for (unsigned i = col_begin; i <= col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, float(i), 1.2f, 1.0f, -1.0f, 0.0f);
-	}
-}
-
-void push_cursor(Characters& characters, Color color, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::LINE, color, row, col);
 };
 
