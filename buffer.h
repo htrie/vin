@@ -463,17 +463,6 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void push_digit(Characters& characters, unsigned row, unsigned col, unsigned digit) const {
-		characters.emplace_back((uint16_t)(48 + digit), colors().line_number, row, col);
-	}
-
-	void push_number(Characters& characters, unsigned row, unsigned col, unsigned line) const {
-		if (line > 999) { push_digit(characters, row, col + 0, (line % 10000) / 1000); }
-		if (line > 99) { push_digit(characters, row, col + 1, (line % 1000) / 100); }
-		if (line > 9) { push_digit(characters, row, col + 2, (line % 100) / 10); }
-		push_digit(characters, row, col + 3, line % 10);
-	}
-
 	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned absolute_row, unsigned cursor_row) const {
 		unsigned column = absolute_row == cursor_row ? col : col + 1;
 		const unsigned line = absolute_row == cursor_row ? absolute_row :
@@ -508,22 +497,6 @@ class Buffer {
 			mode == Mode::normal ? Glyph::BLOCK :
 			Glyph::BOTTOM,
 			colors().cursor, row, col);
-	};
-
-	void push_carriage(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col);
-	};
-
-	void push_return(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
-	};
-
-	void push_tab(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::TAB, colors().whitespace, row, col);
-	};
-
-	void push_space(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col);
 	};
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
