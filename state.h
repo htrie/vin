@@ -191,6 +191,13 @@ public:
 		}
 	}
 
+	std::string get_url() const {
+		const Url current(text, cursor);
+		if (!is_whitespace(text[current.begin()]))
+			return std::string(current.to_string(text));
+		return "";
+	}
+
 	std::string get_word() const {
 		const Word current(text, cursor);
 		if (!is_whitespace(text[current.begin()]))

@@ -24,6 +24,7 @@ class Application {
 
 	Characters characters;
 
+	std::string url;
 	std::string clipboard;
 	std::string notification;
 
@@ -143,7 +144,8 @@ class Application {
 	}
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		switcher.current().process(clipboard, key, col_count, row_count - 1);
+		switcher.current().process(clipboard, url, key, col_count, row_count - 1);
+		if (!url.empty()) { notify(switcher.load(url)); url.clear(); }
 	}
 
 	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {

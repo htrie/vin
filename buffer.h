@@ -84,10 +84,10 @@ class Buffer {
 		end_record(key);
 	}
 
-	void replay(std::string& clipboard, unsigned col_count, unsigned row_count) {
+	void replay(std::string& clipboard, std::string& url, unsigned col_count, unsigned row_count) {
 		const auto s = record; // Cache since process_key will modify it.
 		for (const auto& c : s) {
-			process_key(clipboard, c, col_count, row_count);
+			process_key(clipboard, url, c, col_count, row_count);
 		}
 	}
 
@@ -165,13 +165,13 @@ class Buffer {
 		state().cursor_center(row_count);
 	}
 
-	void process_key(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
+	void process_key(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
 		if (mode != Mode::insert) {
 			stack.push();
 		}
 
 		switch (mode) {
-		case Mode::normal: process_normal(clipboard, key, row_count); break;
+		case Mode::normal: process_normal(clipboard, url, key, row_count); break;
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_slash: process_normal_slash(key, row_count); break;
 		case Mode::normal_question: process_normal_question(key, row_count); break;
@@ -232,7 +232,7 @@ class Buffer {
 		state().prev_char();
 	}
 
-	void process_normal(std::string& clipboard, unsigned key, unsigned row_count) {
+	void process_normal(std::string& clipboard, std::string& url, unsigned key, unsigned row_count) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
@@ -288,6 +288,7 @@ class Buffer {
 		else if (key == 'N') { word_rfind_again(row_count); }
 		else if (key == '.') { repeat = true; }
 		else if (key == '\'') { load_cursor(); state().cursor_center(row_count); }
+		else if (key == '\r') { url = state().get_url(); }
 	}
 
 	void process_normal_number(unsigned key) {
@@ -625,9 +626,9 @@ public:
 
 	void clear_highlight() { highlight.clear(); }
 
-	void process(std::string& clipboard, unsigned key, unsigned col_count, unsigned row_count) {
-		process_key(clipboard, key, col_count, row_count);
-		if (repeat) { repeat = false; replay(clipboard, col_count, row_count); }
+	void process(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
+		process_key(clipboard, url, key, col_count, row_count);
+		if (repeat) { repeat = false; replay(clipboard, url, col_count, row_count); }
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {

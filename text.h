@@ -397,3 +397,35 @@ public:
 	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
+class Url {
+	size_t start = 0;
+	size_t finish = 0;
+
+	bool test(const std::string_view text, size_t pos) {
+		if (pos < text.size()) {
+			return is_number(text[pos]) || is_letter(text[pos]) || is_punctuation(text[pos]);
+		}
+		return false;
+	}
+
+public:
+	Url(const std::string_view text, size_t pos) {
+		if (text.size() > 0) {
+			verify(pos < text.size());
+			start = pos;
+			finish = pos;
+			const auto c = text[pos];
+			while(test(text, finish + 1)) { finish++; }
+			while(test(text, start - 1)) { start--; }
+			verify(start <= finish);
+		}
+	}
+
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+
+	std::string_view to_string(const std::string_view text) const {
+		return text.substr(start, finish - start + 1);
+	}
+};
+
