@@ -69,6 +69,16 @@ std::string to_lower(const std::string_view s) {
 	return res;
 }
 
+std::optional<int> to_int(const std::string_view& input)
+{
+	int out = 0;
+	const std::from_chars_result result = std::from_chars(input.data(), input.data() + input.size(), out);
+	if (result.ec == std::errc::invalid_argument || result.ec == std::errc::result_out_of_range) {
+        return std::nullopt;
+    }
+    return out;
+}
+
 static unsigned compute_letter_index(const uint16_t c) {
 	if (c >= 'a' && c <= 'z') return c - 'a';
 	return (unsigned)-1;
@@ -275,6 +285,10 @@ public:
 
 	size_t begin() const { return start; }
 	size_t end() const { return finish; }
+
+	std::string_view to_string(const std::string_view text) const {
+		return text.substr(start + 1, finish - start);
+	}
 };
 
 class Quote{
@@ -430,9 +444,14 @@ public:
 };
 
 std::string_view extract_filename(const std::string_view url) {
-	return url;
+	Enclosure location(url, url.size() - 1, '(', ')');
+	return location.valid() ? url.substr(0, location.begin()) : url;
 }
 
 unsigned extract_location(const std::string_view url) {
+	Enclosure location(url, url.size() - 1, '(', ')');
+	if (location.valid()) 
+		if (const auto pos = to_int(location.to_string(url)))
+			return pos.value();
 	return 0;
 }

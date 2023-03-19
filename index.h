@@ -92,7 +92,7 @@ public:
 			const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
 			const auto count = std::min((size_t)200, file.contents.size() - start);
 			const auto context = std::string(&file.contents[start], count);
-			list += file.name + "(" + std::to_string(pos) + ")" + make_line(cut_line(context, pos - start));
+			list += file.name + "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
 		}
 		return list;
 	}
