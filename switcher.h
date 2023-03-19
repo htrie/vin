@@ -31,14 +31,11 @@ public:
 				active = index;
 				return std::string("switch ") + std::string(filename);
 			}
-			else if (buffers.size() < 16) {
+			else {
 				const Timer timer;
 				buffers.emplace_back(filename);
 				active = buffers.size() - 1;
 				return std::string("load ") + std::string(buffers[active].get_filename()) + " (" + std::to_string(buffers[active].get_size()) + " bytes) in " + timer.us();
-			}
-			else {
-				return std::string("too many files open");
 			}
 		}
 		return {};

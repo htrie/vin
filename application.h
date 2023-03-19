@@ -6,7 +6,6 @@ const unsigned version_minor = 0;
 enum class Menu {
 	space,
 	normal,
-	picker,
 	switcher,
 	finder,
 };
@@ -51,12 +50,6 @@ class Application {
 		switcher.current().cull(characters, col_count, row_count);
 	}
 
-	void cull_picker(Characters& characters, unsigned col_count, unsigned row_count) {
-		const auto search_height = adjust_search(row_count);
-		switcher.current().cull(characters, col_count, row_count - search_height);
-		picker.cull(characters, col_count, search_height, row_count - search_height + 1);
-	}
-
 	void cull_switcher(Characters& characters, unsigned col_count, unsigned row_count) {
 		switcher.current().cull(characters, col_count, row_count);
 		switcher.cull(characters, col_count, row_count);
@@ -74,7 +67,6 @@ class Application {
 		switch (menu) {
 		case Menu::space: // pass-through.
 		case Menu::normal: cull_normal(characters, vp.w, vp.h); break;
-		case Menu::picker: cull_picker(characters, vp.w, vp.h); break;
 		case Menu::switcher: cull_switcher(characters, vp.w, vp.h); break;
 		case Menu::finder: cull_finder(characters, vp.w, vp.h); break;
 		}
@@ -103,7 +95,9 @@ class Application {
 
 	void process_space_e() {
 		notify(index.populate());
-		picker.filter(index);
+		const auto contents = picker.generate(index);
+		notify(switcher.load("open"));
+		switcher.current().init(contents);
 	}
 
 	void process_space_f() {
@@ -130,7 +124,7 @@ class Application {
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }
 		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'e') { process_space_e(); menu = Menu::picker; }
+		else if (key == 'e') { process_space_e(); }
 		else if (key == 'f') { process_space_f(); menu = Menu::finder; }
 		else if (key == 'h') { process_space_h(row_count); }
 		else if (key == 'l') { process_space_l(row_count); }
@@ -146,12 +140,6 @@ class Application {
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
 		switcher.current().process(clipboard, url, key, col_count, row_count - 1);
 		if (!url.empty()) { notify(switcher.load(url)); url.clear(); }
-	}
-
-	void process_picker(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == '\r') { notify(switcher.load(picker.selection())); menu = Menu::normal; }
-		else if (key == Glyph::ESCAPE) { menu = Menu::normal; }
-		else { picker.process(key); picker.filter(index); }
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
@@ -189,7 +177,6 @@ class Application {
 		switch (menu) {
 		case Menu::space: process_space(key, vp.h); break;
 		case Menu::normal: process_normal(key, vp.w, vp.h); break;
-		case Menu::picker: process_picker(key, vp.w, vp.h); break;
 		case Menu::switcher: process_switcher(key, vp.w, vp.h); break;
 		case Menu::finder: process_finder(key, vp.w, vp.h); break;
 		}
@@ -200,7 +187,6 @@ class Application {
 		switch (menu) {
 		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
 		case Menu::normal: if (space_down && switcher.current().is_normal()) { menu = Menu::space; } break;
-		case Menu::picker: break;
 		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		case Menu::finder: break;
 		}

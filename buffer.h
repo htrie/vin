@@ -585,11 +585,6 @@ class Buffer {
 		push_string(characters, colors().bar_text, row, col, locations);
 	}
 
-	void init(const std::string_view text) {
-		stack.set_cursor(0);
-		stack.set_text(text);
-	}
-
 	std::string load() {
 		std::string text;
 		if (!filename.empty()) {
@@ -610,6 +605,11 @@ public:
 		: filename(filename)
 		, is_code(is_code_extension(filename)) {
 		init(load());
+	}
+
+	void init(const std::string_view text) {
+		stack.set_cursor(0);
+		stack.set_text(text);
 	}
 
 	void reload() {
