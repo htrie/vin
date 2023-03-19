@@ -55,6 +55,18 @@ class Database {
 		}
 	}
 
+	static std::string_view cut_line(const std::string_view text, size_t pos) {
+		Line line(text, pos);
+		return line.to_string(text);
+	}
+
+	std::string make_line(const std::string_view text) {
+		if (text.size() > 0)
+			if (text[text.size() - 1] == '\n')
+				return std::string(text);
+		return std::string(text) + "\n";
+	}
+
 public:
 	std::string populate() {
 		const Timer timer;
@@ -66,24 +78,23 @@ public:
 			std::to_string(files.size()) + " files) in " + timer.us();
 	}
 
-	std::string search(const std::string_view pattern) {
+	std::string generate(const std::string_view pattern) {
 		const Timer timer;
-		locations.clear();
 		if (!pattern.empty() && pattern.size() > 2) {
 			for (unsigned i = 0; i < files.size(); i++) {
 				scan(i, files[i].contents, pattern);
 			}
 		}
-		return std::string("search (") + 
-			std::to_string(locations.size()) + " symbols) in " + timer.us();
-	}
-
-	template <typename F>
-	void process(F func) const {
+		std::string list;
 		for (const auto& location : locations) {
-			if (!func(files[location.file_index], location))
-				break;
+			const auto& file = files[location.file_index];
+			const auto pos = location.position;
+			const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
+			const auto count = std::min((size_t)200, file.contents.size() - start);
+			const auto context = std::string(&file.contents[start], count);
+			list += file.name + "(" + std::to_string(pos) + ")" + make_line(cut_line(context, pos - start));
 		}
+		return list;
 	}
 };
 
