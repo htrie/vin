@@ -1,19 +1,5 @@
 #pragma once
 
-bool accept(const std::string_view filename) {
-	if (filename.ends_with(".c")) return true;
-	if (filename.ends_with(".h")) return true;
-	if (filename.ends_with(".cpp")) return true;
-	if (filename.ends_with(".hpp")) return true;
-	if (filename.ends_with(".inc")) return true;
-	if (filename.ends_with(".txt")) return true;
-	if (filename.ends_with(".diff")) return true;
-	if (filename.ends_with(".bat")) return true;
-	if (filename.ends_with(".frag")) return true;
-	if (filename.ends_with(".vert")) return true;
-	return false;
-}
-
 class Index {
 	std::vector<std::string> paths;
 
@@ -22,10 +8,7 @@ public:
 		const Timer timer;
 		paths.clear();
 		process_files(".", [&](const auto& path) {
-			const std::string filename(path);
-			if (accept(filename)) {
-				paths.push_back(filename);
-			}
+			paths.push_back(path);
 		});
 		return std::string("populate (") + 
 			std::to_string(paths.size()) + " paths) in " + timer.us();
@@ -77,10 +60,7 @@ public:
 		const Timer timer;
 		files.clear();
 		process_files(".", [&](const auto& path) {
-			const std::string filename(path);
-			if (accept(filename)) {
-				add(path);
-			}
+			add(path);
 		});
 		return std::string("populate (") + 
 			std::to_string(files.size()) + " files) in " + timer.us();
