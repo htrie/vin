@@ -429,3 +429,10 @@ public:
 	}
 };
 
+std::string_view extract_filename(const std::string_view url) {
+	return url;
+}
+
+unsigned extract_location(const std::string_view url) {
+	return 0;
+}

@@ -113,7 +113,11 @@ class Application {
 
 	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
 		switcher.current().process(clipboard, url, key, col_count, row_count - 1);
-		if (!url.empty()) { notify(switcher.load(url)); url.clear(); }
+		if (!url.empty()) {
+			notify(switcher.load(extract_filename(url)));
+			switcher.current().jump(extract_location(url), row_count);
+			url.clear();
+		}
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
