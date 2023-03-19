@@ -23,7 +23,6 @@
 #include "font_28.h"
 #include "config.h"
 #include "text.h"
-#include "index.h"
 #include "state.h"
 #include "buffer.h"
 #include "switcher.h"
