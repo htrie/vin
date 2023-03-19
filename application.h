@@ -9,6 +9,18 @@ enum class Menu {
 	switcher,
 };
 
+bool ignore_file(const std::string_view path) {
+	if (path.ends_with(".db")) return true;
+	if (path.ends_with(".exe")) return true;
+	if (path.ends_with(".ilk")) return true;
+	if (path.ends_with(".iobj")) return true;
+	if (path.ends_with(".ipdb")) return true;
+	if (path.ends_with(".obj")) return true;
+	if (path.ends_with(".pch")) return true;
+	if (path.ends_with(".pdb")) return true;
+	return false;
+}
+
 class Index {
 	std::vector<std::string> paths;
 
@@ -17,7 +29,8 @@ public:
 		const Timer timer;
 		paths.clear();
 		process_files(".", [&](const auto& path) {
-			paths.push_back(path);
+			if (!ignore_file(path))
+				paths.push_back(path);
 		});
 		return std::string("populate (") + 
 			std::to_string(paths.size()) + " paths) in " + timer.us();
@@ -48,9 +61,11 @@ class Database {
 
 	void add(const std::string& filename) {
 		map(filename, [&](const char* mem, size_t size) {
-			std::vector<char> contents(size);
-			memcpy(contents.data(), mem, contents.size());
-			files.emplace_back(filename, std::move(contents));
+			if (!ignore_file(filename)) {
+				std::vector<char> contents(size);
+				memcpy(contents.data(), mem, contents.size());
+				files.emplace_back(filename, std::move(contents));
+			}
 		});
 	}
 
@@ -187,6 +202,7 @@ class Application {
 		const auto seed = switcher.current().get_word();
 		switcher.load("find");
 		switcher.current().init(database.generate(seed));
+		switcher.current().set_highlight(seed);
 	}
 
 	void process_space(unsigned key, unsigned row_count) {

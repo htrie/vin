@@ -47,8 +47,8 @@ class Buffer {
 	size_t cursor = 0;
 
 	bool char_forward = false;
-	bool word_forward = false;
-	bool word_strict = false;
+	bool word_forward = true;
+	bool word_strict = true;
 
 	bool needs_save = false;
 	bool is_code = false;
@@ -624,6 +624,7 @@ public:
 		}
 	}
 
+	void set_highlight(const std::string_view pattern) { highlight = pattern; }
 	void clear_highlight() { highlight.clear(); }
 
 	void process(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
