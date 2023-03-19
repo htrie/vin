@@ -26,7 +26,6 @@
 #include "text.h"
 #include "state.h"
 #include "buffer.h"
-#include "picker.h"
 #include "switcher.h"
 #include "finder.h"
 #include "vulkan.h"

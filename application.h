@@ -15,7 +15,6 @@ class Application {
 	Device device;
 	Index index;
 	Database database;
-	Picker picker;
 	Switcher switcher;
 	Finder finder;
 
@@ -95,9 +94,8 @@ class Application {
 
 	void process_space_e() {
 		notify(index.populate());
-		const auto contents = picker.generate(index);
 		notify(switcher.load("open"));
-		switcher.current().init(contents);
+		switcher.current().init(index.generate());
 	}
 
 	void process_space_f() {

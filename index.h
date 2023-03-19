@@ -31,12 +31,12 @@ public:
 			std::to_string(paths.size()) + " paths) in " + timer.us();
 	}
 
-	template <typename F>
-	void process(F func) const {
+	std::string generate() {
+		std::string list;
 		for (const auto& path : paths) {
-			if (!func(path))
-				break;
+			list += path + "\n";
 		}
+		return list;
 	}
 };
 
