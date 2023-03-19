@@ -69,9 +69,6 @@ public:
 	void select_previous() { active = active > 0 ? active - 1 : buffers.size() - 1; }
 	void select_next() { active = (active + 1) % buffers.size(); }
 
-	void process(unsigned key, unsigned col_count, unsigned row_count) {
-	}
-
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
 		unsigned width = std::min(longest_filename(), col_count);
 		unsigned height = std::min((unsigned)buffers.size(), row_count);

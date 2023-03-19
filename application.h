@@ -238,7 +238,6 @@ class Application {
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
 		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else { switcher.process(key, col_count, row_count); }
 	}
 
 	void process(unsigned key) {
