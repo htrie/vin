@@ -25,6 +25,12 @@ constexpr bool is_punctuation(char c) { return
 	c == '&' || c == '|' || c == '%' || c == '^' || c == '!' || c == '~' ||
 	c == '?' || c == '"' || c == '#' || c == '\'';
 }
+constexpr bool is_url_punctuation(char c) { return 
+	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
+	c == '.' || c == '<' || c == '>' || c == '(' || c == ')' ||
+	c == '&' || c == '%' || c == '^' || c == '!' || c == '~' ||
+	c == '?' || c == '#';
+}
 
 bool is_code_extension(const std::string_view filename) {
 	if (filename.ends_with(".cpp")) return true;
@@ -417,7 +423,7 @@ class Url {
 
 	bool test(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
-			return is_number(text[pos]) || is_letter(text[pos]) || is_punctuation(text[pos]);
+			return is_number(text[pos]) || is_letter(text[pos]) || is_url_punctuation(text[pos]);
 		}
 		return false;
 	}
