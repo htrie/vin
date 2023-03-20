@@ -200,7 +200,7 @@ class Application {
 		Database database;
 		notify(database.populate());
 		const auto seed = switcher.current().get_word();
-		switcher.load("find");
+		switcher.load(std::string("find ") + seed);
 		switcher.current().init(database.generate(seed));
 		switcher.current().set_highlight(seed);
 	}
