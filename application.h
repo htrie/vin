@@ -230,7 +230,8 @@ class Application {
 	}
 
 	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key == 'j') { switcher.select_next(); }
+		if (key >= '0' && key <= '9') { switcher.select_index(key - '0'); }
+		else if (key == 'j') { switcher.select_next(); }
 		else if (key == 'k') { switcher.select_previous(); }
 		else if (key == 'w') { notify(switcher.close()); }
 		else if (key == 'r') { notify(switcher.reload()); }

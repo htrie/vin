@@ -66,24 +66,25 @@ public:
 
 	Buffer& current() { return buffers[active]; }
 
+	void select_index(unsigned index) { active = index >= 0 && index < buffers.size() ? index : active; }
 	void select_previous() { active = active > 0 ? active - 1 : buffers.size() - 1; }
 	void select_next() { active = (active + 1) % buffers.size(); }
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		unsigned width = std::min(longest_filename(), col_count);
-		unsigned height = std::min((unsigned)buffers.size(), row_count);
+		const unsigned width = std::min(longest_filename(), col_count);
+		const unsigned height = std::min((unsigned)buffers.size(), row_count);
 
-		unsigned left_col = (col_count - width) / 2;
-		unsigned right_col = left_col + width;
-		unsigned top_row = (row_count - height) / 2;
-		unsigned bottom_row = top_row + height;
+		const unsigned left_col = (col_count - width) / 2;
+		const unsigned right_col = left_col + width;
+		const unsigned top_row = (row_count - height) / 2;
+		const unsigned bottom_row = top_row + height;
 
 		unsigned col = left_col;
 		unsigned row = top_row;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			col = left_col;
 			push_line(characters, i == active ? colors().text : colors().overlay, float(row), left_col, right_col + 1);
-			const auto name = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
+			const auto name = std::to_string(i) + " " + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
 			push_string(characters, i == active ? colors().overlay : colors().text, row, col, name);
 			row++;
 		}
