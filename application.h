@@ -214,6 +214,7 @@ class Application {
 		else if (key == 'f') { process_space_f(); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
+		else if (key == 'l') { menu = Menu::switcher; }
 		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
 		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
