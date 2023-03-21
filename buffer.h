@@ -567,24 +567,6 @@ class Buffer {
 		return 0;
 	}
 
-	void push_status(Characters& characters, unsigned col_count, unsigned row_count) const {
-		unsigned row = 0;
-		unsigned col = 0;
-		push_line(characters, colors().bar, float(row), col, col_count);
-		col = 0;
-		const auto name = filename + (is_dirty() ? "*" : "");
-		push_string(characters, colors().bar_text, row, col, name);
-		col = 62;
-		push_string(characters, colors().bar_text, row, col, readable_size(get_size()));
-		col = 74;
-		const auto percentage = std::to_string(location_percentage()) + "%";
-		push_string(characters, colors().bar_text, row, col, percentage);
-		col = 82;
-		const auto col_and_row = state().find_cursor_row_and_col();
-		const auto locations = std::to_string(col_and_row.first) + "," + std::to_string(col_and_row.second);
-		push_string(characters, colors().bar_text, row, col, locations);
-	}
-
 	std::string load() {
 		std::string text;
 		if (!filename.empty()) {
@@ -633,7 +615,6 @@ public:
 	}
 
 	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_status(characters, col_count, row_count);
 		push_text(characters, col_count, row_count);
 	}
 
