@@ -140,7 +140,7 @@ class Application {
 public:
 	Application(HINSTANCE hInstance, int nCmdShow)
 		: window(hInstance, proc, this)
-		, device(hInstance, window.get(), window.get_dpi()) {
+		, device(hInstance, window.get()) {
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nCmdShow);
 	}

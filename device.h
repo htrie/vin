@@ -49,43 +49,17 @@ class Device {
 	vk::UniqueDeviceMemory image_memory;
 	vk::UniqueImageView image_view;
 
-	FontGlyphs font_glyphs;
-	unsigned font_width = 0;
-	unsigned font_height = 0;
-	const uint8_t* font_pixels = nullptr;
-	unsigned font_pixels_size = 0;
-	float spacing_character = 0.0f;
-	float spacing_line = 0.0f;
+	float spacing_character = 13.0f;
+	float spacing_line = 30.0f;
 
 	unsigned width = 0;
 	unsigned height = 0;
-
-	void select_font(unsigned dpi) {
-		if (dpi <= 120) {
-			font_glyphs = font_20_glyphs;
-			font_width = font_20_width;
-			font_height = font_20_height;
-			font_pixels = font_20_pixels;
-			font_pixels_size = sizeof(font_20_pixels);
-			spacing_character = 9.0f;
-			spacing_line = 20.0f;
-		}
-		else {
-			font_glyphs = font_28_glyphs;
-			font_width = font_28_width;
-			font_height = font_28_height;
-			font_pixels = font_28_pixels;
-			font_pixels_size = sizeof(font_28_pixels);
-			spacing_character = 13.0f;
-			spacing_line = 30.0f;
-		}
-	}
 
 	void upload(const vk::CommandBuffer& cmd_buf) {
 		sampler = create_sampler(device.get());
 		image = create_image(gpu, device.get(), font_width, font_height);
 		image_memory = create_image_memory(gpu, device.get(), image.get());
-		copy_image_data(device.get(), image.get(), image_memory.get(), font_pixels, font_pixels_size, font_width);
+		copy_image_data(device.get(), image.get(), image_memory.get(), font_pixels, sizeof(font_pixels), font_width);
 		image_view = create_image_view(device.get(), image.get(), vk::Format::eR8Unorm);
 		add_image_barrier(cmd_buf, image.get());
 		descriptor_set = create_descriptor_set(device.get(), desc_pool.get(), desc_layout.get());
@@ -140,7 +114,7 @@ class Device {
 	}
 
 public:
-	Device(HINSTANCE hInstance, HWND hWnd, unsigned dpi) {
+	Device(HINSTANCE hInstance, HWND hWnd) {
 		instance = create_instance();
 		gpu = pick_gpu(instance.get());
 		surface = create_surface(instance.get(), hInstance, hWnd);
@@ -164,8 +138,6 @@ public:
 		fence = create_fence(device.get());
 		image_acquired_semaphore = create_semaphore(device.get());
 		draw_complete_semaphore = create_semaphore(device.get());
-
-		select_font(dpi);
 	}
 
 	~Device() {
