@@ -621,7 +621,6 @@ public:
 	const State& state() const { return stack.state(); }
 
 	const std::string_view get_filename() const { return filename; }
-	size_t get_size() const { return state().get_text().size(); }
 
 	std::string get_word() const { return state().get_word(); }
 
