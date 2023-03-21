@@ -23,10 +23,6 @@ class Application {
 		return std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
 	}
 
-	unsigned adjust_search(unsigned row_count) {
-		return std::max(unsigned(float(row_count) * 0.45f), 1u);
-	}
-
 	Characters cull() {
 		const auto vp = device.viewport();
 		Characters characters;

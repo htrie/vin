@@ -120,14 +120,6 @@ class Switcher {
 	void select_previous() { active = active > 0 ? active - 1 : buffers.size() - 1; }
 	void select_next() { active = (active + 1) % buffers.size(); }
 
-	unsigned longest_filename() const {
-		unsigned longest = 0;
-		for (auto& buffer : buffers) {
-			longest = std::max(longest, (unsigned)buffer.get_filename().size());
-		}
-		return longest;
-	}
-
 	size_t find_buffer(const std::string_view filename) {
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			if (buffers[i].get_filename() == filename)
