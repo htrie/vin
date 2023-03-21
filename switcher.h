@@ -113,6 +113,9 @@ class Switcher {
 	std::string url;
 	std::string clipboard;
 
+	Buffer& current() { return buffers[active]; }
+	const Buffer& current() const { return buffers[active]; }
+
 	void select_index(unsigned index) { active = index >= 0 && index < buffers.size() ? index : active; }
 	void select_previous() { active = active > 0 ? active - 1 : buffers.size() - 1; }
 	void select_next() { active = (active + 1) % buffers.size(); }
@@ -180,32 +183,10 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void push_tabs(Characters& characters, unsigned col_count, unsigned row_count) const {
-		std::vector<std::string> tabs;
-		for (size_t i = 0; i < buffers.size(); ++i) {
-			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
-		}
-		const unsigned row = 0;
-		unsigned col = 0;
-		for (size_t i = 0; i < buffers.size(); ++i) {
-			push_line(characters, i == active ? colors().bar_text : colors().bar, (float)row, col, col + (int)tabs[i].size());
-			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tabs[i]);
-			col += 1;
-		}
-	}
-
-public:
-	Switcher() {
-		buffers.emplace_back("scratch");
-	}
-
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_tabs(characters, col_count, row_count);
-		current().cull(characters, col_count, row_count);
-	}
-	
-	void process_space(unsigned key, unsigned row_count) {
-		if (key == 'w') { close(); }
+	void process_space(bool& quit, bool& toggle, unsigned key, unsigned row_count) {
+		if (key == 'q') { quit = true; }
+		else if (key == 'm') { toggle = true; }
+		else if (key == 'w') { close(); }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
 		else if (key == 'e') { process_space_e(); }
@@ -227,7 +208,33 @@ public:
 		}
 	}
 
-	Buffer& current() { return buffers[active]; } // [TODO] Make private.
-	const Buffer& current() const { return buffers[active]; }
+	void push_tabs(Characters& characters, unsigned col_count, unsigned row_count) const {
+		std::vector<std::string> tabs;
+		for (size_t i = 0; i < buffers.size(); ++i) {
+			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
+		}
+		const unsigned row = 0;
+		unsigned col = 0;
+		for (size_t i = 0; i < buffers.size(); ++i) {
+			push_line(characters, i == active ? colors().bar_text : colors().bar, (float)row, col, col + (int)tabs[i].size());
+			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tabs[i]);
+			col += 1;
+		}
+	}
+
+public:
+	Switcher() {
+		buffers.emplace_back("scratch");
+	}
+	
+	void process(bool space_down, bool& quit, bool& toggle, unsigned key, unsigned col_count, unsigned row_count) {
+		if (space_down && current().is_normal()) { process_space(quit, toggle, key, row_count); }
+		else { process_normal(key, col_count, row_count); }
+	}
+
+	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		push_tabs(characters, col_count, row_count);
+		current().cull(characters, col_count, row_count);
+	}
 };
 

@@ -3,26 +3,21 @@
 const unsigned version_major = 1;
 const unsigned version_minor = 1;
 
-enum class Menu {
-	space,
-	normal,
-};
-
 class Application {
 	Window window;
 	Device device;
 	Switcher switcher;
 
-	Menu menu = Menu::normal;
-
 	bool maximized = false;
 	bool minimized = false;
 	bool dirty = false;
+	bool space_down = false;
 	bool quit = false;
 
 	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
+	void set_space_down(bool b) { space_down = b; }
 
 	std::string status() {
 		return std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
@@ -56,28 +51,12 @@ class Application {
 		dirty = false;
 	}
 
-	void process_space(unsigned key, unsigned row_count) {
-		if (key == 'q') { quit = true; }
-		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-		else { switcher.process_space(key, row_count); }
-	}
-
-	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
-		switcher.process_normal(key, col_count, row_count);
-	}
-
 	void process(unsigned key) {
 		const auto vp = device.viewport();
-		switch (menu) {
-		case Menu::space: process_space(key, vp.h); break;
-		case Menu::normal: process_normal(key, vp.w, vp.h); break;
-		}
-	}
-
-	void update(bool space_down) {
-		switch (menu) {
-		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
-		case Menu::normal: if (space_down && switcher.current().is_normal()) { menu = Menu::space; } break; // [TODO] Remove is_normal.
+		bool toggle = false;
+		switcher.process(space_down, quit, toggle, key, vp.w, vp.h);
+		if (toggle) {
+			window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED);
 		}
 	}
 
@@ -134,7 +113,7 @@ class Application {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->set_dirty(true);
-					app->update(true);
+					app->set_space_down(true);
 				}
 			}
 			break;
@@ -143,7 +122,7 @@ class Application {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
 				if (wParam == VK_SPACE) {
 					app->set_dirty(true);
-					app->update(false);
+					app->set_space_down(false);
 				}
 			}
 			break;
