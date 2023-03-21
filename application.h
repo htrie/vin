@@ -6,7 +6,6 @@ const unsigned version_minor = 0;
 enum class Menu {
 	space,
 	normal,
-	switcher,
 };
 
 bool ignore_file(const std::string_view path) {
@@ -152,22 +151,12 @@ class Application {
 		return std::max(unsigned(float(row_count) * 0.45f), 1u);
 	}
 
-	void cull_normal(Characters& characters, unsigned col_count, unsigned row_count) {
-		switcher.current().cull(characters, col_count, row_count);
-	}
-
-	void cull_switcher(Characters& characters, unsigned col_count, unsigned row_count) {
-		switcher.current().cull(characters, col_count, row_count);
-		switcher.cull(characters, col_count, row_count);
-	}
-
 	Characters cull() {
 		const auto vp = device.viewport();
 		Characters characters;
 		switch (menu) {
 		case Menu::space: // pass-through.
-		case Menu::normal: cull_normal(characters, vp.w, vp.h); break;
-		case Menu::switcher: cull_switcher(characters, vp.w, vp.h); break;
+		case Menu::normal: switcher.cull(characters, vp.w, vp.h); break;
 		}
 		return characters;
 	}
@@ -214,9 +203,9 @@ class Application {
 		else if (key == 'f') { process_space_f(); }
 		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
 		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
-		else if (key == 'l') { menu = Menu::switcher; }
-		else if (key == 'j') { switcher.select_next(); menu = Menu::switcher; }
-		else if (key == 'k') { switcher.select_previous(); menu = Menu::switcher; }
+		else if (key >= '0' && key <= '9') { switcher.select_index(key - '0'); }
+		else if (key == 'h') { switcher.select_previous(); }
+		else if (key == 'l') { switcher.select_next(); }
 		else if (key == 'n') { switcher.current().clear_highlight(); }
 		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
 	}
@@ -230,24 +219,11 @@ class Application {
 		}
 	}
 
-	void process_switcher(unsigned key, unsigned col_count, unsigned row_count) {
-		if (key >= '0' && key <= '9') { switcher.select_index(key - '0'); }
-		else if (key == 'j') { switcher.select_next(); }
-		else if (key == 'k') { switcher.select_previous(); }
-		else if (key == 'w') { notify(switcher.close()); }
-		else if (key == 'r') { notify(switcher.reload()); }
-		else if (key == 's') { notify(switcher.save()); }
-		else if (key == 'i') { switcher.current().state().window_down(row_count - 1); }
-		else if (key == 'o') { switcher.current().state().window_up(row_count - 1); }
-		else if (key == 'm') { window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED); }
-	}
-
 	void process(unsigned key) {
 		const auto vp = device.viewport();
 		switch (menu) {
 		case Menu::space: process_space(key, vp.h); break;
 		case Menu::normal: process_normal(key, vp.w, vp.h); break;
-		case Menu::switcher: process_switcher(key, vp.w, vp.h); break;
 		}
 		switcher.current().state().cursor_clamp(vp.h - 1);
 	}
@@ -256,7 +232,6 @@ class Application {
 		switch (menu) {
 		case Menu::space: if (!space_down) { menu = Menu::normal; } break;
 		case Menu::normal: if (space_down && switcher.current().is_normal()) { menu = Menu::space; } break;
-		case Menu::switcher: if (!space_down) { menu = Menu::normal; } break;
 		}
 	}
 
