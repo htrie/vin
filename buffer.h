@@ -561,12 +561,6 @@ class Buffer {
 		}
 	}
 
-	size_t location_percentage() const {
-		if (const auto size = get_size())
-			return 1 + state().get_cursor() * 100 / size;
-		return 0;
-	}
-
 	std::string load() {
 		std::string text;
 		if (!filename.empty()) {
