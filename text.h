@@ -137,7 +137,7 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 }
 
 void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
-	for (unsigned i = col_begin; i <= col_end; ++i) {
+	for (unsigned i = col_begin; i < col_end; ++i) {
 		characters.emplace_back(Glyph::BLOCK, color, row, float(i), 1.2f, 1.0f, 0.0f, 0.0f);
 	}
 }

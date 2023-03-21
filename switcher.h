@@ -23,14 +23,14 @@ class Switcher {
 	void push_tabs(Characters& characters, unsigned col_count, unsigned row_count) const {
 		std::vector<std::string> tabs;
 		for (size_t i = 0; i < buffers.size(); ++i) {
-			tabs.push_back(std::to_string(i) + ")" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
+			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
 		}
 		const unsigned row = 0;
 		unsigned col = 0;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			push_line(characters, i == active ? colors().bar_text : colors().bar, (float)row, col, col + (int)tabs[i].size());
 			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tabs[i]);
-			col++;
+			col += 1;
 		}
 	}
 
