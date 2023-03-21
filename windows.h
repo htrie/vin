@@ -77,31 +77,6 @@ public:
 	HWND get() const { return hWnd; }
 };
 
-class Timer {
-	LARGE_INTEGER frequency;
-	uint64_t start = 0;
-
-	uint64_t now() const {
-		LARGE_INTEGER counter;
-		QueryPerformanceCounter(&counter);
-		return 1000000 * counter.QuadPart / frequency.QuadPart;
-	}
-
-	float duration() const {
-		return (float)((double)(now() - start) * 0.001);
-	}
-
-public:
-	Timer() {
-		QueryPerformanceFrequency(&frequency);
-		start = now();
-	}
-
-	std::string us() const {
-		return std::to_string((unsigned)(duration() * 1000.0f)) + "us";
-	}
-};
-
 template <typename F>
 void map(const std::string_view filename, F func) {
 	if (const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, 

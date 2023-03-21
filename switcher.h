@@ -148,15 +148,12 @@ class Switcher {
 		buffers[active].save();
 	}
 
-	std::string close() {
-		const Timer timer;
+	void close() {
 		const auto filename = std::string(buffers[active].get_filename());
 		if (active != 0) { // Don't close scratch.
 			buffers.erase(buffers.begin() + active);
 			active = (active >= buffers.size() ? active - 1 : active) % buffers.size();
-			return std::string("close ") + filename + " in " + timer.us();
 		}
-		return std::string("can't close ") + filename + " in " + timer.us();
 	}
 
 	void process_space_e() {
