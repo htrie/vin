@@ -172,7 +172,7 @@ class Buffer {
 
 		switch (mode) {
 		case Mode::normal: process_normal(clipboard, url, key, row_count); break;
-		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_number: process_normal_number(key, row_count); break;
 		case Mode::normal_slash: process_normal_slash(key, row_count); break;
 		case Mode::normal_question: process_normal_question(key, row_count); break;
 		case Mode::normal_gt: process_normal_gt(key); break;
@@ -271,8 +271,8 @@ class Buffer {
 		else if (key == 'e') { state().word_end(); }
 		else if (key == '[') { state().enclosure_start(); }
 		else if (key == ']') { state().enclosure_end(); }
-		else if (key == 'g') { save_cursor(); state().buffer_start(); }
-		else if (key == 'G') { save_cursor(); state().buffer_end(); }
+		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); }
+		else if (key == 'G') { save_cursor(); state().buffer_end(row_count); }
 		else if (key == 'H') { save_cursor(); state().window_top(row_count); }
 		else if (key == 'M') { save_cursor(); state().window_center(row_count); }
 		else if (key == 'L') { save_cursor(); state().window_bottom(row_count); }
@@ -291,11 +291,11 @@ class Buffer {
 		else if (key == '\r') { url = state().get_url(); }
 	}
 
-	void process_normal_number(unsigned key) {
+	void process_normal_number(unsigned key, unsigned row_count) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'j') { save_cursor(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { save_cursor(); state().jump_up(accu); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { save_cursor(); state().buffer_start(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { save_cursor(); state().jump_down(accu, row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { save_cursor(); state().jump_up(accu, row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); state().jump_down(accu, row_count); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 

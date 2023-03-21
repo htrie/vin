@@ -257,24 +257,28 @@ public:
 		cursor = prev.to_absolute(current.to_relative(cursor));
 	}
 
-	void buffer_end() {
+	void buffer_end(unsigned row_count) {
 		const Line current(text, cursor);
 		const Line last(text, text.size() - 1);
 		cursor = last.to_absolute(current.to_relative(cursor));
+		cursor_clamp(row_count);
 	}
 
-	void buffer_start() {
+	void buffer_start(unsigned row_count) {
 		const Line current(text, cursor);
 		const Line first(text, 0);
 		cursor = first.to_absolute(current.to_relative(cursor));
+		cursor_clamp(row_count);
 	}
 
-	void jump_down(unsigned skip) {
+	void jump_down(unsigned skip, unsigned row_count) {
 		for (unsigned i = 0; i < skip; i++) { next_line(); }
+		cursor_clamp(row_count);
 	}
 
-	void jump_up(unsigned skip) {
+	void jump_up(unsigned skip, unsigned row_count) {
 		for (unsigned i = 0; i < skip; i++) { prev_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void window_down(unsigned row_count) {
@@ -282,6 +286,7 @@ public:
 		const unsigned down_row = cursor_row + row_count / 2;
 		const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void window_up(unsigned row_count) {
@@ -289,6 +294,7 @@ public:
 		const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
 		const unsigned skip = cursor_row - up_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void window_top(unsigned row_count) {
@@ -296,6 +302,7 @@ public:
 		const unsigned top_row = begin_row;
 		const unsigned skip = cursor_row - top_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void window_center(unsigned row_count) {
@@ -303,6 +310,7 @@ public:
 		const unsigned middle_row = begin_row + row_count / 2;
 		const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
 		for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void window_bottom(unsigned row_count) {
@@ -310,6 +318,7 @@ public:
 		const unsigned bottom_row = begin_row + row_count;
 		const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(); }
+		cursor_clamp(row_count);
 	}
 
 	void cursor_clamp(unsigned row_count) {

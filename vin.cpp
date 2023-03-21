@@ -31,9 +31,7 @@
 #include "application.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	const Timer timer;
 	Application application(hInstance, nCmdShow);
-	application.notify(std::string("init in ") + timer.us());
 	application.run();
 	return 0;
 }
