@@ -3,15 +3,19 @@
 bool ignore_file(const std::string_view path) {
 	if (path.ends_with(".db")) return true;
 	if (path.ends_with(".aps")) return true;
+	if (path.ends_with(".bin")) return true;
+	if (path.ends_with(".dat")) return true;
 	if (path.ends_with(".exe")) return true;
 	if (path.ends_with(".idb")) return true;
 	if (path.ends_with(".ilk")) return true;
 	if (path.ends_with(".iobj")) return true;
 	if (path.ends_with(".ipdb")) return true;
+	if (path.ends_with(".jpg")) return true;
 	if (path.ends_with(".lib")) return true;
 	if (path.ends_with(".obj")) return true;
 	if (path.ends_with(".pch")) return true;
 	if (path.ends_with(".pdb")) return true;
+	if (path.ends_with(".png")) return true;
 	if (path.ends_with(".tlog")) return true;
 	return false;
 }
@@ -44,20 +48,26 @@ std::string make_entry(size_t pos, const char* mem, size_t size) {
 	return "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
 }
 
+std::string scan(const std::string_view path, const std::string_view pattern) {
+	std::string list;
+	map(path, [&](const char* mem, size_t size) {
+		for (size_t i = 0; i < size; ++i) {
+			if (mem[i] == pattern[0]) {
+				if (strncmp(&mem[i], pattern.data(), std::min(pattern.size(), size - i)) == 0) {
+					list += std::string(path) + make_entry(i, mem, size);
+				}
+			}
+		}
+	});
+	return list;
+}
+
 std::string find(const std::string_view pattern) {
 	std::string list;
 	if (!pattern.empty() && pattern.size() > 2) {
 		process_files(".", [&](const auto& path) {
 			if (!ignore_file(path)) {
-				map(path, [&](const char* mem, size_t size) {
-					for (size_t i = 0; i < size; ++i) {
-						if (mem[i] == pattern[0]) {
-							if (strncmp(&mem[i], pattern.data(), std::min(pattern.size(), size - i)) == 0) {
-								list += path + make_entry(i, mem, size);
-							}
-						}
-					}
-				});
+				list += scan(path, pattern);
 			}
 		});
 	}
