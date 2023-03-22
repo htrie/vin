@@ -19,16 +19,6 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	std::string status() {
-		return std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
-	}
-
-	Characters cull() {
-		Characters characters;
-		switcher.cull(characters);
-		return characters;
-	}
-
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
 			const auto viewport = device.resize(w, h);
@@ -38,8 +28,7 @@ class Application {
 
 	void redraw() {
 		if (!minimized && dirty) {
-			device.redraw(cull());
-			window.set_title(status().data());
+			device.redraw(switcher.cull());
 		}
 		else {
 			Sleep(1); // Avoid busy loop when minimized.
@@ -140,6 +129,7 @@ public:
 	Application(HINSTANCE hInstance, int nCmdShow)
 		: window(hInstance, proc, this)
 		, device(hInstance, window.get()) {
+		window.set_title(std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor));
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nCmdShow);
 	}

@@ -193,9 +193,11 @@ public:
 		else { process_normal(key); }
 	}
 
-	void cull(Characters& characters) const {
+	Characters cull() const {
+		Characters characters;
 		push_tabs(characters);
 		current().cull(characters, col_count, row_count);
+		return characters;
 	}
 };
 
