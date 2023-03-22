@@ -98,6 +98,10 @@ class Buffer {
 		accu += digit;
 	}
 
+	bool is_mode_search() const {
+		return mode == Mode::normal_question || mode == Mode::normal_slash;
+	}
+
 	std::pair<bool, bool> check_highlight_strict(size_t index) const {
 		Word current(state().get_text(), index);
 		if (current.to_string(state().get_text()) == highlight)
@@ -473,12 +477,12 @@ class Buffer {
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
-		characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col, 1.2f, 1.0f, -1.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col, 1.2f, 1.0f, -1.0f, 0.0f);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().highlight, row, col + i, 1.2f, 1.0f, -1.0f, 0.0f);
+			characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col + i, 1.2f, 1.0f, -1.0f, 0.0f);
 		}
 	};
 

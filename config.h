@@ -6,6 +6,7 @@ struct Colors {
 	Color cursor_line = Color::rgba(80, 80, 0, 255);
 	Color cursor = Color::rgba(255, 255, 0, 255);
 	Color highlight = Color::rgba(180, 0, 180, 255);
+	Color search = Color::rgba(0, 180, 180, 255);
 	Color whitespace = Color::gray(30);
 	Color bar = Color::rgba(59, 56, 54, 255);
 	Color bar_text = Color::rgba(120, 110, 100, 255);
