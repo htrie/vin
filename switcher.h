@@ -147,8 +147,8 @@ class Switcher {
 		else if (key == 's') { save(); }
 		else if (key == 'e') { process_space_e(); }
 		else if (key == 'f') { process_space_f(); }
-		else if (key == 'i') { current().state().window_down(row_count - 1); }
-		else if (key == 'o') { current().state().window_up(row_count - 1); }
+		else if (key == 'i') { current().window_down(row_count); }
+		else if (key == 'o') { current().window_up(row_count); }
 		else if (key >= '0' && key <= '9') { select_index(key - '0'); }
 		else if (key == 'h') { select_previous(); }
 		else if (key == 'l') { select_next(); }
@@ -156,7 +156,7 @@ class Switcher {
 	}
 
 	void process_normal(unsigned key) {
-		current().process(clipboard, url, key, col_count, row_count- 1);
+		current().process(clipboard, url, key, col_count, row_count);
 		if (!url.empty()) {
 			load(extract_filename(url));
 			current().jump(extract_location(url), row_count);
@@ -185,7 +185,7 @@ public:
 
 	void resize(unsigned w, unsigned h) {
 		col_count = w;
-		row_count = h;
+		row_count = h - 1; // Remove 1 for tabs bar.
 	}
 	
 	void process(bool space_down, bool& quit, bool& toggle, unsigned key) {

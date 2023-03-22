@@ -55,6 +55,9 @@ class Buffer {
 
 	size_t last_cursor = 0;
 
+	State& state() { return stack.state(); }
+	const State& state() const { return stack.state(); }
+
 	void save_cursor() {
 		last_cursor = state().get_cursor();
 	}
@@ -621,8 +624,8 @@ public:
 		state().cursor_center(row_count);
 	}
 
-	State& state() { return stack.state(); }
-	const State& state() const { return stack.state(); }
+	void window_down(unsigned row_count) { state().window_down(row_count); }
+	void window_up(unsigned row_count) { state().window_up(row_count); }
 
 	const std::string_view get_filename() const { return filename; }
 
