@@ -2,13 +2,17 @@
 
 bool ignore_file(const std::string_view path) {
 	if (path.ends_with(".db")) return true;
+	if (path.ends_with(".aps")) return true;
 	if (path.ends_with(".exe")) return true;
+	if (path.ends_with(".idb")) return true;
 	if (path.ends_with(".ilk")) return true;
 	if (path.ends_with(".iobj")) return true;
 	if (path.ends_with(".ipdb")) return true;
+	if (path.ends_with(".lib")) return true;
 	if (path.ends_with(".obj")) return true;
 	if (path.ends_with(".pch")) return true;
 	if (path.ends_with(".pdb")) return true;
+	if (path.ends_with(".tlog")) return true;
 	return false;
 }
 
@@ -33,78 +37,41 @@ public:
 	}
 };
 
-class Database {
-	struct File {
-		std::string name;
-		std::vector<char> contents;
-	};
+std::string_view cut_line(const std::string_view text, size_t pos) {
+	Line line(text, pos);
+	return line.to_string(text);
+}
 
-	struct Location {
-		size_t file_index = 0;
-		size_t position = 0;
-	};
+std::string make_line(const std::string_view text) {
+	if (text.size() > 0)
+		if (text[text.size() - 1] == '\n')
+			return std::string(text);
+	return std::string(text) + "\n";
+}
 
-	std::vector<File> files;
-	std::vector<Location> locations;
-
-	void add(const std::string& filename) {
-		map(filename, [&](const char* mem, size_t size) {
-			if (!ignore_file(filename)) {
-				std::vector<char> contents(size);
-				memcpy(contents.data(), mem, contents.size());
-				files.emplace_back(filename, std::move(contents));
-			}
-		});
-	}
-
-	void scan(unsigned file_index, const std::vector<char>& contents, const std::string_view pattern) {
-		for (size_t i = 0; i < contents.size(); ++i) {
-			if (contents[i] == pattern[0]) {
-				if (strncmp(&contents[i], pattern.data(), pattern.size()) == 0) {
-					locations.emplace_back(file_index, i);
-				}
-			}
-		}
-	}
-
-	static std::string_view cut_line(const std::string_view text, size_t pos) {
-		Line line(text, pos);
-		return line.to_string(text);
-	}
-
-	std::string make_line(const std::string_view text) {
-		if (text.size() > 0)
-			if (text[text.size() - 1] == '\n')
-				return std::string(text);
-		return std::string(text) + "\n";
-	}
-
-public:
-	void populate() {
-		files.clear();
+std::string find(const std::string_view pattern) {
+	std::string list;
+	if (!pattern.empty() && pattern.size() > 2) {
 		process_files(".", [&](const auto& path) {
-			add(path);
+			if (!ignore_file(path)) {
+				map(path, [&](const char* mem, size_t size) {
+					for (size_t i = 0; i < size; ++i) {
+						if (mem[i] == pattern[0]) {
+							if (strncmp(&mem[i], pattern.data(), std::min(pattern.size(), size - i)) == 0) {
+								const auto pos = i;
+								const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
+								const auto count = std::min((size_t)200, size - start);
+								const auto context = std::string(&mem[start], count);
+								list += path + "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
+							}
+						}
+					}
+				});
+			}
 		});
 	}
-
-	std::string generate(const std::string_view pattern) {
-		if (!pattern.empty() && pattern.size() > 2) {
-			for (unsigned i = 0; i < files.size(); i++) {
-				scan(i, files[i].contents, pattern);
-			}
-		}
-		std::string list;
-		for (const auto& location : locations) {
-			const auto& file = files[location.file_index];
-			const auto pos = location.position;
-			const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
-			const auto count = std::min((size_t)200, file.contents.size() - start);
-			const auto context = std::string(&file.contents[start], count);
-			list += file.name + "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
-		}
-		return list;
-	}
-};
+	return list;
+}
 
 class Switcher {
 	std::vector<Buffer> buffers;
@@ -164,11 +131,9 @@ class Switcher {
 	}
 
 	void process_space_f() {
-		Database database;
-		database.populate();
 		const auto seed = current().get_word();
 		load(std::string("find ") + seed);
-		current().init(database.generate(seed));
+		current().init(find(seed));
 		current().set_highlight(seed);
 	}
 
