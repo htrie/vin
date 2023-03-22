@@ -37,6 +37,13 @@ std::string make_line(const std::string_view text) {
 	return std::string(text) + "\n";
 }
 
+std::string make_entry(size_t pos, const char* mem, size_t size) {
+	const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
+	const auto count = std::min((size_t)200, size - start);
+	const auto context = std::string(&mem[start], count);
+	return "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
+}
+
 std::string find(const std::string_view pattern) {
 	std::string list;
 	if (!pattern.empty() && pattern.size() > 2) {
@@ -46,11 +53,7 @@ std::string find(const std::string_view pattern) {
 					for (size_t i = 0; i < size; ++i) {
 						if (mem[i] == pattern[0]) {
 							if (strncmp(&mem[i], pattern.data(), std::min(pattern.size(), size - i)) == 0) {
-								const auto pos = i;
-								const auto start = pos > (size_t)100 ? pos - (size_t)100 : (size_t)0;
-								const auto count = std::min((size_t)200, size - start);
-								const auto context = std::string(&mem[start], count);
-								list += path + "(" + std::to_string(pos) + ") " + make_line(cut_line(context, pos - start));
+								list += path + make_entry(i, mem, size);
 							}
 						}
 					}
