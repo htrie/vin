@@ -24,15 +24,15 @@ class Application {
 	}
 
 	Characters cull() {
-		const auto vp = device.viewport();
 		Characters characters;
-		switcher.cull(characters, vp.w, vp.h);
+		switcher.cull(characters);
 		return characters;
 	}
 
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
-			device.resize(w, h);
+			const auto viewport = device.resize(w, h);
+			switcher.resize(viewport.w, viewport.h);
 		}
 	}
 
@@ -48,9 +48,8 @@ class Application {
 	}
 
 	void process(unsigned key) {
-		const auto vp = device.viewport();
 		bool toggle = false;
-		switcher.process(space_down, quit, toggle, key, vp.w, vp.h);
+		switcher.process(space_down, quit, toggle, key);
 		if (toggle) {
 			window.show(maximized ? SW_SHOWDEFAULT : SW_SHOWMAXIMIZED);
 		}

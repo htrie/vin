@@ -144,7 +144,7 @@ public:
 		wait_idle(device.get());
 	}
 
-	void resize(unsigned w, unsigned h) {
+	Viewport resize(unsigned w, unsigned h) {
 		width = w;
 		height = h;
 
@@ -162,6 +162,11 @@ public:
 				cmds.emplace_back(create_command_buffer(device.get(), cmd_pool.get()));
 			}
 		}
+
+		return {
+			(unsigned)((float)width / spacing_character - 0.5f),
+			(unsigned)((float)height / spacing_line - 0.5f)
+		};
 	}
 
 	void redraw(const Characters& characters) {
@@ -186,13 +191,6 @@ public:
 
 		submit(queue, image_acquired_semaphore.get(), draw_complete_semaphore.get(), cmd, fence.get());
 		present(swapchain.get(), queue, draw_complete_semaphore.get(), frame_index);
-	}
-
-	Viewport viewport() const {
-		return {
-			(unsigned)((float)width / spacing_character - 0.5f),
-			(unsigned)((float)height / spacing_line - 0.5f)
-		};
 	}
 };
 

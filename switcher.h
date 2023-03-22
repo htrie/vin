@@ -81,6 +81,9 @@ class Switcher {
 	std::string url;
 	std::string clipboard;
 
+	unsigned col_count = 0;
+	unsigned row_count = 0;
+
 	Buffer& current() { return buffers[active]; }
 	const Buffer& current() const { return buffers[active]; }
 
@@ -136,7 +139,7 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void process_space(bool& quit, bool& toggle, unsigned key, unsigned row_count) {
+	void process_space(bool& quit, bool& toggle, unsigned key) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'm') { toggle = true; }
 		else if (key == 'w') { close(); }
@@ -152,7 +155,7 @@ class Switcher {
 		else if (key == 'n') { current().clear_highlight(); }
 	}
 
-	void process_normal(unsigned key, unsigned col_count, unsigned row_count) {
+	void process_normal(unsigned key) {
 		current().process(clipboard, url, key, col_count, row_count- 1);
 		if (!url.empty()) {
 			load(extract_filename(url));
@@ -161,7 +164,7 @@ class Switcher {
 		}
 	}
 
-	void push_tabs(Characters& characters, unsigned col_count, unsigned row_count) const {
+	void push_tabs(Characters& characters) const {
 		std::vector<std::string> tabs;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
@@ -179,14 +182,19 @@ public:
 	Switcher() {
 		buffers.emplace_back("scratch");
 	}
+
+	void resize(unsigned w, unsigned h) {
+		col_count = w;
+		row_count = h;
+	}
 	
-	void process(bool space_down, bool& quit, bool& toggle, unsigned key, unsigned col_count, unsigned row_count) {
-		if (space_down && current().is_normal()) { process_space(quit, toggle, key, row_count); }
-		else { process_normal(key, col_count, row_count); }
+	void process(bool space_down, bool& quit, bool& toggle, unsigned key) {
+		if (space_down && current().is_normal()) { process_space(quit, toggle, key); }
+		else { process_normal(key); }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) const {
-		push_tabs(characters, col_count, row_count);
+	void cull(Characters& characters) const {
+		push_tabs(characters);
 		current().cull(characters, col_count, row_count);
 	}
 };
