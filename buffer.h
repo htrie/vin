@@ -179,14 +179,14 @@ class Buffer {
 		case Mode::normal_number: process_normal_number(key, row_count); break;
 		case Mode::normal_slash: process_normal_slash(key, row_count); break;
 		case Mode::normal_question: process_normal_question(key, row_count); break;
-		case Mode::normal_gt: process_normal_gt(key); break;
-		case Mode::normal_lt: process_normal_lt(key); break;
-		case Mode::normal_c: process_normal_c(clipboard, key); break;
+		case Mode::normal_gt: process_normal_gt(key, row_count); break;
+		case Mode::normal_lt: process_normal_lt(key, row_count); break;
+		case Mode::normal_c: process_normal_c(clipboard, key, row_count); break;
 		case Mode::normal_cf: process_normal_cf(clipboard, key); break;
 		case Mode::normal_ct: process_normal_ct(clipboard, key); break;
 		case Mode::normal_ci: process_normal_ci(clipboard, key); break;
 		case Mode::normal_ca: process_normal_ca(clipboard, key); break;
-		case Mode::normal_d: process_normal_d(clipboard, key); break;
+		case Mode::normal_d: process_normal_d(clipboard, key, row_count); break;
 		case Mode::normal_df: process_normal_df(clipboard, key); break;
 		case Mode::normal_dt: process_normal_dt(clipboard, key); break;
 		case Mode::normal_di: process_normal_di(clipboard, key); break;
@@ -221,10 +221,10 @@ class Buffer {
 		state().insert("\n" + state().copy_line_whitespace());
 	}
 
-	void process_normal_O() {
+	void process_normal_O(unsigned row_count) {
 		state().line_start();
 		state().insert(state().copy_line_whitespace() + "\n");
-		state().prev_line();
+		state().prev_line(row_count);
 		state().line_end();
 	}
 
@@ -253,7 +253,7 @@ class Buffer {
 		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
 		else if (key == 'o') { begin_record(key); process_normal_o(); mode = Mode::insert; }
-		else if (key == 'O') { begin_record(key); process_normal_O(); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); process_normal_O(row_count); mode = Mode::insert; }
 		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { begin_record(key); clipboard = state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { begin_record(key); clipboard = state().erase_to_line_end(); mode = Mode::insert; }
@@ -261,14 +261,14 @@ class Buffer {
 		else if (key == 'D') { begin_end_record(key); clipboard = state().erase_to_line_end(); }
 		else if (key == 'J') { begin_end_record(key); process_normal_J(); }
 		else if (key == '~') { begin_end_record(key); state().change_case(); }
-		else if (key == 'P') { state().paste_before(clipboard); }
-		else if (key == 'p') { state().paste_after(clipboard); }
+		else if (key == 'P') { state().paste_before(clipboard, row_count); }
+		else if (key == 'p') { state().paste_after(clipboard, row_count); }
 		else if (key == '0') { state().line_start(); }
 		else if (key == '_') { state().line_start_whitespace(); }
 		else if (key == '$') { state().line_end(); }
 		else if (key == 'h') { state().prev_char(); }
-		else if (key == 'j') { state().next_line(); }
-		else if (key == 'k') { state().prev_line(); }
+		else if (key == 'j') { state().next_line(row_count); }
+		else if (key == 'k') { state().prev_line(row_count); }
 		else if (key == 'l') { state().next_char(); }
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
@@ -280,8 +280,8 @@ class Buffer {
 		else if (key == 'H') { save_cursor(); state().window_top(row_count); }
 		else if (key == 'M') { save_cursor(); state().window_center(row_count); }
 		else if (key == 'L') { save_cursor(); state().window_bottom(row_count); }
-		else if (key == '+') { save_cursor(); state().next_line(); state().line_start_whitespace(); }
-		else if (key == '-') { save_cursor(); state().prev_line(); state().line_start_whitespace(); }
+		else if (key == '+') { save_cursor(); state().next_line(row_count); state().line_start_whitespace(); }
+		else if (key == '-') { save_cursor(); state().prev_line(row_count); state().line_start_whitespace(); }
 		else if (key == ';') { line_find(); mode = Mode::normal; }
 		else if (key == ',') { line_rfind(); mode = Mode::normal; }
 		else if (key == '*') { save_cursor(); word_find_under_cursor(row_count); }
@@ -376,30 +376,30 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_gt(unsigned key) {
+	void process_normal_gt(unsigned key, unsigned row_count) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == '>') { end_record(key); state().indent_right(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_lt(unsigned key) {
+	void process_normal_lt(unsigned key, unsigned row_count) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == '<') { end_record(key); state().indent_left(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_c(std::string& clipboard, unsigned key) {
+	void process_normal_c(std::string& clipboard, unsigned key, unsigned row_count) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clipboard = state().erase_line_contents(); accu = 0; mode = Mode::insert; }
 		else if (key == 'w') { append_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
 		else if (key == 'g') { append_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::insert; }
 		else if (key == 'G') { append_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::insert; }
 		else if (key == 'j') { append_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
-		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
+		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::insert; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_cf; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_ct; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_ci; }
@@ -430,14 +430,14 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_d(std::string& clipboard, unsigned key) {
+	void process_normal_d(std::string& clipboard, unsigned key, unsigned row_count) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'd') { end_record(key); clipboard = state().erase_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { end_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { end_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { end_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_df; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_dt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_di; }
