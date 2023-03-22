@@ -16,26 +16,14 @@ bool ignore_file(const std::string_view path) {
 	return false;
 }
 
-class Index {
-	std::vector<std::string> paths;
-
-public:
-	void populate() {
-		paths.clear();
-		process_files(".", [&](const auto& path) {
-			if (!ignore_file(path))
-				paths.push_back(path);
-		});
-	}
-
-	std::string generate() {
-		std::string list;
-		for (const auto& path : paths) {
+std::string list() {
+	std::string list;
+	process_files(".", [&](const auto& path) {
+		if (!ignore_file(path))
 			list += path + "\n";
-		}
-		return list;
-	}
-};
+	});
+	return list;
+}
 
 std::string_view cut_line(const std::string_view text, size_t pos) {
 	Line line(text, pos);
@@ -124,10 +112,8 @@ class Switcher {
 	}
 
 	void process_space_e() {
-		Index index;
-		index.populate();
 		load("open");
-		current().init(index.generate());
+		current().init(list());
 	}
 
 	void process_space_f() {
