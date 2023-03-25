@@ -568,43 +568,15 @@ class Buffer {
 		}
 	}
 
-	std::string load() {
-		std::string text;
-		if (!filename.empty()) {
-			text = "\n"; // EOF
-			needs_save = true;
-			if (std::filesystem::exists(filename)) { // TODO: URL.
-				map(filename, [&](const char* mem, size_t size) {
-					text = std::string(mem, size);
-					needs_save = false;
-				});
-			}
-		}
-		return text;
-	}
-
 public:
 	Buffer(const std::string_view filename)
 		: filename(filename)
 		, is_code(is_code_extension(filename)) {
-		init(load());
 	}
 
 	void init(const std::string_view text) {
 		stack.set_cursor(0);
 		stack.set_text(text);
-	}
-
-	void reload() {
-		init(load());
-	}
-
-	void save() {
-		if (!filename.empty()) {
-			if (write(filename, stack.get_text())) {
-				needs_save = false;
-			}
-		}
 	}
 
 	void set_highlight(const std::string_view pattern) { highlight = pattern; word_forward = true; }
@@ -630,8 +602,11 @@ public:
 	const std::string_view get_filename() const { return filename; }
 
 	std::string get_word() const { return state().get_word(); }
+	std::string_view get_text() const { return state().get_text(); }
 
 	bool is_normal() const { return mode == Mode::normal; }
+
+	void set_dirty(bool b) { needs_save = b; }
 	bool is_dirty() const { return needs_save; }
 };
 

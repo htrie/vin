@@ -16,16 +16,12 @@
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
-#include "windows.h"
 #include "math.h"
-#include "font.h"
-#include "config.h"
+#include "vulkan.h"
 #include "text.h"
 #include "state.h"
 #include "buffer.h"
-#include "switcher.h"
-#include "vulkan.h"
-#include "device.h"
+#include "font.h"
 #include "application.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {

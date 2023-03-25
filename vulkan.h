@@ -1,5 +1,13 @@
 #pragma once
 
+void verify(bool expr) {
+#ifndef NDEBUG
+	if (!(expr)) {
+		abort();
+	}
+#endif
+}
+
 vk::UniqueInstance create_instance() {
 	std::vector<const char*> layers;
 #if !defined(NDEBUG)

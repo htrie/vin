@@ -11,8 +11,6 @@ struct Vec2 {
 	float& operator[](const unsigned int i) { return ((V&)*this)[i]; }
 	const float& operator[](const unsigned int i) const { return ((V&)*this)[i]; }
 
-	V& as_array() { return (V&)*this; }
-
 	Vec2 operator+(const Vec2& o) const { return Vec2(x + o[0], y + o[1]); }
 	Vec2 operator-(const Vec2& o) const { return Vec2(x - o[0], y - o[1]); }
 	Vec2 operator*(const Vec2& o) const { return Vec2(x * o[0], y * o[1]); }
@@ -55,8 +53,6 @@ struct Vec3 {
 	using V = float[3];
 	float& operator[](const unsigned int i) { return ((V&)*this)[i]; }
 	const float& operator[](const unsigned int i) const { return ((V&)*this)[i]; }
-
-	V& as_array() { return (V&)*this; }
 
 	Vec3 operator+(const Vec3& o) const { return Vec3(x + o[0], y + o[1], z + o[2]); }
 	Vec3 operator-(const Vec3& o) const { return Vec3(x - o[0], y - o[1], z - o[2]); }
@@ -106,8 +102,6 @@ struct Vec4 {
 	using V = float[4];
 	float& operator[](const unsigned int i) { return ((V&)*this)[i]; }
 	const float& operator[](const unsigned int i) const { return ((V&)*this)[i]; }
-
-	V& as_array() { return (V&)*this; }
 
 	Vec4 operator+(const float f) const { return *this + Vec4(f); }
 	Vec4 operator-(const float f) const { return *this - Vec4(f); }
