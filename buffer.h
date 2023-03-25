@@ -579,9 +579,6 @@ public:
 		stack.set_text(text);
 	}
 
-	void set_highlight(const std::string_view pattern) { highlight = pattern; word_forward = true; }
-	void clear_highlight() { highlight.clear(); }
-
 	void process(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
 		process_key(clipboard, url, key, col_count, row_count);
 		if (repeat) { repeat = false; replay(clipboard, url, col_count, row_count); }
@@ -605,6 +602,9 @@ public:
 	std::string_view get_text() const { return state().get_text(); }
 
 	bool is_normal() const { return mode == Mode::normal; }
+
+	void set_highlight(const std::string_view pattern) { highlight = pattern; word_forward = true; }
+	void clear_highlight() { highlight.clear(); }
 
 	void set_dirty(bool b) { needs_save = b; }
 	bool is_dirty() const { return needs_save; }
