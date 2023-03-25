@@ -58,7 +58,7 @@ constexpr bool is_punctuation(char c) { return
 }
 constexpr bool is_url_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
-	c == '.' || c == '<' || c == '>' || c == '(' || c == ')' ||
+	c == '.' || c == '<' || c == '>' || c == '(' || c == ')' || c == ':' ||
 	c == '&' || c == '%' || c == '^' || c == '!' || c == '~' ||
 	c == '?' || c == '#';
 }

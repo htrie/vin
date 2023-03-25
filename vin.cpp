@@ -1,5 +1,6 @@
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "vulkan-1.lib")
+#pragma comment(lib, "winhttp.lib")
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -14,6 +15,7 @@
 #include <stdlib.h>
 #include <dwmapi.h>
 #include <vulkan/vulkan.hpp>
+#include <winhttp.h>
 
 #include "resource.h"
 #include "math.h"
