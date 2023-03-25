@@ -16,7 +16,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "resource.h"
-#include "memory.h"
 #include "windows.h"
 #include "math.h"
 #include "font.h"

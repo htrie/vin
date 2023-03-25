@@ -4,6 +4,14 @@
 	#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+void verify(bool expr) {
+#ifndef NDEBUG
+	if (!(expr)) {
+		abort();
+	}
+#endif
+}
+
 std::string get_error_string() {
 	const DWORD error = GetLastError();
 	std::string res = std::string("(error ") + std::to_string((unsigned)error);

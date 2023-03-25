@@ -5,7 +5,7 @@ fileVersion=1
 fontName=PragmataPro Mono Liga
 fontFile=
 charSet=0
-fontSize=28
+fontSize=30
 aa=4
 scaleH=100
 useSmoothing=1
@@ -35,7 +35,7 @@ widthPaddingFactor=0.00
 
 # output file
 outWidth=256
-outHeight=92
+outHeight=100
 outBitDepth=8
 fontDescFormat=0
 fourChnlPacked=0
