@@ -352,9 +352,8 @@ class Device {
 			uniforms.scale_and_pos[index] = {
 				glyph.w * font_width * character.scale_x,
 				glyph.h * font_height * character.scale_y, 
-				(character.col * spacing_character + glyph.x_off * font_width + character.offset_x),
-				(character.row * spacing_line + glyph.y_off * font_height + character.offset_y)
-			};
+				character.col * spacing_character + glyph.x_off * font_width + character.offset_x,
+				character.row * spacing_line + glyph.y_off * font_height + character.offset_y };
 			uniforms.color[index] = character.color.rgba();
 			uniforms.uv_origin_and_size[index] = { glyph.x, glyph.y, glyph.w, glyph.h };
 			index++;
