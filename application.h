@@ -311,8 +311,8 @@ class Device {
 	vk::UniqueDeviceMemory image_memory;
 	vk::UniqueImageView image_view;
 
-	float spacing_character = 13.0f;
-	float spacing_line = 30.0f;
+	float spacing_character = 9.0f;
+	float spacing_line = 20.0f;
 
 	unsigned width = 0;
 	unsigned height = 0;
