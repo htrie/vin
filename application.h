@@ -267,10 +267,9 @@ struct Uniforms {
 	static const unsigned CharacterMaxCount = 8192;
 
 	Matrix view_proj;
-	Matrix model[CharacterMaxCount];
+	Vec4 scale_and_pos[CharacterMaxCount];
 	Vec4 color[CharacterMaxCount];
-	Vec4 uv_origin[CharacterMaxCount];
-	Vec4 uv_sizes[CharacterMaxCount];
+	Vec4 uv_origin_and_size[CharacterMaxCount];
 };
 
 struct Viewport {
@@ -350,18 +349,14 @@ class Device {
 		unsigned index = 0;
 
 		const auto add = [&](const auto& character, const auto& glyph) {
-			uniforms.model[index] = {
-				{ glyph.w * font_width * character.scale_x, 0.0f, 0.0f, 0.0f },
-				{ 0.0f, glyph.h * font_height * character.scale_y, 0.0f, 0.0f },
-				{ 0.0f, 0.0f, 1.0f, 0.0f },
-				{
-					(character.col * spacing_character + glyph.x_off * font_width + character.offset_x),
-					(character.row * spacing_line + glyph.y_off * font_height + character.offset_y),
-					0.0f, 1.0f }
+			uniforms.scale_and_pos[index] = {
+				glyph.w * font_width * character.scale_x,
+				glyph.h * font_height * character.scale_y, 
+				(character.col * spacing_character + glyph.x_off * font_width + character.offset_x),
+				(character.row * spacing_line + glyph.y_off * font_height + character.offset_y)
 			};
 			uniforms.color[index] = character.color.rgba();
-			uniforms.uv_origin[index] = { glyph.x, glyph.y, 0.0f, 0.0f };
-			uniforms.uv_sizes[index] = { glyph.w, glyph.h, 0.0f, 0.0f };
+			uniforms.uv_origin_and_size[index] = { glyph.x, glyph.y, glyph.w, glyph.h };
 			index++;
 		};
 
