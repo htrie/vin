@@ -188,9 +188,12 @@ static std::string find(const std::string_view pattern) {
 
 static std::string load(const std::string_view filename) {
 	std::string text = "\n"; // EOF
-	if (filename.starts_with("www")) { text = request(filename); }
-	else if (filename.starts_with("https")) { text = request(filename.substr(sizeof("https://") - 1)); }
-	else if (filename.starts_with("http")) { text = request(filename.substr(sizeof("http://") - 1)); }
+	if (filename.starts_with("www")) {
+		text = request(filename); }
+	else if (filename.starts_with("https")) {
+		text = request(filename.substr(sizeof("https://") - 1)); }
+	else if (filename.starts_with("http")) {
+		text = request(filename.substr(sizeof("http://") - 1)); }
 	else if (std::filesystem::exists(filename)) {
 		map(filename, [&](const char* mem, size_t size) {
 			text = std::string(mem, size);
