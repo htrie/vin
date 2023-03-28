@@ -186,14 +186,20 @@ static std::string find(const std::string_view pattern) {
 	return list;
 }
 
+static std::string prettify_html(const std::string_view contents) {
+	std::string out = std::string(contents);
+	// TODO
+	return out;
+}
+
 static std::string load(const std::string_view filename) {
 	std::string text = "\n"; // EOF
 	if (filename.starts_with("www")) {
-		text = request(filename); }
+		text = prettify_html(request(filename)); }
 	else if (filename.starts_with("https")) {
-		text = request(filename.substr(sizeof("https://") - 1)); }
+		text = prettify_html(request(filename.substr(sizeof("https://") - 1))); }
 	else if (filename.starts_with("http")) {
-		text = request(filename.substr(sizeof("http://") - 1)); }
+		text = prettify_html(request(filename.substr(sizeof("http://") - 1))); }
 	else if (std::filesystem::exists(filename)) {
 		map(filename, [&](const char* mem, size_t size) {
 			text = std::string(mem, size);
