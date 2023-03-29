@@ -480,9 +480,9 @@ public:
 	}
 };
 
-std::string_view extract_filename(const std::string_view url) {
+std::string extract_filename(const std::string_view url) {
 	Enclosure location(url, url.size() - 1, '(', ')');
-	return location.valid() ? url.substr(0, location.begin()) : url;
+	return std::string(location.valid() ? url.substr(0, location.begin()) : url);
 }
 
 unsigned extract_location(const std::string_view url) {
