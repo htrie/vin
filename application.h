@@ -63,9 +63,11 @@ std::string download(const HINTERNET request) {
 
 std::string request(const std::string_view url) {
 	std::string contents;
+	const auto server = convert(extract_server(url));
+	const auto payload = convert(extract_payload(url));
 	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
-		if (const auto connection = WinHttpConnect(session, convert(url).data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {
-			if (const auto request = WinHttpOpenRequest(connection, L"GET", NULL, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
+		if (const auto connection = WinHttpConnect(session, server.data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {
+			if (const auto request = WinHttpOpenRequest(connection, L"GET", payload.data(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
 				if (WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
 					if (WinHttpReceiveResponse(request, NULL))
 						contents = download(request);
