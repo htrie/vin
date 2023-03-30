@@ -302,7 +302,7 @@ class Buffer {
 		if (key >= '0' && key <= '9') { accumulate(key); }
 		else if (key == 'j') { save_cursor(); state().jump_down(accu, row_count); accu = 0; mode = Mode::normal; }
 		else if (key == 'k') { save_cursor(); state().jump_up(accu, row_count); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); state().jump_down(accu, row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); state().jump_down(accu > 0 ? accu - 1 : 0, row_count); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
