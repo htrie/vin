@@ -4,6 +4,7 @@ class State {
 	std::string text;
 	size_t cursor = 0;
 	unsigned begin_row = 0;
+	unsigned line_count = 0;
 
 public:
 	const std::string_view get_text() const { return text; }
@@ -13,6 +14,7 @@ public:
 	void set_cursor(size_t u) { cursor = u; }
 
 	unsigned get_begin_row() const { return begin_row; }
+	void set_line_count(unsigned count) { line_count = count; }
 
 	Word incr(const Word& w) { return Word(text, w.end() < text.size() - 1 ? w.end() + 1 : w.end()); }
 	Word decr(const Word& w) { return Word(text, w.begin() > 0 ? w.begin() - 1 : 0); }
@@ -249,54 +251,54 @@ public:
 		const Line current(text, cursor);
 		const Line next = incr(current);
 		cursor = next.to_absolute(current.to_relative(cursor));
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void prev_line(unsigned row_count) {
 		const Line current(text, cursor);
 		const Line prev = decr(current);
 		cursor = prev.to_absolute(current.to_relative(cursor));
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void buffer_end(unsigned row_count) {
 		const Line current(text, cursor);
 		const Line last(text, text.size() - 1);
 		cursor = last.to_absolute(current.to_relative(cursor));
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void buffer_start(unsigned row_count) {
 		const Line current(text, cursor);
 		const Line first(text, 0);
 		cursor = first.to_absolute(current.to_relative(cursor));
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void jump_down(unsigned skip, unsigned row_count) {
 		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void jump_up(unsigned skip, unsigned row_count) {
 		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void window_down(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		const unsigned down_row = cursor_row + row_count / 2;
+		const unsigned down_row = cursor_row + line_count / 2;
 		const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void window_up(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		const unsigned up_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
+		const unsigned up_row = cursor_row > line_count / 2 ? cursor_row - line_count / 2 : 0;
 		const unsigned skip = cursor_row - up_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void window_top(unsigned row_count) {
@@ -304,28 +306,28 @@ public:
 		const unsigned top_row = begin_row;
 		const unsigned skip = cursor_row - top_row;
 		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void window_center(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		const unsigned middle_row = begin_row + row_count / 2;
+		const unsigned middle_row = begin_row + line_count / 2;
 		const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
 		for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line(row_count) : prev_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
 	void window_bottom(unsigned row_count) {
 		const unsigned cursor_row = find_cursor_row();
-		const unsigned bottom_row = begin_row + row_count;
+		const unsigned bottom_row = begin_row + line_count;
 		const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
 		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
-		cursor_clamp(row_count);
+		cursor_clamp();
 	}
 
-	void cursor_clamp(unsigned row_count) {
+	void cursor_clamp() {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = std::clamp(begin_row, cursor_row > row_count ? cursor_row - row_count : 0, cursor_row);
+		begin_row = std::clamp(begin_row, cursor_row > line_count ? cursor_row - line_count : 0, cursor_row);
 	}
 
 	void cursor_center(unsigned row_count) {

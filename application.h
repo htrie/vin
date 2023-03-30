@@ -584,7 +584,7 @@ public:
 		else { process_normal(key); }
 	}
 
-	Characters cull() const {
+	Characters cull() {
 		Characters characters;
 		push_tabs(characters);
 		current().cull(characters, col_count, row_count);
