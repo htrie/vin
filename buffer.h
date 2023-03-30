@@ -473,10 +473,10 @@ class Buffer {
 
 	void push_line_number(Characters& characters, unsigned row, unsigned col, unsigned absolute_row, unsigned cursor_row) const {
 		unsigned column = absolute_row == cursor_row ? col : col + 1;
-		const unsigned line = absolute_row == cursor_row ? absolute_row :
+		const unsigned line = absolute_row == cursor_row ? 1 + absolute_row :
 			absolute_row < cursor_row ? cursor_row - absolute_row :
 			absolute_row - cursor_row;
-		push_number(characters, row, column, 1 + line);
+		push_number(characters, row, column, line);
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
