@@ -253,7 +253,7 @@ struct Viewport {
 };
 
 class Window {
-	HWND hWnd = nullptr;
+	HWND hwnd = nullptr;
 	COLORREF* pixels = nullptr;
 
 	unsigned width = 0;
@@ -263,9 +263,9 @@ class Window {
 	float spacing_line = 20.0f;
 
 public:
-	Window(HINSTANCE hInstance, WNDPROC proc, void* data, int nCmdShow) {
+	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int show) {
 		const char* name = "vin";
-		const auto hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON1));
+		const auto hicon = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
 
 		WNDCLASSEX win_class;
 		win_class.cbSize = sizeof(WNDCLASSEX);
@@ -273,36 +273,36 @@ public:
 		win_class.lpfnWndProc = proc;
 		win_class.cbClsExtra = 0;
 		win_class.cbWndExtra = 0;
-		win_class.hInstance = hInstance;
-		win_class.hIcon = hIcon;
+		win_class.hInstance = hinstance;
+		win_class.hIcon = hicon;
 		win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
 		win_class.hbrBackground = CreateSolidBrush(0);
 		win_class.lpszMenuName = nullptr;
 		win_class.lpszClassName = name;
-		win_class.hIconSm = hIcon;
+		win_class.hIconSm = hicon;
 
 		RegisterClassEx(&win_class);
 
 		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
 
-		hWnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
+		hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
 			CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
-			nullptr, nullptr, hInstance, data);
+			nullptr, nullptr, hinstance, data);
 
 	#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 		#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 	#endif
 		BOOL value = TRUE;
-		DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
+		DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
 
 		const auto title  = std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
-		SetWindowTextA(hWnd, title.data());
+		SetWindowTextA(hwnd, title.data());
 
-		ShowWindow(hWnd, nCmdShow);
+		ShowWindow(hwnd, show);
 	}
 
 	~Window() {
-		DestroyWindow(hWnd);
+		DestroyWindow(hwnd);
 
 		if (pixels)
 			free(pixels);
@@ -315,8 +315,6 @@ public:
 		if (pixels)
 			free(pixels);
 		pixels = (COLORREF*)malloc(width * height * sizeof(COLORREF));
-
-		// TODO: recreate bitmap
 
 		return {
 			(unsigned)((float)width / spacing_character - 0.5f),
@@ -335,12 +333,13 @@ public:
 		j = (j + 2) % height;
 		pixels[j * width + i] = colors().text.as_uint();
 
-		HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels);
-		HDC hdc = GetDC(hWnd);
-		HDC src = CreateCompatibleDC(hdc);
+		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels);
+		const HDC hdc = GetDC(hwnd);
+		const HDC src = CreateCompatibleDC(GetDC(hwnd));
 		SelectObject(src, map);
 		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
 		DeleteDC(src);
+		DeleteObject(map);
 	}
 };
 
@@ -509,11 +508,11 @@ class Application {
 		switcher.process(space_down, quit, key);
 	}
 
-	static LRESULT CALLBACK proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-		switch (uMsg) {
+	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+		switch (msg) {
 		case WM_CREATE: {
-			LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-			SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
+			LPCREATESTRUCT create_struct = reinterpret_cast<LPCREATESTRUCT>(lparam);
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams));
 			break;
 		}
 		case WM_DESTROY:
@@ -522,7 +521,7 @@ class Application {
 			break;
 		}
 		case WM_GETMINMAXINFO: {
-			((MINMAXINFO*)lParam)->ptMinTrackSize = {
+			((MINMAXINFO*)lparam)->ptMinTrackSize = {
 				GetSystemMetrics(SM_CXMINTRACK),
 				GetSystemMetrics(SM_CYMINTRACK) + 1 // Must be at least 1 pixel high.
 			};
@@ -535,32 +534,32 @@ class Application {
 		case WM_MOVING:
 		case WM_KILLFOCUS:
 		case WM_SETFOCUS: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
 			}
 			break;
 		}
 		case WM_SETREDRAW:
 		case WM_PAINT: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
 				app->redraw();
 			}
 			break;
 		}
 		case WM_SIZE: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				const unsigned width = lParam & 0xffff;
-				const unsigned height = (lParam & 0xffff0000) >> 16;
-				app->set_maximized(wParam == SIZE_MAXIMIZED);
-				app->set_minimized(wParam == SIZE_MINIMIZED);
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+				const unsigned width = lparam & 0xffff;
+				const unsigned height = (lparam & 0xffff0000) >> 16;
+				app->set_maximized(wparam == SIZE_MAXIMIZED);
+				app->set_minimized(wparam == SIZE_MINIMIZED);
 				app->set_dirty(true);
 				app->resize(width, height);
 			}
 			break;
 		}
 		case WM_KEYDOWN: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				if (wParam == VK_SPACE) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+				if (wparam == VK_SPACE) {
 					app->set_dirty(true);
 					app->set_space_down(true);
 				}
@@ -568,8 +567,8 @@ class Application {
 			break;
 		}
 		case WM_KEYUP: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
-				if (wParam == VK_SPACE) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
+				if (wparam == VK_SPACE) {
 					app->set_dirty(true);
 					app->set_space_down(false);
 				}
@@ -577,22 +576,22 @@ class Application {
 			break;
 		}
 		case WM_CHAR: {
-			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
-				app->process((unsigned)wParam);
+				app->process((unsigned)wparam);
 			}
 			break;
 		}
 		default: {
-			return DefWindowProc(hWnd, uMsg, wParam, lParam);
+			return DefWindowProc(hwnd, msg, wparam, lparam);
 		}
 		}
 		return 0;
 	}
 
 public:
-	Application(HINSTANCE hInstance, int nCmdShow)
-		: window(hInstance, proc, this, nCmdShow) {
+	Application(HINSTANCE hinstance, int show)
+		: window(hinstance, proc, this, show) {
 	}
 
 	void run() {
@@ -604,8 +603,8 @@ public:
 	}
 };
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine, int nCmdShow) {
-	Application application(hInstance, nCmdShow);
+int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR cmd, int show) {
+	Application application(hinstance, show);
 	application.run();
 	return 0;
 }
