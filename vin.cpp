@@ -262,6 +262,19 @@ class Window {
 	float spacing_character = 9.0f;
 	float spacing_line = 20.0f;
 
+	void clear() {
+		memset(pixels, colors().clear.as_uint(), width * height * sizeof(COLORREF));
+	}
+
+	void blit() {
+		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels);
+		const HDC hdc = GetDC(hwnd);
+		const HDC src = CreateCompatibleDC(GetDC(hwnd));
+		SelectObject(src, map);
+		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
+		DeleteDC(src);
+		DeleteObject(map);
+	}
 public:
 	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int show) {
 		const char* name = "vin";
@@ -323,23 +336,16 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		// TODO blit bitmap
+		clear();
 
-		memset(pixels, colors().clear.as_uint(), width * height * sizeof(COLORREF));
-
+		// TODO blit characters
 		static unsigned i = 0;
 		static unsigned j = 0;
 		i = (i + 1) % width;
 		j = (j + 2) % height;
 		pixels[j * width + i] = colors().text.as_uint();
 
-		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels);
-		const HDC hdc = GetDC(hwnd);
-		const HDC src = CreateCompatibleDC(GetDC(hwnd));
-		SelectObject(src, map);
-		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
-		DeleteDC(src);
-		DeleteObject(map);
+		blit();
 	}
 };
 
