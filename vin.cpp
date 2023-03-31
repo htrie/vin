@@ -257,6 +257,54 @@ class Window {
 	float spacing_character = 9.0f;
 	float spacing_line = 20.0f;
 
+	static HWND create(HINSTANCE hinstance, WNDPROC proc, void* data) {
+		const char* name = "vin";
+		const auto hicon = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
+		WNDCLASSEX win_class;
+		win_class.cbSize = sizeof(WNDCLASSEX);
+		win_class.style = CS_HREDRAW | CS_VREDRAW;
+		win_class.lpfnWndProc = proc;
+		win_class.cbClsExtra = 0;
+		win_class.cbWndExtra = 0;
+		win_class.hInstance = hinstance;
+		win_class.hIcon = hicon;
+		win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
+		win_class.hbrBackground = CreateSolidBrush(0);
+		win_class.lpszMenuName = nullptr;
+		win_class.lpszClassName = name;
+		win_class.hIconSm = hicon;
+		RegisterClassEx(&win_class);
+		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+		return CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768, nullptr, nullptr, hinstance, data);
+	}
+
+	static void destroy(HWND hwnd) {
+		DestroyWindow(hwnd);
+	}
+
+	static void set_title(HWND hwnd) {
+		const auto title  = std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
+		SetWindowTextA(hwnd, title.data());
+	}
+
+	static void set_dark(HWND hwnd) {
+		BOOL value = TRUE;
+		DwmSetWindowAttribute(hwnd, 20, &value, sizeof(value)); // Dark mode.
+	}
+
+	static void show(HWND hwnd, int nshow) {
+		ShowWindow(hwnd, nshow);
+	}
+
+	void reset() {
+		if (pixels)
+			free(pixels);
+	}
+
+	void alloc() {
+		pixels = (COLORREF*)malloc(width * height * sizeof(COLORREF));
+	}
+
 	void clear() {
 		memset(pixels, colors().clear.as_uint(), width * height * sizeof(COLORREF));
 	}
@@ -271,58 +319,24 @@ class Window {
 		DeleteObject(map);
 	}
 public:
-	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int show) {
-		const char* name = "vin";
-		const auto hicon = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
-
-		WNDCLASSEX win_class;
-		win_class.cbSize = sizeof(WNDCLASSEX);
-		win_class.style = CS_HREDRAW | CS_VREDRAW;
-		win_class.lpfnWndProc = proc;
-		win_class.cbClsExtra = 0;
-		win_class.cbWndExtra = 0;
-		win_class.hInstance = hinstance;
-		win_class.hIcon = hicon;
-		win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-		win_class.hbrBackground = CreateSolidBrush(0);
-		win_class.lpszMenuName = nullptr;
-		win_class.lpszClassName = name;
-		win_class.hIconSm = hicon;
-
-		RegisterClassEx(&win_class);
-
-		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-
-		hwnd = CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768,
-			nullptr, nullptr, hinstance, data);
-
-	#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
-		#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
-	#endif
-		BOOL value = TRUE;
-		DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &value, sizeof(value));
-
-		const auto title  = std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
-		SetWindowTextA(hwnd, title.data());
-
-		ShowWindow(hwnd, show);
+	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int nshow)
+		: hwnd(create(hinstance, proc, data)) {
+		set_dark(hwnd);
+		set_title(hwnd);
+		show(hwnd, nshow);
 	}
 
 	~Window() {
-		DestroyWindow(hwnd);
-
-		if (pixels)
-			free(pixels);
+		reset();
+		destroy(hwnd);
 	}
 
 	void resize(unsigned w, unsigned h) {
 		width = w;
 		height = h;
 
-		if (pixels)
-			free(pixels);
-		pixels = (COLORREF*)malloc(width * height * sizeof(COLORREF));
+		reset();
+		alloc();
 	}
 
 	void redraw(const Characters& characters) {
@@ -589,8 +603,8 @@ class Application {
 	}
 
 public:
-	Application(HINSTANCE hinstance, int show)
-		: window(hinstance, proc, this, show) {
+	Application(HINSTANCE hinstance, int nshow)
+		: window(hinstance, proc, this, nshow) {
 	}
 
 	void run() {
@@ -602,8 +616,8 @@ public:
 	}
 };
 
-int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR cmd, int show) {
-	Application application(hinstance, show);
+int WINAPI WinMain(HINSTANCE hinstance, HINSTANCE hprev, LPSTR cmd, int nshow) {
+	Application application(hinstance, nshow);
 	application.run();
 	return 0;
 }
