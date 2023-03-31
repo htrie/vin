@@ -574,7 +574,10 @@ public:
 		state().cursor_center();
 	}
 
-	void set_line_count(unsigned count) { state().set_line_count(count); }
+	void set_line_count(unsigned count) {
+		state().set_line_count(count);
+		state().cursor_clamp();
+	}
 
 	void window_down() { state().window_down(); }
 	void window_up() { state().window_up(); }
