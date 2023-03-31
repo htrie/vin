@@ -219,26 +219,6 @@ class Buffer {
 		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
-	void process_normal_o() {
-		state().line_end();
-		state().insert("\n" + state().copy_line_whitespace());
-	}
-
-	void process_normal_O() {
-		state().line_start();
-		state().insert(state().copy_line_whitespace() + "\n");
-		state().prev_line();
-		state().line_end();
-	}
-
-	void process_normal_J() {
-		state().line_end();
-		state().erase();
-		state().remove_line_whitespace();
-		state().insert(" ");
-		state().prev_char();
-	}
-
 	void process_normal(std::string& clipboard, std::string& url, unsigned key) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
@@ -255,14 +235,14 @@ class Buffer {
 		else if (key == 'I') { begin_record(key); state().line_start_whitespace(); mode = Mode::insert; }
 		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
-		else if (key == 'o') { begin_record(key); process_normal_o(); mode = Mode::insert; }
-		else if (key == 'O') { begin_record(key); process_normal_O(); mode = Mode::insert; }
+		else if (key == 'o') { begin_record(key); state().insert_line_down(); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); state().insert_line_up(); mode = Mode::insert; }
 		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { begin_record(key); clipboard = state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { begin_record(key); clipboard = state().erase_to_line_end(); mode = Mode::insert; }
 		else if (key == 'x') { begin_end_record(key); clipboard = state().erase(); }
 		else if (key == 'D') { begin_end_record(key); clipboard = state().erase_to_line_end(); }
-		else if (key == 'J') { begin_end_record(key); process_normal_J(); }
+		else if (key == 'J') { begin_end_record(key); state().join_lines(); }
 		else if (key == '~') { begin_end_record(key); state().change_case(); }
 		else if (key == 'P') { state().paste_before(clipboard); }
 		else if (key == 'p') { state().paste_after(clipboard); }

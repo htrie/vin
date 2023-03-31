@@ -707,6 +707,26 @@ public:
 		}
 	}
 
+	void insert_line_down() {
+		line_end();
+		insert("\n" + copy_line_whitespace());
+	}
+
+	void insert_line_up() {
+		line_start();
+		insert(copy_line_whitespace() + "\n");
+		prev_line();
+		line_end();
+	}
+
+	void join_lines() {
+		line_end();
+		erase();
+		remove_line_whitespace();
+		insert(" ");
+		prev_char();
+	}
+
 	void fix_eof() {
 		const auto size = text.size();
 		if (size == 0 || (size > 0 && text[size - 1] != '\n')) {
