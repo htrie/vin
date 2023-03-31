@@ -247,11 +247,6 @@ const FontGlyph* find_glyph(uint16_t id) {
 	return nullptr;
 }
 
-struct Viewport {
-	unsigned w = 0;
-	unsigned h = 0;
-};
-
 class Window {
 	HWND hwnd = nullptr;
 	COLORREF* pixels = nullptr;
@@ -321,18 +316,13 @@ public:
 			free(pixels);
 	}
 
-	Viewport resize(unsigned w, unsigned h) {
+	void resize(unsigned w, unsigned h) {
 		width = w;
 		height = h;
 
 		if (pixels)
 			free(pixels);
 		pixels = (COLORREF*)malloc(width * height * sizeof(COLORREF));
-
-		return {
-			(unsigned)((float)width / spacing_character - 0.5f),
-			(unsigned)((float)height / spacing_line - 0.5f)
-		};
 	}
 
 	void redraw(const Characters& characters) {
@@ -347,6 +337,9 @@ public:
 
 		blit();
 	}
+
+	unsigned get_row_count() const { return (unsigned)((float)width / spacing_character - 0.5f); }
+	unsigned get_col_count() const { return (unsigned)((float)height / spacing_line - 0.5f); }
 };
 
 class Switcher {
@@ -495,8 +488,8 @@ class Application {
 
 	void resize(unsigned w, unsigned h) {
 		if (!minimized) {
-			const auto viewport = window.resize(w, h);
-			switcher.resize(viewport.w, viewport.h);
+			window.resize(w, h);
+			switcher.resize(window.get_col_count(), window.get_row_count());
 		}
 	}
 
