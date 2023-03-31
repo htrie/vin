@@ -87,10 +87,10 @@ class Buffer {
 		end_record(key);
 	}
 
-	void replay(std::string& clipboard, std::string& url, unsigned col_count, unsigned row_count) {
+	void replay(std::string& clipboard, std::string& url) {
 		const auto s = record; // Cache since process_key will modify it.
 		for (const auto& c : s) {
-			process_key(clipboard, url, c, col_count, row_count);
+			process_key(clipboard, url, c);
 		}
 	}
 
@@ -126,70 +126,70 @@ class Buffer {
 		else { state().line_find(f_key); }
 	}
 
-	void word_find_under_cursor(unsigned row_count) {
+	void word_find_under_cursor() {
 		highlight = state().current_word();
 		word_forward = true;
 		word_strict = true;
 		state().word_find(highlight, word_strict);
-		state().cursor_center(row_count);
+		state().cursor_center();
 	}
 
-	void word_rfind_under_cursor(unsigned row_count) {
+	void word_rfind_under_cursor() {
 		highlight = state().current_word();
 		word_forward = false;
 		word_strict = true;
 		state().word_rfind(highlight, word_strict);
-		state().cursor_center(row_count);
+		state().cursor_center();
 	}
 
-	void word_find_partial(unsigned row_count) {
+	void word_find_partial() {
 		word_forward = true;
 		word_strict = false;
 		if (!state().current_word().starts_with(highlight)) {
 			state().word_find(highlight, word_strict);
-			state().cursor_center(row_count);
+			state().cursor_center();
 		}
 	}
 
-	void word_rfind_partial(unsigned row_count) {
+	void word_rfind_partial() {
 		word_forward = false;
 		word_strict = false;
 		if (!state().current_word().starts_with(highlight)) {
 			state().word_rfind(highlight, word_strict);
-			state().cursor_center(row_count);
+			state().cursor_center();
 		}
 	}
 
-	void word_find_again(unsigned row_count) {
+	void word_find_again() {
 		if (word_forward) { state().word_find(highlight, word_strict); }
 		else { state().word_rfind(highlight, word_strict); }
-		state().cursor_center(row_count);
+		state().cursor_center();
 	}
 
-	void word_rfind_again(unsigned row_count) {
+	void word_rfind_again() {
 		if (word_forward) { state().word_rfind(highlight, word_strict); }
 		else { state().word_find(highlight, word_strict); }
-		state().cursor_center(row_count);
+		state().cursor_center();
 	}
 
-	void process_key(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
+	void process_key(std::string& clipboard, std::string& url, unsigned key) {
 		if (mode != Mode::insert) {
 			stack.push();
 		}
 
 		switch (mode) {
-		case Mode::normal: process_normal(clipboard, url, key, row_count); break;
-		case Mode::normal_number: process_normal_number(key, row_count); break;
-		case Mode::normal_slash: process_normal_slash(key, row_count); break;
-		case Mode::normal_question: process_normal_question(key, row_count); break;
-		case Mode::normal_gt: process_normal_gt(key, row_count); break;
-		case Mode::normal_lt: process_normal_lt(key, row_count); break;
-		case Mode::normal_c: process_normal_c(clipboard, key, row_count); break;
+		case Mode::normal: process_normal(clipboard, url, key); break;
+		case Mode::normal_number: process_normal_number(key); break;
+		case Mode::normal_slash: process_normal_slash(key); break;
+		case Mode::normal_question: process_normal_question(key); break;
+		case Mode::normal_gt: process_normal_gt(key); break;
+		case Mode::normal_lt: process_normal_lt(key); break;
+		case Mode::normal_c: process_normal_c(clipboard, key); break;
 		case Mode::normal_cf: process_normal_cf(clipboard, key); break;
 		case Mode::normal_ct: process_normal_ct(clipboard, key); break;
 		case Mode::normal_ci: process_normal_ci(clipboard, key); break;
 		case Mode::normal_ca: process_normal_ca(clipboard, key); break;
-		case Mode::normal_d: process_normal_d(clipboard, key, row_count); break;
+		case Mode::normal_d: process_normal_d(clipboard, key); break;
 		case Mode::normal_df: process_normal_df(clipboard, key); break;
 		case Mode::normal_dt: process_normal_dt(clipboard, key); break;
 		case Mode::normal_di: process_normal_di(clipboard, key); break;
@@ -202,7 +202,7 @@ class Buffer {
 		case Mode::normal_yt: process_normal_yt(clipboard, key); break;
 		case Mode::normal_yi: process_normal_yi(clipboard, key); break;
 		case Mode::normal_ya: process_normal_ya(clipboard, key); break;
-		case Mode::normal_z: process_normal_z(key, row_count); break;
+		case Mode::normal_z: process_normal_z(key); break;
 		case Mode::insert: process_insert(key); break;
 		};
 
@@ -224,10 +224,10 @@ class Buffer {
 		state().insert("\n" + state().copy_line_whitespace());
 	}
 
-	void process_normal_O(unsigned row_count) {
+	void process_normal_O() {
 		state().line_start();
 		state().insert(state().copy_line_whitespace() + "\n");
-		state().prev_line(row_count);
+		state().prev_line();
 		state().line_end();
 	}
 
@@ -239,7 +239,7 @@ class Buffer {
 		state().prev_char();
 	}
 
-	void process_normal(std::string& clipboard, std::string& url, unsigned key, unsigned row_count) {
+	void process_normal(std::string& clipboard, std::string& url, unsigned key) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
@@ -256,7 +256,7 @@ class Buffer {
 		else if (key == 'a') { begin_record(key); state().next_char(); mode = Mode::insert; }
 		else if (key == 'A') { begin_record(key); state().line_end(); mode = Mode::insert; }
 		else if (key == 'o') { begin_record(key); process_normal_o(); mode = Mode::insert; }
-		else if (key == 'O') { begin_record(key); process_normal_O(row_count); mode = Mode::insert; }
+		else if (key == 'O') { begin_record(key); process_normal_O(); mode = Mode::insert; }
 		else if (key == 's') { begin_record(key); state().erase(); mode = Mode::insert; }
 		else if (key == 'S') { begin_record(key); clipboard = state().erase_line_contents(); mode = Mode::insert; }
 		else if (key == 'C') { begin_record(key); clipboard = state().erase_to_line_end(); mode = Mode::insert; }
@@ -264,60 +264,60 @@ class Buffer {
 		else if (key == 'D') { begin_end_record(key); clipboard = state().erase_to_line_end(); }
 		else if (key == 'J') { begin_end_record(key); process_normal_J(); }
 		else if (key == '~') { begin_end_record(key); state().change_case(); }
-		else if (key == 'P') { state().paste_before(clipboard, row_count); }
-		else if (key == 'p') { state().paste_after(clipboard, row_count); }
+		else if (key == 'P') { state().paste_before(clipboard); }
+		else if (key == 'p') { state().paste_after(clipboard); }
 		else if (key == '0') { state().line_start(); }
 		else if (key == '_') { state().line_start_whitespace(); }
 		else if (key == '$') { state().line_end(); }
 		else if (key == 'h') { state().prev_char(); }
-		else if (key == 'j') { state().next_line(row_count); }
-		else if (key == 'k') { state().prev_line(row_count); }
+		else if (key == 'j') { state().next_line(); }
+		else if (key == 'k') { state().prev_line(); }
 		else if (key == 'l') { state().next_char(); }
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
 		else if (key == 'e') { state().word_end(); }
 		else if (key == '[') { state().enclosure_start(); }
 		else if (key == ']') { state().enclosure_end(); }
-		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); }
-		else if (key == 'G') { save_cursor(); state().buffer_end(row_count); }
-		else if (key == 'H') { save_cursor(); state().window_top(row_count); }
-		else if (key == 'M') { save_cursor(); state().window_center(row_count); }
-		else if (key == 'L') { save_cursor(); state().window_bottom(row_count); }
-		else if (key == '+') { save_cursor(); state().next_line(row_count); state().line_start_whitespace(); }
-		else if (key == '-') { save_cursor(); state().prev_line(row_count); state().line_start_whitespace(); }
+		else if (key == 'g') { save_cursor(); state().buffer_start(); }
+		else if (key == 'G') { save_cursor(); state().buffer_end(); }
+		else if (key == 'H') { save_cursor(); state().window_top(); }
+		else if (key == 'M') { save_cursor(); state().window_center(); }
+		else if (key == 'L') { save_cursor(); state().window_bottom(); }
+		else if (key == '+') { save_cursor(); state().next_line(); state().line_start_whitespace(); }
+		else if (key == '-') { save_cursor(); state().prev_line(); state().line_start_whitespace(); }
 		else if (key == ';') { line_find(); mode = Mode::normal; }
 		else if (key == ',') { line_rfind(); mode = Mode::normal; }
-		else if (key == '*') { save_cursor(); word_find_under_cursor(row_count); }
-		else if (key == '#') { save_cursor(); word_rfind_under_cursor(row_count); }
+		else if (key == '*') { save_cursor(); word_find_under_cursor(); }
+		else if (key == '#') { save_cursor(); word_rfind_under_cursor(); }
 		else if (key == '/') { highlight.clear(); mode = Mode::normal_slash; }
 		else if (key == '?') { highlight.clear(); mode = Mode::normal_question; }
-		else if (key == 'n') { word_find_again(row_count); }
-		else if (key == 'N') { word_rfind_again(row_count); }
+		else if (key == 'n') { word_find_again(); }
+		else if (key == 'N') { word_rfind_again(); }
 		else if (key == '.') { repeat = true; }
-		else if (key == '\'') { load_cursor(); state().cursor_center(row_count); }
+		else if (key == '\'') { load_cursor(); state().cursor_center(); }
 		else if (key == '\r') { url = state().get_url(); }
 	}
 
-	void process_normal_number(unsigned key, unsigned row_count) {
+	void process_normal_number(unsigned key) {
 		if (key >= '0' && key <= '9') { accumulate(key); }
-		else if (key == 'j') { save_cursor(); state().jump_down(accu, row_count); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { save_cursor(); state().jump_up(accu, row_count); accu = 0; mode = Mode::normal; }
-		else if (key == 'g') { save_cursor(); state().buffer_start(row_count); state().jump_down(accu > 0 ? accu - 1 : 0, row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { save_cursor(); state().jump_down(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { save_cursor(); state().jump_up(accu); accu = 0; mode = Mode::normal; }
+		else if (key == 'g') { save_cursor(); state().buffer_start(); state().jump_down(accu > 0 ? accu - 1 : 0); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_slash(unsigned key, unsigned row_count) {
+	void process_normal_slash(unsigned key) {
 		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
-		else if (key == '\r') { word_find_partial(row_count); mode = Mode::normal; }
-		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(row_count); } }
-		else { highlight += key; word_find_partial(row_count); }
+		else if (key == '\r') { word_find_partial(); mode = Mode::normal; }
+		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(); } }
+		else { highlight += key; word_find_partial(); }
 	}
 
-	void process_normal_question(unsigned key, unsigned row_count) {
+	void process_normal_question(unsigned key) {
 		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
-		else if (key == '\r') { word_rfind_partial(row_count); mode = Mode::normal; }
-		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(row_count); } }
-		else { highlight += key; word_rfind_partial(row_count); }
+		else if (key == '\r') { word_rfind_partial(); mode = Mode::normal; }
+		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(); } }
+		else { highlight += key; word_rfind_partial(); }
 	}
 	void process_normal_f(unsigned key) {
 		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
@@ -334,10 +334,10 @@ class Buffer {
 		else { end_record(key); clipboard = state().erase(); state().insert(std::string((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
 	}
 
-	void process_normal_z(unsigned key, unsigned row_count) {
-		if (key == 'z') { state().cursor_center(row_count); mode = Mode::normal; }
-		else if (key == 't') { state().cursor_top(row_count); mode = Mode::normal; }
-		else if (key == 'b') { state().cursor_bottom(row_count); mode = Mode::normal; }
+	void process_normal_z(unsigned key) {
+		if (key == 'z') { state().cursor_center(); mode = Mode::normal; }
+		else if (key == 't') { state().cursor_top(); mode = Mode::normal; }
+		else if (key == 'b') { state().cursor_bottom(); mode = Mode::normal; }
 		else { mode = Mode::normal; }
 	}
 
@@ -379,30 +379,30 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_gt(unsigned key, unsigned row_count) {
+	void process_normal_gt(unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == '>') { end_record(key); state().indent_right(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_right_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_right_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_lt(unsigned key, unsigned row_count) {
+	void process_normal_lt(unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == '<') { end_record(key); state().indent_left(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'j') { end_record(key); state().indent_left_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); state().indent_left_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else { accu = 0; mode = Mode::normal; }
 	}
 
-	void process_normal_c(std::string& clipboard, unsigned key, unsigned row_count) {
+	void process_normal_c(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'c') { append_record(key); clipboard = state().erase_line_contents(); accu = 0; mode = Mode::insert; }
 		else if (key == 'w') { append_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
 		else if (key == 'g') { append_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::insert; }
 		else if (key == 'G') { append_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::insert; }
 		else if (key == 'j') { append_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
-		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::insert; }
+		else if (key == 'k') { append_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::insert; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_cf; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_ct; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_ci; }
@@ -433,14 +433,14 @@ class Buffer {
 		else { mode = Mode::normal; }
 	}
 
-	void process_normal_d(std::string& clipboard, unsigned key, unsigned row_count) {
+	void process_normal_d(std::string& clipboard, unsigned key) {
 		if (key >= '0' && key <= '9') { append_record(key); accumulate(key); }
 		else if (key == 'd') { end_record(key); clipboard = state().erase_line(); accu = 0; mode = Mode::normal; }
 		else if (key == 'w') { end_record(key); clipboard = state().erase_words(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'g') { end_record(key); clipboard = state().erase_all_up(); accu = 0; mode = Mode::normal; }
 		else if (key == 'G') { end_record(key); clipboard = state().erase_all_down(); accu = 0; mode = Mode::normal; }
 		else if (key == 'j') { end_record(key); clipboard = state().erase_lines_down(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
-		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(std::max(1u, accu), row_count); accu = 0; mode = Mode::normal; }
+		else if (key == 'k') { end_record(key); clipboard = state().erase_lines_up(std::max(1u, accu)); accu = 0; mode = Mode::normal; }
 		else if (key == 'f') { append_record(key); accu = 0; mode = Mode::normal_df; }
 		else if (key == 't') { append_record(key); accu = 0; mode = Mode::normal_dt; }
 		else if (key == 'i') { append_record(key); accu = 0; mode = Mode::normal_di; }
@@ -580,22 +580,24 @@ public:
 		stack.set_text(text);
 	}
 
-	void process(std::string& clipboard, std::string& url, unsigned key, unsigned col_count, unsigned row_count) {
-		process_key(clipboard, url, key, col_count, row_count);
-		if (repeat) { repeat = false; replay(clipboard, url, col_count, row_count); }
+	void process(std::string& clipboard, std::string& url, unsigned key) {
+		process_key(clipboard, url, key);
+		if (repeat) { repeat = false; replay(clipboard, url); }
 	}
 
-	void cull(Characters& characters, unsigned col_count, unsigned row_count) {
-		state().set_line_count(push_text(characters, col_count, row_count));
+	unsigned cull(Characters& characters, unsigned col_count, unsigned row_count) const {
+		return push_text(characters, col_count, row_count);
 	}
 
-	void jump(size_t position, unsigned row_count) {
+	void jump(size_t position) {
 		state().set_cursor(position);
-		state().cursor_center(row_count);
+		state().cursor_center();
 	}
 
-	void window_down(unsigned row_count) { state().window_down(row_count); }
-	void window_up(unsigned row_count) { state().window_up(row_count); }
+	void set_line_count(unsigned count) { state().set_line_count(count); }
+
+	void window_down() { state().window_down(); }
+	void window_up() { state().window_up(); }
 
 	const std::string_view get_filename() const { return filename; }
 

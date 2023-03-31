@@ -538,8 +538,8 @@ class Switcher {
 		else if (key == 's') { save(); }
 		else if (key == 'e') { process_space_e(); }
 		else if (key == 'f') { process_space_f(); }
-		else if (key == 'i') { current().window_down(row_count); }
-		else if (key == 'o') { current().window_up(row_count); }
+		else if (key == 'i') { current().window_down(); }
+		else if (key == 'o') { current().window_up(); }
 		else if (key >= '0' && key <= '9') { select_index(key - '0'); }
 		else if (key == 'h') { select_previous(); }
 		else if (key == 'l') { select_next(); }
@@ -547,10 +547,10 @@ class Switcher {
 	}
 
 	void process_normal(unsigned key) {
-		current().process(clipboard, url, key, col_count, row_count);
+		current().process(clipboard, url, key);
 		if (!url.empty()) {
 			open(extract_filename(url));
-			current().jump(extract_location(url), row_count);
+			current().jump(extract_location(url));
 			url.clear();
 		}
 	}
@@ -587,7 +587,7 @@ public:
 	Characters cull() {
 		Characters characters;
 		push_tabs(characters);
-		current().cull(characters, col_count, row_count);
+		current().set_line_count(current().cull(characters, col_count, row_count));
 		return characters;
 	}
 };

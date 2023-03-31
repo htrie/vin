@@ -247,81 +247,81 @@ public:
 		return current.begin() == 0;
 	}
 
-	void next_line(unsigned row_count) {
+	void next_line() {
 		const Line current(text, cursor);
 		const Line next = incr(current);
 		cursor = next.to_absolute(current.to_relative(cursor));
 		cursor_clamp();
 	}
 
-	void prev_line(unsigned row_count) {
+	void prev_line() {
 		const Line current(text, cursor);
 		const Line prev = decr(current);
 		cursor = prev.to_absolute(current.to_relative(cursor));
 		cursor_clamp();
 	}
 
-	void buffer_end(unsigned row_count) {
+	void buffer_end() {
 		const Line current(text, cursor);
 		const Line last(text, text.size() - 1);
 		cursor = last.to_absolute(current.to_relative(cursor));
 		cursor_clamp();
 	}
 
-	void buffer_start(unsigned row_count) {
+	void buffer_start() {
 		const Line current(text, cursor);
 		const Line first(text, 0);
 		cursor = first.to_absolute(current.to_relative(cursor));
 		cursor_clamp();
 	}
 
-	void jump_down(unsigned skip, unsigned row_count) {
-		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
+	void jump_down(unsigned skip) {
+		for (unsigned i = 0; i < skip; i++) { next_line(); }
 		cursor_clamp();
 	}
 
-	void jump_up(unsigned skip, unsigned row_count) {
-		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
+	void jump_up(unsigned skip) {
+		for (unsigned i = 0; i < skip; i++) { prev_line(); }
 		cursor_clamp();
 	}
 
-	void window_down(unsigned row_count) {
+	void window_down() {
 		const unsigned cursor_row = find_cursor_row();
 		const unsigned down_row = cursor_row + line_count / 2;
 		const unsigned skip = down_row > cursor_row ? down_row - cursor_row : 0;
-		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
+		for (unsigned i = 0; i < skip; i++) { next_line(); }
 		cursor_clamp();
 	}
 
-	void window_up(unsigned row_count) {
+	void window_up() {
 		const unsigned cursor_row = find_cursor_row();
 		const unsigned up_row = cursor_row > line_count / 2 ? cursor_row - line_count / 2 : 0;
 		const unsigned skip = cursor_row - up_row;
-		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
+		for (unsigned i = 0; i < skip; i++) { prev_line(); }
 		cursor_clamp();
 	}
 
-	void window_top(unsigned row_count) {
+	void window_top() {
 		const unsigned cursor_row = find_cursor_row();
 		const unsigned top_row = begin_row;
 		const unsigned skip = cursor_row - top_row;
-		for (unsigned i = 0; i < skip; i++) { prev_line(row_count); }
+		for (unsigned i = 0; i < skip; i++) { prev_line(); }
 		cursor_clamp();
 	}
 
-	void window_center(unsigned row_count) {
+	void window_center() {
 		const unsigned cursor_row = find_cursor_row();
 		const unsigned middle_row = begin_row + line_count / 2;
 		const unsigned skip = middle_row > cursor_row ? middle_row - cursor_row : cursor_row - middle_row;
-		for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line(row_count) : prev_line(row_count); }
+		for (unsigned i = 0; i < skip; i++) { middle_row > cursor_row ? next_line() : prev_line(); }
 		cursor_clamp();
 	}
 
-	void window_bottom(unsigned row_count) {
+	void window_bottom() {
 		const unsigned cursor_row = find_cursor_row();
 		const unsigned bottom_row = begin_row + line_count;
 		const unsigned skip = bottom_row > cursor_row ? bottom_row - cursor_row : 0;
-		for (unsigned i = 0; i < skip; i++) { next_line(row_count); }
+		for (unsigned i = 0; i < skip; i++) { next_line(); }
 		cursor_clamp();
 	}
 
@@ -330,19 +330,19 @@ public:
 		begin_row = std::clamp(begin_row, cursor_row > line_count ? cursor_row - line_count : 0, cursor_row);
 	}
 
-	void cursor_center(unsigned row_count) {
+	void cursor_center() {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = cursor_row > row_count / 2 ? cursor_row - row_count / 2 : 0;
+		begin_row = cursor_row > line_count / 2 ? cursor_row - line_count / 2 : 0;
 	}
 
-	void cursor_top(unsigned row_count) {
+	void cursor_top() {
 		const unsigned cursor_row = find_cursor_row();
 		begin_row = cursor_row;
 	}
 
-	void cursor_bottom(unsigned row_count) {
+	void cursor_bottom() {
 		const unsigned cursor_row = find_cursor_row();
-		begin_row = cursor_row > row_count ? cursor_row - row_count : 0;
+		begin_row = cursor_row > line_count ? cursor_row - line_count : 0;
 	}
 
 	void remove_line_whitespace() {
@@ -588,14 +588,14 @@ public:
 		return s;
 	}
 
-	std::string erase_lines_up(unsigned count, unsigned row_count) {
+	std::string erase_lines_up(unsigned count) {
 		std::string s;
 		bool first_line = false;
 		for (unsigned i = 0; i <= count; i++) {
 			if (first_line) break; // Don't erase twice.
 			first_line = is_first_line();
 			s.insert(0, erase_line());
-			prev_line(row_count);
+			prev_line();
 		}
 		return s;
 	}
@@ -636,18 +636,18 @@ public:
 		return {};
 	}
 
-	void paste_before(const std::string_view s, unsigned row_count) {
+	void paste_before(const std::string_view s) {
 		if (s.find("\n") != std::string::npos) {
-			line_start(); insert(s); prev_line(row_count);
+			line_start(); insert(s); prev_line();
 		}
 		else {
 			insert(s);
 		}
 	}
 
-	void paste_after(const std::string_view s, unsigned row_count) {
+	void paste_after(const std::string_view s) {
 		if (s.find("\n") != std::string::npos) {
-			next_line(row_count); line_start(); insert(s); prev_line(row_count);
+			next_line(); line_start(); insert(s); prev_line();
 		}
 		else {
 			next_char(); insert(s);
@@ -660,21 +660,21 @@ public:
 			insert("\t");
 	}
 
-	void indent_right_down(unsigned count, unsigned row_count) {
+	void indent_right_down(unsigned count) {
 		line_start_whitespace();
 		insert("\t");
 		for (unsigned i = 0; i < count; ++i) {
-			next_line(row_count);
+			next_line();
 			line_start_whitespace();
 			insert("\t");
 		}
 	}
 
-	void indent_right_up(unsigned count, unsigned row_count) {
+	void indent_right_up(unsigned count) {
 		line_start_whitespace();
 		insert("\t");
 		for (unsigned i = 0; i < count; ++i) {
-			prev_line(row_count);
+			prev_line();
 			line_start_whitespace();
 			insert("\t");
 		}
@@ -687,21 +687,21 @@ public:
 		line_start_whitespace();
 	}
 
-	void indent_left_down(unsigned count, unsigned row_count) {
+	void indent_left_down(unsigned count) {
 		line_start();
 		erase_if('\t');
 		for (unsigned i = 0; i < count; ++i) {
-			next_line(row_count);
+			next_line();
 			line_start();
  			erase_if('\t');
 		}
 	}
 
-	void indent_left_up(unsigned count, unsigned row_count) {
+	void indent_left_up(unsigned count) {
 		line_start();
 		erase_if('\t');
 		for (unsigned i = 0; i < count; ++i) {
-			prev_line(row_count);
+			prev_line();
 			line_start();
 			erase_if('\t');
 		}
