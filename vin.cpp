@@ -342,30 +342,23 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		clear();
+		clear(); // TODO doesn't display beore resizing
 
 		for (auto& character : characters) {
 			const auto* glyph = find_glyph(character.index);
 			if (glyph == nullptr)
 				glyph = find_glyph(Glyph::UNKNOWN);
 			if (glyph) {
-				for (unsigned j = 0; j < glyph->h; ++j) { 
+				for (unsigned j = 0; j < glyph->h; ++j) { // TODO use helper functions
 					for (unsigned i = 0; i < glyph->w; ++i) {
 						const unsigned src = (glyph->y + j) * font_width + (glyph->x + i);
 						const unsigned dst = (character.row * spacing_line + j + glyph->y_off) * width + (character.col * spacing_character + i + glyph->x_off);
 						if (dst < width * height)
-							pixels[dst] = Color::gray(font_pixels[src]).as_uint(); // TODO: blending. // TODO: Color.
+							pixels[dst] = Color::gray(font_pixels[src]).as_uint(); // TODO blending // TODO color
 					}
 				}
 			}
 		}
-
-		// TODO blit characters
-		static unsigned i = 0;
-		static unsigned j = 0;
-		i = (i + 1) % width;
-		j = (j + 2) % height;
-		pixels[j * width + i] = colors().text.as_uint();
 
 		blit();
 	}
@@ -507,13 +500,11 @@ class Application {
 	Window window;
 	Switcher switcher;
 
-	bool maximized = false;
 	bool minimized = false;
 	bool dirty = false;
 	bool space_down = false;
 	bool quit = false;
 
-	void set_maximized(bool b) { maximized = b; }
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
@@ -581,7 +572,6 @@ class Application {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
 				const unsigned width = lparam & 0xffff;
 				const unsigned height = (lparam & 0xffff0000) >> 16;
-				app->set_maximized(wparam == SIZE_MAXIMIZED);
 				app->set_minimized(wparam == SIZE_MINIMIZED);
 				app->set_dirty(true);
 				app->resize(width, height);
