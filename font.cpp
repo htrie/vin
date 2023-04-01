@@ -204,16 +204,16 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	out << "#define FONT_GLYPH" << std::endl;
 	out << "struct FontGlyph {" << std::endl;
 	out << "	uint16_t id = 0;" << std::endl;
-	out << "	float x = 0.0f;" << std::endl;
-	out << "	float y = 0.0f;" << std::endl;
-	out << "	float w = 0.0f;" << std::endl;
-	out << "	float h = 0.0f;" << std::endl;
-	out << "	float x_off = 0.0f;" << std::endl;
-	out << "	float y_off = 0.0f;" << std::endl;
-	out << "	float x_adv = 0.0f;" << std::endl;
+	out << "	uint16_t x = 0;" << std::endl;
+	out << "	uint16_t y = 0;" << std::endl;
+	out << "	uint16_t w = 0;" << std::endl;
+	out << "	uint16_t h = 0;" << std::endl;
+	out << "	uint16_t x_off = 0;" << std::endl;
+	out << "	uint16_t y_off = 0;" << std::endl;
+	out << "	uint16_t x_adv = 0;" << std::endl;
 	out << std::endl;
 	out << "	FontGlyph() {}" << std::endl;
-	out << "	FontGlyph(uint16_t id, float x, float y, float w, float h, float x_off, float y_off, float x_adv)" << std::endl;
+	out << "	FontGlyph(uint16_t id, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t x_off, uint16_t y_off, uint16_t x_adv)" << std::endl;
 	out << "		: id(id), x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}" << std::endl;
 	out << "};" << std::endl;
 	out << std::endl;
@@ -225,13 +225,13 @@ void output(const std::string_view font_filename, const Tga& tga, const Fnt& fnt
 	for (unsigned i = 0; i < fnt.chars.values.size(); i++) {
 		const auto& c = fnt.chars.values[i];
 		out << "\t{ " << c.id << ", " <<
-			std::to_string((double)c.x / (double)tga.header.width) << "f, " << 
-			std::to_string((double)c.y / (double)tga.header.height) << "f, " << 
-			std::to_string((double)c.width / (double)tga.header.width) << "f, " << 
-			std::to_string((double)c.height / (double)tga.header.height) << "f, " << 
-			std::to_string((double)c.xoffset / (double)tga.header.width) << "f, " << 
-			std::to_string((double)c.yoffset / (double)tga.header.height) << "f, " << 
-			std::to_string((double)c.xadvance / (double)tga.header.width) << "f }";
+			std::to_string(c.x) << ", " << 
+			std::to_string(c.y) << ", " << 
+			std::to_string(c.width) << ", " << 
+			std::to_string(c.height) << ", " << 
+			std::to_string(c.xoffset) << ", " << 
+			std::to_string(c.yoffset ) << ", " << 
+			std::to_string(c.xadvance) << " }";
 		if (i < (unsigned)fnt.chars.values.size() - 1)
 			out << ",";
 		out << std::endl;

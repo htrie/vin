@@ -249,13 +249,15 @@ const FontGlyph* find_glyph(uint16_t id) {
 
 class Window {
 	HWND hwnd = nullptr;
+
 	COLORREF* pixels = nullptr;
+	static_assert(sizeof(COLORREF) == sizeof(uint32_t));
 
 	unsigned width = 0;
 	unsigned height = 0;
 
-	float spacing_character = 9.0f;
-	float spacing_line = 20.0f;
+	unsigned spacing_character = 9;
+	unsigned spacing_line = 20;
 
 	static HWND create(HINSTANCE hinstance, WNDPROC proc, void* data) {
 		const char* name = "vin";
@@ -342,6 +344,22 @@ public:
 	void redraw(const Characters& characters) {
 		clear();
 
+		for (auto& character : characters) {
+			const auto* glyph = find_glyph(character.index);
+			if (glyph == nullptr)
+				glyph = find_glyph(Glyph::UNKNOWN);
+			if (glyph) {
+				for (unsigned j = 0; j < glyph->h; ++j) { 
+					for (unsigned i = 0; i < glyph->w; ++i) {
+						const unsigned src = (glyph->y + j) * font_width + (glyph->x + i);
+						const unsigned dst = (character.row * spacing_line + j + glyph->y_off) * width + (character.col * spacing_character + i + glyph->x_off);
+						if (dst < width * height)
+							pixels[dst] = Color::gray(font_pixels[src]).as_uint(); // TODO: blending. // TODO: Color.
+					}
+				}
+			}
+		}
+
 		// TODO blit characters
 		static unsigned i = 0;
 		static unsigned j = 0;
@@ -352,8 +370,8 @@ public:
 		blit();
 	}
 
-	unsigned get_row_count() const { return (unsigned)((float)width / spacing_character - 0.5f); }
-	unsigned get_col_count() const { return (unsigned)((float)height / spacing_line - 0.5f); }
+	unsigned get_col_count() const { return (unsigned)((float)width / (float)spacing_character - 0.5f); }
+	unsigned get_row_count() const { return (unsigned)((float)height / (float)spacing_line - 0.5f); }
 };
 
 class Switcher {
@@ -456,7 +474,7 @@ class Switcher {
 		const unsigned row = 0;
 		unsigned col = 0;
 		for (size_t i = 0; i < buffers.size(); ++i) {
-			push_line(characters, i == active ? colors().bar_text : colors().bar, (float)row, col, col + (int)tabs[i].size());
+			push_line(characters, i == active ? colors().bar_text : colors().bar, row, col, col + (int)tabs[i].size());
 			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tabs[i]);
 			col += 1;
 		}

@@ -28,11 +28,6 @@ struct Color {
 	static Color argb(unsigned a, unsigned r, unsigned g, unsigned b) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color gray(unsigned c) { Color color; color.a = (uint8_t)255; color.r = (uint8_t)c;  color.g = (uint8_t)c;  color.b = (uint8_t)c; return color; }
-
-	std::array<float, 4> rgba() const { return { (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f }; }
-
-	bool operator==(const Color& o) const { return b == o.b && g == o.g && r == o.r && a == o.a; }
-	bool operator!=(const Color& o) const { return !(*this == o); }
 };
 
 struct Colors {
@@ -147,18 +142,16 @@ static unsigned compute_letter_index(const uint16_t c) {
 struct Character {
 	uint16_t index;
 	Color color = Color::rgba(255, 0, 0, 255);
-	float row = 0.0f;
-	float col = 0.0f;
+	unsigned row = 0;
+	unsigned col = 0;
 	float scale_x = 1.0f;
 	float scale_y = 1.0f;
 	float offset_x = 0.0f;
 	float offset_y = 0.0f;
 
 	Character() {}
-	Character(uint16_t index, Color color, float row, float col, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
-		: index(index), color(color), row(row), col(col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
 	Character(uint16_t index, Color color, unsigned row, unsigned col, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
-		: index(index), color(color), row((float)row), col((float)col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
+		: index(index), color(color), row(row), col(col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -190,9 +183,9 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 	}
 }
 
-void push_line(Characters& characters, Color color, float row, unsigned col_begin, unsigned col_end) {
+void push_line(Characters& characters, Color color, unsigned row, unsigned col_begin, unsigned col_end) {
 	for (unsigned i = col_begin; i < col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, float(i), 1.2f, 1.0f, 0.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, color, row, i, 1.2f, 1.0f, 0.0f, 0.0f);
 	}
 }
 
