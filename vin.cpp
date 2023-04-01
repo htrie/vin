@@ -299,8 +299,10 @@ class Window {
 	}
 
 	void reset() {
-		if (pixels)
+		if (pixels) {
 			free(pixels);
+			pixels = nullptr;
+		}
 	}
 
 	void alloc() {
@@ -309,6 +311,29 @@ class Window {
 
 	void clear() {
 		memset(pixels, colors().clear.as_uint(), width * height * sizeof(COLORREF));
+	}
+
+	void render_glyph(const Character& character, const FontGlyph& glyph) {
+		unsigned src = (glyph.y) * font_width + (glyph.x);
+		unsigned dst = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
+		for (unsigned j = 0; j < glyph.h; ++j) {
+			for (unsigned i = 0; i < glyph.w; ++i) {
+				if (dst < width * height)
+					pixels[dst + i] = Color::gray(font_pixels[src + i]).as_uint(); // TODO blending // TODO color
+			}
+			src += font_width;
+			dst += width;
+		}
+	}
+
+	void render(const Characters& characters) {
+		for (auto& character : characters) {
+			const auto* glyph = find_glyph(character.index);
+			if (glyph == nullptr)
+				glyph = find_glyph(Glyph::UNKNOWN);
+			if (glyph)
+				render_glyph(character, *glyph);
+		}
 	}
 
 	void blit() {
@@ -320,6 +345,7 @@ class Window {
 		DeleteDC(src);
 		DeleteObject(map);
 	}
+
 public:
 	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int nshow)
 		: hwnd(create(hinstance, proc, data)) {
@@ -336,30 +362,13 @@ public:
 	void resize(unsigned w, unsigned h) {
 		width = w;
 		height = h;
-
 		reset();
 		alloc();
 	}
 
 	void redraw(const Characters& characters) {
 		clear(); // TODO doesn't display beore resizing
-
-		for (auto& character : characters) {
-			const auto* glyph = find_glyph(character.index);
-			if (glyph == nullptr)
-				glyph = find_glyph(Glyph::UNKNOWN);
-			if (glyph) {
-				for (unsigned j = 0; j < glyph->h; ++j) { // TODO use helper functions
-					for (unsigned i = 0; i < glyph->w; ++i) {
-						const unsigned src = (glyph->y + j) * font_width + (glyph->x + i);
-						const unsigned dst = (character.row * spacing_line + j + glyph->y_off) * width + (character.col * spacing_character + i + glyph->x_off);
-						if (dst < width * height)
-							pixels[dst] = Color::gray(font_pixels[src]).as_uint(); // TODO blending // TODO color
-					}
-				}
-			}
-		}
-
+		render(characters);
 		blit();
 	}
 
