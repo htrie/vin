@@ -6,6 +6,7 @@
 #define _HAS_EXCEPTIONS 0
 
 #include <array>
+#include <unordered_map>
 #include <iostream>
 #include <filesystem>
 #include <sstream>
@@ -33,6 +34,13 @@ class Font {
 	SFT_Font* font = nullptr;
 	SFT sft;
 
+	struct Glyph {
+		SFT_GMetrics metrics;
+		// storage
+	};
+
+	std::unordered_map<SFT_Glyph, Glyph> glyphs;
+
 public:
 	Font(const std::string_view filename, double size) {
 		memset(&sft, 0, sizeof sft);
@@ -54,7 +62,7 @@ public:
 class Window {
 	HWND hwnd = nullptr;
 
-	COLORREF* pixels = nullptr;
+	std::vector<COLORREF> pixels;
 	static_assert(sizeof(COLORREF) == sizeof(uint32_t));
 
 	unsigned width = 0;
@@ -102,19 +110,8 @@ class Window {
 		ShowWindow(hwnd, nshow);
 	}
 
-	void reset() {
-		if (pixels) {
-			free(pixels);
-			pixels = nullptr;
-		}
-	}
-
-	void alloc() {
-		pixels = (COLORREF*)malloc(width * height * sizeof(COLORREF));
-	}
-
 	void clear() {
-		memset(pixels, colors().clear.as_uint(), width * height * sizeof(COLORREF));
+		memset(pixels.data(), colors().clear.as_uint(), width * height * sizeof(COLORREF));
 	}
 
 	void render_glyph(const Character& character, const FontGlyph& glyph) {
@@ -152,7 +149,7 @@ class Window {
 	}
 
 	void blit() {
-		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels);
+		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels.data());
 		const HDC hdc = GetDC(hwnd);
 		const HDC src = CreateCompatibleDC(GetDC(hwnd));
 		SelectObject(src, map);
@@ -171,14 +168,12 @@ public:
 
 	~Window() {
 		destroy(hwnd);
-		reset();
 	}
 
 	void resize(unsigned width, unsigned height) {
 		this->width = width;
 		this->height = height;
-		reset();
-		alloc();
+		pixels.resize(width * height);
 	}
 
 	void redraw(const Characters& characters) {
