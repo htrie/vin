@@ -15,7 +15,14 @@
 #include <dwmapi.h>
 #include <winhttp.h>
 
-#include "schrift.h"
+void verify(bool expr) {
+#ifndef NDEBUG
+	if (!(expr)) {
+		abort();
+	}
+#endif
+}
+
 #include "resource.h"
 #include "text.h"
 #include "state.h"
