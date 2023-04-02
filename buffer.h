@@ -95,10 +95,11 @@ class Buffer {
 	}
 
 	void accumulate(unsigned key) {
-		verify(key >= '0' && key <= '9');
-		const auto digit = (unsigned)key - (unsigned)'0';
-		accu *= 10;
-		accu += digit;
+		if (key >= '0' && key <= '9') {
+			const auto digit = (unsigned)key - (unsigned)'0';
+			accu *= 10;
+			accu += digit;
+		}
 	}
 
 	bool is_mode_search() const {

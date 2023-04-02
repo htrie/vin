@@ -245,8 +245,7 @@ class Word {
 
 public:
 	Word(const std::string_view text, size_t pos) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			start = pos;
 			finish = pos;
 			const auto c = text[pos];
@@ -267,7 +266,6 @@ public:
 				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
-			verify(start <= finish);
 			is_class = is_uppercase_letter(text[start]) || text[start] == '_';
 			is_function = finish < text.size() - 1 ? text[finish + 1] == '(' : false;
 		}
@@ -326,8 +324,7 @@ class Enclosure {
 
 public:
 	Enclosure(const std::string_view text, size_t pos, uint16_t left, uint16_t right) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			start = pos;
 			finish = pos;
 			const auto prev = find_prev(text, pos, left, right);
@@ -336,7 +333,6 @@ public:
 				start = prev != std::string::npos ? prev : pos;
 				finish = next != std::string::npos ? next : pos;
 			}
-			verify(start <= finish);
 		}
 	}
 
@@ -384,8 +380,7 @@ class Quote{
 
 public:
 	Quote(const std::string_view text, size_t pos, uint16_t quote) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			start = pos;
 			finish = pos;
 			const auto prev = find_prev(text, pos, quote);
@@ -394,7 +389,6 @@ public:
 				start = prev != std::string::npos ? prev : pos;
 				finish = next != std::string::npos ? next : pos;
 			}
-			verify(start <= finish);
 		}
 	}
 
@@ -410,24 +404,21 @@ class Line {
 
 public:
 	Line(const std::string_view text, size_t pos) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
 			start = pn != std::string::npos ? (pn < pos ? pn + 1 : pn) : 0;
 			finish = nn != std::string::npos ? nn : text.size() - 1;
-			verify(start <= finish);
 		}
 	}
 
 	size_t to_relative(size_t pos) const {
-		verify(pos != std::string::npos);
-		verify(pos >= start && pos <= finish);
-		return pos - start;
+		if (pos >= start && pos <= finish)
+			return pos - start;
+		return pos;
 	}
 
 	size_t to_absolute(size_t pos) const {
-		verify(pos != std::string::npos);
 		return std::min(start + pos, finish);
 	}
 
@@ -451,8 +442,7 @@ class Comment {
 
 public:
 	Comment(const std::string_view text, size_t pos) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
 			const auto nn = text.find("\n", pos);
 			const auto begin = pn != std::string::npos && pn < pos ? pn : 0;
@@ -461,7 +451,6 @@ public:
 			if (n != std::string::npos && n < end) {
 				start = n;
 				finish = end;
-				verify(start <= finish);
 			}
 		}
 	}
@@ -483,14 +472,12 @@ class Url {
 
 public:
 	Url(const std::string_view text, size_t pos) {
-		if (text.size() > 0) {
-			verify(pos < text.size());
+		if (text.size() > 0 && pos < text.size()) {
 			start = pos;
 			finish = pos;
 			const auto c = text[pos];
 			while(test(text, finish + 1)) { finish++; }
 			while(test(text, start - 1)) { start--; }
-			verify(start <= finish);
 		}
 	}
 

@@ -15,14 +15,6 @@
 #include <dwmapi.h>
 #include <winhttp.h>
 
-void verify(bool expr) {
-#ifndef NDEBUG
-	if (!(expr)) {
-		abort();
-	}
-#endif
-}
-
 #include "resource.h"
 #include "text.h"
 #include "state.h"
@@ -65,13 +57,13 @@ std::string get_error_string() {
 }
 
 std::wstring convert(const std::string_view url) {
-	const auto len = mbstowcs(nullptr, url.data(), 0);
-	verify(len == url.length());
-	std::wstring res;
-    res.resize(len);
-	const auto converted = mbstowcs(res.data(), url.data(), len + 1);
-	verify(converted == len);
-	return res;
+	if (const auto len = mbstowcs(nullptr, url.data(), 0); len == url.length()) {
+		std::wstring res;
+		res.resize(len);
+		if (const auto converted = mbstowcs(res.data(), url.data(), len + 1); converted == len)
+			return res;
+	}
+	return {};
 }
 
 std::string download(const HINTERNET request) {
@@ -81,8 +73,7 @@ std::string download(const HINTERNET request) {
 		if (WinHttpQueryDataAvailable(request, &size)) {
 			std::vector<char> partial(size);
 			DWORD downloaded = 0;
-			if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded)) {
-				verify(downloaded == size);
+			if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded) && downloaded == size) {
 				contents += std::string(partial.begin(), partial.end());
 			}
 		}
