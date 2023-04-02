@@ -369,7 +369,7 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		clear(); // TODO doesn't display before resizing
+		clear();
 		render(characters);
 		blit();
 	}
@@ -508,8 +508,8 @@ public:
 };
 
 class Application {
-	Window window;
 	Switcher switcher;
+	Window window;
 
 	bool minimized = false;
 	bool dirty = false;
