@@ -25,6 +25,10 @@
 const unsigned version_major = 1;
 const unsigned version_minor = 2;
 
+// TODO font class
+// TODO use libschrift
+// TODO remove bmfont
+
 class Window {
 	HWND hwnd = nullptr;
 
