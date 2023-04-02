@@ -59,7 +59,7 @@ private:
 public:
 	Font(const std::string_view filename, double size) {
 		memset(&sft, 0, sizeof sft);
-		if (font = sft_loadfile(filename.data())) {
+		if (font = sft_loadfile(filename.data())) { // TODO load font data from system // TODO font fallback
 			sft.font = font;
 			sft.xScale = size;
 			sft.yScale = size;
@@ -446,7 +446,7 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this, nshow)
-		, font("ProggyClean.ttf", 20.0) {
+		, font("PragmataPro_Mono_R_liga_0829.ttf", 20.0) {
 	}
 
 	void run() {
