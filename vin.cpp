@@ -80,7 +80,8 @@ public:
 	}
 
 	unsigned get_character_width() const { return (unsigned)(sft.xScale / 2); } // TODO base on font
-	unsigned get_line_height() const { return (unsigned)sft.yScale; }
+	unsigned get_line_height() const { return (unsigned)sft.yScale + 2; } // TODO base on font
+	unsigned get_line_baseline() const { return (unsigned)lmtx.ascender; }
 };
 
 class Window {
@@ -323,7 +324,8 @@ class Application {
 
 	void render_glyph(const Character& character, const Font::Glyph& glyph) {
 		unsigned in = 0;
-		unsigned out = (character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() + (character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
+		unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+			(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
 		auto* pixels = window.get_pixels();
 		auto color = character.color;
 		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
@@ -446,7 +448,7 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this, nshow)
-		, font("PragmataPro_Mono_R_liga_0829.ttf", 20.0) {
+		, font("PragmataPro_Mono_R_liga_0829.ttf", 20.0) { // TODO adjust font size base on dpi
 	}
 
 	void run() {
