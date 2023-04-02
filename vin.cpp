@@ -24,7 +24,7 @@
 #include "file.h"
 
 const unsigned version_major = 1;
-const unsigned version_minor = 2;
+const unsigned version_minor = 3;
 
 class Font {
 public:
