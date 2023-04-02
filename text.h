@@ -215,9 +215,21 @@ void push_space(Characters& characters, unsigned row, unsigned col) {
 	characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col);
 };
 
-class Word {
+class Range {
+protected:
 	size_t start = 0;
 	size_t finish = 0;
+
+public:
+	size_t begin() const { return start; }
+	size_t end() const { return finish; }
+
+	bool valid() const { return start < finish; }
+
+	bool contains(size_t pos) const { return start <= pos && pos < finish; }
+};
+
+class Word : public Range {
 	size_t finish_no_whitespace = 0;
 	bool is_class = false;
 	bool is_function = false;
@@ -271,9 +283,6 @@ public:
 		}
 	}
 
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
-	
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
 	}
@@ -294,10 +303,7 @@ public:
 	}
 };
 
-class Enclosure {
-	size_t start = 0;
-	size_t finish = 0;
-
+class Enclosure : public Range {
 	size_t find_prev(const std::string_view text, size_t pos, uint16_t left, uint16_t right) {
 		unsigned count = 1;
 		size_t index = pos > 0 && text[pos] == right ? pos - 1 : pos;
@@ -336,20 +342,12 @@ public:
 		}
 	}
 
-	bool valid() const { return start < finish; }
-
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
-
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start + 1, finish - start);
 	}
 };
 
-class Quote{
-	size_t start = 0;
-	size_t finish = 0;
-
+class Quote : public Range {
 	size_t find_prev(const std::string_view text, size_t pos, uint16_t quote) {
 		unsigned count = 0;
 		size_t last = pos;
@@ -391,17 +389,9 @@ public:
 			}
 		}
 	}
-
-	bool valid() const { return start < finish; }
-
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
 };
 
-class Line {
-	size_t start = 0;
-	size_t finish = 0;
-
+class Line : public Range {
 public:
 	Line(const std::string_view text, size_t pos) {
 		if (text.size() > 0 && pos < text.size()) {
@@ -422,9 +412,6 @@ public:
 		return std::min(start + pos, finish);
 	}
 
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
-
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish - start + 1);
 	}
@@ -436,10 +423,7 @@ public:
 	}
 };
 
-class Comment {
-	size_t start = 0;
-	size_t finish = 0;
-
+class Comment : public Range {
 public:
 	Comment(const std::string_view text, size_t pos) {
 		if (text.size() > 0 && pos < text.size()) {
@@ -454,15 +438,9 @@ public:
 			}
 		}
 	}
-
-	bool valid() const { return start < finish; }
-	bool contains(size_t pos) const { return start <= pos && pos < finish; }
 };
 
-class Url {
-	size_t start = 0;
-	size_t finish = 0;
-
+class Url : public Range {
 	bool test(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
 			return is_number(text[pos]) || is_letter(text[pos]) || is_url_punctuation(text[pos]);
@@ -480,9 +458,6 @@ public:
 			while(test(text, start - 1)) { start--; }
 		}
 	}
-
-	size_t begin() const { return start; }
-	size_t end() const { return finish; }
 
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish - start + 1);
