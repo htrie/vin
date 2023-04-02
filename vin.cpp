@@ -21,25 +21,23 @@
 #include "text.h"
 #include "state.h"
 #include "buffer.h"
-#include "font.h"
 #include "file.h"
 
 const unsigned version_major = 1;
 const unsigned version_minor = 2;
 
-// TODO use libschrift
-// TODO remove bmfont
-
 class Font {
-	SFT_Font* font = nullptr;
-	SFT sft;
-	SFT_LMetrics lmtx;
-
+public:
 	struct Glyph {
 		SFT_Glyph gid;
 		SFT_GMetrics mtx;
 		std::vector<uint8_t> pixels;
 	};
+
+private:
+	SFT_Font* font = nullptr;
+	SFT sft;
+	SFT_LMetrics lmtx;
 	std::unordered_map<uint32_t, Glyph> glyphs;
 	
 	const Glyph* add_glyph(uint32_t codepoint) {
@@ -323,38 +321,28 @@ class Application {
 		}
 	}
 
-	void render_glyph(const Character& character, const FontGlyph& glyph) {
-		int in = (glyph.y) * font_width + (glyph.x);
-		int out = (character.row * spacing_line + glyph.y_off) * window.get_width() + (character.col * spacing_character + glyph.x_off);
+	void render_glyph(const Character& character, const Font::Glyph& glyph) {
+		unsigned in = 0;
+		unsigned out = (character.row * spacing_line + glyph.mtx.yOffset) * window.get_width() + (character.col * spacing_character + (int)glyph.mtx.leftSideBearing);
 		auto* pixels = window.get_pixels();
 		auto color = character.color;
-		const bool force_opaque = glyph.id == Glyph::BLOCK;
-		for (unsigned j = 0; j < glyph.h; ++j) {
-			for (unsigned i = 0; i < glyph.w; ++i) {
+		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
+			for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
 				if (out + i < window.get_width() * window.get_height()) {
-					pixels[out + i].blend(color.set_alpha(force_opaque ? 255 : font_pixels[in + i]));
+					pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
 				}
 			}
-			in += font_width;
+			in += glyph.mtx.minWidth;
 			out += window.get_width();
 		}
 	}
 
-	const FontGlyph* find_glyph(uint16_t id) {
-		for (auto& glyph : font_glyphs) {
-			if (glyph.id == id)
-				return &glyph;
-		}
-		return nullptr;
-	}
-
 	void render(const Characters& characters) {
 		for (auto& character : characters) {
-			const auto* glyph = find_glyph(character.index);
-			if (glyph == nullptr)
-				glyph = find_glyph(Glyph::UNKNOWN);
-			if (glyph)
+			const auto* glyph = font.find_glyph(character.index);
+			if (glyph) {
 				render_glyph(character, *glyph);
+			}
 		}
 	}
 
