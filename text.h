@@ -154,14 +154,10 @@ struct Character {
 	Color color = Color::rgba(255, 0, 0, 255);
 	unsigned row = 0;
 	unsigned col = 0;
-	float scale_x = 1.0f;
-	float scale_y = 1.0f;
-	float offset_x = 0.0f;
-	float offset_y = 0.0f;
 
 	Character() {}
-	Character(uint16_t index, Color color, unsigned row, unsigned col, float scale_x = 1.0f, float scale_y = 1.0f, float offset_x = 0.0f, float offset_y = 0.0f)
-		: index(index), color(color), row(row), col(col), scale_x(scale_x), scale_y(scale_y), offset_x(offset_x), offset_y(offset_y) {}
+	Character(uint16_t index, Color color, unsigned row, unsigned col)
+		: index(index), color(color), row(row), col(col) {}
 };
 
 typedef std::vector<Character> Characters;
@@ -195,7 +191,7 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 
 void push_line(Characters& characters, Color color, unsigned row, unsigned col_begin, unsigned col_end) {
 	for (unsigned i = col_begin; i < col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, i, 1.2f, 1.0f, 0.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, color, row, i);
 	}
 }
 

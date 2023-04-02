@@ -460,12 +460,12 @@ class Buffer {
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
-		characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col, 1.2f, 1.0f, -1.0f, 0.0f);
+		characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
-			characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col + i, 1.2f, 1.0f, -1.0f, 0.0f);
+			characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col + i);
 		}
 	};
 
@@ -475,7 +475,7 @@ class Buffer {
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 5; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i, 1.2f, 1.0f, -1.0f, 0.0f);
+			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
 		}
 	}
 
@@ -490,8 +490,8 @@ class Buffer {
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
-		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col, true); }
+		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
@@ -506,11 +506,11 @@ class Buffer {
 		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
 		else if (single_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 		else if (double_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
-		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col, true); }
-		else if (word.check_function()) { characters.emplace_back((uint16_t)c, colors().function, row, col, true); }
-		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col, true); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col, true); }
-		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col, true); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+		else if (word.check_function()) { characters.emplace_back((uint16_t)c, colors().function, row, col); }
+		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col); }
 		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
