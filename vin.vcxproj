@@ -151,6 +151,7 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="schrift.c" />
     <ClCompile Include="vin.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -158,6 +159,15 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resources.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="buffer.h" />
+    <ClInclude Include="file.h" />
+    <ClInclude Include="font.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="schrift.h" />
+    <ClInclude Include="state.h" />
+    <ClInclude Include="text.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
