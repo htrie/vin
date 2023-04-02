@@ -219,7 +219,7 @@ std::string find(const std::string_view pattern) {
 
 std::string prettify_html(const std::string_view contents) {
 	std::string out = std::string(contents);
-	// TODO
+	// TODO parse html <p> and <a>
 	return out;
 }
 
@@ -314,15 +314,17 @@ class Window {
 	}
 
 	void render_glyph(const Character& character, const FontGlyph& glyph) {
-		unsigned src = (glyph.y) * font_width + (glyph.x);
-		unsigned dst = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
+		unsigned in = (glyph.y) * font_width + (glyph.x);
+		unsigned out = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
+		auto color = character.color;
 		for (unsigned j = 0; j < glyph.h; ++j) {
 			for (unsigned i = 0; i < glyph.w; ++i) {
-				if (dst < width * height)
-					pixels[dst + i] = Color::gray(font_pixels[src + i]).as_uint(); // TODO blending // TODO color
+				if (out < width * height) {
+					((Color&)pixels[out + i]).blend(color.set_alpha(255 - font_pixels[in + i]));
+				}
 			}
-			src += font_width;
-			dst += width;
+			in += font_width;
+			out += width;
 		}
 	}
 
@@ -355,8 +357,8 @@ public:
 	}
 
 	~Window() {
-		reset();
 		destroy(hwnd);
+		reset();
 	}
 
 	void resize(unsigned w, unsigned h) {
@@ -367,7 +369,7 @@ public:
 	}
 
 	void redraw(const Characters& characters) {
-		clear(); // TODO doesn't display beore resizing
+		clear(); // TODO doesn't display before resizing
 		render(characters);
 		blit();
 	}

@@ -28,6 +28,16 @@ struct Color {
 	static Color argb(unsigned a, unsigned r, unsigned g, unsigned b) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color rgba(unsigned r, unsigned g, unsigned b, unsigned a) { Color color; color.a = (uint8_t)a; color.r = (uint8_t)r;  color.g = (uint8_t)g;  color.b = (uint8_t)b; return color; }
 	static Color gray(unsigned c) { Color color; color.a = (uint8_t)255; color.r = (uint8_t)c;  color.g = (uint8_t)c;  color.b = (uint8_t)c; return color; }
+
+	Color& set_alpha(uint8_t alpha) { a = alpha; return *this; }
+
+	static uint8_t blend(const uint8_t s, const uint8_t d, const uint8_t a) { return ((s * a) + (d * (255 - a))) >> 8; }
+
+	void blend(const Color& dst) {
+		r = blend(r, dst.r, dst.a);
+		g = blend(g, dst.g, dst.a);
+		b = blend(b, dst.b, dst.a);
+	}
 };
 
 struct Colors {
