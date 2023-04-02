@@ -76,12 +76,12 @@ struct FontGlyph {
 	uint16_t y = 0;
 	uint16_t w = 0;
 	uint16_t h = 0;
-	uint16_t x_off = 0;
-	uint16_t y_off = 0;
-	uint16_t x_adv = 0;
+	int16_t x_off = 0;
+	int16_t y_off = 0;
+	int16_t x_adv = 0;
 
 	FontGlyph() {}
-	FontGlyph(uint16_t id, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t x_off, uint16_t y_off, uint16_t x_adv)
+	FontGlyph(uint16_t id, uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t x_off, int16_t y_off, int16_t x_adv)
 		: id(id), x(x), y(y), w(w), h(h), x_off(x_off), y_off(y_off), x_adv(x_adv) {}
 };
 

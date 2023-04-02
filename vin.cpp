@@ -314,8 +314,8 @@ class Window {
 	}
 
 	void render_glyph(const Character& character, const FontGlyph& glyph) {
-		unsigned in = (glyph.y) * font_width + (glyph.x);
-		unsigned out = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
+		int in = (glyph.y) * font_width + (glyph.x);
+		int out = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
 		auto color = character.color;
 		for (unsigned j = 0; j < glyph.h; ++j) {
 			for (unsigned i = 0; i < glyph.w; ++i) {
