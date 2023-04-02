@@ -33,6 +33,7 @@ const unsigned version_minor = 2;
 class Font {
 	SFT_Font* font = nullptr;
 	SFT sft;
+	SFT_LMetrics lmtx;
 
 	struct Glyph {
 		SFT_Glyph gid;
@@ -65,6 +66,7 @@ public:
 			sft.xScale = size;
 			sft.yScale = size;
 			sft.flags = SFT_DOWNWARD_Y;
+			sft_lmetrics(&sft, &lmtx);
 		}
 	}
 
