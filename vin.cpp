@@ -35,11 +35,27 @@ class Font {
 	SFT sft;
 
 	struct Glyph {
-		SFT_GMetrics metrics;
-		// storage
+		SFT_Glyph gid;
+		SFT_GMetrics mtx;
+		std::vector<uint8_t> pixels;
 	};
-
-	std::unordered_map<SFT_Glyph, Glyph> glyphs;
+	std::unordered_map<uint32_t, Glyph> glyphs;
+	
+	const Glyph* add_glyph(uint32_t codepoint) {
+		auto& glyph = glyphs[codepoint];
+		if (sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
+			if (sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
+				SFT_Image image;
+				image.width  = glyph.mtx.minWidth;
+				image.height = glyph.mtx.minHeight;
+				glyph.pixels.resize(image.width * image.height);
+				image.pixels = glyph.pixels.data();
+				sft_render(&sft, glyph.gid, image);
+				return &glyph;
+			}
+		}
+		return nullptr;
+	}
 
 public:
 	Font(const std::string_view filename, double size) {
@@ -57,6 +73,11 @@ public:
 			sft_freefont(font);
 	}
 
+	const Glyph* find_glyph(uint32_t codepoint) { // TODO return ref and default to unknow
+		if (auto found = glyphs.find(codepoint); found != glyphs.end())
+			return &found->second;
+		return add_glyph(codepoint);
+	}
 };
 
 class Window {
