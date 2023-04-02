@@ -152,9 +152,9 @@ public:
 		reset();
 	}
 
-	void resize(unsigned w, unsigned h) {
-		width = w;
-		height = h;
+	void resize(unsigned width, unsigned height) {
+		this->width = width;
+		this->height = height;
 		reset();
 		alloc();
 	}
@@ -280,9 +280,9 @@ public:
 		open("scratch");
 	}
 
-	void resize(unsigned w, unsigned h) {
-		col_count = w;
-		row_count = h - 1; // Remove 1 for tabs bar.
+	void resize(unsigned col_count, unsigned row_count) {
+		this->col_count = col_count;
+		this->row_count = row_count - 1; // Remove 1 for tabs bar.
 	}
 
 	void process(bool space_down, bool& quit, unsigned key) {
@@ -311,9 +311,9 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	void resize(unsigned w, unsigned h) {
+	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
-			window.resize(w, h);
+			window.resize(width, height);
 			switcher.resize(window.get_col_count(), window.get_row_count());
 		}
 	}
