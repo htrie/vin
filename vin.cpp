@@ -317,10 +317,11 @@ class Window {
 		int in = (glyph.y) * font_width + (glyph.x);
 		int out = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
 		auto color = character.color;
+		const bool force_opaque = glyph.id == Glyph::BLOCK;
 		for (unsigned j = 0; j < glyph.h; ++j) {
 			for (unsigned i = 0; i < glyph.w; ++i) {
 				if (out + i < width * height) {
-					((Color&)pixels[out + i]).blend(color.set_alpha(255 - font_pixels[in + i]));
+					((Color&)pixels[out + i]).blend(color.set_alpha(force_opaque ? 255 : font_pixels[in + i]));
 				}
 			}
 			in += font_width;

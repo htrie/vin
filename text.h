@@ -31,7 +31,7 @@ struct Color {
 
 	Color& set_alpha(uint8_t alpha) { a = alpha; return *this; }
 
-	static uint8_t blend(const uint8_t s, const uint8_t d, const uint8_t a) { return ((s * a) + (d * (255 - a))) >> 8; }
+	static uint8_t blend(const uint8_t s, const uint8_t d, const uint8_t a) { return ((s * (255 - a)) + (d * a)) >> 8; }
 
 	void blend(const Color& dst) {
 		r = blend(r, dst.r, dst.a);
