@@ -15,6 +15,7 @@
 #include <dwmapi.h>
 #include <winhttp.h>
 
+#include "schrift.h"
 #include "resource.h"
 #include "text.h"
 #include "state.h"
@@ -25,9 +26,30 @@
 const unsigned version_major = 1;
 const unsigned version_minor = 2;
 
-// TODO font class
 // TODO use libschrift
 // TODO remove bmfont
+
+class Font {
+	SFT_Font* font = nullptr;
+	SFT sft;
+
+public:
+	Font(const std::string_view filename, double size) {
+		memset(&sft, 0, sizeof sft);
+		if (font = sft_loadfile(filename.data())) {
+			sft.font = font;
+			sft.xScale = size;
+			sft.yScale = size;
+			sft.flags = SFT_DOWNWARD_Y;
+		}
+	}
+
+	~Font() {
+		if (font)
+			sft_freefont(font);
+	}
+
+};
 
 class Window {
 	HWND hwnd = nullptr;
@@ -301,6 +323,7 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
+	Font font;
 
 	bool minimized = false;
 	bool dirty = true;
@@ -414,7 +437,8 @@ class Application {
 
 public:
 	Application(HINSTANCE hinstance, int nshow)
-		: window(hinstance, proc, this, nshow) {
+		: window(hinstance, proc, this, nshow)
+		, font("ProggyClean.ttf", 20.0) {
 	}
 
 	void run() {
