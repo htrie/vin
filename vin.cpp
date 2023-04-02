@@ -513,7 +513,7 @@ class Application {
 	Window window;
 
 	bool minimized = false;
-	bool dirty = false;
+	bool dirty = true;
 	bool space_down = false;
 	bool quit = false;
 
