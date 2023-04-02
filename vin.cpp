@@ -78,6 +78,9 @@ public:
 			return &found->second;
 		return add_glyph(codepoint);
 	}
+
+	unsigned get_character_width() const { return (unsigned)(sft.xScale / 2); } // TODO base on font
+	unsigned get_line_height() const { return (unsigned)sft.yScale; }
 };
 
 class Window {
@@ -295,12 +298,9 @@ public:
 };
 
 class Application {
-	unsigned spacing_character = 9; // TODO move to font
-	unsigned spacing_line = 20;
-
 	Switcher switcher;
-	Window window;
 	Font font;
+	Window window; // Last.
 
 	bool minimized = false;
 	bool dirty = true;
@@ -311,8 +311,8 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)spacing_character - 0.5f); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)spacing_line - 0.5f); }
+	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width() - 0.5f); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height() - 0.5f); }
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
@@ -323,7 +323,7 @@ class Application {
 
 	void render_glyph(const Character& character, const Font::Glyph& glyph) {
 		unsigned in = 0;
-		unsigned out = (character.row * spacing_line + glyph.mtx.yOffset) * window.get_width() + (character.col * spacing_character + (int)glyph.mtx.leftSideBearing);
+		unsigned out = (character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() + (character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
 		auto* pixels = window.get_pixels();
 		auto color = character.color;
 		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
