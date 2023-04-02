@@ -91,9 +91,6 @@ class Window {
 	unsigned width = 0;
 	unsigned height = 0;
 
-	unsigned spacing_character = 9;
-	unsigned spacing_line = 20;
-
 	static HWND create(HINSTANCE hinstance, WNDPROC proc, void* data) {
 		const char* name = "vin";
 		const auto hicon = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
@@ -133,54 +130,6 @@ class Window {
 		ShowWindow(hwnd, nshow);
 	}
 
-	void clear() {
-		memset(pixels.data(), colors().clear.as_uint(), width * height * sizeof(COLORREF));
-	}
-
-	void render_glyph(const Character& character, const FontGlyph& glyph) {
-		int in = (glyph.y) * font_width + (glyph.x);
-		int out = (character.row * spacing_line + glyph.y_off) * width + (character.col * spacing_character + glyph.x_off);
-		auto color = character.color;
-		const bool force_opaque = glyph.id == Glyph::BLOCK;
-		for (unsigned j = 0; j < glyph.h; ++j) {
-			for (unsigned i = 0; i < glyph.w; ++i) {
-				if (out + i < width * height) {
-					((Color&)pixels[out + i]).blend(color.set_alpha(force_opaque ? 255 : font_pixels[in + i]));
-				}
-			}
-			in += font_width;
-			out += width;
-		}
-	}
-
-	const FontGlyph* find_glyph(uint16_t id) {
-		for (auto& glyph : font_glyphs) {
-			if (glyph.id == id)
-				return &glyph;
-		}
-		return nullptr;
-	}
-
-	void render(const Characters& characters) {
-		for (auto& character : characters) {
-			const auto* glyph = find_glyph(character.index);
-			if (glyph == nullptr)
-				glyph = find_glyph(Glyph::UNKNOWN);
-			if (glyph)
-				render_glyph(character, *glyph);
-		}
-	}
-
-	void blit() {
-		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels.data());
-		const HDC hdc = GetDC(hwnd);
-		const HDC src = CreateCompatibleDC(GetDC(hwnd));
-		SelectObject(src, map);
-		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
-		DeleteDC(src);
-		DeleteObject(map);
-	}
-
 public:
 	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int nshow)
 		: hwnd(create(hinstance, proc, data)) {
@@ -199,14 +148,23 @@ public:
 		pixels.resize(width * height);
 	}
 
-	void redraw(const Characters& characters) {
-		clear();
-		render(characters);
-		blit();
+	void clear(uint32_t color) {
+		memset(pixels.data(), color, width * height * sizeof(COLORREF));
 	}
 
-	unsigned get_col_count() const { return (unsigned)((float)width / (float)spacing_character - 0.5f); }
-	unsigned get_row_count() const { return (unsigned)((float)height / (float)spacing_line - 0.5f); }
+	void blit() {
+		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels.data());
+		const HDC hdc = GetDC(hwnd);
+		const HDC src = CreateCompatibleDC(GetDC(hwnd));
+		SelectObject(src, map);
+		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
+		DeleteDC(src);
+		DeleteObject(map);
+	}
+
+	Color* get_pixels() { return (Color*)pixels.data(); }
+	unsigned get_width() const { return width; }
+	unsigned get_height() const { return height; }
 };
 
 class Switcher {
@@ -339,6 +297,9 @@ public:
 };
 
 class Application {
+	unsigned spacing_character = 9; // TODO move to font
+	unsigned spacing_line = 20;
+
 	Switcher switcher;
 	Window window;
 	Font font;
@@ -352,16 +313,57 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
+	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)spacing_character - 0.5f); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)spacing_line - 0.5f); }
+
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
 			window.resize(width, height);
-			switcher.resize(window.get_col_count(), window.get_row_count());
+			switcher.resize(get_col_count(), get_row_count());
+		}
+	}
+
+	void render_glyph(const Character& character, const FontGlyph& glyph) {
+		int in = (glyph.y) * font_width + (glyph.x);
+		int out = (character.row * spacing_line + glyph.y_off) * window.get_width() + (character.col * spacing_character + glyph.x_off);
+		auto* pixels = window.get_pixels();
+		auto color = character.color;
+		const bool force_opaque = glyph.id == Glyph::BLOCK;
+		for (unsigned j = 0; j < glyph.h; ++j) {
+			for (unsigned i = 0; i < glyph.w; ++i) {
+				if (out + i < window.get_width() * window.get_height()) {
+					pixels[out + i].blend(color.set_alpha(force_opaque ? 255 : font_pixels[in + i]));
+				}
+			}
+			in += font_width;
+			out += window.get_width();
+		}
+	}
+
+	const FontGlyph* find_glyph(uint16_t id) {
+		for (auto& glyph : font_glyphs) {
+			if (glyph.id == id)
+				return &glyph;
+		}
+		return nullptr;
+	}
+
+	void render(const Characters& characters) {
+		for (auto& character : characters) {
+			const auto* glyph = find_glyph(character.index);
+			if (glyph == nullptr)
+				glyph = find_glyph(Glyph::UNKNOWN);
+			if (glyph)
+				render_glyph(character, *glyph);
 		}
 	}
 
 	void redraw() {
 		if (!minimized && dirty) {
-			window.redraw(switcher.cull());
+			const auto characters = switcher.cull();
+			window.clear(colors().clear.as_uint());
+			render(characters);
+			window.blit();
 		}
 		else {
 			Sleep(1); // Avoid busy loop when minimized.
