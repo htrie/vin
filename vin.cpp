@@ -319,7 +319,7 @@ class Window {
 		auto color = character.color;
 		for (unsigned j = 0; j < glyph.h; ++j) {
 			for (unsigned i = 0; i < glyph.w; ++i) {
-				if (out < width * height) {
+				if (out + i < width * height) {
 					((Color&)pixels[out + i]).blend(color.set_alpha(255 - font_pixels[in + i]));
 				}
 			}
