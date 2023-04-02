@@ -9,7 +9,6 @@ enum Glyph {
 	BOTTOM = 9601,
 	BLOCK = 9608,
 	LINE = 9615,
-	UNKNOWN = 65533,
 };
 
 struct Color {
