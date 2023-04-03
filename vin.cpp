@@ -41,8 +41,6 @@ private:
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
 
-	double advance = 0.0;
-	
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
@@ -75,10 +73,13 @@ public:
 	}
 
 	void set_size(double size) {
-		sft.xScale = size;
-		sft.yScale = size;
-		sft_lmetrics(&sft, &lmtx);
-		advance = find_glyph(0).mtx.advanceWidth; // monospaced font (all glyphs should have the same advance)
+		if (size != sft.xScale) {
+			sft.xScale = size;
+			sft.yScale = size;
+			sft_lmetrics(&sft, &lmtx);
+			glyphs.clear();
+			add_glyph(0);
+		}
 	}
 
 	const Glyph& find_glyph(uint32_t codepoint) {
@@ -87,7 +88,7 @@ public:
 		return add_glyph(codepoint);
 	}
 
-	unsigned get_character_width() const { return (unsigned)advance; }
+	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
 	unsigned get_line_height() const { return (unsigned)(sft.yScale - lmtx.descender); }
 	unsigned get_line_baseline() const { return (unsigned)lmtx.ascender; }
 };
@@ -250,8 +251,10 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void process_space(bool& quit, unsigned key) {
+	void process_space(bool& quit, double& zoom, unsigned key) {
 		if (key == 'q') { quit = true; }
+		else if (key == '+') { zoom *= 1.05; }
+		else if (key == '-') { zoom *= 0.95; }
 		else if (key == 'w') { close(); }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
@@ -298,8 +301,8 @@ public:
 		this->row_count = row_count - 1; // Remove 1 for tabs bar.
 	}
 
-	void process(bool space_down, bool& quit, unsigned key) {
-		if (space_down && current().is_normal()) { process_space(quit, key); }
+	void process(bool space_down, bool& quit, double& zoom, unsigned key) {
+		if (space_down && current().is_normal()) { process_space(quit, zoom, key); }
 		else { process_normal(key); }
 	}
 
@@ -320,6 +323,8 @@ class Application {
 	bool dirty = true;
 	bool space_down = false;
 	bool quit = false;
+
+	double zoom = 1.0;
 
 	void set_minimized(bool b) { minimized = b; }
 	void set_dirty(bool b) { dirty = b; }
@@ -372,7 +377,9 @@ class Application {
 	}
 
 	void process(unsigned key) {
-		switcher.process(space_down, quit, key);
+		switcher.process(space_down, quit, zoom, key);
+		font.set_size(zoom * double(window.get_dpi() / 8)); 
+		switcher.resize(get_col_count(), get_row_count());
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
