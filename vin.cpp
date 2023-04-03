@@ -56,7 +56,7 @@ private:
 				return glyph;
 			}
 		}
-		return add_glyph(0xFFFFFFFF);
+		return add_glyph(0);
 	}
 
 public:
@@ -78,7 +78,7 @@ public:
 		sft.xScale = size;
 		sft.yScale = size;
 		sft_lmetrics(&sft, &lmtx);
-		advance = find_glyph(0xFFFFFFFF).mtx.advanceWidth; // monospaced font (all glyphs should have the same advance)
+		advance = find_glyph(0).mtx.advanceWidth; // monospaced font (all glyphs should have the same advance)
 	}
 
 	const Glyph& find_glyph(uint32_t codepoint) {
