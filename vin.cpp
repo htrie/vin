@@ -119,7 +119,7 @@ class Window {
 		win_class.hIconSm = hicon;
 		RegisterClassEx(&win_class);
 		SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-		return CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768, nullptr, nullptr, hinstance, data);
+		return CreateWindowEx(0, name, name, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, nullptr, nullptr, hinstance, data);
 	}
 
 	static void destroy(HWND hwnd) {
@@ -149,6 +149,10 @@ public:
 
 	void show(int nshow) {
 		ShowWindow(hwnd, nshow);
+	}
+
+	void set_size(int w, int h) {
+		SetWindowPos(hwnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
 	}
 
 	void resize(unsigned width, unsigned height) {
@@ -455,6 +459,7 @@ public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
 		font.set_size(window.get_dpi() / 8);
+		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
 	}
 
