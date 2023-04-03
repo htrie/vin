@@ -331,7 +331,7 @@ class Application {
 	void set_space_down(bool b) { space_down = b; }
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width()); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height()); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height() - 0.5f); }
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
