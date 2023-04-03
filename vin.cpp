@@ -322,6 +322,8 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
+	double get_default_font_size() const { return double(window.get_dpi() / 8); } 
+
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width()); }
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height() - 0.5f); }
 
@@ -331,26 +333,23 @@ class Application {
 		}
 	}
 
-	void render_glyph(const Character& character, const Font::Glyph& glyph) {
-		unsigned in = 0;
-		unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-			(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
-		auto* pixels = window.get_pixels();
-		auto color = character.color;
-		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
-			for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
-				if (out + i < window.get_width() * window.get_height()) {
-					pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
-				}
-			}
-			in += glyph.mtx.minWidth;
-			out += window.get_width();
-		}
-	}
-
 	void render(const Characters& characters) {
+		auto* pixels = window.get_pixels();
 		for (auto& character : characters) {
-			render_glyph(character, font.find_glyph(character.index));
+			const auto& glyph = font.find_glyph(character.index);
+			unsigned in = 0;
+			unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+				(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
+			auto color = character.color;
+			for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
+				for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
+					if (out + i < window.get_width() * window.get_height()) {
+						pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
+					}
+				}
+				in += glyph.mtx.minWidth;
+				out += window.get_width();
+			}
 		}
 	}
 
@@ -369,7 +368,7 @@ class Application {
 
 	void process(unsigned key) {
 		switcher.process(space_down, quit, zoom, key);
-		font.set_size(zoom * double(window.get_dpi() / 8)); 
+		font.set_size(zoom * get_default_font_size()); 
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -455,7 +454,7 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
-		font.set_size(window.get_dpi() / 8);
+		font.set_size(get_default_font_size());
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
 	}
