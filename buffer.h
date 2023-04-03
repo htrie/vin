@@ -475,7 +475,7 @@ class Buffer {
 	};
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
-		for (unsigned i = 0; i < col_count - 5; ++i) {
+		for (unsigned i = 0; i < col_count - 7; ++i) {
 			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
 		}
 	}
