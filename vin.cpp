@@ -35,15 +35,13 @@ public:
 	};
 
 private:
-	std::string filename = "C:\\Users\\vensa\\AppData\\Local\\Microsoft\\Windows\\Fonts\\PragmataPro_Mono_R_liga.ttf"; // TODO load font data from system
-
-	double size = 24.0;
-
 	SFT_Font* font = nullptr;
 	SFT sft;
 	SFT_LMetrics lmtx;
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
+
+	double advance = 0.0;
 	
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
@@ -64,7 +62,8 @@ private:
 public:
 	Font() {
 		memset(&sft, 0, sizeof sft);
-		if (font = sft_loadfile(filename.data())) { // TODO font fallback
+		const char* filename = "C:\\Users\\vensa\\AppData\\Local\\Microsoft\\Windows\\Fonts\\PragmataPro_Mono_R_liga.ttf"; // TODO load font data from system
+		if (font = sft_loadfile(filename)) { // TODO font fallback
 			sft.font = font;
 			sft.flags = SFT_DOWNWARD_Y;
 		}
@@ -79,6 +78,7 @@ public:
 		sft.xScale = size;
 		sft.yScale = size;
 		sft_lmetrics(&sft, &lmtx);
+		advance = find_glyph(0xFFFFFFFF).mtx.advanceWidth; // monospaced font (all glyphs should have the same advance)
 	}
 
 	const Glyph& find_glyph(uint32_t codepoint) {
@@ -87,8 +87,8 @@ public:
 		return add_glyph(codepoint);
 	}
 
-	unsigned get_character_width() const { return (unsigned)(sft.xScale / 2); } // TODO base on font
-	unsigned get_line_height() const { return (unsigned)sft.yScale + 2; } // TODO base on font
+	unsigned get_character_width() const { return (unsigned)advance; }
+	unsigned get_line_height() const { return (unsigned)(sft.yScale - lmtx.descender); }
 	unsigned get_line_baseline() const { return (unsigned)lmtx.ascender; }
 };
 
