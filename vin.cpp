@@ -152,6 +152,10 @@ public:
 		ShowWindow(hwnd, nshow);
 	}
 
+	void maximize(bool b) {
+		ShowWindow(hwnd, b ? SW_SHOWMAXIMIZED : SW_SHOWDEFAULT);
+	}
+
 	void set_size(int w, int h) {
 		SetWindowPos(hwnd, 0, 0, 0, w, h, SWP_NOMOVE | SWP_NOOWNERZORDER);
 	}
@@ -248,8 +252,9 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void process_space(bool& quit, double& zoom, unsigned key) {
+	void process_space(bool& quit, bool& maximize, double& zoom, unsigned key) {
 		if (key == 'q') { quit = true; }
+		else if (key == 'm') { maximize = true; }
 		else if (key == '+') { zoom *= 1.05; }
 		else if (key == '-') { zoom *= 0.95; }
 		else if (key == 'w') { close(); }
@@ -293,8 +298,8 @@ public:
 		open("scratch");
 	}
 
-	void process(bool space_down, bool& quit, double& zoom, unsigned key) {
-		if (space_down && current().is_normal()) { process_space(quit, zoom, key); }
+	void process(bool space_down, bool& quit, bool& maximize, double& zoom, unsigned key) {
+		if (space_down && current().is_normal()) { process_space(quit, maximize, zoom, key); }
 		else { process_normal(key); }
 	}
 
@@ -312,6 +317,7 @@ class Application {
 	Font font;
 
 	bool minimized = false;
+	bool maximized = false;
 	bool dirty = true;
 	bool space_down = false;
 	bool quit = false;
@@ -319,6 +325,7 @@ class Application {
 	double zoom = 1.0;
 
 	void set_minimized(bool b) { minimized = b; }
+	void set_maximized(bool b) { maximized = b; }
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
@@ -367,7 +374,10 @@ class Application {
 	}
 
 	void process(unsigned key) {
-		switcher.process(space_down, quit, zoom, key);
+		bool maximize = false;
+		switcher.process(space_down, quit, maximize, zoom, key);
+		if (maximize)
+			window.maximize(!maximized);
 		font.set_size(zoom * get_default_font_size()); 
 	}
 
@@ -414,6 +424,7 @@ class Application {
 				const unsigned width = lparam & 0xffff;
 				const unsigned height = (lparam & 0xffff0000) >> 16;
 				app->set_minimized(wparam == SIZE_MINIMIZED);
+				app->set_maximized(wparam == SIZE_MAXIMIZED);
 				app->set_dirty(true);
 				app->resize(width, height);
 			}
