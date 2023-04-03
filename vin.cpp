@@ -190,9 +190,6 @@ class Switcher {
 	std::string url;
 	std::string clipboard;
 
-	unsigned col_count = 0;
-	unsigned row_count = 0;
-
 	Buffer& current() { return buffers[active]; }
 	const Buffer& current() const { return buffers[active]; }
 
@@ -296,20 +293,15 @@ public:
 		open("scratch");
 	}
 
-	void resize(unsigned col_count, unsigned row_count) {
-		this->col_count = col_count;
-		this->row_count = row_count - 1; // Remove 1 for tabs bar.
-	}
-
 	void process(bool space_down, bool& quit, double& zoom, unsigned key) {
 		if (space_down && current().is_normal()) { process_space(quit, zoom, key); }
 		else { process_normal(key); }
 	}
 
-	Characters cull() {
+	Characters cull(unsigned col_count, unsigned row_count) {
 		Characters characters;
 		push_tabs(characters);
-		current().set_line_count(current().cull(characters, col_count, row_count));
+		current().set_line_count(current().cull(characters, col_count, row_count - 1)); // Remove 1 for tabs bar.
 		return characters;
 	}
 };
@@ -336,7 +328,6 @@ class Application {
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
 			window.resize(width, height);
-			switcher.resize(get_col_count(), get_row_count());
 		}
 	}
 
@@ -365,7 +356,7 @@ class Application {
 
 	void redraw() {
 		if (!minimized && dirty) {
-			const auto characters = switcher.cull();
+			const auto characters = switcher.cull(get_col_count(), get_row_count());
 			window.clear(colors().clear.as_uint());
 			render(characters);
 			window.blit();
@@ -379,7 +370,6 @@ class Application {
 	void process(unsigned key) {
 		switcher.process(space_down, quit, zoom, key);
 		font.set_size(zoom * double(window.get_dpi() / 8)); 
-		switcher.resize(get_col_count(), get_row_count());
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
