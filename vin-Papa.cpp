@@ -35,14 +35,9 @@ public:
 	};
 
 private:
-	std::string filename = "C:\\Users\\vensa\\AppData\\Local\\Microsoft\\Windows\\Fonts\\PragmataPro_Mono_R_liga.ttf"; // TODO load font data from system
-
-	double size = 24.0;
-
 	SFT_Font* font = nullptr;
 	SFT sft;
 	SFT_LMetrics lmtx;
-
 	std::unordered_map<uint32_t, Glyph> glyphs;
 	
 	const Glyph* add_glyph(uint32_t codepoint) {
@@ -62,23 +57,20 @@ private:
 	}
 
 public:
-	Font() {
+	Font(const std::string_view filename, double size) {
 		memset(&sft, 0, sizeof sft);
-		if (font = sft_loadfile(filename.data())) { // TODO font fallback
+		if (font = sft_loadfile(filename.data())) { // TODO load font data from system // TODO font fallback
 			sft.font = font;
+			sft.xScale = size;
+			sft.yScale = size;
 			sft.flags = SFT_DOWNWARD_Y;
+			sft_lmetrics(&sft, &lmtx);
 		}
 	}
 
 	~Font() {
 		if (font)
 			sft_freefont(font);
-	}
-
-	void set_size(double size) {
-		sft.xScale = size;
-		sft.yScale = size;
-		sft_lmetrics(&sft, &lmtx);
 	}
 
 	const Glyph* find_glyph(uint32_t codepoint) { // TODO return ref and default to unknow
@@ -136,19 +128,20 @@ class Window {
 		DwmSetWindowAttribute(hwnd, 20, &value, sizeof(value)); // Dark mode.
 	}
 
+	static void show(HWND hwnd, int nshow) {
+		ShowWindow(hwnd, nshow);
+	}
+
 public:
-	Window(HINSTANCE hinstance, WNDPROC proc, void* data)
+	Window(HINSTANCE hinstance, WNDPROC proc, void* data, int nshow)
 		: hwnd(create(hinstance, proc, data)) {
 		set_dark(hwnd);
 		set_title(hwnd);
+		show(hwnd, nshow);
 	}
 
 	~Window() {
 		destroy(hwnd);
-	}
-
-	void show(int nshow) {
-		ShowWindow(hwnd, nshow);
 	}
 
 	void resize(unsigned width, unsigned height) {
@@ -174,8 +167,6 @@ public:
 	Color* get_pixels() { return (Color*)pixels.data(); }
 	unsigned get_width() const { return width; }
 	unsigned get_height() const { return height; }
-
-	unsigned get_dpi() const { return GetDpiForWindow(hwnd); }
 };
 
 class Switcher {
@@ -309,8 +300,8 @@ public:
 
 class Application {
 	Switcher switcher;
-	Window window;
 	Font font;
+	Window window; // Last.
 
 	bool minimized = false;
 	bool dirty = true;
@@ -456,9 +447,8 @@ class Application {
 
 public:
 	Application(HINSTANCE hinstance, int nshow)
-		: window(hinstance, proc, this) {
-		font.set_size(window.get_dpi() / 8);
-		window.show(nshow);
+		: window(hinstance, proc, this, nshow)
+		, font("C:\\Users\\vensa\\AppData\\Local\\Microsoft\\Windows\\Fonts\\PragmataPro_Mono_R_liga_0829.ttf", 24.0) { // TODO adjust font size base on dpi
 	}
 
 	void run() {
