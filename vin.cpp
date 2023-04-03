@@ -45,7 +45,7 @@ private:
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
 	
-	const Glyph* add_glyph(uint32_t codepoint) {
+	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
 			if (sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
@@ -55,10 +55,10 @@ private:
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
 				sft_render(&sft, glyph.gid, image);
-				return &glyph;
+				return glyph;
 			}
 		}
-		return nullptr;
+		return add_glyph(0xFFFFFFFF);
 	}
 
 public:
@@ -81,9 +81,9 @@ public:
 		sft_lmetrics(&sft, &lmtx);
 	}
 
-	const Glyph* find_glyph(uint32_t codepoint) { // TODO return ref and default to unknow
+	const Glyph& find_glyph(uint32_t codepoint) {
 		if (auto found = glyphs.find(codepoint); found != glyphs.end())
-			return &found->second;
+			return found->second;
 		return add_glyph(codepoint);
 	}
 
@@ -350,10 +350,7 @@ class Application {
 
 	void render(const Characters& characters) {
 		for (auto& character : characters) {
-			const auto* glyph = font.find_glyph(character.index);
-			if (glyph) {
-				render_glyph(character, *glyph);
-			}
+			render_glyph(character, font.find_glyph(character.index));
 		}
 	}
 
