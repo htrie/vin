@@ -307,7 +307,7 @@ class Switcher {
 	}
 
 	void process_space_e() {
-		open("open");
+		open("list");
 		current().init(list());
 	}
 
