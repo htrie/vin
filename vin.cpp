@@ -86,8 +86,6 @@ private:
 				continue;
 
 			std::string name(valueName, valueNameSize);
-			OutputDebugStringA(name.c_str());
-			OutputDebugStringA("\n");
 			if (_strnicmp(faceName.c_str(), name.c_str(), faceName.length()) == 0) {
 				fontFile.assign((LPSTR)valueData, valueDataSize);
 				break;
