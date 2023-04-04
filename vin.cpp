@@ -58,54 +58,49 @@ private:
 		return add_glyph(0);
 	}
 
-	static std::string get_system_font(const std::string& faceName) {
-		HKEY hKey;
+	static std::string get_system_font_path() {
+		char win_dir[MAX_PATH];
+		GetWindowsDirectoryA(win_dir, MAX_PATH);
+		std::stringstream ss;
+		ss << win_dir << "\\Fonts\\";
+		return ss.str();
+	}
+
+	static std::string get_system_font_name(const std::string& face_name) {
+		HKEY hkey;
 		static const char* registry = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
-		auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registry, 0, KEY_READ, &hKey);
+		auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registry, 0, KEY_READ, &hkey);
 		if (result != ERROR_SUCCESS)
 			return "";
 
 		DWORD name_max_size, data_max_size;
-		result = RegQueryInfoKey(hKey, 0, 0, 0, 0, 0, 0, 0, &name_max_size, &data_max_size, 0, 0);
+		result = RegQueryInfoKey(hkey, 0, 0, 0, 0, 0, 0, 0, &name_max_size, &data_max_size, 0, 0);
 		if (result != ERROR_SUCCESS)
 			return "";
 
 		DWORD index = 0;
-		LPSTR valueName = new char[name_max_size];
-		LPBYTE valueData = new BYTE[data_max_size];
-		DWORD valueNameSize, valueDataSize, valueType;
-		std::string fontFile;
+		std::vector<char> name(name_max_size);
+		std::vector<BYTE> data(data_max_size);
+		std::string font;
 
 		do {
-			fontFile.clear();
-			valueDataSize = data_max_size;
-			valueNameSize = name_max_size;
-
-			const auto result = RegEnumValueA(hKey, index++, valueName, &valueNameSize, 0, &valueType, valueData, &valueDataSize);
-			if (result != ERROR_SUCCESS || valueType != REG_SZ)
+			DWORD data_size = data_max_size;
+			DWORD name_size = name_max_size;
+			DWORD type;
+			const auto result = RegEnumValueA(hkey, index++, name.data(), &name_size, 0, &type, data.data(), &data_size);
+			if (result != ERROR_SUCCESS || type != REG_SZ)
 				continue;
 
-			std::string name(valueName, valueNameSize);
-			if (_strnicmp(faceName.c_str(), name.c_str(), faceName.length()) == 0) {
-				fontFile.assign((LPSTR)valueData, valueDataSize);
+			std::string font_name(name.data(), name_size);
+			if (_strnicmp(face_name.c_str(), font_name.c_str(), face_name.length()) == 0) {
+				font.assign((LPSTR)data.data(), data_size);
 				break;
 			}
 		} while (result != ERROR_NO_MORE_ITEMS);
 
-		delete[] valueName;
-		delete[] valueData;
+		RegCloseKey(hkey);
 
-		RegCloseKey(hKey);
-
-		if (fontFile.empty())
-			return "";
-
-		char winDir[MAX_PATH];
-		GetWindowsDirectoryA(winDir, MAX_PATH);
-		std::stringstream ss;
-		ss << winDir << "\\Fonts\\" << fontFile;
-		fontFile = ss.str();
-		return std::string(fontFile.begin(), fontFile.end());
+		return font;
 	}
 
 	static std::string get_user_font_path() {
@@ -125,7 +120,7 @@ public:
 	Font() {
 		font = try_font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
 		if (font == nullptr)
-			font = try_font(get_system_font("Consolas"));
+			font = try_font(get_system_font_path() + get_system_font_name("Consolas"));
 		if (font) {
 			memset(&sft, 0, sizeof sft);
 			sft.font = font;
