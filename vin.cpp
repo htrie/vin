@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <dwmapi.h>
 #include <winhttp.h>
+#include <shlobj.h>
 
 #include "schrift.h"
 #include "resource.h"
@@ -88,7 +89,6 @@ private:
 			OutputDebugStringA(name.c_str());
 			OutputDebugStringA("\n");
 			if (_strnicmp(faceName.c_str(), name.c_str(), faceName.length()) == 0) {
-
 				fontFile.assign((LPSTR)valueData, valueDataSize);
 				break;
 			}
@@ -110,11 +110,26 @@ private:
 		return std::string(fontFile.begin(), fontFile.end());
 	}
 
+	static std::string get_user_font_path() {
+		char path[MAX_PATH];
+		if (const auto res = SHGetSpecialFolderPathA(NULL, path, CSIDL_LOCAL_APPDATA, FALSE))
+			return std::string(path) + "\\Microsoft\\Windows\\Fonts\\";
+		return "";
+	}
+
+	SFT_Font* try_font(const std::string_view filename) {
+		if (auto* font = sft_loadfile(filename.data()))
+			return font;
+		return nullptr;
+	}
+
 public:
 	Font() {
-		memset(&sft, 0, sizeof sft);
-		const auto filename = get_system_font("Consolas");
-		if (font = sft_loadfile(filename.data())) { // TODO font fallback
+		font = try_font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
+		if (font == nullptr)
+			font = try_font(get_system_font("Consolas"));
+		if (font) {
+			memset(&sft, 0, sizeof sft);
 			sft.font = font;
 			sft.flags = SFT_DOWNWARD_Y;
 		}
