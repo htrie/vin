@@ -57,11 +57,64 @@ private:
 		return add_glyph(0);
 	}
 
+	static std::string get_system_font(const std::string& faceName) {
+		HKEY hKey;
+		static const char* registry = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
+		auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registry, 0, KEY_READ, &hKey);
+		if (result != ERROR_SUCCESS)
+			return "";
+
+		DWORD name_max_size, data_max_size;
+		result = RegQueryInfoKey(hKey, 0, 0, 0, 0, 0, 0, 0, &name_max_size, &data_max_size, 0, 0);
+		if (result != ERROR_SUCCESS)
+			return "";
+
+		DWORD index = 0;
+		LPSTR valueName = new char[name_max_size];
+		LPBYTE valueData = new BYTE[data_max_size];
+		DWORD valueNameSize, valueDataSize, valueType;
+		std::string fontFile;
+
+		do {
+			fontFile.clear();
+			valueDataSize = data_max_size;
+			valueNameSize = name_max_size;
+
+			const auto result = RegEnumValueA(hKey, index++, valueName, &valueNameSize, 0, &valueType, valueData, &valueDataSize);
+			if (result != ERROR_SUCCESS || valueType != REG_SZ)
+				continue;
+
+			std::string name(valueName, valueNameSize);
+			OutputDebugStringA(name.c_str());
+			OutputDebugStringA("\n");
+			if (_strnicmp(faceName.c_str(), name.c_str(), faceName.length()) == 0) {
+
+				fontFile.assign((LPSTR)valueData, valueDataSize);
+				break;
+			}
+		} while (result != ERROR_NO_MORE_ITEMS);
+
+		delete[] valueName;
+		delete[] valueData;
+
+		RegCloseKey(hKey);
+
+		if (fontFile.empty())
+			return "";
+
+		char winDir[MAX_PATH];
+		GetWindowsDirectoryA(winDir, MAX_PATH);
+		std::stringstream ss;
+		ss << winDir << "\\Fonts\\" << fontFile;
+		fontFile = ss.str();
+		return std::string(fontFile.begin(), fontFile.end());
+	}
+
 public:
 	Font() {
 		memset(&sft, 0, sizeof sft);
-		const char* filename = "C:\\Users\\vensa\\AppData\\Local\\Microsoft\\Windows\\Fonts\\PragmataPro_Mono_R_liga.ttf"; // TODO load font data from system
-		if (font = sft_loadfile(filename)) { // TODO font fallback
+		const auto filename = get_system_font("Consolas");
+		if (font = sft_loadfile(filename.data())) { // TODO font fallback
 			sft.font = font;
 			sft.flags = SFT_DOWNWARD_Y;
 		}
@@ -329,7 +382,7 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	double get_default_font_size() const { return double(window.get_dpi() / 8); } 
+	double get_default_font_size() const { return double(window.get_dpi() / 6); } 
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width()); }
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height() - 0.5f); }
