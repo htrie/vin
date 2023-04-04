@@ -191,7 +191,7 @@ std::string prettify_html(const std::string_view contents) {
 }
 
 std::string load(const std::string_view filename) {
-	std::string text = "\n"; // EOF
+	std::string text;
 	if (filename.starts_with("www")) {
 		text = prettify_html(request(filename)); }
 	else if (filename.starts_with("https")) {
@@ -201,7 +201,7 @@ std::string load(const std::string_view filename) {
 	else if (std::filesystem::exists(filename)) {
 		map(filename, [&](const char* mem, size_t size) {
 			text = std::string(mem, size);
-			});
+		});
 	}
 	return text;
 }

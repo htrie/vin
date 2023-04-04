@@ -9,6 +9,7 @@ class State {
 public:
 	const std::string_view get_text() const { return text; }
 	void set_text(const std::string_view t) { text = t; }
+	void append_text(const std::string_view t) { text += t; }
 
 	size_t get_cursor() const { return cursor; }
 	void set_cursor(size_t u) { cursor = u; }
@@ -750,7 +751,8 @@ public:
 	const State& state() const { return states.back(); }
 
 	const std::string_view get_text() const { return states.back().get_text(); }
-	void set_text(const std::string_view t) { states.back().set_text(t); }
+	void set_text(const std::string_view text) { states.back().set_text(text); }
+	void append_text(const std::string_view text) { states.back().append_text(text); }
 
 	size_t get_cursor() const { return states.back().get_cursor(); }
 	void set_cursor(size_t u) { states.back().set_cursor(u); }

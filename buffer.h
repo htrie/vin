@@ -561,6 +561,11 @@ public:
 		stack.set_text(text);
 	}
 
+	void append(const std::string_view text) {
+		stack.append_text(text);
+		set_dirty(true);
+	}
+
 	void process(std::string& clipboard, std::string& url, unsigned key) {
 		process_key(clipboard, url, key);
 		if (repeat) { repeat = false; replay(clipboard, url); }
