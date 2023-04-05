@@ -191,7 +191,7 @@ std::string prettify_html(const std::string_view contents) {
 }
 
 std::string load(const std::string_view filename) {
-	std::string text;
+	std::string text = "\n";
 	if (filename.starts_with("www")) {
 		text = prettify_html(request(filename)); }
 	else if (filename.starts_with("https")) {

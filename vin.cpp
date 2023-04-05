@@ -203,7 +203,6 @@ class Switcher {
 	std::string url;
 	std::string clipboard;
 
-	Buffer& log() { return buffers[0]; }
 	Buffer& current() { return buffers[active]; }
 	const Buffer& current() const { return buffers[active]; }
 
@@ -220,35 +219,29 @@ class Switcher {
 	}
 
 	void open(const std::string_view filename) {
-		if (!filename.empty()) {
-			if (auto index = find_buffer(filename); index != (size_t)-1) {
-				active = index;
-			}
-			else {
-				buffers.emplace_back(filename);
-				active = buffers.size() - 1;
-				current().init(load(filename));
-				log().append(std::string("open ") + std::string(filename) + "\n");
-			}
+		if (auto index = find_buffer(filename); index != (size_t)-1) {
+			active = index;
+		}
+		else {
+			buffers.emplace_back(filename);
+			active = buffers.size() - 1;
+			current().init(load(filename));
 		}
 	}
 
 	void reload() {
 		current().init(load(current().get_filename()));
-		log().append(std::string("reload ") + std::string(current().get_filename()) + "\n");
 	}
 
 	void save() {
-		log().append(std::string("save ") + std::string(current().get_filename()) + "\n");
 		if (write(current().get_filename(), current().get_text())) {
 			current().set_dirty(false);
 		}
 	}
 
 	void close() {
-		if (active != 0) { // Don't close log.
+		if (active > 0) { // Don't close buffer 0.
 			const auto filename = std::string(current().get_filename());
-			log().append(std::string("close ") + filename + "\n");
 			buffers.erase(buffers.begin() + active);
 			active = (active >= buffers.size() ? active - 1 : active) % buffers.size();
 		}
@@ -309,7 +302,7 @@ class Switcher {
 
 public:
 	Switcher() {
-		open("log");
+		open("");
 	}
 
 	void process(bool space_down, bool& quit, bool& maximize, double& zoom, unsigned key) {
