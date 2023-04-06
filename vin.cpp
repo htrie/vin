@@ -17,7 +17,7 @@
 #include <winhttp.h>
 #include <shlobj.h>
 
-#include "schrift.h"
+#include "schrift.h" // TODO remove, and use custom
 #include "resource.h"
 #include "text.h"
 #include "state.h"
