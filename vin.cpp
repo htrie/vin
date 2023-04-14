@@ -104,9 +104,8 @@ public:
 
 class Window {
 	HWND hwnd = nullptr;
-
-	std::vector<COLORREF> pixels;
-	static_assert(sizeof(COLORREF) == sizeof(uint32_t));
+	HBITMAP bitmap = nullptr;
+	COLORREF* bits = nullptr;
 
 	unsigned width = 0;
 	unsigned height = 0;
@@ -146,6 +145,19 @@ class Window {
 		DwmSetWindowAttribute(hwnd, 20, &value, sizeof(value)); // Dark mode.
 	}
 
+	void recreate() {
+		if (bitmap)
+			DeleteObject(bitmap);
+
+		BITMAPINFO info = {};
+		info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+		info.bmiHeader.biWidth = width;
+		info.bmiHeader.biHeight = -(LONG)height;  //negative so (0,0) is at top left
+		info.bmiHeader.biPlanes = 1;
+		info.bmiHeader.biBitCount = 32;
+		bitmap = CreateDIBSection(GetDC(hwnd), &info, DIB_RGB_COLORS, (void**)&bits, NULL, 0);
+	}
+
 public:
 	Window(HINSTANCE hinstance, WNDPROC proc, void* data)
 		: hwnd(create(hinstance, proc, data)) {
@@ -154,6 +166,7 @@ public:
 	}
 
 	~Window() {
+		if (bitmap) DeleteObject(bitmap);
 		destroy(hwnd);
 	}
 
@@ -172,24 +185,23 @@ public:
 	void resize(unsigned width, unsigned height) {
 		this->width = width;
 		this->height = height;
-		pixels.resize(width * height);
+		recreate();
 	}
 
 	void clear(uint32_t color) {
-		memset(pixels.data(), color, width * height * sizeof(COLORREF));
+		static_assert(sizeof(COLORREF) == sizeof(uint32_t));
+		memset(bits, color, width * height * sizeof(COLORREF));
 	}
 
 	void blit() {
-		const HBITMAP map = CreateBitmap(width, height, 1, 32, (void*)pixels.data());
 		const HDC hdc = GetDC(hwnd);
-		const HDC src = CreateCompatibleDC(GetDC(hwnd));
-		SelectObject(src, map);
+		const HDC src = CreateCompatibleDC(hdc);
+		SelectObject(src, bitmap);
 		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
 		DeleteDC(src);
-		DeleteObject(map);
 	}
 
-	Color* get_pixels() { return (Color*)pixels.data(); }
+	Color* get_pixels() { return (Color*)bits; }
 	unsigned get_width() const { return width; }
 	unsigned get_height() const { return height; }
 
