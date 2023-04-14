@@ -431,6 +431,7 @@ class Application {
 			break;
 		}
 		case WM_SIZING:
+		case WM_ERASEBKGND:
 		case WM_MOUSEMOVE:
 		case WM_MOUSELEAVE:
 		case WM_MOVE:
