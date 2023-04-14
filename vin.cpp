@@ -430,14 +430,7 @@ class Application {
 			};
 			break;
 		}
-		case WM_SIZING:
-		case WM_ERASEBKGND:
-		case WM_MOUSEMOVE:
-		case WM_MOUSELEAVE:
-		case WM_MOVE:
-		case WM_MOVING:
-		case WM_KILLFOCUS:
-		case WM_SETFOCUS: {
+		case WM_ERASEBKGND: {
 			if (auto* app = reinterpret_cast<Application*>(GetWindowLongPtr(hwnd, GWLP_USERDATA))) {
 				app->set_dirty(true);
 			}
