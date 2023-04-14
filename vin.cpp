@@ -271,6 +271,7 @@ class Switcher {
 	void process_space_e() {
 		open("list");
 		current().init(list());
+		current().set_dirty(true);
 	}
 
 	void process_space_f() {
