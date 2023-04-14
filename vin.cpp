@@ -161,8 +161,11 @@ class Window {
 		info.bmiHeader.biPlanes = 1;
 		info.bmiHeader.biBitCount = 32;
 		bitmap = CreateDIBSection(GetDC(hwnd), &info, DIB_RGB_COLORS, (void**)&bits, NULL, 0);
-		hdc = CreateCompatibleDC(GetDC(hwnd));
-		SelectObject(hdc, bitmap);
+		if (bitmap) {
+			hdc = CreateCompatibleDC(GetDC(hwnd));
+			if (hdc)
+				SelectObject(hdc, bitmap);
+		}
 	}
 
 public:
@@ -192,16 +195,19 @@ public:
 	void resize(unsigned width, unsigned height) {
 		this->width = width;
 		this->height = height;
+		reset();
 		recreate();
 	}
 
 	void clear(uint32_t color) {
 		static_assert(sizeof(COLORREF) == sizeof(uint32_t));
-		memset(bits, color, width * height * sizeof(COLORREF));
+		if (bits)
+			memset(bits, color, width * height * sizeof(COLORREF));
 	}
 
 	void blit() {
-		BitBlt(GetDC(hwnd), 0, 0, width, height, hdc, 0, 0, SRCCOPY);
+		if (hdc)
+			BitBlt(GetDC(hwnd), 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 	}
 
 	Color* get_pixels() { return (Color*)bits; }
@@ -363,21 +369,22 @@ class Application {
 	}
 
 	void render(const Characters& characters) {
-		auto* pixels = window.get_pixels();
-		for (auto& character : characters) {
-			const auto& glyph = font.find_glyph(character.index);
-			unsigned in = 0;
-			unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-				(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
-			auto color = character.color;
-			for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
-				for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
-					if (out + i < window.get_width() * window.get_height()) {
-						pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
+		if (auto* pixels = window.get_pixels()) {
+			for (auto& character : characters) {
+				const auto& glyph = font.find_glyph(character.index);
+				unsigned in = 0;
+				unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+					(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
+				auto color = character.color;
+				for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
+					for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
+						if (out + i < window.get_width() * window.get_height()) {
+							pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
+						}
 					}
+					in += glyph.mtx.minWidth;
+					out += window.get_width();
 				}
-				in += glyph.mtx.minWidth;
-				out += window.get_width();
 			}
 		}
 	}
