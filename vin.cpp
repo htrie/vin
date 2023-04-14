@@ -104,6 +104,7 @@ public:
 
 class Window {
 	HWND hwnd = nullptr;
+	HDC hdc = nullptr;
 	HBITMAP bitmap = nullptr;
 	COLORREF* bits = nullptr;
 
@@ -145,10 +146,14 @@ class Window {
 		DwmSetWindowAttribute(hwnd, 20, &value, sizeof(value)); // Dark mode.
 	}
 
-	void recreate() {
+	void reset() {
 		if (bitmap)
 			DeleteObject(bitmap);
+		if (hdc)
+			DeleteDC(hdc);
+	}
 
+	void recreate() {
 		BITMAPINFO info = {};
 		info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 		info.bmiHeader.biWidth = width;
@@ -156,6 +161,8 @@ class Window {
 		info.bmiHeader.biPlanes = 1;
 		info.bmiHeader.biBitCount = 32;
 		bitmap = CreateDIBSection(GetDC(hwnd), &info, DIB_RGB_COLORS, (void**)&bits, NULL, 0);
+		hdc = CreateCompatibleDC(GetDC(hwnd));
+		SelectObject(hdc, bitmap);
 	}
 
 public:
@@ -166,7 +173,7 @@ public:
 	}
 
 	~Window() {
-		if (bitmap) DeleteObject(bitmap);
+		reset();
 		destroy(hwnd);
 	}
 
@@ -194,11 +201,7 @@ public:
 	}
 
 	void blit() {
-		const HDC hdc = GetDC(hwnd);
-		const HDC src = CreateCompatibleDC(hdc);
-		SelectObject(src, bitmap);
-		BitBlt(hdc, 0, 0, width, height, src, 0, 0, SRCCOPY);
-		DeleteDC(src);
+		BitBlt(GetDC(hwnd), 0, 0, width, height, hdc, 0, 0, SRCCOPY);
 	}
 
 	Color* get_pixels() { return (Color*)bits; }
