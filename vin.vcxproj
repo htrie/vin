@@ -163,9 +163,8 @@
   <ItemGroup>
     <ClInclude Include="buffer.h" />
     <ClInclude Include="file.h" />
-    <ClInclude Include="font.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="schrift.h" />
+    <ClInclude Include="font.h" />
     <ClInclude Include="state.h" />
     <ClInclude Include="text.h" />
   </ItemGroup>
