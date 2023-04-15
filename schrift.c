@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) // TODO remove non-windows
 # define restrict __restrict
 #endif
 
@@ -36,7 +36,7 @@
 # include <unistd.h>
 #endif
 
-#include "schrift.h"
+#include "schrift.h" // TODO move all to header file
 
 #define SCHRIFT_VERSION "0.10.2"
 
@@ -183,7 +183,7 @@ static int  render_outline(Outline *outl, double transform[6], SFT_Image image);
 
 /* function implementations */
 
-const char *
+const char * // TODO fix indentation
 sft_version(void)
 {
 	return SCHRIFT_VERSION;
@@ -438,7 +438,7 @@ fast_ceil(double x)
 #if defined(_WIN32)
 
 static int
-map_file(SFT_Font *font, const char *filename)
+map_file(SFT_Font *font, const char *filename) // TODO remove file helpers
 {
 	HANDLE file;
 	DWORD high, low;
@@ -605,7 +605,7 @@ init_outline(Outline *outl)
 	/* TODO Smaller initial allocations */
 	outl->numPoints = 0;
 	outl->capPoints = 64;
-	if (!(outl->points = malloc(outl->capPoints * sizeof *outl->points)))
+	if (!(outl->points = malloc(outl->capPoints * sizeof *outl->points))) // TODO ues cpp storage
 		return -1;
 	outl->numCurves = 0;
 	outl->capCurves = 64;

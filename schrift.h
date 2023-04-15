@@ -21,7 +21,7 @@
 #include <stdint.h> /* uint_fast32_t, uint_least32_t */
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" { // TODO use cpp style
 #endif
 
 #define SFT_DOWNWARD_Y 0x01
