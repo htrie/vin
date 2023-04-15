@@ -16,18 +16,6 @@
 
 #pragma once
 
-#include <stddef.h> /* size_t */
-#include <stdint.h> /* uint_fast32_t, uint_least32_t */
-
-#include <assert.h>
-#include <errno.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-# define restrict __restrict
-
 namespace font {
 
 #define SFT_DOWNWARD_Y 0x01
@@ -1485,7 +1473,7 @@ draw_line(Raster buf, Point origin, Point goal)
 	struct { int x, y; } pixel;
 	struct { int x, y; } dir;
 	int step, numSteps = 0;
-	Cell *restrict cptr, cell;
+	Cell *cptr, cell;
 
 	delta.x = goal.x - origin.x;
 	delta.y = goal.y - origin.y;

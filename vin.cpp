@@ -5,6 +5,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define _HAS_EXCEPTIONS 0
 
+#include <stddef.h>
+#include <stdint.h>
+#include <assert.h>
 #include <array>
 #include <unordered_map>
 #include <iostream>
@@ -17,8 +20,8 @@
 #include <winhttp.h>
 #include <shlobj.h>
 
-#include "schrift.h" // TODO remove, and use custom
 #include "resource.h"
+#include "font.h"
 #include "text.h"
 #include "state.h"
 #include "buffer.h"
