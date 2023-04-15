@@ -30,36 +30,36 @@ const unsigned version_minor = 3;
 class Font {
 public:
 	struct Glyph {
-		SFT_Glyph gid;
-		SFT_GMetrics mtx;
+		font::SFT_Glyph gid;
+		font::SFT_GMetrics mtx;
 		std::vector<uint8_t> pixels;
 	};
 
 private:
-	SFT_Font* font = nullptr;
-	SFT sft;
-	SFT_LMetrics lmtx;
+	font::SFT_Font* font = nullptr;
+	font::SFT sft;
+	font::SFT_LMetrics lmtx;
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
 
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
-		if (sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
-			if (sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
-				SFT_Image image;
+		if (font::sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
+			if (font::sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
+				font::SFT_Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
-				sft_render(&sft, glyph.gid, image);
+				font::sft_render(&sft, glyph.gid, image);
 				return glyph;
 			}
 		}
 		return add_glyph(0);
 	}
 
-	SFT_Font* try_font(const std::string_view filename) {
-		if (auto* font = sft_loadfile(filename.data()))
+	font::SFT_Font* try_font(const std::string_view filename) {
+		if (auto* font = font::sft_loadfile(filename.data()))
 			return font;
 		return nullptr;
 	}
@@ -78,14 +78,14 @@ public:
 
 	~Font() {
 		if (font)
-			sft_freefont(font);
+			font::sft_freefont(font);
 	}
 
 	void set_size(double size) {
 		if (size != sft.xScale) {
 			sft.xScale = size;
 			sft.yScale = size;
-			sft_lmetrics(&sft, &lmtx);
+			font::sft_lmetrics(&sft, &lmtx);
 			glyphs.clear();
 			add_glyph(0);
 		}

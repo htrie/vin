@@ -152,7 +152,6 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="schrift.c" />
     <ClCompile Include="vin.cpp" />
   </ItemGroup>
   <ItemGroup>
