@@ -55,6 +55,33 @@ namespace font {
 	#define STACK_FREE(var) \
 		if (var != var##_stack_) free(var);
 
+	/* This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
+	 * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW */
+	#define MUL_NO_OVERFLOW	((size_t)1 << (sizeof(size_t) * 4))
+
+	 /* OpenBSD's reallocarray() standard libary function.
+	  * A wrapper for realloc() that takes two size args like calloc().
+	  * Useful because it eliminates common integer overflow bugs. */
+	static void* reallocarray(void* optr, size_t nmemb, size_t size) {
+		if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
+			nmemb > 0 && SIZE_MAX / nmemb < size) {
+			errno = ENOMEM;
+			return NULL;
+		}
+		return realloc(optr, size * nmemb);
+	}
+
+	/* TODO maybe we should use long here instead of int. */
+	static inline int fast_floor(double x) {
+		int i = (int)x;
+		return i - (i > x);
+	}
+
+	static inline int fast_ceil(double x) {
+		int i = (int)x;
+		return i + (i < x);
+	}
+
 
 	struct SFT_Font {
 		const uint8_t* memory = nullptr;
@@ -129,6 +156,72 @@ namespace font {
 		uint_least16_t capCurves = 0;
 		uint_least16_t numLines = 0;
 		uint_least16_t capLines = 0;
+
+		int init() {
+			/* TODO Smaller initial allocations */
+			numPoints = 0;
+			capPoints = 64;
+			if (!(points = (Point*)malloc(capPoints * sizeof * points))) // TODO use cpp storage
+				return -1;
+			numCurves = 0;
+			capCurves = 64;
+			if (!(curves = (Curve*)malloc(capCurves * sizeof * curves)))
+				return -1;
+			numLines = 0;
+			capLines = 64;
+			if (!(lines = (Line*)malloc(capLines * sizeof * lines)))
+				return -1;
+			return 0;
+		}
+
+		void quit() {
+			free(points);
+			free(curves);
+			free(lines);
+		}
+
+		int grow_points() {
+			void* mem;
+			uint_fast16_t cap;
+			assert(capPoints);
+			/* Since we use uint_fast16_t for capacities, we have to be extra careful not to trigger integer overflow. */
+			if (capPoints > UINT16_MAX / 2)
+				return -1;
+			cap = (uint_fast16_t)(2U * capPoints);
+			if (!(mem = reallocarray(points, cap, sizeof * points)))
+				return -1;
+			capPoints = (uint_least16_t)cap;
+			points = (Point*)mem;
+			return 0;
+		}
+
+		int grow_curves() {
+			void* mem;
+			uint_fast16_t cap;
+			assert(capCurves);
+			if (capCurves > UINT16_MAX / 2)
+				return -1;
+			cap = (uint_fast16_t)(2U * capCurves);
+			if (!(mem = reallocarray(curves, cap, sizeof * curves)))
+				return -1;
+			capCurves = (uint_least16_t)cap;
+			curves = (Curve*)mem;
+			return 0;
+		}
+
+		int grow_lines() {
+			void* mem;
+			uint_fast16_t cap;
+			assert(capLines);
+			if (capLines > UINT16_MAX / 2)
+				return -1;
+			cap = (uint_fast16_t)(2U * capLines);
+			if (!(mem = reallocarray(lines, cap, sizeof * lines)))
+				return -1;
+			capLines = (uint_least16_t)cap;
+			lines = (Line*)mem;
+			return 0;
+		}
 	};
 
 	struct Raster {
@@ -191,12 +284,6 @@ namespace font {
 	static Point midpoint(Point a, Point b);
 	static void transform_points(unsigned int numPts, Point* points, double trf[6]);
 	static void clip_points(unsigned int numPts, Point* points, int width, int height);
-
-	static int init_outline(Outline* outl);
-	static void free_outline(Outline* outl);
-	static int grow_points(Outline* outl);
-	static int grow_curves(Outline* outl);
-	static int grow_lines(Outline* outl);
 
 	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
 	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
@@ -391,7 +478,6 @@ namespace font {
 		uint_fast32_t outline;
 		double transform[6];
 		int bbox[4];
-		Outline outl;
 
 		if (outline_offset(sft->font, glyph, &outline) < 0)
 			return -1;
@@ -415,8 +501,8 @@ namespace font {
 			transform[5] = sft->yOffset - bbox[1];
 		}
 
-		memset(&outl, 0, sizeof outl);
-		if (init_outline(&outl) < 0)
+		Outline outl;
+		if (outl.init() < 0)
 			goto failure;
 
 		if (decode_outline(sft->font, outline, 0, &outl) < 0)
@@ -424,39 +510,12 @@ namespace font {
 		if (render_outline(&outl, transform, image) < 0)
 			goto failure;
 
-		free_outline(&outl);
+		outl.quit();
 		return 0;
 
 	failure:
-		free_outline(&outl);
+		outl.quit();
 		return -1;
-	}
-
-	/* This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
-	 * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW */
-	#define MUL_NO_OVERFLOW	((size_t)1 << (sizeof(size_t) * 4))
-
-	 /* OpenBSD's reallocarray() standard libary function.
-	  * A wrapper for realloc() that takes two size args like calloc().
-	  * Useful because it eliminates common integer overflow bugs. */
-	static void* reallocarray(void* optr, size_t nmemb, size_t size) {
-		if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
-			nmemb > 0 && SIZE_MAX / nmemb < size) {
-			errno = ENOMEM;
-			return NULL;
-		}
-		return realloc(optr, size * nmemb);
-	}
-
-	/* TODO maybe we should use long here instead of int. */
-	static inline int fast_floor(double x) {
-		int i = (int)x;
-		return i - (i > x);
-	}
-
-	static inline int fast_ceil(double x) {
-		int i = (int)x;
-		return i + (i < x);
 	}
 
 	static int init_font(SFT_Font* font) {
@@ -524,72 +583,6 @@ namespace font {
 				points[i].y = nextafter(height, 0.0);
 			}
 		}
-	}
-
-	static int init_outline(Outline* outl) {
-		/* TODO Smaller initial allocations */
-		outl->numPoints = 0;
-		outl->capPoints = 64;
-		if (!(outl->points = (Point*)malloc(outl->capPoints * sizeof * outl->points))) // TODO use cpp storage
-			return -1;
-		outl->numCurves = 0;
-		outl->capCurves = 64;
-		if (!(outl->curves = (Curve*)malloc(outl->capCurves * sizeof * outl->curves)))
-			return -1;
-		outl->numLines = 0;
-		outl->capLines = 64;
-		if (!(outl->lines = (Line*)malloc(outl->capLines * sizeof * outl->lines)))
-			return -1;
-		return 0;
-	}
-
-	static void free_outline(Outline* outl) {
-		free(outl->points);
-		free(outl->curves);
-		free(outl->lines);
-	}
-
-	static int grow_points(Outline* outl) {
-		void* mem;
-		uint_fast16_t cap;
-		assert(outl->capPoints);
-		/* Since we use uint_fast16_t for capacities, we have to be extra careful not to trigger integer overflow. */
-		if (outl->capPoints > UINT16_MAX / 2)
-			return -1;
-		cap = (uint_fast16_t)(2U * outl->capPoints);
-		if (!(mem = reallocarray(outl->points, cap, sizeof * outl->points)))
-			return -1;
-		outl->capPoints = (uint_least16_t)cap;
-		outl->points = (Point*)mem;
-		return 0;
-	}
-
-	static int grow_curves(Outline* outl) {
-		void* mem;
-		uint_fast16_t cap;
-		assert(outl->capCurves);
-		if (outl->capCurves > UINT16_MAX / 2)
-			return -1;
-		cap = (uint_fast16_t)(2U * outl->capCurves);
-		if (!(mem = reallocarray(outl->curves, cap, sizeof * outl->curves)))
-			return -1;
-		outl->capCurves = (uint_least16_t)cap;
-		outl->curves = (Curve*)mem;
-		return 0;
-	}
-
-	static int grow_lines(Outline* outl) {
-		void* mem;
-		uint_fast16_t cap;
-		assert(outl->capLines);
-		if (outl->capLines > UINT16_MAX / 2)
-			return -1;
-		cap = (uint_fast16_t)(2U * outl->capLines);
-		if (!(mem = reallocarray(outl->lines, cap, sizeof * outl->lines)))
-			return -1;
-		outl->capLines = (uint_least16_t)cap;
-		outl->lines = (Line*)mem;
-		return 0;
 	}
 
 	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin) {
@@ -1008,7 +1001,7 @@ namespace font {
 			looseEnd = (uint_least16_t)(basePoint + --count);
 		}
 		else {
-			if (outl->numPoints >= outl->capPoints && grow_points(outl) < 0)
+			if (outl->numPoints >= outl->capPoints && outl->grow_points() < 0)
 				return -1;
 
 			looseEnd = outl->numPoints;
@@ -1027,12 +1020,12 @@ namespace font {
 			 * http://clang-developers.42468.n3.nabble.com/StaticAnalyzer-False-positive-with-loop-handling-td4053875.html */
 			if (flags[i] & POINT_IS_ON_CURVE) {
 				if (gotCtrl) {
-					if (outl->numCurves >= outl->capCurves && grow_curves(outl) < 0)
+					if (outl->numCurves >= outl->capCurves && outl->grow_curves() < 0)
 						return -1;
 					outl->curves[outl->numCurves++] = Curve(beg, cur, ctrl);
 				}
 				else {
-					if (outl->numLines >= outl->capLines && grow_lines(outl) < 0)
+					if (outl->numLines >= outl->capLines && outl->grow_lines() < 0)
 						return -1;
 					outl->lines[outl->numLines++] = Line(beg, cur);
 				}
@@ -1042,12 +1035,12 @@ namespace font {
 			else {
 				if (gotCtrl) {
 					center = outl->numPoints;
-					if (outl->numPoints >= outl->capPoints && grow_points(outl) < 0)
+					if (outl->numPoints >= outl->capPoints && outl->grow_points() < 0)
 						return -1;
 					outl->points[center] = midpoint(outl->points[ctrl], outl->points[cur]);
 					++outl->numPoints;
 
-					if (outl->numCurves >= outl->capCurves && grow_curves(outl) < 0)
+					if (outl->numCurves >= outl->capCurves && outl->grow_curves() < 0)
 						return -1;
 					outl->curves[outl->numCurves++] = Curve(beg, center, ctrl);
 
@@ -1058,12 +1051,12 @@ namespace font {
 			}
 		}
 		if (gotCtrl) {
-			if (outl->numCurves >= outl->capCurves && grow_curves(outl) < 0)
+			if (outl->numCurves >= outl->capCurves && outl->grow_curves() < 0)
 				return -1;
 			outl->curves[outl->numCurves++] = Curve(beg, looseEnd, ctrl);
 		}
 		else {
-			if (outl->numLines >= outl->capLines && grow_lines(outl) < 0)
+			if (outl->numLines >= outl->capLines && outl->grow_lines() < 0)
 				return -1;
 			outl->lines[outl->numLines++] = Line(beg, looseEnd);
 		}
@@ -1092,7 +1085,7 @@ namespace font {
 			goto failure;
 
 		while (outl->capPoints < basePoint + numPts) {
-			if (grow_points(outl) < 0)
+			if (outl->grow_points() < 0)
 				goto failure;
 		}
 
@@ -1254,7 +1247,7 @@ namespace font {
 		unsigned int top = 0;
 		for (;;) {
 			if (is_flat(outl, curve) || top >= STACK_SIZE) {
-				if (outl->numLines >= outl->capLines && grow_lines(outl) < 0)
+				if (outl->numLines >= outl->capLines && outl->grow_lines() < 0)
 					return -1;
 				outl->lines[outl->numLines++] = Line(curve.beg, curve.end);
 				if (top == 0) break;
@@ -1262,19 +1255,19 @@ namespace font {
 			}
 			else {
 				uint_least16_t ctrl0 = outl->numPoints;
-				if (outl->numPoints >= outl->capPoints && grow_points(outl) < 0)
+				if (outl->numPoints >= outl->capPoints && outl->grow_points() < 0)
 					return -1;
 				outl->points[ctrl0] = midpoint(outl->points[curve.beg], outl->points[curve.ctrl]);
 				++outl->numPoints;
 
 				uint_least16_t ctrl1 = outl->numPoints;
-				if (outl->numPoints >= outl->capPoints && grow_points(outl) < 0)
+				if (outl->numPoints >= outl->capPoints && outl->grow_points() < 0)
 					return -1;
 				outl->points[ctrl1] = midpoint(outl->points[curve.ctrl], outl->points[curve.end]);
 				++outl->numPoints;
 
 				uint_least16_t pivot = outl->numPoints;
-				if (outl->numPoints >= outl->capPoints && grow_points(outl) < 0)
+				if (outl->numPoints >= outl->capPoints && outl->grow_points() < 0)
 					return -1;
 				outl->points[pivot] = midpoint(outl->points[ctrl0], outl->points[ctrl1]);
 				++outl->numPoints;
