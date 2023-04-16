@@ -116,6 +116,14 @@ namespace font {
 		double x = 0.0, y = 0.0;
 	};
 
+	static Point midpoint(Point a, Point b) {
+		return Point(
+			0.5 * (a.x + b.x),
+			0.5 * (a.y + b.y)
+		);
+	}
+
+
 	struct Line {
 		uint_least16_t beg = 0, end = 0;
 	};
@@ -128,6 +136,12 @@ namespace font {
 		double area = 0.0, cover = 0.0;
 	};
 
+	struct Raster {
+		Cell* cells = nullptr;
+		int width = 0;
+		int height = 0;
+	};
+
 	struct Outline {
 		std::vector<Point> points;
 		std::vector<Curve> curves;
@@ -138,12 +152,153 @@ namespace font {
 			curves.reserve(64);
 			lines.reserve(64);
 		}
-	};
 
-	struct Raster {
-		Cell* cells = nullptr;
-		int width = 0;
-		int height = 0;
+		/* A heuristic to tell whether a given curve can be approximated closely enough by a line. */
+		int is_flat(const Curve& curve) {
+			const double maxArea2 = 2.0;
+			Point a = points[curve.beg];
+			Point b = points[curve.ctrl];
+			Point c = points[curve.end];
+			Point g = { b.x - a.x, b.y - a.y };
+			Point h = { c.x - a.x, c.y - a.y };
+			double area2 = fabs(g.x * h.y - h.x * g.y);
+			return area2 <= maxArea2;
+		}
+
+		int tesselate_curve(Curve curve) {
+			/* From my tests I can conclude that this stack barely reaches a top height
+			 * of 4 elements even for the largest font sizes I'm willing to support. And
+			 * as space requirements should only grow logarithmically, I think 10 is
+			 * more than enough. */
+			std::array<Curve, 10> stack;
+			unsigned int top = 0;
+			for (;;) {
+				if (is_flat(curve) || top >= stack.size()) {
+					lines.emplace_back(curve.beg, curve.end);
+					if (top == 0) break;
+					curve = stack[--top];
+				}
+				else {
+					uint_least16_t ctrl0 = (uint_least16_t)points.size();
+					points.push_back(midpoint(points[curve.beg], points[curve.ctrl]));
+
+					uint_least16_t ctrl1 = (uint_least16_t)points.size();
+					points.push_back(midpoint(points[curve.ctrl], points[curve.end]));
+
+					uint_least16_t pivot = (uint_least16_t)points.size();
+					points.push_back(midpoint(points[ctrl0], points[ctrl1]));
+
+					stack[top++] = Curve(curve.beg, pivot, ctrl0);
+					curve = Curve(pivot, curve.end, ctrl1);
+				}
+			}
+			return 0;
+		}
+
+		int tesselate_curves() {
+			unsigned int i;
+			for (i = 0; i < curves.size(); ++i) {
+				if (tesselate_curve(curves[i]) < 0)
+					return -1;
+			}
+			return 0;
+		}
+
+		/* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
+		static void draw_line(Raster buf, Point origin, Point goal) {
+			Point delta;
+			Point nextCrossing;
+			Point crossingIncr;
+			double halfDeltaX;
+			double prevDistance = 0.0, nextDistance;
+			double xAverage, yDifference;
+			struct { int x, y; } pixel;
+			struct { int x, y; } dir;
+			int step, numSteps = 0;
+			Cell* cptr, cell;
+
+			delta.x = goal.x - origin.x;
+			delta.y = goal.y - origin.y;
+			dir.x = SIGN(delta.x);
+			dir.y = SIGN(delta.y);
+
+			if (!dir.y) {
+				return;
+			}
+
+			crossingIncr.x = dir.x ? fabs(1.0 / delta.x) : 1.0;
+			crossingIncr.y = fabs(1.0 / delta.y);
+
+			if (!dir.x) {
+				pixel.x = fast_floor(origin.x);
+				nextCrossing.x = 100.0;
+			}
+			else {
+				if (dir.x > 0) {
+					pixel.x = fast_floor(origin.x);
+					nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
+					nextCrossing.x = crossingIncr.x - nextCrossing.x;
+					numSteps += fast_ceil(goal.x) - fast_floor(origin.x) - 1;
+				}
+				else {
+					pixel.x = fast_ceil(origin.x) - 1;
+					nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
+					numSteps += fast_ceil(origin.x) - fast_floor(goal.x) - 1;
+				}
+			}
+
+			if (dir.y > 0) {
+				pixel.y = fast_floor(origin.y);
+				nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
+				nextCrossing.y = crossingIncr.y - nextCrossing.y;
+				numSteps += fast_ceil(goal.y) - fast_floor(origin.y) - 1;
+			}
+			else {
+				pixel.y = fast_ceil(origin.y) - 1;
+				nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
+				numSteps += fast_ceil(origin.y) - fast_floor(goal.y) - 1;
+			}
+
+			nextDistance = std::min(nextCrossing.x, nextCrossing.y);
+			halfDeltaX = 0.5 * delta.x;
+
+			for (step = 0; step < numSteps; ++step) {
+				xAverage = origin.x + (prevDistance + nextDistance) * halfDeltaX;
+				yDifference = (nextDistance - prevDistance) * delta.y;
+				cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+				cell = *cptr;
+				cell.cover += yDifference;
+				xAverage -= (double)pixel.x;
+				cell.area += (1.0 - xAverage) * yDifference;
+				*cptr = cell;
+				prevDistance = nextDistance;
+				int alongX = nextCrossing.x < nextCrossing.y;
+				pixel.x += alongX ? dir.x : 0;
+				pixel.y += alongX ? 0 : dir.y;
+				nextCrossing.x += alongX ? crossingIncr.x : 0.0;
+				nextCrossing.y += alongX ? 0.0 : crossingIncr.y;
+				nextDistance = std::min(nextCrossing.x, nextCrossing.y);
+			}
+
+			xAverage = origin.x + (prevDistance + 1.0) * halfDeltaX;
+			yDifference = (1.0 - prevDistance) * delta.y;
+			cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+			cell = *cptr;
+			cell.cover += yDifference;
+			xAverage -= (double)pixel.x;
+			cell.area += (1.0 - xAverage) * yDifference;
+			*cptr = cell;
+		}
+
+		void draw_lines(Raster buf) const {
+			unsigned int i;
+			for (i = 0; i < lines.size(); ++i) {
+				const Line& line = lines[i];
+				const Point& origin = points[line.beg];
+				const Point& goal = points[line.end];
+				draw_line(buf, origin, goal);
+			}
+		}
 	};
 
 	int map_file(SFT_Font* font, const char* filename) {
@@ -197,7 +352,6 @@ namespace font {
 
 	static int init_font(SFT_Font* font);
 
-	static Point midpoint(Point a, Point b);
 	static void transform_points(unsigned int numPts, Point* points, double trf[6]);
 	static void clip_points(unsigned int numPts, Point* points, int width, int height);
 
@@ -226,13 +380,6 @@ namespace font {
 	static int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours, Outline* outl);
 	static int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
 	static int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
-
-	static int is_flat(Outline* outl, Curve curve);
-	static int tesselate_curve(Curve curve, Outline* outl);
-	static int tesselate_curves(Outline* outl);
-
-	static void draw_line(Raster buf, Point origin, Point goal);
-	static void draw_lines(Outline* outl, Raster buf);
 
 	static void post_process(Raster buf, uint8_t* image);
 
@@ -450,13 +597,6 @@ namespace font {
 		font->numLongHmtx = getu16(font, hhea + 34);
 
 		return 0;
-	}
-
-	static Point midpoint(Point a, Point b) {
-		return Point(
-			0.5 * (a.x + b.x),
-			0.5 * (a.y + b.y)
-		);
 	}
 
 	static void transform_points(unsigned int numPts, Point* points, double trf[6]) {
@@ -1108,155 +1248,6 @@ namespace font {
 		}
 	}
 
-	/* A heuristic to tell whether a given curve can be approximated closely enough by a line. */
-	static int is_flat(Outline* outl, Curve curve) {
-		const double maxArea2 = 2.0;
-		Point a = outl->points[curve.beg];
-		Point b = outl->points[curve.ctrl];
-		Point c = outl->points[curve.end];
-		Point g = { b.x - a.x, b.y - a.y };
-		Point h = { c.x - a.x, c.y - a.y };
-		double area2 = fabs(g.x * h.y - h.x * g.y);
-		return area2 <= maxArea2;
-	}
-
-	static int tesselate_curve(Curve curve, Outline* outl) {
-		/* From my tests I can conclude that this stack barely reaches a top height
-		 * of 4 elements even for the largest font sizes I'm willing to support. And
-		 * as space requirements should only grow logarithmically, I think 10 is
-		 * more than enough. */
-#define STACK_SIZE 10
-		Curve stack[STACK_SIZE];
-		unsigned int top = 0;
-		for (;;) {
-			if (is_flat(outl, curve) || top >= STACK_SIZE) {
-				outl->lines.emplace_back(curve.beg, curve.end);
-				if (top == 0) break;
-				curve = stack[--top];
-			}
-			else {
-				uint_least16_t ctrl0 = (uint_least16_t)outl->points.size();
-				outl->points.push_back(midpoint(outl->points[curve.beg], outl->points[curve.ctrl]));
-
-				uint_least16_t ctrl1 = (uint_least16_t)outl->points.size();
-				outl->points.push_back(midpoint(outl->points[curve.ctrl], outl->points[curve.end]));
-
-				uint_least16_t pivot = (uint_least16_t)outl->points.size();
-				outl->points.push_back(midpoint(outl->points[ctrl0], outl->points[ctrl1]));
-
-				stack[top++] = Curve(curve.beg, pivot, ctrl0);
-				curve = Curve(pivot, curve.end, ctrl1);
-			}
-		}
-		return 0;
-#undef STACK_SIZE
-	}
-
-	static int tesselate_curves(Outline* outl) {
-		unsigned int i;
-		for (i = 0; i < outl->curves.size(); ++i) {
-			if (tesselate_curve(outl->curves[i], outl) < 0)
-				return -1;
-		}
-		return 0;
-	}
-
-	/* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
-	static void draw_line(Raster buf, Point origin, Point goal) {
-		Point delta;
-		Point nextCrossing;
-		Point crossingIncr;
-		double halfDeltaX;
-		double prevDistance = 0.0, nextDistance;
-		double xAverage, yDifference;
-		struct { int x, y; } pixel;
-		struct { int x, y; } dir;
-		int step, numSteps = 0;
-		Cell* cptr, cell;
-
-		delta.x = goal.x - origin.x;
-		delta.y = goal.y - origin.y;
-		dir.x = SIGN(delta.x);
-		dir.y = SIGN(delta.y);
-
-		if (!dir.y) {
-			return;
-		}
-
-		crossingIncr.x = dir.x ? fabs(1.0 / delta.x) : 1.0;
-		crossingIncr.y = fabs(1.0 / delta.y);
-
-		if (!dir.x) {
-			pixel.x = fast_floor(origin.x);
-			nextCrossing.x = 100.0;
-		}
-		else {
-			if (dir.x > 0) {
-				pixel.x = fast_floor(origin.x);
-				nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
-				nextCrossing.x = crossingIncr.x - nextCrossing.x;
-				numSteps += fast_ceil(goal.x) - fast_floor(origin.x) - 1;
-			}
-			else {
-				pixel.x = fast_ceil(origin.x) - 1;
-				nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
-				numSteps += fast_ceil(origin.x) - fast_floor(goal.x) - 1;
-			}
-		}
-
-		if (dir.y > 0) {
-			pixel.y = fast_floor(origin.y);
-			nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
-			nextCrossing.y = crossingIncr.y - nextCrossing.y;
-			numSteps += fast_ceil(goal.y) - fast_floor(origin.y) - 1;
-		}
-		else {
-			pixel.y = fast_ceil(origin.y) - 1;
-			nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
-			numSteps += fast_ceil(origin.y) - fast_floor(goal.y) - 1;
-		}
-
-		nextDistance = std::min(nextCrossing.x, nextCrossing.y);
-		halfDeltaX = 0.5 * delta.x;
-
-		for (step = 0; step < numSteps; ++step) {
-			xAverage = origin.x + (prevDistance + nextDistance) * halfDeltaX;
-			yDifference = (nextDistance - prevDistance) * delta.y;
-			cptr = &buf.cells[pixel.y * buf.width + pixel.x];
-			cell = *cptr;
-			cell.cover += yDifference;
-			xAverage -= (double)pixel.x;
-			cell.area += (1.0 - xAverage) * yDifference;
-			*cptr = cell;
-			prevDistance = nextDistance;
-			int alongX = nextCrossing.x < nextCrossing.y;
-			pixel.x += alongX ? dir.x : 0;
-			pixel.y += alongX ? 0 : dir.y;
-			nextCrossing.x += alongX ? crossingIncr.x : 0.0;
-			nextCrossing.y += alongX ? 0.0 : crossingIncr.y;
-			nextDistance = std::min(nextCrossing.x, nextCrossing.y);
-		}
-
-		xAverage = origin.x + (prevDistance + 1.0) * halfDeltaX;
-		yDifference = (1.0 - prevDistance) * delta.y;
-		cptr = &buf.cells[pixel.y * buf.width + pixel.x];
-		cell = *cptr;
-		cell.cover += yDifference;
-		xAverage -= (double)pixel.x;
-		cell.area += (1.0 - xAverage) * yDifference;
-		*cptr = cell;
-	}
-
-	static void draw_lines(Outline* outl, Raster buf) {
-		unsigned int i;
-		for (i = 0; i < outl->lines.size(); ++i) {
-			const Line& line = outl->lines[i];
-			const Point& origin = outl->points[line.beg];
-			const Point& goal = outl->points[line.end];
-			draw_line(buf, origin, goal);
-		}
-	}
-
 	/* Integrate the values in the buffer to arrive at the final grayscale image. */
 	static void post_process(Raster buf, uint8_t* image) {
 		Cell cell;
@@ -1293,12 +1284,12 @@ namespace font {
 
 		clip_points((unsigned)outl->points.size(), outl->points.data(), image.width, image.height);
 
-		if (tesselate_curves(outl) < 0) {
+		if (outl->tesselate_curves() < 0) {
 			STACK_FREE(cells);
 			return -1;
 		}
 
-		draw_lines(outl, buf);
+		outl->draw_lines(buf);
 
 		post_process(buf, (uint8_t*)image.pixels);
 
