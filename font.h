@@ -109,9 +109,6 @@ namespace font {
 		int height = 0;
 	};
 
-	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
-	typedef uint_fast32_t SFT_Glyph;
-
 	struct Point {
 		double x = 0.0, y = 0.0;
 	};
@@ -123,6 +120,39 @@ namespace font {
 		);
 	}
 
+	static void transform_points(unsigned int numPts, Point* points, double trf[6]) {
+		Point pt;
+		unsigned int i;
+		for (i = 0; i < numPts; ++i) {
+			pt = points[i];
+			points[i] = Point(
+				pt.x * trf[0] + pt.y * trf[2] + trf[4],
+				pt.x * trf[1] + pt.y * trf[3] + trf[5]
+			);
+		}
+	}
+
+	static void clip_points(unsigned int numPts, Point* points, int width, int height) {
+		Point pt;
+		unsigned int i;
+
+		for (i = 0; i < numPts; ++i) {
+			pt = points[i];
+
+			if (pt.x < 0.0) {
+				points[i].x = 0.0;
+			}
+			if (pt.x >= width) {
+				points[i].x = nextafter(width, 0.0);
+			}
+			if (pt.y < 0.0) {
+				points[i].y = 0.0;
+			}
+			if (pt.y >= height) {
+				points[i].y = nextafter(height, 0.0);
+			}
+		}
+	}
 
 	struct Line {
 		uint_least16_t beg = 0, end = 0;
@@ -141,6 +171,24 @@ namespace font {
 		int width = 0;
 		int height = 0;
 	};
+
+	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
+	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
+	static int cmpu16(const void* a, const void* b);
+	static int cmpu32(const void* a, const void* b);
+	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset);
+	static inline int_least8_t geti8(SFT_Font* font, uint_fast32_t offset);
+	static inline uint_least16_t getu16(SFT_Font* font, uint_fast32_t offset);
+	static inline int_least16_t geti16(SFT_Font* font, uint_fast32_t offset);
+	static inline uint_least32_t getu32(SFT_Font* font, uint_fast32_t offset);
+	static int gettable(SFT_Font* font, char tag[4], uint_fast32_t* offset);
+
+	static int outline_offset(SFT_Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
+	static int simple_flags(SFT_Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
+	static int simple_points(SFT_Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
+
+	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
+	typedef uint_fast32_t SFT_Glyph;
 
 	struct Outline {
 		std::vector<Point> points;
@@ -362,6 +410,163 @@ namespace font {
 
 			return 0;
 		}
+
+		int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
+			int numContours;
+			if (!is_safe_offset(font, offset, 10))
+				return -1;
+			numContours = geti16(font, offset);
+			if (numContours > 0) {
+				/* Glyph has a 'simple' outline consisting of a number of contours. */
+				return simple_outline(font, offset + 10, (unsigned int)numContours);
+			}
+			else if (numContours < 0) {
+				/* Glyph has a compound outline combined from mutiple other outlines. */
+				return compound_outline(font, offset + 10, recDepth);
+			}
+			else {
+				return 0;
+			}
+		}
+
+		int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours) {
+			uint_fast16_t* endPts = NULL;
+			uint8_t* flags = NULL;
+			uint_fast16_t numPts;
+			unsigned int i;
+
+			assert(numContours > 0);
+
+			uint_fast16_t basePoint = (uint_fast16_t)points.size();
+			uint_fast16_t beg = 0;
+
+			if (!is_safe_offset(font, offset, numContours * 2 + 2))
+				goto failure;
+			numPts = getu16(font, offset + (numContours - 1) * 2);
+			if (numPts >= UINT16_MAX)
+				goto failure;
+			numPts++;
+			if (points.size() > UINT16_MAX - numPts)
+				goto failure;
+			points.resize(basePoint + numPts);
+
+			STACK_ALLOC(endPts, uint_fast16_t, 16, numContours);
+			if (endPts == NULL)
+				goto failure;
+			STACK_ALLOC(flags, uint8_t, 128, numPts);
+			if (flags == NULL)
+				goto failure;
+
+			for (i = 0; i < numContours; ++i) {
+				endPts[i] = getu16(font, offset);
+				offset += 2;
+			}
+			/* Ensure that endPts are never falling.
+			 * Falling endPts have no sensible interpretation and most likely only occur in malicious input.
+			 * Therefore, we bail, should we ever encounter such input. */
+			for (i = 0; i < numContours - 1; ++i) {
+				if (endPts[i + 1] < endPts[i] + 1)
+					goto failure;
+			}
+			offset += 2U + getu16(font, offset);
+
+			if (simple_flags(font, &offset, numPts, flags) < 0)
+				goto failure;
+			if (simple_points(font, offset, numPts, flags, points.data() + basePoint) < 0)
+				goto failure;
+
+			for (i = 0; i < numContours; ++i) {
+				uint_fast16_t count = endPts[i] - beg + 1;
+				if (decode_contour(flags + beg, basePoint + beg, count) < 0)
+					goto failure;
+				beg = endPts[i] + 1;
+			}
+
+			STACK_FREE(endPts);
+			STACK_FREE(flags);
+			return 0;
+		failure:
+			STACK_FREE(endPts);
+			STACK_FREE(flags);
+			return -1;
+		}
+
+		int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
+			double local[6];
+			uint_fast32_t outline;
+			unsigned int flags, glyph, basePoint;
+			/* Guard against infinite recursion (compound glyphs that have themselves as component). */
+			if (recDepth >= 4)
+				return -1;
+			do {
+				memset(local, 0, sizeof local);
+				if (!is_safe_offset(font, offset, 4))
+					return -1;
+				flags = getu16(font, offset);
+				glyph = getu16(font, offset + 2);
+				offset += 4;
+				/* We don't implement point matching, and neither does stb_truetype for that matter. */
+				if (!(flags & ACTUAL_XY_OFFSETS))
+					return -1;
+				/* Read additional X and Y offsets (in FUnits) of this component. */
+				if (flags & OFFSETS_ARE_LARGE) {
+					if (!is_safe_offset(font, offset, 4))
+						return -1;
+					local[4] = geti16(font, offset);
+					local[5] = geti16(font, offset + 2);
+					offset += 4;
+				}
+				else {
+					if (!is_safe_offset(font, offset, 2))
+						return -1;
+					local[4] = geti8(font, offset);
+					local[5] = geti8(font, offset + 1);
+					offset += 2;
+				}
+				if (flags & GOT_A_SINGLE_SCALE) {
+					if (!is_safe_offset(font, offset, 2))
+						return -1;
+					local[0] = geti16(font, offset) / 16384.0;
+					local[3] = local[0];
+					offset += 2;
+				}
+				else if (flags & GOT_AN_X_AND_Y_SCALE) {
+					if (!is_safe_offset(font, offset, 4))
+						return -1;
+					local[0] = geti16(font, offset + 0) / 16384.0;
+					local[3] = geti16(font, offset + 2) / 16384.0;
+					offset += 4;
+				}
+				else if (flags & GOT_A_SCALE_MATRIX) {
+					if (!is_safe_offset(font, offset, 8))
+						return -1;
+					local[0] = geti16(font, offset + 0) / 16384.0;
+					local[1] = geti16(font, offset + 2) / 16384.0;
+					local[2] = geti16(font, offset + 4) / 16384.0;
+					local[3] = geti16(font, offset + 6) / 16384.0;
+					offset += 8;
+				}
+				else {
+					local[0] = 1.0;
+					local[3] = 1.0;
+				}
+				/* At this point, Apple's spec more or less tells you to scale the matrix by its own L1 norm.
+				 * But stb_truetype scales by the L2 norm. And FreeType2 doesn't scale at all.
+				 * Furthermore, Microsoft's spec doesn't even mention anything like this.
+				 * It's almost as if nobody ever uses this feature anyway. */
+				if (outline_offset(font, glyph, &outline) < 0)
+					return -1;
+				if (outline) {
+					basePoint = (unsigned)points.size();
+					if (decode_outline(font, outline, recDepth + 1) < 0)
+						return -1;
+					transform_points((unsigned)points.size() - basePoint, points.data() + basePoint, local);
+				}
+			} while (flags & THERE_ARE_MORE_COMPONENTS);
+
+			return 0;
+		}
+
 	};
 
 	int map_file(SFT_Font* font, const char* filename) {
@@ -415,33 +620,12 @@ namespace font {
 
 	static int init_font(SFT_Font* font);
 
-	static void transform_points(unsigned int numPts, Point* points, double trf[6]);
-	static void clip_points(unsigned int numPts, Point* points, int width, int height);
-
-	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
-	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
-	static int cmpu16(const void* a, const void* b);
-	static int cmpu32(const void* a, const void* b);
-	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset);
-	static inline int_least8_t geti8(SFT_Font* font, uint_fast32_t offset);
-	static inline uint_least16_t getu16(SFT_Font* font, uint_fast32_t offset);
-	static inline int_least16_t geti16(SFT_Font* font, uint_fast32_t offset);
-	static inline uint_least32_t getu32(SFT_Font* font, uint_fast32_t offset);
-	static int gettable(SFT_Font* font, char tag[4], uint_fast32_t* offset);
-
 	static int cmap_fmt4(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, uint_fast32_t* glyph);
 	static int cmap_fmt6(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, uint_fast32_t* glyph);
 	static int glyph_id(SFT_Font* font, SFT_UChar charCode, uint_fast32_t* glyph);
 
 	static int hor_metrics(SFT_Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
-
-	static int outline_offset(SFT_Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
-	static int simple_flags(SFT_Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
-	static int simple_points(SFT_Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
-	static int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours, Outline* outl);
-	static int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
-	static int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
 
 	static void post_process(Raster buf, uint8_t* image);
 
@@ -627,7 +811,7 @@ namespace font {
 		}
 
 		Outline outl;
-		if (decode_outline(sft->font, outline, 0, &outl) < 0)
+		if (outl.decode_outline(sft->font, outline, 0) < 0)
 			return -1;
 		if (render_outline(&outl, transform, image) < 0)
 			return -1;
@@ -659,40 +843,6 @@ namespace font {
 		font->numLongHmtx = getu16(font, hhea + 34);
 
 		return 0;
-	}
-
-	static void transform_points(unsigned int numPts, Point* points, double trf[6]) {
-		Point pt;
-		unsigned int i;
-		for (i = 0; i < numPts; ++i) {
-			pt = points[i];
-			points[i] = Point(
-				pt.x * trf[0] + pt.y * trf[2] + trf[4],
-				pt.x * trf[1] + pt.y * trf[3] + trf[5]
-			);
-		}
-	}
-
-	static void clip_points(unsigned int numPts, Point* points, int width, int height) {
-		Point pt;
-		unsigned int i;
-
-		for (i = 0; i < numPts; ++i) {
-			pt = points[i];
-
-			if (pt.x < 0.0) {
-				points[i].x = 0.0;
-			}
-			if (pt.x >= width) {
-				points[i].x = nextafter(width, 0.0);
-			}
-			if (pt.y < 0.0) {
-				points[i].y = 0.0;
-			}
-			if (pt.y >= height) {
-				points[i].y = nextafter(height, 0.0);
-			}
-		}
 	}
 
 	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin) {
@@ -1089,162 +1239,6 @@ namespace font {
 		}
 
 		return 0;
-	}
-
-	static int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours, Outline* outl) {
-		uint_fast16_t* endPts = NULL;
-		uint8_t* flags = NULL;
-		uint_fast16_t numPts;
-		unsigned int i;
-
-		assert(numContours > 0);
-
-		uint_fast16_t basePoint = (uint_fast16_t)outl->points.size();
-		uint_fast16_t beg = 0;
-
-		if (!is_safe_offset(font, offset, numContours * 2 + 2))
-			goto failure;
-		numPts = getu16(font, offset + (numContours - 1) * 2);
-		if (numPts >= UINT16_MAX)
-			goto failure;
-		numPts++;
-		if (outl->points.size() > UINT16_MAX - numPts)
-			goto failure;
-		outl->points.resize(basePoint + numPts);
-
-		STACK_ALLOC(endPts, uint_fast16_t, 16, numContours);
-		if (endPts == NULL)
-			goto failure;
-		STACK_ALLOC(flags, uint8_t, 128, numPts);
-		if (flags == NULL)
-			goto failure;
-
-		for (i = 0; i < numContours; ++i) {
-			endPts[i] = getu16(font, offset);
-			offset += 2;
-		}
-		/* Ensure that endPts are never falling.
-		 * Falling endPts have no sensible interpretation and most likely only occur in malicious input.
-		 * Therefore, we bail, should we ever encounter such input. */
-		for (i = 0; i < numContours - 1; ++i) {
-			if (endPts[i + 1] < endPts[i] + 1)
-				goto failure;
-		}
-		offset += 2U + getu16(font, offset);
-
-		if (simple_flags(font, &offset, numPts, flags) < 0)
-			goto failure;
-		if (simple_points(font, offset, numPts, flags, outl->points.data() + basePoint) < 0)
-			goto failure;
-
-		for (i = 0; i < numContours; ++i) {
-			uint_fast16_t count = endPts[i] - beg + 1;
-			if (outl->decode_contour(flags + beg, basePoint + beg, count) < 0)
-				goto failure;
-			beg = endPts[i] + 1;
-		}
-
-		STACK_FREE(endPts);
-		STACK_FREE(flags);
-		return 0;
-	failure:
-		STACK_FREE(endPts);
-		STACK_FREE(flags);
-		return -1;
-	}
-
-	static int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl) {
-		double local[6];
-		uint_fast32_t outline;
-		unsigned int flags, glyph, basePoint;
-		/* Guard against infinite recursion (compound glyphs that have themselves as component). */
-		if (recDepth >= 4)
-			return -1;
-		do {
-			memset(local, 0, sizeof local);
-			if (!is_safe_offset(font, offset, 4))
-				return -1;
-			flags = getu16(font, offset);
-			glyph = getu16(font, offset + 2);
-			offset += 4;
-			/* We don't implement point matching, and neither does stb_truetype for that matter. */
-			if (!(flags & ACTUAL_XY_OFFSETS))
-				return -1;
-			/* Read additional X and Y offsets (in FUnits) of this component. */
-			if (flags & OFFSETS_ARE_LARGE) {
-				if (!is_safe_offset(font, offset, 4))
-					return -1;
-				local[4] = geti16(font, offset);
-				local[5] = geti16(font, offset + 2);
-				offset += 4;
-			}
-			else {
-				if (!is_safe_offset(font, offset, 2))
-					return -1;
-				local[4] = geti8(font, offset);
-				local[5] = geti8(font, offset + 1);
-				offset += 2;
-			}
-			if (flags & GOT_A_SINGLE_SCALE) {
-				if (!is_safe_offset(font, offset, 2))
-					return -1;
-				local[0] = geti16(font, offset) / 16384.0;
-				local[3] = local[0];
-				offset += 2;
-			}
-			else if (flags & GOT_AN_X_AND_Y_SCALE) {
-				if (!is_safe_offset(font, offset, 4))
-					return -1;
-				local[0] = geti16(font, offset + 0) / 16384.0;
-				local[3] = geti16(font, offset + 2) / 16384.0;
-				offset += 4;
-			}
-			else if (flags & GOT_A_SCALE_MATRIX) {
-				if (!is_safe_offset(font, offset, 8))
-					return -1;
-				local[0] = geti16(font, offset + 0) / 16384.0;
-				local[1] = geti16(font, offset + 2) / 16384.0;
-				local[2] = geti16(font, offset + 4) / 16384.0;
-				local[3] = geti16(font, offset + 6) / 16384.0;
-				offset += 8;
-			}
-			else {
-				local[0] = 1.0;
-				local[3] = 1.0;
-			}
-			/* At this point, Apple's spec more or less tells you to scale the matrix by its own L1 norm.
-			 * But stb_truetype scales by the L2 norm. And FreeType2 doesn't scale at all.
-			 * Furthermore, Microsoft's spec doesn't even mention anything like this.
-			 * It's almost as if nobody ever uses this feature anyway. */
-			if (outline_offset(font, glyph, &outline) < 0)
-				return -1;
-			if (outline) {
-				basePoint = (unsigned)outl->points.size();
-				if (decode_outline(font, outline, recDepth + 1, outl) < 0)
-					return -1;
-				transform_points((unsigned)outl->points.size() - basePoint, outl->points.data() + basePoint, local);
-			}
-		} while (flags & THERE_ARE_MORE_COMPONENTS);
-
-		return 0;
-	}
-
-	static int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl) {
-		int numContours;
-		if (!is_safe_offset(font, offset, 10))
-			return -1;
-		numContours = geti16(font, offset);
-		if (numContours > 0) {
-			/* Glyph has a 'simple' outline consisting of a number of contours. */
-			return simple_outline(font, offset + 10, (unsigned int)numContours, outl);
-		}
-		else if (numContours < 0) {
-			/* Glyph has a compound outline combined from mutiple other outlines. */
-			return compound_outline(font, offset + 10, recDepth, outl);
-		}
-		else {
-			return 0;
-		}
 	}
 
 	/* Integrate the values in the buffer to arrive at the final grayscale image. */
