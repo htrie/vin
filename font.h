@@ -64,6 +64,32 @@ namespace font {
 		return i + (i < x);
 	}
 
+	/* Like bsearch(), but returns the next highest element if key could not be found. */
+	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
+		const uint8_t* bytes = (uint8_t*)base, * sample;
+		size_t low = 0, high = nmemb - 1, mid;
+		if (!nmemb) return NULL;
+		while (low != high) {
+			mid = low + (high - low) / 2;
+			sample = bytes + mid * size;
+			if (compar(key, sample) > 0) {
+				low = mid + 1;
+			}
+			else {
+				high = mid;
+			}
+		}
+		return (uint8_t*)bytes + low * size;
+	}
+
+	static int cmpu16(const void* a, const void* b) {
+		return memcmp(a, b, 2);
+	}
+
+	static int cmpu32(const void* a, const void* b) {
+		return memcmp(a, b, 4);
+	}
+
 
 	struct SFT_Font {
 		const uint8_t* memory = nullptr;
@@ -173,7 +199,7 @@ namespace font {
 	};
 
 	/* Integrate the values in the buffer to arrive at the final grayscale image. */
-	static void post_process(Raster buf, uint8_t* image) {
+	static void post_process(const Raster& buf, uint8_t* image) {
 		Cell cell;
 		double accum = 0.0, value;
 		unsigned int i, num;
@@ -189,7 +215,7 @@ namespace font {
 	}
 
 	/* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
-	static void draw_line(Raster buf, Point origin, Point goal) {
+	static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 		Point delta;
 		Point nextCrossing;
 		Point crossingIncr;
@@ -348,7 +374,7 @@ namespace font {
 			return 0;
 		}
 
-		void draw_lines(Raster buf) const {
+		void draw_lines(Raster& buf) const {
 			unsigned int i;
 			for (i = 0; i < lines.size(); ++i) {
 				const Line& line = lines[i];
@@ -892,32 +918,6 @@ namespace font {
 		if (offset > font->size) return 0;
 		if (font->size - offset < margin) return 0;
 		return 1;
-	}
-
-	/* Like bsearch(), but returns the next highest element if key could not be found. */
-	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*)) {
-		const uint8_t* bytes = (uint8_t*)base, * sample;
-		size_t low = 0, high = nmemb - 1, mid;
-		if (!nmemb) return NULL;
-		while (low != high) {
-			mid = low + (high - low) / 2;
-			sample = bytes + mid * size;
-			if (compar(key, sample) > 0) {
-				low = mid + 1;
-			}
-			else {
-				high = mid;
-			}
-		}
-		return (uint8_t*)bytes + low * size;
-	}
-
-	static int cmpu16(const void* a, const void* b) {
-		return memcmp(a, b, 2);
-	}
-
-	static int cmpu32(const void* a, const void* b) {
-		return memcmp(a, b, 4);
 	}
 
 	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset) {
