@@ -55,13 +55,12 @@ namespace font {
 	#define STACK_FREE(var) \
 		if (var != var##_stack_) free(var);
 
-	enum { SrcMapping, SrcUser }; // TODO remove and use bool
 
 	struct SFT_Font {
 		const uint8_t* memory = nullptr;
 		uint_fast32_t size;
 		HANDLE mapping;
-		int source;
+		bool mapped = false;
 		uint_least16_t unitsPerEm;
 		int_least16_t  locaFormat;
 		uint_least16_t numLongHmtx;
@@ -197,8 +196,7 @@ namespace font {
 
 	void sft_freefont(SFT_Font* font) {
 		if (!font) return;
-		/* Only unmap if we mapped it ourselves. */
-		if (font->source == SrcMapping)
+		if (font->mapped)
 			unmap_file(font);
 		free(font);
 	}
@@ -213,7 +211,7 @@ namespace font {
 		}
 		font->memory = (uint8_t*)mem;
 		font->size = (uint_fast32_t)size;
-		font->source = SrcUser;
+		font->mapped = false;
 		if (init_font(font) < 0) {
 			sft_freefont(font);
 			return NULL;
