@@ -172,6 +172,108 @@ namespace font {
 		int height = 0;
 	};
 
+	/* Integrate the values in the buffer to arrive at the final grayscale image. */
+	static void post_process(Raster buf, uint8_t* image) {
+		Cell cell;
+		double accum = 0.0, value;
+		unsigned int i, num;
+		num = (unsigned int)buf.width * (unsigned int)buf.height;
+		for (i = 0; i < num; ++i) {
+			cell = buf.cells[i];
+			value = fabs(accum + cell.area);
+			value = std::min(value, 1.0);
+			value = value * 255.0 + 0.5;
+			image[i] = (uint8_t)value;
+			accum += cell.cover;
+		}
+	}
+
+	/* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
+	static void draw_line(Raster buf, Point origin, Point goal) {
+		Point delta;
+		Point nextCrossing;
+		Point crossingIncr;
+		double halfDeltaX;
+		double prevDistance = 0.0, nextDistance;
+		double xAverage, yDifference;
+		struct { int x, y; } pixel;
+		struct { int x, y; } dir;
+		int step, numSteps = 0;
+		Cell* cptr, cell;
+
+		delta.x = goal.x - origin.x;
+		delta.y = goal.y - origin.y;
+		dir.x = SIGN(delta.x);
+		dir.y = SIGN(delta.y);
+
+		if (!dir.y) {
+			return;
+		}
+
+		crossingIncr.x = dir.x ? fabs(1.0 / delta.x) : 1.0;
+		crossingIncr.y = fabs(1.0 / delta.y);
+
+		if (!dir.x) {
+			pixel.x = fast_floor(origin.x);
+			nextCrossing.x = 100.0;
+		}
+		else {
+			if (dir.x > 0) {
+				pixel.x = fast_floor(origin.x);
+				nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
+				nextCrossing.x = crossingIncr.x - nextCrossing.x;
+				numSteps += fast_ceil(goal.x) - fast_floor(origin.x) - 1;
+			}
+			else {
+				pixel.x = fast_ceil(origin.x) - 1;
+				nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
+				numSteps += fast_ceil(origin.x) - fast_floor(goal.x) - 1;
+			}
+		}
+
+		if (dir.y > 0) {
+			pixel.y = fast_floor(origin.y);
+			nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
+			nextCrossing.y = crossingIncr.y - nextCrossing.y;
+			numSteps += fast_ceil(goal.y) - fast_floor(origin.y) - 1;
+		}
+		else {
+			pixel.y = fast_ceil(origin.y) - 1;
+			nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
+			numSteps += fast_ceil(origin.y) - fast_floor(goal.y) - 1;
+		}
+
+		nextDistance = std::min(nextCrossing.x, nextCrossing.y);
+		halfDeltaX = 0.5 * delta.x;
+
+		for (step = 0; step < numSteps; ++step) {
+			xAverage = origin.x + (prevDistance + nextDistance) * halfDeltaX;
+			yDifference = (nextDistance - prevDistance) * delta.y;
+			cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+			cell = *cptr;
+			cell.cover += yDifference;
+			xAverage -= (double)pixel.x;
+			cell.area += (1.0 - xAverage) * yDifference;
+			*cptr = cell;
+			prevDistance = nextDistance;
+			int alongX = nextCrossing.x < nextCrossing.y;
+			pixel.x += alongX ? dir.x : 0;
+			pixel.y += alongX ? 0 : dir.y;
+			nextCrossing.x += alongX ? crossingIncr.x : 0.0;
+			nextCrossing.y += alongX ? 0.0 : crossingIncr.y;
+			nextDistance = std::min(nextCrossing.x, nextCrossing.y);
+		}
+
+		xAverage = origin.x + (prevDistance + 1.0) * halfDeltaX;
+		yDifference = (1.0 - prevDistance) * delta.y;
+		cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+		cell = *cptr;
+		cell.cover += yDifference;
+		xAverage -= (double)pixel.x;
+		cell.area += (1.0 - xAverage) * yDifference;
+		*cptr = cell;
+	}
+
 	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
 	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
 	static int cmpu16(const void* a, const void* b);
@@ -202,7 +304,7 @@ namespace font {
 		}
 
 		/* A heuristic to tell whether a given curve can be approximated closely enough by a line. */
-		int is_flat(const Curve& curve) {
+		int is_flat(const Curve& curve) const {
 			const double maxArea2 = 2.0;
 			Point a = points[curve.beg];
 			Point b = points[curve.ctrl];
@@ -250,92 +352,6 @@ namespace font {
 					return -1;
 			}
 			return 0;
-		}
-
-		/* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
-		static void draw_line(Raster buf, Point origin, Point goal) {
-			Point delta;
-			Point nextCrossing;
-			Point crossingIncr;
-			double halfDeltaX;
-			double prevDistance = 0.0, nextDistance;
-			double xAverage, yDifference;
-			struct { int x, y; } pixel;
-			struct { int x, y; } dir;
-			int step, numSteps = 0;
-			Cell* cptr, cell;
-
-			delta.x = goal.x - origin.x;
-			delta.y = goal.y - origin.y;
-			dir.x = SIGN(delta.x);
-			dir.y = SIGN(delta.y);
-
-			if (!dir.y) {
-				return;
-			}
-
-			crossingIncr.x = dir.x ? fabs(1.0 / delta.x) : 1.0;
-			crossingIncr.y = fabs(1.0 / delta.y);
-
-			if (!dir.x) {
-				pixel.x = fast_floor(origin.x);
-				nextCrossing.x = 100.0;
-			}
-			else {
-				if (dir.x > 0) {
-					pixel.x = fast_floor(origin.x);
-					nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
-					nextCrossing.x = crossingIncr.x - nextCrossing.x;
-					numSteps += fast_ceil(goal.x) - fast_floor(origin.x) - 1;
-				}
-				else {
-					pixel.x = fast_ceil(origin.x) - 1;
-					nextCrossing.x = (origin.x - pixel.x) * crossingIncr.x;
-					numSteps += fast_ceil(origin.x) - fast_floor(goal.x) - 1;
-				}
-			}
-
-			if (dir.y > 0) {
-				pixel.y = fast_floor(origin.y);
-				nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
-				nextCrossing.y = crossingIncr.y - nextCrossing.y;
-				numSteps += fast_ceil(goal.y) - fast_floor(origin.y) - 1;
-			}
-			else {
-				pixel.y = fast_ceil(origin.y) - 1;
-				nextCrossing.y = (origin.y - pixel.y) * crossingIncr.y;
-				numSteps += fast_ceil(origin.y) - fast_floor(goal.y) - 1;
-			}
-
-			nextDistance = std::min(nextCrossing.x, nextCrossing.y);
-			halfDeltaX = 0.5 * delta.x;
-
-			for (step = 0; step < numSteps; ++step) {
-				xAverage = origin.x + (prevDistance + nextDistance) * halfDeltaX;
-				yDifference = (nextDistance - prevDistance) * delta.y;
-				cptr = &buf.cells[pixel.y * buf.width + pixel.x];
-				cell = *cptr;
-				cell.cover += yDifference;
-				xAverage -= (double)pixel.x;
-				cell.area += (1.0 - xAverage) * yDifference;
-				*cptr = cell;
-				prevDistance = nextDistance;
-				int alongX = nextCrossing.x < nextCrossing.y;
-				pixel.x += alongX ? dir.x : 0;
-				pixel.y += alongX ? 0 : dir.y;
-				nextCrossing.x += alongX ? crossingIncr.x : 0.0;
-				nextCrossing.y += alongX ? 0.0 : crossingIncr.y;
-				nextDistance = std::min(nextCrossing.x, nextCrossing.y);
-			}
-
-			xAverage = origin.x + (prevDistance + 1.0) * halfDeltaX;
-			yDifference = (1.0 - prevDistance) * delta.y;
-			cptr = &buf.cells[pixel.y * buf.width + pixel.x];
-			cell = *cptr;
-			cell.cover += yDifference;
-			xAverage -= (double)pixel.x;
-			cell.area += (1.0 - xAverage) * yDifference;
-			*cptr = cell;
 		}
 
 		void draw_lines(Raster buf) const {
@@ -627,11 +643,7 @@ namespace font {
 	static int hor_metrics(SFT_Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
 
-	static void post_process(Raster buf, uint8_t* image);
-
 	static int render_outline(Outline* outl, double transform[6], SFT_Image image);
-
-	const char* sft_version(void) { return SCHRIFT_VERSION; }
 
 	void sft_freefont(SFT_Font* font) {
 		if (!font) return;
@@ -1239,22 +1251,6 @@ namespace font {
 		}
 
 		return 0;
-	}
-
-	/* Integrate the values in the buffer to arrive at the final grayscale image. */
-	static void post_process(Raster buf, uint8_t* image) {
-		Cell cell;
-		double accum = 0.0, value;
-		unsigned int i, num;
-		num = (unsigned int)buf.width * (unsigned int)buf.height;
-		for (i = 0; i < num; ++i) {
-			cell = buf.cells[i];
-			value = fabs(accum + cell.area);
-			value = std::min(value, 1.0);
-			value = value * 255.0 + 0.5;
-			image[i] = (uint8_t)value;
-			accum += cell.cover;
-		}
 	}
 
 	static int render_outline(Outline* outl, double transform[6], SFT_Image image) {
