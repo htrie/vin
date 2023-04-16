@@ -292,16 +292,10 @@ namespace font {
 	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
 	typedef uint_fast32_t SFT_Glyph;
 
-	struct Outline {
+	class Outline {
 		std::vector<Point> points;
 		std::vector<Curve> curves;
 		std::vector<Line> lines;
-
-		Outline() {
-			points.reserve(64);
-			curves.reserve(64);
-			lines.reserve(64);
-		}
 
 		/* A heuristic to tell whether a given curve can be approximated closely enough by a line. */
 		int is_flat(const Curve& curve) const {
@@ -425,24 +419,6 @@ namespace font {
 			}
 
 			return 0;
-		}
-
-		int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
-			int numContours;
-			if (!is_safe_offset(font, offset, 10))
-				return -1;
-			numContours = geti16(font, offset);
-			if (numContours > 0) {
-				/* Glyph has a 'simple' outline consisting of a number of contours. */
-				return simple_outline(font, offset + 10, (unsigned int)numContours);
-			}
-			else if (numContours < 0) {
-				/* Glyph has a compound outline combined from mutiple other outlines. */
-				return compound_outline(font, offset + 10, recDepth);
-			}
-			else {
-				return 0;
-			}
 		}
 
 		int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours) {
@@ -583,6 +559,63 @@ namespace font {
 			return 0;
 		}
 
+	public:
+		Outline() {
+			points.reserve(64);
+			curves.reserve(64);
+			lines.reserve(64);
+		}
+
+		int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
+			int numContours;
+			if (!is_safe_offset(font, offset, 10))
+				return -1;
+			numContours = geti16(font, offset);
+			if (numContours > 0) {
+				/* Glyph has a 'simple' outline consisting of a number of contours. */
+				return simple_outline(font, offset + 10, (unsigned int)numContours);
+			}
+			else if (numContours < 0) {
+				/* Glyph has a compound outline combined from mutiple other outlines. */
+				return compound_outline(font, offset + 10, recDepth);
+			}
+			else {
+				return 0;
+			}
+		}
+
+		int render_outline(double transform[6], SFT_Image image) {
+			Cell* cells = NULL;
+			Raster buf;
+			unsigned int numPixels;
+
+			numPixels = (unsigned int)image.width * (unsigned int)image.height;
+
+			STACK_ALLOC(cells, Cell, 128 * 128, numPixels);
+			if (!cells) {
+				return -1;
+			}
+			memset(cells, 0, numPixels * sizeof * cells);
+			buf.cells = cells;
+			buf.width = image.width;
+			buf.height = image.height;
+
+			transform_points((unsigned)points.size(), points.data(), transform);
+
+			clip_points((unsigned)points.size(), points.data(), image.width, image.height);
+
+			if (tesselate_curves() < 0) {
+				STACK_FREE(cells);
+				return -1;
+			}
+
+			draw_lines(buf);
+
+			post_process(buf, (uint8_t*)image.pixels);
+
+			STACK_FREE(cells);
+			return 0;
+		}
 	};
 
 	int map_file(SFT_Font* font, const char* filename) {
@@ -642,8 +675,6 @@ namespace font {
 
 	static int hor_metrics(SFT_Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
-
-	static int render_outline(Outline* outl, double transform[6], SFT_Image image);
 
 	void sft_freefont(SFT_Font* font) {
 		if (!font) return;
@@ -825,7 +856,7 @@ namespace font {
 		Outline outl;
 		if (outl.decode_outline(sft->font, outline, 0) < 0)
 			return -1;
-		if (render_outline(&outl, transform, image) < 0)
+		if (outl.render_outline(transform, image) < 0)
 			return -1;
 
 		return 0;
@@ -1250,39 +1281,6 @@ namespace font {
 			points[i].y = (double)accum;
 		}
 
-		return 0;
-	}
-
-	static int render_outline(Outline* outl, double transform[6], SFT_Image image) {
-		Cell* cells = NULL;
-		Raster buf;
-		unsigned int numPixels;
-
-		numPixels = (unsigned int)image.width * (unsigned int)image.height;
-
-		STACK_ALLOC(cells, Cell, 128 * 128, numPixels);
-		if (!cells) {
-			return -1;
-		}
-		memset(cells, 0, numPixels * sizeof * cells);
-		buf.cells = cells;
-		buf.width = image.width;
-		buf.height = image.height;
-
-		transform_points((unsigned)outl->points.size(), outl->points.data(), transform);
-
-		clip_points((unsigned)outl->points.size(), outl->points.data(), image.width, image.height);
-
-		if (outl->tesselate_curves() < 0) {
-			STACK_FREE(cells);
-			return -1;
-		}
-
-		outl->draw_lines(buf);
-
-		post_process(buf, (uint8_t*)image.pixels);
-
-		STACK_FREE(cells);
 		return 0;
 	}
 
