@@ -18,19 +18,57 @@
 
 namespace font {
 
-#define SFT_DOWNWARD_Y 0x01
+	#define SFT_DOWNWARD_Y 0x01
 
-	typedef struct SFT SFT; // TODO remove SFT and sft
-	typedef struct SFT_Font SFT_Font;
-	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
-	typedef uint_fast32_t SFT_Glyph;
-	typedef struct SFT_LMetrics SFT_LMetrics;
-	typedef struct SFT_GMetrics SFT_GMetrics;
-	typedef struct SFT_Kerning  SFT_Kerning;
-	typedef struct SFT_Image    SFT_Image;
+	#define SCHRIFT_VERSION "0.10.2"
+
+	#define FILE_MAGIC_ONE             0x00010000
+	#define FILE_MAGIC_TWO             0x74727565
+
+	#define HORIZONTAL_KERNING         0x01
+	#define MINIMUM_KERNING            0x02
+	#define CROSS_STREAM_KERNING       0x04
+	#define OVERRIDE_KERNING           0x08
+
+	#define POINT_IS_ON_CURVE          0x01
+	#define X_CHANGE_IS_SMALL          0x02
+	#define Y_CHANGE_IS_SMALL          0x04
+	#define REPEAT_FLAG                0x08
+	#define X_CHANGE_IS_ZERO           0x10
+	#define X_CHANGE_IS_POSITIVE       0x10
+	#define Y_CHANGE_IS_ZERO           0x20
+	#define Y_CHANGE_IS_POSITIVE       0x20
+
+	#define OFFSETS_ARE_LARGE          0x001
+	#define ACTUAL_XY_OFFSETS          0x002
+	#define GOT_A_SINGLE_SCALE         0x008
+	#define THERE_ARE_MORE_COMPONENTS  0x020
+	#define GOT_AN_X_AND_Y_SCALE       0x040
+	#define GOT_A_SCALE_MATRIX         0x080
+
+	#define MIN(a, b) ((a) < (b) ? (a) : (b))
+	#define SIGN(x)   (((x) > 0) - ((x) < 0))
+
+	#define STACK_ALLOC(var, type, thresh, count) \
+		type var##_stack_[thresh]; \
+		var = (count) <= (thresh) ? var##_stack_ : (type*)calloc(sizeof(type), count);
+	#define STACK_FREE(var) \
+		if (var != var##_stack_) free(var);
+
+	enum { SrcMapping, SrcUser }; // TODO remove and use bool
+
+	struct SFT_Font {
+		const uint8_t* memory = nullptr;
+		uint_fast32_t size;
+		HANDLE mapping;
+		int source;
+		uint_least16_t unitsPerEm;
+		int_least16_t  locaFormat;
+		uint_least16_t numLongHmtx;
+	};
 
 	struct SFT {
-		SFT_Font* font;
+		SFT_Font* font = nullptr;
 		double xScale;
 		double yScale;
 		double xOffset;
@@ -58,76 +96,34 @@ namespace font {
 	};
 
 	struct SFT_Image {
-		void* pixels;
+		void* pixels = nullptr;
 		int width;
 		int height;
 	};
 
-	const char* sft_version(void);
+	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
+	typedef uint_fast32_t SFT_Glyph;
 
-	SFT_Font* sft_loadmem(const void* mem, size_t size);
-	void sft_freefont(SFT_Font* font);
+	struct Point {
+		double x, y;
+	};
 
-	int sft_lmetrics(const SFT* sft, SFT_LMetrics* metrics);
-	int sft_lookup(const SFT* sft, SFT_UChar codepoint, SFT_Glyph* glyph);
-	int sft_gmetrics(const SFT* sft, SFT_Glyph glyph, SFT_GMetrics* metrics);
-	int sft_kerning(const SFT* sft, SFT_Glyph leftGlyph, SFT_Glyph rightGlyph, SFT_Kerning* kerning);
-	int sft_render(const SFT* sft, SFT_Glyph glyph, SFT_Image image);
+	struct Line {
+		uint_least16_t beg, end;
+	};
 
-#define SCHRIFT_VERSION "0.10.2"
+	struct Curve {
+		uint_least16_t beg, end, ctrl;
+	};
 
-#define FILE_MAGIC_ONE             0x00010000
-#define FILE_MAGIC_TWO             0x74727565
-
-#define HORIZONTAL_KERNING         0x01
-#define MINIMUM_KERNING            0x02
-#define CROSS_STREAM_KERNING       0x04
-#define OVERRIDE_KERNING           0x08
-
-#define POINT_IS_ON_CURVE          0x01
-#define X_CHANGE_IS_SMALL          0x02
-#define Y_CHANGE_IS_SMALL          0x04
-#define REPEAT_FLAG                0x08
-#define X_CHANGE_IS_ZERO           0x10
-#define X_CHANGE_IS_POSITIVE       0x10
-#define Y_CHANGE_IS_ZERO           0x20
-#define Y_CHANGE_IS_POSITIVE       0x20
-
-#define OFFSETS_ARE_LARGE          0x001
-#define ACTUAL_XY_OFFSETS          0x002
-#define GOT_A_SINGLE_SCALE         0x008
-#define THERE_ARE_MORE_COMPONENTS  0x020
-#define GOT_AN_X_AND_Y_SCALE       0x040
-#define GOT_A_SCALE_MATRIX         0x080
-
-	/* macros */
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define SIGN(x)   (((x) > 0) - ((x) < 0))
-/* Allocate values on the stack if they are small enough, else spill to heap. */
-#define STACK_ALLOC(var, type, thresh, count) \
-	type var##_stack_[thresh]; \
-	var = (count) <= (thresh) ? var##_stack_ : (type*)calloc(sizeof(type), count);
-#define STACK_FREE(var) \
-	if (var != var##_stack_) free(var);
-
-	enum { SrcMapping, SrcUser };
-
-	typedef struct Point Point;
-	typedef struct Line Line;
-	typedef struct Curve Curve;
-	typedef struct Cell Cell;
-	typedef struct Outline Outline;
-	typedef struct Raster Raster;
-
-	struct Point { double x, y; };
-	struct Line { uint_least16_t beg, end; };
-	struct Curve { uint_least16_t beg, end, ctrl; };
-	struct Cell { double area, cover; };
+	struct Cell {
+		double area, cover;
+	};
 
 	struct Outline {
-		Point* points;
-		Curve* curves;
-		Line* lines;
+		Point* points = nullptr;
+		Curve* curves = nullptr;
+		Line* lines = nullptr;
 		uint_least16_t numPoints;
 		uint_least16_t capPoints;
 		uint_least16_t numCurves;
@@ -140,16 +136,6 @@ namespace font {
 		Cell* cells;
 		int width;
 		int height;
-	};
-
-	struct SFT_Font {
-		const uint8_t* memory;
-		uint_fast32_t size;
-		HANDLE mapping;
-		int source;
-		uint_least16_t unitsPerEm;
-		int_least16_t  locaFormat;
-		uint_least16_t numLongHmtx;
 	};
 
 	static void* reallocarray(void* optr, size_t nmemb, size_t size);
@@ -209,6 +195,14 @@ namespace font {
 
 	const char* sft_version(void) { return SCHRIFT_VERSION; }
 
+	void sft_freefont(SFT_Font* font) {
+		if (!font) return;
+		/* Only unmap if we mapped it ourselves. */
+		if (font->source == SrcMapping)
+			unmap_file(font);
+		free(font);
+	}
+
 	SFT_Font* sft_loadmem(const void* mem, size_t size) {
 		SFT_Font* font;
 		if (size > UINT32_MAX) {
@@ -241,14 +235,6 @@ namespace font {
 			return NULL;
 		}
 		return font;
-	}
-
-	void sft_freefont(SFT_Font* font) {
-		if (!font) return;
-		/* Only unmap if we mapped it ourselves. */
-		if (font->source == SrcMapping)
-			unmap_file(font);
-		free(font);
 	}
 
 	int sft_lmetrics(const SFT* sft, SFT_LMetrics* metrics) {
