@@ -58,83 +58,83 @@ namespace font {
 
 	struct SFT_Font {
 		const uint8_t* memory = nullptr;
-		uint_fast32_t size;
-		HANDLE mapping;
+		uint_fast32_t size = 0;
+		HANDLE mapping = nullptr;
 		bool mapped = false;
-		uint_least16_t unitsPerEm;
-		int_least16_t  locaFormat;
-		uint_least16_t numLongHmtx;
+		uint_least16_t unitsPerEm = 0;
+		int_least16_t  locaFormat = 0;
+		uint_least16_t numLongHmtx = 0;
 	};
 
 	struct SFT {
 		SFT_Font* font = nullptr;
-		double xScale;
-		double yScale;
-		double xOffset;
-		double yOffset;
-		int flags;
+		double xScale = 0.0;
+		double yScale = 0.0;
+		double xOffset = 0.0;
+		double yOffset = 0.0;
+		int flags = 0;
 	};
 
 	struct SFT_LMetrics {
-		double ascender;
-		double descender;
-		double lineGap;
+		double ascender = 0.0;
+		double descender = 0.0;
+		double lineGap = 0.0;
 	};
 
 	struct SFT_GMetrics {
-		double advanceWidth;
-		double leftSideBearing;
-		int yOffset;
-		int minWidth;
-		int minHeight;
+		double advanceWidth = 0.0;
+		double leftSideBearing = 0.0;
+		int yOffset = 0;
+		int minWidth = 0;
+		int minHeight = 0;
 	};
 
 	struct SFT_Kerning {
-		double xShift;
-		double yShift;
+		double xShift = 0.0;
+		double yShift = 0.0;
 	};
 
 	struct SFT_Image {
 		void* pixels = nullptr;
-		int width;
-		int height;
+		int width = 0;
+		int height = 0;
 	};
 
 	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
 	typedef uint_fast32_t SFT_Glyph;
 
 	struct Point {
-		double x, y;
+		double x = 0.0, y = 0.0;
 	};
 
 	struct Line {
-		uint_least16_t beg, end;
+		uint_least16_t beg = 0, end = 0;
 	};
 
 	struct Curve {
-		uint_least16_t beg, end, ctrl;
+		uint_least16_t beg = 0, end = 0, ctrl = 0;
 	};
 
 	struct Cell {
-		double area, cover;
+		double area = 0.0, cover = 0.0;
 	};
 
 	struct Outline {
 		Point* points = nullptr;
 		Curve* curves = nullptr;
 		Line* lines = nullptr;
-		uint_least16_t numPoints;
-		uint_least16_t capPoints;
-		uint_least16_t numCurves;
-		uint_least16_t capCurves;
-		uint_least16_t numLines;
-		uint_least16_t capLines;
+		uint_least16_t numPoints = 0;
+		uint_least16_t capPoints = 0;
+		uint_least16_t numCurves = 0;
+		uint_least16_t capCurves = 0;
+		uint_least16_t numLines = 0;
+		uint_least16_t capLines = 0;
 	};
 
 	struct Raster {
-		Cell* cells;
-		int width;
-		int height;
+		Cell* cells = nullptr;
+		int width = 0;
+		int height = 0;
 	};
 
 	static void* reallocarray(void* optr, size_t nmemb, size_t size);
