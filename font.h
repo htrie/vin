@@ -299,6 +299,69 @@ namespace font {
 				draw_line(buf, origin, goal);
 			}
 		}
+
+		int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count) {
+			uint_fast16_t i;
+			uint_least16_t looseEnd, beg, ctrl, center, cur;
+			unsigned int gotCtrl;
+
+			/* Skip contours with less than two points, since the following algorithm can't handle them and
+			 * they should appear invisible either way (because they don't have any area). */
+			if (count < 2) return 0;
+
+			assert(basePoint <= UINT16_MAX - count);
+
+			if (flags[0] & POINT_IS_ON_CURVE) {
+				looseEnd = (uint_least16_t)basePoint++;
+				++flags;
+				--count;
+			}
+			else if (flags[count - 1] & POINT_IS_ON_CURVE) {
+				looseEnd = (uint_least16_t)(basePoint + --count);
+			}
+			else {
+				looseEnd = (uint_least16_t)points.size();
+				points.push_back(midpoint(points[basePoint], points[basePoint + count - 1]));
+			}
+			beg = looseEnd;
+			gotCtrl = 0;
+			for (i = 0; i < count; ++i) {
+				/* cur can't overflow because we ensure that basePoint + count < 0xFFFF before calling decode_contour(). */
+				cur = (uint_least16_t)(basePoint + i);
+				/* NOTE clang-analyzer will often flag this and another piece of code because it thinks that flags and
+				 * points + basePoint don't always get properly initialized -- even when you explicitly loop over both
+				 * and set every element to zero (but not when you use memset). This is a known clang-analyzer bug:
+				 * http://clang-developers.42468.n3.nabble.com/StaticAnalyzer-False-positive-with-loop-handling-td4053875.html */
+				if (flags[i] & POINT_IS_ON_CURVE) {
+					if (gotCtrl) {
+						curves.emplace_back(beg, cur, ctrl);
+					}
+					else {
+						lines.emplace_back(beg, cur);
+					}
+					beg = cur;
+					gotCtrl = 0;
+				}
+				else {
+					if (gotCtrl) {
+						center = (uint_least16_t)points.size();
+						points.push_back(midpoint(points[ctrl], points[cur]));
+						curves.emplace_back(beg, center, ctrl);
+						beg = center;
+					}
+					ctrl = cur;
+					gotCtrl = 1;
+				}
+			}
+			if (gotCtrl) {
+				curves.emplace_back(beg, looseEnd, ctrl);
+			}
+			else {
+				lines.emplace_back(beg, looseEnd);
+			}
+
+			return 0;
+		}
 	};
 
 	int map_file(SFT_Font* font, const char* filename) {
@@ -376,7 +439,6 @@ namespace font {
 	static int outline_offset(SFT_Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
 	static int simple_flags(SFT_Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
 	static int simple_points(SFT_Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
-	static int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count, Outline* outl);
 	static int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours, Outline* outl);
 	static int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
 	static int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth, Outline* outl);
@@ -1029,69 +1091,6 @@ namespace font {
 		return 0;
 	}
 
-	static int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count, Outline* outl) {
-		uint_fast16_t i;
-		uint_least16_t looseEnd, beg, ctrl, center, cur;
-		unsigned int gotCtrl;
-
-		/* Skip contours with less than two points, since the following algorithm can't handle them and
-		 * they should appear invisible either way (because they don't have any area). */
-		if (count < 2) return 0;
-
-		assert(basePoint <= UINT16_MAX - count);
-
-		if (flags[0] & POINT_IS_ON_CURVE) {
-			looseEnd = (uint_least16_t)basePoint++;
-			++flags;
-			--count;
-		}
-		else if (flags[count - 1] & POINT_IS_ON_CURVE) {
-			looseEnd = (uint_least16_t)(basePoint + --count);
-		}
-		else {
-			looseEnd = (uint_least16_t)outl->points.size();
-			outl->points.push_back(midpoint(outl->points[basePoint], outl->points[basePoint + count - 1]));
-		}
-		beg = looseEnd;
-		gotCtrl = 0;
-		for (i = 0; i < count; ++i) {
-			/* cur can't overflow because we ensure that basePoint + count < 0xFFFF before calling decode_contour(). */
-			cur = (uint_least16_t)(basePoint + i);
-			/* NOTE clang-analyzer will often flag this and another piece of code because it thinks that flags and
-			 * outl->points + basePoint don't always get properly initialized -- even when you explicitly loop over both
-			 * and set every element to zero (but not when you use memset). This is a known clang-analyzer bug:
-			 * http://clang-developers.42468.n3.nabble.com/StaticAnalyzer-False-positive-with-loop-handling-td4053875.html */
-			if (flags[i] & POINT_IS_ON_CURVE) {
-				if (gotCtrl) {
-					outl->curves.emplace_back(beg, cur, ctrl);
-				}
-				else {
-					outl->lines.emplace_back(beg, cur);
-				}
-				beg = cur;
-				gotCtrl = 0;
-			}
-			else {
-				if (gotCtrl) {
-					center = (uint_least16_t)outl->points.size();
-					outl->points.push_back(midpoint(outl->points[ctrl], outl->points[cur]));
-					outl->curves.emplace_back(beg, center, ctrl);
-					beg = center;
-				}
-				ctrl = cur;
-				gotCtrl = 1;
-			}
-		}
-		if (gotCtrl) {
-			outl->curves.emplace_back(beg, looseEnd, ctrl);
-		}
-		else {
-			outl->lines.emplace_back(beg, looseEnd);
-		}
-
-		return 0;
-	}
-
 	static int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours, Outline* outl) {
 		uint_fast16_t* endPts = NULL;
 		uint8_t* flags = NULL;
@@ -1140,7 +1139,7 @@ namespace font {
 
 		for (i = 0; i < numContours; ++i) {
 			uint_fast16_t count = endPts[i] - beg + 1;
-			if (decode_contour(flags + beg, basePoint + beg, count, outl) < 0)
+			if (outl->decode_contour(flags + beg, basePoint + beg, count) < 0)
 				goto failure;
 			beg = endPts[i] + 1;
 		}
