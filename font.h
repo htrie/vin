@@ -16,7 +16,7 @@
 
 #pragma once
 
-namespace font {
+namespace font { // TODO remove namespace
 
 	#define SFT_DOWNWARD_Y 0x01
 
@@ -90,50 +90,6 @@ namespace font {
 		return memcmp(a, b, 4);
 	}
 
-
-	struct SFT_Font {
-		const uint8_t* memory = nullptr;
-		uint_fast32_t size = 0;
-		HANDLE mapping = nullptr;
-		bool mapped = false;
-		uint_least16_t unitsPerEm = 0;
-		int_least16_t  locaFormat = 0;
-		uint_least16_t numLongHmtx = 0;
-	};
-
-	struct SFT {
-		SFT_Font* font = nullptr;
-		double xScale = 0.0;
-		double yScale = 0.0;
-		double xOffset = 0.0;
-		double yOffset = 0.0;
-		int flags = 0;
-	};
-
-	struct SFT_LMetrics {
-		double ascender = 0.0;
-		double descender = 0.0;
-		double lineGap = 0.0;
-	};
-
-	struct SFT_GMetrics {
-		double advanceWidth = 0.0;
-		double leftSideBearing = 0.0;
-		int yOffset = 0;
-		int minWidth = 0;
-		int minHeight = 0;
-	};
-
-	struct SFT_Kerning {
-		double xShift = 0.0;
-		double yShift = 0.0;
-	};
-
-	struct SFT_Image {
-		void* pixels = nullptr;
-		int width = 0;
-		int height = 0;
-	};
 
 	struct Point {
 		double x = 0.0, y = 0.0;
@@ -300,10 +256,52 @@ namespace font {
 		*cptr = cell;
 	}
 
+
+	struct SFT_Font { // TODO remove SFT_
+		const uint8_t* memory = nullptr;
+		uint_fast32_t size = 0;
+		HANDLE mapping = nullptr;
+		bool mapped = false;
+		uint_least16_t unitsPerEm = 0;
+		int_least16_t  locaFormat = 0;
+		uint_least16_t numLongHmtx = 0;
+	};
+
+	struct SFT { // TODO make class
+		SFT_Font* font = nullptr;
+		double xScale = 0.0;
+		double yScale = 0.0;
+		double xOffset = 0.0;
+		double yOffset = 0.0;
+		int flags = 0;
+	};
+
+	struct SFT_LMetrics {
+		double ascender = 0.0;
+		double descender = 0.0;
+		double lineGap = 0.0;
+	};
+
+	struct SFT_GMetrics {
+		double advanceWidth = 0.0;
+		double leftSideBearing = 0.0;
+		int yOffset = 0;
+		int minWidth = 0;
+		int minHeight = 0;
+	};
+
+	struct SFT_Kerning {
+		double xShift = 0.0;
+		double yShift = 0.0;
+	};
+
+	struct SFT_Image {
+		void* pixels = nullptr;
+		int width = 0;
+		int height = 0;
+	};
+
 	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
-	static void* csearch(const void* key, const void* base, size_t nmemb, size_t size, int (*compar)(const void*, const void*));
-	static int cmpu16(const void* a, const void* b);
-	static int cmpu32(const void* a, const void* b);
 	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset);
 	static inline int_least8_t geti8(SFT_Font* font, uint_fast32_t offset);
 	static inline uint_least16_t getu16(SFT_Font* font, uint_fast32_t offset);
