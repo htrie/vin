@@ -47,14 +47,14 @@ private:
 
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
-		if (font::sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
-			if (font::sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
+		if (font::lookup(&sft, codepoint, &glyph.gid) == 0) {
+			if (font::gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
-				font::sft_render(&sft, glyph.gid, image);
+				font::render(&sft, glyph.gid, image);
 				return glyph;
 			}
 		}
@@ -62,7 +62,7 @@ private:
 	}
 
 	font::Font* try_font(const std::string_view filename) {
-		if (auto* font = font::sft_loadfile(filename.data()))
+		if (auto* font = font::loadfile(filename.data()))
 			return font;
 		return nullptr;
 	}
@@ -81,14 +81,14 @@ public:
 
 	~Font() {
 		if (font)
-			font::sft_freefont(font);
+			font::freefont(font);
 	}
 
 	void set_size(double size) {
 		if (size != sft.xScale) {
 			sft.xScale = size;
 			sft.yScale = size;
-			font::sft_lmetrics(&sft, &lmtx);
+			font::lmetrics(&sft, &lmtx);
 			glyphs.clear();
 			add_glyph(0);
 		}

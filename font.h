@@ -700,14 +700,14 @@ namespace font { // TODO remove namespace
 	static int hor_metrics(Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
 
-	void sft_freefont(Font* font) {
+	void freefont(Font* font) {
 		if (!font) return;
 		if (font->mapped)
 			unmap_file(font);
 		free(font);
 	}
 
-	Font* sft_loadmem(const void* mem, size_t size) {
+	Font* loadmem(const void* mem, size_t size) {
 		Font* font;
 		if (size > UINT32_MAX) {
 			return NULL;
@@ -719,13 +719,13 @@ namespace font { // TODO remove namespace
 		font->size = (uint_fast32_t)size;
 		font->mapped = false;
 		if (init_font(font) < 0) {
-			sft_freefont(font);
+			freefont(font);
 			return NULL;
 		}
 		return font;
 	}
 
-	Font * sft_loadfile(char const* filename) {
+	Font * loadfile(char const* filename) {
 		Font* font;
 		if (!(font = (Font*)calloc(1, sizeof * font))) {
 			return NULL;
@@ -735,13 +735,13 @@ namespace font { // TODO remove namespace
 			return NULL;
 		}
 		if (init_font(font) < 0) {
-			sft_freefont(font);
+			freefont(font);
 			return NULL;
 		}
 		return font;
 	}
 
-	int sft_lmetrics(const SFT* sft, LMetrics* metrics) {
+	int lmetrics(const SFT* sft, LMetrics* metrics) {
 		double factor;
 		uint_fast32_t hhea;
 		memset(metrics, 0, sizeof * metrics);
@@ -756,11 +756,11 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int sft_lookup(const SFT* sft, UChar codepoint, Glyph* glyph) {
+	int lookup(const SFT* sft, UChar codepoint, Glyph* glyph) {
 		return glyph_id(sft->font, codepoint, glyph);
 	}
 
-	int sft_gmetrics(const SFT* sft, Glyph glyph, GMetrics* metrics) {
+	int gmetrics(const SFT* sft, Glyph glyph, GMetrics* metrics) {
 		int adv, lsb;
 		double xScale = sft->xScale / sft->font->unitsPerEm;
 		uint_fast32_t outline;
@@ -786,7 +786,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int sft_kerning(const SFT* sft, Glyph leftGlyph, Glyph rightGlyph, Kerning* kerning) {
+	int kerning(const SFT* sft, Glyph leftGlyph, Glyph rightGlyph, Kerning* kerning) {
 		void* match;
 		uint_fast32_t offset;
 		unsigned int numTables, numPairs, length, format, flags;
@@ -850,7 +850,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int sft_render(const SFT* sft, Glyph glyph, Image image) {
+	int render(const SFT* sft, Glyph glyph, Image image) {
 		uint_fast32_t outline;
 		double transform[6];
 		int bbox[4];
