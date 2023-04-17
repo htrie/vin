@@ -257,6 +257,9 @@ namespace font { // TODO remove namespace
 	}
 
 
+	typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
+	typedef uint_fast32_t Glyph;
+
 	struct Font {
 		const uint8_t* memory = nullptr;
 		uint_fast32_t size = 0;
@@ -265,6 +268,388 @@ namespace font { // TODO remove namespace
 		uint_least16_t unitsPerEm = 0;
 		int_least16_t  locaFormat = 0;
 		uint_least16_t numLongHmtx = 0;
+
+		uint_least8_t getu8(uint_fast32_t offset) const {
+			assert(offset + 1 <= size);
+			return *(memory + offset);
+		}
+
+		int_least8_t geti8(uint_fast32_t offset) const {
+			return (int_least8_t)getu8(offset);
+		}
+
+		uint_least16_t getu16(uint_fast32_t offset) const {
+			assert(offset + 2 <= size);
+			const uint8_t* base = memory + offset;
+			uint_least16_t b1 = base[0], b0 = base[1];
+			return (uint_least16_t)(b1 << 8 | b0);
+		}
+
+		int16_t geti16(uint_fast32_t offset) const {
+			return (int_least16_t)getu16(offset);
+		}
+
+		uint32_t getu32(uint_fast32_t offset) const {
+			assert(offset + 4 <= size);
+			const uint8_t* base = memory + offset;
+			uint_least32_t b3 = base[0], b2 = base[1], b1 = base[2], b0 = base[3];
+			return (uint_least32_t)(b3 << 24 | b2 << 16 | b1 << 8 | b0);
+		}
+
+		int is_safe_offset(uint_fast32_t offset, uint_fast32_t margin) const {
+			if (offset > size) return 0;
+			if (size - offset < margin) return 0;
+			return 1;
+		}
+
+		int gettable(char tag[4], uint_fast32_t* offset) const {
+			void* match;
+			unsigned int numTables;
+			/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
+			numTables = getu16(4);
+			if (!is_safe_offset(12, (uint_fast32_t)numTables * 16))
+				return -1;
+			if (!(match = bsearch(tag, memory + 12, numTables, 16, cmpu32)))
+				return -1;
+			*offset = getu32((uint_fast32_t)((uint8_t*)match - memory + 8));
+			return 0;
+		}
+
+		int init() {
+			uint_fast32_t scalerType, head, hhea;
+
+			if (!is_safe_offset(0, 12))
+				return -1;
+			/* Check for a compatible scalerType (magic number). */
+			scalerType = getu32(0);
+			if (scalerType != FILE_MAGIC_ONE && scalerType != FILE_MAGIC_TWO)
+				return -1;
+
+			if (gettable((char*)"head", &head) < 0)
+				return -1;
+			if (!is_safe_offset(head, 54))
+				return -1;
+			unitsPerEm = getu16(head + 18);
+			locaFormat = geti16(head + 50);
+
+			if (gettable((char*)"hhea", &hhea) < 0)
+				return -1;
+			if (!is_safe_offset(hhea, 36))
+				return -1;
+			numLongHmtx = getu16(hhea + 34);
+
+			return 0;
+		}
+
+		int hor_metrics(Glyph glyph, int* advanceWidth, int* leftSideBearing) const {
+			uint_fast32_t hmtx, offset, boundary;
+			if (gettable((char*)"hmtx", &hmtx) < 0)
+				return -1;
+			if (glyph < numLongHmtx) {
+				/* glyph is inside long metrics segment. */
+				offset = hmtx + 4 * glyph;
+				if (!is_safe_offset(offset, 4))
+					return -1;
+				*advanceWidth = getu16(offset);
+				*leftSideBearing = geti16(offset + 2);
+				return 0;
+			}
+			else {
+				/* glyph is inside short metrics segment. */
+				boundary = hmtx + 4U * (uint_fast32_t)numLongHmtx;
+				if (boundary < 4)
+					return -1;
+
+				offset = boundary - 4;
+				if (!is_safe_offset(offset, 4))
+					return -1;
+				*advanceWidth = getu16(offset);
+
+				offset = boundary + 2 * (glyph - numLongHmtx);
+				if (!is_safe_offset(offset, 2))
+					return -1;
+				*leftSideBearing = geti16(offset);
+				return 0;
+			}
+		}
+
+		/* Returns the offset into the font that the glyph's outline is stored at. */
+		int outline_offset(Glyph glyph, uint_fast32_t* offset) const {
+			uint_fast32_t loca, glyf;
+			uint_fast32_t base, current, next;
+
+			if (gettable((char*)"loca", &loca) < 0)
+				return -1;
+			if (gettable((char*)"glyf", &glyf) < 0)
+				return -1;
+
+			if (locaFormat == 0) {
+				base = loca + 2 * glyph;
+
+				if (!is_safe_offset(base, 4))
+					return -1;
+
+				current = 2U * (uint_fast32_t)getu16(base);
+				next = 2U * (uint_fast32_t)getu16(base + 2);
+			}
+			else {
+				base = loca + 4 * glyph;
+
+				if (!is_safe_offset(base, 8))
+					return -1;
+
+				current = getu32(base);
+				next = getu32(base + 4);
+			}
+
+			*offset = current == next ? 0 : glyf + current;
+			return 0;
+		}
+
+		/* For a 'simple' outline, determines each point of the outline with a set of flags. */
+		int simple_flags(uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) const {
+			uint_fast32_t off = *offset;
+			uint_fast16_t i;
+			uint8_t value = 0, repeat = 0;
+			for (i = 0; i < numPts; ++i) {
+				if (repeat) {
+					--repeat;
+				}
+				else {
+					if (!is_safe_offset(off, 1))
+						return -1;
+					value = getu8(off++);
+					if (value & REPEAT_FLAG) {
+						if (!is_safe_offset(off, 1))
+							return -1;
+						repeat = getu8(off++);
+					}
+				}
+				flags[i] = value;
+			}
+			*offset = off;
+			return 0;
+		}
+
+		/* For a 'simple' outline, decodes both X and Y coordinates for each point of the outline. */
+		int simple_points(uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) const {
+			long accum, value, bit;
+			uint_fast16_t i;
+
+			accum = 0L;
+			for (i = 0; i < numPts; ++i) {
+				if (flags[i] & X_CHANGE_IS_SMALL) {
+					if (!is_safe_offset(offset, 1))
+						return -1;
+					value = (long)getu8(offset++);
+					bit = !!(flags[i] & X_CHANGE_IS_POSITIVE);
+					accum -= (value ^ -bit) + bit;
+				}
+				else if (!(flags[i] & X_CHANGE_IS_ZERO)) {
+					if (!is_safe_offset(offset, 2))
+						return -1;
+					accum += geti16(offset);
+					offset += 2;
+				}
+				points[i].x = (double)accum;
+			}
+
+			accum = 0L;
+			for (i = 0; i < numPts; ++i) {
+				if (flags[i] & Y_CHANGE_IS_SMALL) {
+					if (!is_safe_offset(offset, 1))
+						return -1;
+					value = (long)getu8(offset++);
+					bit = !!(flags[i] & Y_CHANGE_IS_POSITIVE);
+					accum -= (value ^ -bit) + bit;
+				}
+				else if (!(flags[i] & Y_CHANGE_IS_ZERO)) {
+					if (!is_safe_offset(offset, 2))
+						return -1;
+					accum += geti16(offset);
+					offset += 2;
+				}
+				points[i].y = (double)accum;
+			}
+
+			return 0;
+		}
+
+		int cmap_fmt4(uint_fast32_t table, UChar charCode, Glyph* glyph) const {
+			const uint8_t* segPtr;
+			uint_fast32_t segIdxX2;
+			uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
+			uint_fast16_t segCountX2, idRangeOffset, startCode, shortCode, idDelta, id;
+			uint8_t key[2] = { (uint8_t)(charCode >> 8), (uint8_t)charCode };
+			/* cmap format 4 only supports the Unicode BMP. */
+			if (charCode > 0xFFFF) {
+				*glyph = 0;
+				return 0;
+			}
+			shortCode = (uint_fast16_t)charCode;
+			if (!is_safe_offset(table, 8))
+				return -1;
+			segCountX2 = getu16(table);
+			if ((segCountX2 & 1) || !segCountX2)
+				return -1;
+			/* Find starting positions of the relevant arrays. */
+			endCodes = table + 8;
+			startCodes = endCodes + segCountX2 + 2;
+			idDeltas = startCodes + segCountX2;
+			idRangeOffsets = idDeltas + segCountX2;
+			if (!is_safe_offset(idRangeOffsets, segCountX2))
+				return -1;
+			/* Find the segment that contains shortCode by binary searching over
+			 * the highest codes in the segments. */
+			segPtr = (uint8_t*)csearch(key, memory + endCodes, segCountX2 / 2, 2, cmpu16);
+			segIdxX2 = (uint_fast32_t)(segPtr - (memory + endCodes));
+			/* Look up segment info from the arrays & short circuit if the spec requires. */
+			if ((startCode = getu16(startCodes + segIdxX2)) > shortCode)
+				return 0;
+			idDelta = getu16(idDeltas + segIdxX2);
+			if (!(idRangeOffset = getu16(idRangeOffsets + segIdxX2))) {
+				/* Intentional integer under- and overflow. */
+				*glyph = (shortCode + idDelta) & 0xFFFF;
+				return 0;
+			}
+			/* Calculate offset into glyph array and determine ultimate value. */
+			idOffset = idRangeOffsets + segIdxX2 + idRangeOffset + 2U * (unsigned int)(shortCode - startCode);
+			if (!is_safe_offset(idOffset, 2))
+				return -1;
+			id = getu16(idOffset);
+			/* Intentional integer under- and overflow. */
+			*glyph = id ? (id + idDelta) & 0xFFFF : 0;
+			return 0;
+		}
+
+		int cmap_fmt6(uint_fast32_t table, UChar charCode, Glyph* glyph) const {
+			unsigned int firstCode, entryCount;
+			/* cmap format 6 only supports the Unicode BMP. */
+			if (charCode > 0xFFFF) {
+				*glyph = 0;
+				return 0;
+			}
+			if (!is_safe_offset(table, 4))
+				return -1;
+			firstCode = getu16(table);
+			entryCount = getu16(table + 2);
+			if (!is_safe_offset(table, 4 + 2 * entryCount))
+				return -1;
+			if (charCode < firstCode)
+				return -1;
+			charCode -= firstCode;
+			if (!(charCode < entryCount))
+				return -1;
+			*glyph = getu16(table + 4 + 2 * charCode);
+			return 0;
+		}
+
+		int cmap_fmt12_13(uint_fast32_t table, UChar charCode, Glyph* glyph, int which) const {
+			uint32_t len, numEntries;
+			uint_fast32_t i;
+
+			*glyph = 0;
+
+			/* check that the entire header is present */
+			if (!is_safe_offset(table, 16))
+				return -1;
+
+			len = getu32(table + 4);
+
+			/* A minimal header is 16 bytes */
+			if (len < 16)
+				return -1;
+
+			if (!is_safe_offset(table, len))
+				return -1;
+
+			numEntries = getu32(table + 12);
+
+			for (i = 0; i < numEntries; ++i) {
+				uint32_t firstCode, lastCode, glyphOffset;
+				firstCode = getu32(table + (i * 12) + 16);
+				lastCode = getu32(table + (i * 12) + 16 + 4);
+				if (charCode < firstCode || charCode > lastCode)
+					continue;
+				glyphOffset = getu32(table + (i * 12) + 16 + 8);
+				if (which == 12)
+					*glyph = (charCode - firstCode) + glyphOffset;
+				else
+					*glyph = glyphOffset;
+				return 0;
+			}
+
+			return 0;
+		}
+
+		/* Maps Unicode code points to glyph indices. */
+		int glyph_id(UChar charCode, Glyph* glyph) const {
+			uint_fast32_t cmap, entry, table;
+			unsigned int idx, numEntries;
+			int type, format;
+
+			*glyph = 0;
+
+			if (gettable((char*)"cmap", &cmap) < 0)
+				return -1;
+
+			if (!is_safe_offset(cmap, 4))
+				return -1;
+			numEntries = getu16(cmap + 2);
+
+			if (!is_safe_offset(cmap, 4 + numEntries * 8))
+				return -1;
+
+			/* First look for a 'full repertoire'/non-BMP map. */
+			for (idx = 0; idx < numEntries; ++idx) {
+				entry = cmap + 4 + idx * 8;
+				type = getu16(entry) * 0100 + getu16(entry + 2);
+				/* Complete unicode map */
+				if (type == 0004 || type == 0312) {
+					table = cmap + getu32(entry + 4);
+					if (!is_safe_offset(table, 8))
+						return -1;
+					/* Dispatch based on cmap format. */
+					format = getu16(table);
+					switch (format) {
+					case 12:
+						return cmap_fmt12_13(table, charCode, glyph, 12);
+					default:
+						return -1;
+					}
+				}
+			}
+
+			/* If no 'full repertoire' cmap was found, try looking for a BMP map. */
+			for (idx = 0; idx < numEntries; ++idx) {
+				entry = cmap + 4 + idx * 8;
+				type = getu16(entry) * 0100 + getu16(entry + 2);
+				/* Unicode BMP */
+				if (type == 0003 || type == 0301) {
+					table = cmap + getu32(entry + 4);
+					if (!is_safe_offset(table, 6))
+						return -1;
+					/* Dispatch based on cmap format. */
+					switch (getu16(table)) {
+					case 4:
+						return cmap_fmt4(table + 6, charCode, glyph);
+					case 6:
+						return cmap_fmt6(table + 6, charCode, glyph);
+					default:
+						return -1;
+					}
+				}
+			}
+
+			return -1;
+		}
+	};
+
+
+	struct LMetrics {
+		double ascender = 0.0;
+		double descender = 0.0;
+		double lineGap = 0.0;
 	};
 
 	struct SFT { // TODO make class // TODO rename
@@ -274,12 +659,22 @@ namespace font { // TODO remove namespace
 		double xOffset = 0.0;
 		double yOffset = 0.0;
 		int flags = 0;
-	};
 
-	struct LMetrics {
-		double ascender = 0.0;
-		double descender = 0.0;
-		double lineGap = 0.0;
+		int lmetrics(LMetrics* metrics) {
+			double factor;
+			uint_fast32_t hhea;
+			memset(metrics, 0, sizeof * metrics);
+			if (font->gettable((char*)"hhea", &hhea) < 0)
+				return -1;
+			if (!font->is_safe_offset(hhea, 36))
+				return -1;
+			factor = yScale / font->unitsPerEm;
+			metrics->ascender = font->geti16(hhea + 4) * factor;
+			metrics->descender = font->geti16(hhea + 6) * factor;
+			metrics->lineGap = font->geti16(hhea + 8) * factor;
+			return 0;
+		}
+
 	};
 
 	struct GMetrics {
@@ -290,31 +685,11 @@ namespace font { // TODO remove namespace
 		int minHeight = 0;
 	};
 
-	struct Kerning {
-		double xShift = 0.0;
-		double yShift = 0.0;
-	};
-
 	struct Image {
 		void* pixels = nullptr;
 		int width = 0;
 		int height = 0;
 	};
-
-	static inline int is_safe_offset(Font* font, uint_fast32_t offset, uint_fast32_t margin);
-	static inline uint_least8_t getu8(Font* font, uint_fast32_t offset);
-	static inline int_least8_t geti8(Font* font, uint_fast32_t offset);
-	static inline uint_least16_t getu16(Font* font, uint_fast32_t offset);
-	static inline int_least16_t geti16(Font* font, uint_fast32_t offset);
-	static inline uint_least32_t getu32(Font* font, uint_fast32_t offset);
-	static int gettable(Font* font, char tag[4], uint_fast32_t* offset);
-
-	static int outline_offset(Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
-	static int simple_flags(Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
-	static int simple_points(Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
-
-	typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
-	typedef uint_fast32_t Glyph;
 
 	class Outline {
 		std::vector<Point> points;
@@ -445,7 +820,7 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int simple_outline(Font* font, uint_fast32_t offset, unsigned int numContours) {
+		int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) {
 			uint_fast16_t* endPts = NULL;
 			uint8_t* flags = NULL;
 			uint_fast16_t numPts;
@@ -456,9 +831,9 @@ namespace font { // TODO remove namespace
 			uint_fast16_t basePoint = (uint_fast16_t)points.size();
 			uint_fast16_t beg = 0;
 
-			if (!is_safe_offset(font, offset, numContours * 2 + 2))
+			if (!font.is_safe_offset(offset, numContours * 2 + 2))
 				goto failure;
-			numPts = getu16(font, offset + (numContours - 1) * 2);
+			numPts = font.getu16(offset + (numContours - 1) * 2);
 			if (numPts >= UINT16_MAX)
 				goto failure;
 			numPts++;
@@ -474,7 +849,7 @@ namespace font { // TODO remove namespace
 				goto failure;
 
 			for (i = 0; i < numContours; ++i) {
-				endPts[i] = getu16(font, offset);
+				endPts[i] = font.getu16(offset);
 				offset += 2;
 			}
 			/* Ensure that endPts are never falling.
@@ -484,11 +859,11 @@ namespace font { // TODO remove namespace
 				if (endPts[i + 1] < endPts[i] + 1)
 					goto failure;
 			}
-			offset += 2U + getu16(font, offset);
+			offset += 2U + font.getu16(offset);
 
-			if (simple_flags(font, &offset, numPts, flags) < 0)
+			if (font.simple_flags(&offset, numPts, flags) < 0)
 				goto failure;
-			if (simple_points(font, offset, numPts, flags, points.data() + basePoint) < 0)
+			if (font.simple_points(offset, numPts, flags, points.data() + basePoint) < 0)
 				goto failure;
 
 			for (i = 0; i < numContours; ++i) {
@@ -507,7 +882,7 @@ namespace font { // TODO remove namespace
 			return -1;
 		}
 
-		int compound_outline(Font* font, uint_fast32_t offset, int recDepth) {
+		int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 			double local[6];
 			uint_fast32_t outline;
 			unsigned int flags, glyph, basePoint;
@@ -516,50 +891,50 @@ namespace font { // TODO remove namespace
 				return -1;
 			do {
 				memset(local, 0, sizeof local);
-				if (!is_safe_offset(font, offset, 4))
+				if (!font.is_safe_offset(offset, 4))
 					return -1;
-				flags = getu16(font, offset);
-				glyph = getu16(font, offset + 2);
+				flags = font.getu16(offset);
+				glyph = font.getu16(offset + 2);
 				offset += 4;
 				/* We don't implement point matching, and neither does stb_truetype for that matter. */
 				if (!(flags & ACTUAL_XY_OFFSETS))
 					return -1;
 				/* Read additional X and Y offsets (in FUnits) of this component. */
 				if (flags & OFFSETS_ARE_LARGE) {
-					if (!is_safe_offset(font, offset, 4))
+					if (!font.is_safe_offset(offset, 4))
 						return -1;
-					local[4] = geti16(font, offset);
-					local[5] = geti16(font, offset + 2);
+					local[4] = font.geti16(offset);
+					local[5] = font.geti16(offset + 2);
 					offset += 4;
 				}
 				else {
-					if (!is_safe_offset(font, offset, 2))
+					if (!font.is_safe_offset(offset, 2))
 						return -1;
-					local[4] = geti8(font, offset);
-					local[5] = geti8(font, offset + 1);
+					local[4] = font.geti8(offset);
+					local[5] = font.geti8(offset + 1);
 					offset += 2;
 				}
 				if (flags & GOT_A_SINGLE_SCALE) {
-					if (!is_safe_offset(font, offset, 2))
+					if (!font.is_safe_offset(offset, 2))
 						return -1;
-					local[0] = geti16(font, offset) / 16384.0;
+					local[0] = font.geti16(offset) / 16384.0;
 					local[3] = local[0];
 					offset += 2;
 				}
 				else if (flags & GOT_AN_X_AND_Y_SCALE) {
-					if (!is_safe_offset(font, offset, 4))
+					if (!font.is_safe_offset(offset, 4))
 						return -1;
-					local[0] = geti16(font, offset + 0) / 16384.0;
-					local[3] = geti16(font, offset + 2) / 16384.0;
+					local[0] = font.geti16(offset + 0) / 16384.0;
+					local[3] = font.geti16(offset + 2) / 16384.0;
 					offset += 4;
 				}
 				else if (flags & GOT_A_SCALE_MATRIX) {
-					if (!is_safe_offset(font, offset, 8))
+					if (!font.is_safe_offset(offset, 8))
 						return -1;
-					local[0] = geti16(font, offset + 0) / 16384.0;
-					local[1] = geti16(font, offset + 2) / 16384.0;
-					local[2] = geti16(font, offset + 4) / 16384.0;
-					local[3] = geti16(font, offset + 6) / 16384.0;
+					local[0] = font.geti16(offset + 0) / 16384.0;
+					local[1] = font.geti16(offset + 2) / 16384.0;
+					local[2] = font.geti16(offset + 4) / 16384.0;
+					local[3] = font.geti16(offset + 6) / 16384.0;
 					offset += 8;
 				}
 				else {
@@ -570,7 +945,7 @@ namespace font { // TODO remove namespace
 				 * But stb_truetype scales by the L2 norm. And FreeType2 doesn't scale at all.
 				 * Furthermore, Microsoft's spec doesn't even mention anything like this.
 				 * It's almost as if nobody ever uses this feature anyway. */
-				if (outline_offset(font, glyph, &outline) < 0)
+				if (font.outline_offset(glyph, &outline) < 0)
 					return -1;
 				if (outline) {
 					basePoint = (unsigned)points.size();
@@ -590,11 +965,11 @@ namespace font { // TODO remove namespace
 			lines.reserve(64);
 		}
 
-		int decode_outline(Font* font, uint_fast32_t offset, int recDepth) {
+		int decode_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 			int numContours;
-			if (!is_safe_offset(font, offset, 10))
+			if (!font.is_safe_offset(offset, 10))
 				return -1;
-			numContours = geti16(font, offset);
+			numContours = font.geti16(offset);
 			if (numContours > 0) {
 				/* Glyph has a 'simple' outline consisting of a number of contours. */
 				return simple_outline(font, offset + 10, (unsigned int)numContours);
@@ -691,13 +1066,6 @@ namespace font { // TODO remove namespace
 		}
 	}
 
-	static int init_font(Font* font);
-
-	static int cmap_fmt4(Font* font, uint_fast32_t table, UChar charCode, uint_fast32_t* glyph);
-	static int cmap_fmt6(Font* font, uint_fast32_t table, UChar charCode, uint_fast32_t* glyph);
-	static int glyph_id(Font* font, UChar charCode, uint_fast32_t* glyph);
-
-	static int hor_metrics(Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
 
 	void freefont(Font* font) {
@@ -718,14 +1086,14 @@ namespace font { // TODO remove namespace
 		font->memory = (uint8_t*)mem;
 		font->size = (uint_fast32_t)size;
 		font->mapped = false;
-		if (init_font(font) < 0) {
+		if (font->init() < 0) {
 			freefont(font);
 			return NULL;
 		}
 		return font;
 	}
 
-	Font * loadfile(char const* filename) {
+	Font* loadfile(char const* filename) {
 		Font* font;
 		if (!(font = (Font*)calloc(1, sizeof * font))) {
 			return NULL;
@@ -734,30 +1102,15 @@ namespace font { // TODO remove namespace
 			free(font);
 			return NULL;
 		}
-		if (init_font(font) < 0) {
+		if (font->init() < 0) {
 			freefont(font);
 			return NULL;
 		}
 		return font;
 	}
 
-	int lmetrics(const SFT* sft, LMetrics* metrics) {
-		double factor;
-		uint_fast32_t hhea;
-		memset(metrics, 0, sizeof * metrics);
-		if (gettable(sft->font, (char*)"hhea", &hhea) < 0)
-			return -1;
-		if (!is_safe_offset(sft->font, hhea, 36))
-			return -1;
-		factor = sft->yScale / sft->font->unitsPerEm;
-		metrics->ascender = geti16(sft->font, hhea + 4) * factor;
-		metrics->descender = geti16(sft->font, hhea + 6) * factor;
-		metrics->lineGap = geti16(sft->font, hhea + 8) * factor;
-		return 0;
-	}
-
 	int lookup(const SFT* sft, UChar codepoint, Glyph* glyph) {
-		return glyph_id(sft->font, codepoint, glyph);
+		return sft->font->glyph_id(codepoint, glyph);
 	}
 
 	int gmetrics(const SFT* sft, Glyph glyph, GMetrics* metrics) {
@@ -768,12 +1121,12 @@ namespace font { // TODO remove namespace
 
 		memset(metrics, 0, sizeof * metrics);
 
-		if (hor_metrics(sft->font, glyph, &adv, &lsb) < 0)
+		if (sft->font->hor_metrics(glyph, &adv, &lsb) < 0)
 			return -1;
 		metrics->advanceWidth = adv * xScale;
 		metrics->leftSideBearing = lsb * xScale + sft->xOffset;
 
-		if (outline_offset(sft->font, glyph, &outline) < 0)
+		if (sft->font->outline_offset(glyph, &outline) < 0)
 			return -1;
 		if (!outline)
 			return 0;
@@ -786,76 +1139,12 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int kerning(const SFT* sft, Glyph leftGlyph, Glyph rightGlyph, Kerning* kerning) {
-		void* match;
-		uint_fast32_t offset;
-		unsigned int numTables, numPairs, length, format, flags;
-		int value;
-		uint8_t key[4];
-
-		memset(kerning, 0, sizeof * kerning);
-
-		if (gettable(sft->font, (char*)"kern", &offset) < 0)
-			return 0;
-
-		/* Read kern table header. */
-		if (!is_safe_offset(sft->font, offset, 4))
-			return -1;
-		if (getu16(sft->font, offset) != 0)
-			return 0;
-		numTables = getu16(sft->font, offset + 2);
-		offset += 4;
-
-		while (numTables > 0) {
-			/* Read subtable header. */
-			if (!is_safe_offset(sft->font, offset, 6))
-				return -1;
-			length = getu16(sft->font, offset + 2);
-			format = getu8(sft->font, offset + 4);
-			flags = getu8(sft->font, offset + 5);
-			offset += 6;
-
-			if (format == 0 && (flags & HORIZONTAL_KERNING) && !(flags & MINIMUM_KERNING)) {
-				/* Read format 0 header. */
-				if (!is_safe_offset(sft->font, offset, 8))
-					return -1;
-				numPairs = getu16(sft->font, offset);
-				offset += 8;
-				/* Look up character code pair via binary search. */
-				key[0] = (leftGlyph >> 8) & 0xFF;
-				key[1] = leftGlyph & 0xFF;
-				key[2] = (rightGlyph >> 8) & 0xFF;
-				key[3] = rightGlyph & 0xFF;
-				if ((match = bsearch(key, sft->font->memory + offset,
-					numPairs, 6, cmpu32)) != NULL) {
-
-					value = geti16(sft->font, (uint_fast32_t)((uint8_t*)match - sft->font->memory + 4));
-					if (flags & CROSS_STREAM_KERNING) {
-						kerning->yShift += value;
-					}
-					else {
-						kerning->xShift += value;
-					}
-				}
-
-			}
-
-			offset += length;
-			--numTables;
-		}
-
-		kerning->xShift = kerning->xShift / sft->font->unitsPerEm * sft->xScale;
-		kerning->yShift = kerning->yShift / sft->font->unitsPerEm * sft->yScale;
-
-		return 0;
-	}
-
 	int render(const SFT* sft, Glyph glyph, Image image) {
 		uint_fast32_t outline;
 		double transform[6];
 		int bbox[4];
 
-		if (outline_offset(sft->font, glyph, &outline) < 0)
+		if (sft->font->outline_offset(glyph, &outline) < 0)
 			return -1;
 		if (!outline)
 			return 0;
@@ -878,7 +1167,7 @@ namespace font { // TODO remove namespace
 		}
 
 		Outline outl;
-		if (outl.decode_outline(sft->font, outline, 0) < 0)
+		if (outl.decode_outline(*sft->font, outline, 0) < 0)
 			return -1;
 		if (outl.render_outline(transform, image) < 0)
 			return -1;
@@ -886,288 +1175,15 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static int init_font(Font* font) {
-		uint_fast32_t scalerType, head, hhea;
-
-		if (!is_safe_offset(font, 0, 12))
-			return -1;
-		/* Check for a compatible scalerType (magic number). */
-		scalerType = getu32(font, 0);
-		if (scalerType != FILE_MAGIC_ONE && scalerType != FILE_MAGIC_TWO)
-			return -1;
-
-		if (gettable(font, (char*)"head", &head) < 0)
-			return -1;
-		if (!is_safe_offset(font, head, 54))
-			return -1;
-		font->unitsPerEm = getu16(font, head + 18);
-		font->locaFormat = geti16(font, head + 50);
-
-		if (gettable(font, (char*)"hhea", &hhea) < 0)
-			return -1;
-		if (!is_safe_offset(font, hhea, 36))
-			return -1;
-		font->numLongHmtx = getu16(font, hhea + 34);
-
-		return 0;
-	}
-
-	static inline int is_safe_offset(Font* font, uint_fast32_t offset, uint_fast32_t margin) {
-		if (offset > font->size) return 0;
-		if (font->size - offset < margin) return 0;
-		return 1;
-	}
-
-	static inline uint_least8_t getu8(Font* font, uint_fast32_t offset) {
-		assert(offset + 1 <= font->size);
-		return *(font->memory + offset);
-	}
-
-	static inline int_least8_t geti8(Font* font, uint_fast32_t offset) {
-		return (int_least8_t)getu8(font, offset);
-	}
-
-	static inline uint_least16_t getu16(Font* font, uint_fast32_t offset) {
-		assert(offset + 2 <= font->size);
-		const uint8_t* base = font->memory + offset;
-		uint_least16_t b1 = base[0], b0 = base[1];
-		return (uint_least16_t)(b1 << 8 | b0);
-	}
-
-	static inline int16_t geti16(Font* font, uint_fast32_t offset) {
-		return (int_least16_t)getu16(font, offset);
-	}
-
-	static inline uint32_t getu32(Font* font, uint_fast32_t offset) {
-		assert(offset + 4 <= font->size);
-		const uint8_t* base = font->memory + offset;
-		uint_least32_t b3 = base[0], b2 = base[1], b1 = base[2], b0 = base[3];
-		return (uint_least32_t)(b3 << 24 | b2 << 16 | b1 << 8 | b0);
-	}
-
-	static int gettable(Font* font, char tag[4], uint_fast32_t* offset) {
-		void* match;
-		unsigned int numTables;
-		/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
-		numTables = getu16(font, 4);
-		if (!is_safe_offset(font, 12, (uint_fast32_t)numTables * 16))
-			return -1;
-		if (!(match = bsearch(tag, font->memory + 12, numTables, 16, cmpu32)))
-			return -1;
-		*offset = getu32(font, (uint_fast32_t)((uint8_t*)match - font->memory + 8));
-		return 0;
-	}
-
-	static int cmap_fmt4(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph) {
-		const uint8_t* segPtr;
-		uint_fast32_t segIdxX2;
-		uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
-		uint_fast16_t segCountX2, idRangeOffset, startCode, shortCode, idDelta, id;
-		uint8_t key[2] = { (uint8_t)(charCode >> 8), (uint8_t)charCode };
-		/* cmap format 4 only supports the Unicode BMP. */
-		if (charCode > 0xFFFF) {
-			*glyph = 0;
-			return 0;
-		}
-		shortCode = (uint_fast16_t)charCode;
-		if (!is_safe_offset(font, table, 8))
-			return -1;
-		segCountX2 = getu16(font, table);
-		if ((segCountX2 & 1) || !segCountX2)
-			return -1;
-		/* Find starting positions of the relevant arrays. */
-		endCodes = table + 8;
-		startCodes = endCodes + segCountX2 + 2;
-		idDeltas = startCodes + segCountX2;
-		idRangeOffsets = idDeltas + segCountX2;
-		if (!is_safe_offset(font, idRangeOffsets, segCountX2))
-			return -1;
-		/* Find the segment that contains shortCode by binary searching over
-		 * the highest codes in the segments. */
-		segPtr = (uint8_t*)csearch(key, font->memory + endCodes, segCountX2 / 2, 2, cmpu16);
-		segIdxX2 = (uint_fast32_t)(segPtr - (font->memory + endCodes));
-		/* Look up segment info from the arrays & short circuit if the spec requires. */
-		if ((startCode = getu16(font, startCodes + segIdxX2)) > shortCode)
-			return 0;
-		idDelta = getu16(font, idDeltas + segIdxX2);
-		if (!(idRangeOffset = getu16(font, idRangeOffsets + segIdxX2))) {
-			/* Intentional integer under- and overflow. */
-			*glyph = (shortCode + idDelta) & 0xFFFF;
-			return 0;
-		}
-		/* Calculate offset into glyph array and determine ultimate value. */
-		idOffset = idRangeOffsets + segIdxX2 + idRangeOffset + 2U * (unsigned int)(shortCode - startCode);
-		if (!is_safe_offset(font, idOffset, 2))
-			return -1;
-		id = getu16(font, idOffset);
-		/* Intentional integer under- and overflow. */
-		*glyph = id ? (id + idDelta) & 0xFFFF : 0;
-		return 0;
-	}
-
-	static int cmap_fmt6(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph) {
-		unsigned int firstCode, entryCount;
-		/* cmap format 6 only supports the Unicode BMP. */
-		if (charCode > 0xFFFF) {
-			*glyph = 0;
-			return 0;
-		}
-		if (!is_safe_offset(font, table, 4))
-			return -1;
-		firstCode = getu16(font, table);
-		entryCount = getu16(font, table + 2);
-		if (!is_safe_offset(font, table, 4 + 2 * entryCount))
-			return -1;
-		if (charCode < firstCode)
-			return -1;
-		charCode -= firstCode;
-		if (!(charCode < entryCount))
-			return -1;
-		*glyph = getu16(font, table + 4 + 2 * charCode);
-		return 0;
-	}
-
-	static int cmap_fmt12_13(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph, int which) {
-		uint32_t len, numEntries;
-		uint_fast32_t i;
-
-		*glyph = 0;
-
-		/* check that the entire header is present */
-		if (!is_safe_offset(font, table, 16))
-			return -1;
-
-		len = getu32(font, table + 4);
-
-		/* A minimal header is 16 bytes */
-		if (len < 16)
-			return -1;
-
-		if (!is_safe_offset(font, table, len))
-			return -1;
-
-		numEntries = getu32(font, table + 12);
-
-		for (i = 0; i < numEntries; ++i) {
-			uint32_t firstCode, lastCode, glyphOffset;
-			firstCode = getu32(font, table + (i * 12) + 16);
-			lastCode = getu32(font, table + (i * 12) + 16 + 4);
-			if (charCode < firstCode || charCode > lastCode)
-				continue;
-			glyphOffset = getu32(font, table + (i * 12) + 16 + 8);
-			if (which == 12)
-				*glyph = (charCode - firstCode) + glyphOffset;
-			else
-				*glyph = glyphOffset;
-			return 0;
-		}
-
-		return 0;
-	}
-
-	/* Maps Unicode code points to glyph indices. */
-	static int glyph_id(Font* font, UChar charCode, Glyph* glyph) {
-		uint_fast32_t cmap, entry, table;
-		unsigned int idx, numEntries;
-		int type, format;
-
-		*glyph = 0;
-
-		if (gettable(font, (char*)"cmap", &cmap) < 0)
-			return -1;
-
-		if (!is_safe_offset(font, cmap, 4))
-			return -1;
-		numEntries = getu16(font, cmap + 2);
-
-		if (!is_safe_offset(font, cmap, 4 + numEntries * 8))
-			return -1;
-
-		/* First look for a 'full repertoire'/non-BMP map. */
-		for (idx = 0; idx < numEntries; ++idx) {
-			entry = cmap + 4 + idx * 8;
-			type = getu16(font, entry) * 0100 + getu16(font, entry + 2);
-			/* Complete unicode map */
-			if (type == 0004 || type == 0312) {
-				table = cmap + getu32(font, entry + 4);
-				if (!is_safe_offset(font, table, 8))
-					return -1;
-				/* Dispatch based on cmap format. */
-				format = getu16(font, table);
-				switch (format) {
-				case 12:
-					return cmap_fmt12_13(font, table, charCode, glyph, 12);
-				default:
-					return -1;
-				}
-			}
-		}
-
-		/* If no 'full repertoire' cmap was found, try looking for a BMP map. */
-		for (idx = 0; idx < numEntries; ++idx) {
-			entry = cmap + 4 + idx * 8;
-			type = getu16(font, entry) * 0100 + getu16(font, entry + 2);
-			/* Unicode BMP */
-			if (type == 0003 || type == 0301) {
-				table = cmap + getu32(font, entry + 4);
-				if (!is_safe_offset(font, table, 6))
-					return -1;
-				/* Dispatch based on cmap format. */
-				switch (getu16(font, table)) {
-				case 4:
-					return cmap_fmt4(font, table + 6, charCode, glyph);
-				case 6:
-					return cmap_fmt6(font, table + 6, charCode, glyph);
-				default:
-					return -1;
-				}
-			}
-		}
-
-		return -1;
-	}
-
-	static int hor_metrics(Font* font, Glyph glyph, int* advanceWidth, int* leftSideBearing) {
-		uint_fast32_t hmtx, offset, boundary;
-		if (gettable(font, (char*)"hmtx", &hmtx) < 0)
-			return -1;
-		if (glyph < font->numLongHmtx) {
-			/* glyph is inside long metrics segment. */
-			offset = hmtx + 4 * glyph;
-			if (!is_safe_offset(font, offset, 4))
-				return -1;
-			*advanceWidth = getu16(font, offset);
-			*leftSideBearing = geti16(font, offset + 2);
-			return 0;
-		}
-		else {
-			/* glyph is inside short metrics segment. */
-			boundary = hmtx + 4U * (uint_fast32_t)font->numLongHmtx;
-			if (boundary < 4)
-				return -1;
-
-			offset = boundary - 4;
-			if (!is_safe_offset(font, offset, 4))
-				return -1;
-			*advanceWidth = getu16(font, offset);
-
-			offset = boundary + 2 * (glyph - font->numLongHmtx);
-			if (!is_safe_offset(font, offset, 2))
-				return -1;
-			*leftSideBearing = geti16(font, offset);
-			return 0;
-		}
-	}
-
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]) {
 		double xScale, yScale;
 		/* Read the bounding box from the font file verbatim. */
-		if (!is_safe_offset(sft->font, outline, 10))
+		if (!sft->font->is_safe_offset(outline, 10))
 			return -1;
-		box[0] = geti16(sft->font, outline + 2);
-		box[1] = geti16(sft->font, outline + 4);
-		box[2] = geti16(sft->font, outline + 6);
-		box[3] = geti16(sft->font, outline + 8);
+		box[0] = sft->font->geti16(outline + 2);
+		box[1] = sft->font->geti16(outline + 4);
+		box[2] = sft->font->geti16(outline + 6);
+		box[3] = sft->font->geti16(outline + 8);
 		if (box[2] <= box[0] || box[3] <= box[1])
 			return -1;
 		/* Transform the bounding box into SFT coordinate space. */
@@ -1177,108 +1193,6 @@ namespace font { // TODO remove namespace
 		box[1] = (int)floor(box[1] * yScale + sft->yOffset);
 		box[2] = (int)ceil(box[2] * xScale + sft->xOffset);
 		box[3] = (int)ceil(box[3] * yScale + sft->yOffset);
-		return 0;
-	}
-
-	/* Returns the offset into the font that the glyph's outline is stored at. */
-	static int outline_offset(Font* font, Glyph glyph, uint_fast32_t* offset) {
-		uint_fast32_t loca, glyf;
-		uint_fast32_t base, current, next;
-
-		if (gettable(font, (char*)"loca", &loca) < 0)
-			return -1;
-		if (gettable(font, (char*)"glyf", &glyf) < 0)
-			return -1;
-
-		if (font->locaFormat == 0) {
-			base = loca + 2 * glyph;
-
-			if (!is_safe_offset(font, base, 4))
-				return -1;
-
-			current = 2U * (uint_fast32_t)getu16(font, base);
-			next = 2U * (uint_fast32_t)getu16(font, base + 2);
-		}
-		else {
-			base = loca + 4 * glyph;
-
-			if (!is_safe_offset(font, base, 8))
-				return -1;
-
-			current = getu32(font, base);
-			next = getu32(font, base + 4);
-		}
-
-		*offset = current == next ? 0 : glyf + current;
-		return 0;
-	}
-
-	/* For a 'simple' outline, determines each point of the outline with a set of flags. */
-	static int simple_flags(Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) {
-		uint_fast32_t off = *offset;
-		uint_fast16_t i;
-		uint8_t value = 0, repeat = 0;
-		for (i = 0; i < numPts; ++i) {
-			if (repeat) {
-				--repeat;
-			}
-			else {
-				if (!is_safe_offset(font, off, 1))
-					return -1;
-				value = getu8(font, off++);
-				if (value & REPEAT_FLAG) {
-					if (!is_safe_offset(font, off, 1))
-						return -1;
-					repeat = getu8(font, off++);
-				}
-			}
-			flags[i] = value;
-		}
-		*offset = off;
-		return 0;
-	}
-
-	/* For a 'simple' outline, decodes both X and Y coordinates for each point of the outline. */
-	static int simple_points(Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) {
-		long accum, value, bit;
-		uint_fast16_t i;
-
-		accum = 0L;
-		for (i = 0; i < numPts; ++i) {
-			if (flags[i] & X_CHANGE_IS_SMALL) {
-				if (!is_safe_offset(font, offset, 1))
-					return -1;
-				value = (long)getu8(font, offset++);
-				bit = !!(flags[i] & X_CHANGE_IS_POSITIVE);
-				accum -= (value ^ -bit) + bit;
-			}
-			else if (!(flags[i] & X_CHANGE_IS_ZERO)) {
-				if (!is_safe_offset(font, offset, 2))
-					return -1;
-				accum += geti16(font, offset);
-				offset += 2;
-			}
-			points[i].x = (double)accum;
-		}
-
-		accum = 0L;
-		for (i = 0; i < numPts; ++i) {
-			if (flags[i] & Y_CHANGE_IS_SMALL) {
-				if (!is_safe_offset(font, offset, 1))
-					return -1;
-				value = (long)getu8(font, offset++);
-				bit = !!(flags[i] & Y_CHANGE_IS_POSITIVE);
-				accum -= (value ^ -bit) + bit;
-			}
-			else if (!(flags[i] & Y_CHANGE_IS_ZERO)) {
-				if (!is_safe_offset(font, offset, 2))
-					return -1;
-				accum += geti16(font, offset);
-				offset += 2;
-			}
-			points[i].y = (double)accum;
-		}
-
 		return 0;
 	}
 

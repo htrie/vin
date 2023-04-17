@@ -88,7 +88,7 @@ public:
 		if (size != sft.xScale) {
 			sft.xScale = size;
 			sft.yScale = size;
-			font::lmetrics(&sft, &lmtx);
+			sft.lmetrics(&lmtx);
 			glyphs.clear();
 			add_glyph(0);
 		}
