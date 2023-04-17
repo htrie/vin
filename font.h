@@ -315,6 +315,32 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
+		Font() {}
+
+		Font(const void* mem, size_t size) {
+			if (size > UINT32_MAX) {
+				return;
+			}
+			memory = (uint8_t*)mem;
+			size = (uint_fast32_t)size;
+			mapped = false;
+			init();
+		}
+
+		Font(const std::string_view filename) {
+			if (map_file(filename) < 0) {
+				return;
+			}
+			init();
+		}
+
+		~Font() {
+			if (mapped)
+				unmap_file();
+		}
+
+		bool is_valid() const { return memory != nullptr; }
+
 		int init() {
 			uint_fast32_t scalerType, head, hhea;
 
@@ -339,6 +365,55 @@ namespace font { // TODO remove namespace
 			numLongHmtx = getu16(hhea + 34);
 
 			return 0;
+		}
+
+		int map_file(const std::string_view filename) {
+			HANDLE file;
+			DWORD high, low;
+
+			mapping = NULL;
+			memory = NULL;
+
+			file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+			if (file == INVALID_HANDLE_VALUE) {
+				return -1;
+			}
+
+			low = GetFileSize(file, &high);
+			if (low == INVALID_FILE_SIZE) {
+				CloseHandle(file);
+				return -1;
+			}
+
+			size = (size_t)high << (8 * sizeof(DWORD)) | low;
+
+			mapping = CreateFileMapping(file, NULL, PAGE_READONLY, high, low, NULL);
+			if (!mapping) {
+				CloseHandle(file);
+				return -1;
+			}
+
+			CloseHandle(file);
+
+			memory = (uint8_t*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+			if (!memory) {
+				CloseHandle(mapping);
+				mapping = NULL;
+				return -1;
+			}
+
+			return 0;
+		}
+
+		void unmap_file() {
+			if (memory) {
+				UnmapViewOfFile(memory);
+				memory = NULL;
+			}
+			if (mapping) {
+				CloseHandle(mapping);
+				mapping = NULL;
+			}
 		}
 
 		int hor_metrics(Glyph glyph, int* advanceWidth, int* leftSideBearing) const {
@@ -643,46 +718,6 @@ namespace font { // TODO remove namespace
 
 			return -1;
 		}
-	};
-
-
-	struct LMetrics {
-		double ascender = 0.0;
-		double descender = 0.0;
-		double lineGap = 0.0;
-	};
-
-	struct SFT { // TODO make class // TODO rename
-		Font* font = nullptr;
-		double xScale = 0.0;
-		double yScale = 0.0;
-		double xOffset = 0.0;
-		double yOffset = 0.0;
-		int flags = 0;
-
-		int lmetrics(LMetrics* metrics) {
-			double factor;
-			uint_fast32_t hhea;
-			memset(metrics, 0, sizeof * metrics);
-			if (font->gettable((char*)"hhea", &hhea) < 0)
-				return -1;
-			if (!font->is_safe_offset(hhea, 36))
-				return -1;
-			factor = yScale / font->unitsPerEm;
-			metrics->ascender = font->geti16(hhea + 4) * factor;
-			metrics->descender = font->geti16(hhea + 6) * factor;
-			metrics->lineGap = font->geti16(hhea + 8) * factor;
-			return 0;
-		}
-
-	};
-
-	struct GMetrics {
-		double advanceWidth = 0.0;
-		double leftSideBearing = 0.0;
-		int yOffset = 0;
-		int minWidth = 0;
-		int minHeight = 0;
 	};
 
 	struct Image {
@@ -1017,100 +1052,65 @@ namespace font { // TODO remove namespace
 		}
 	};
 
-	int map_file(Font* font, const char* filename) {
-		HANDLE file;
-		DWORD high, low;
 
-		font->mapping = NULL;
-		font->memory = NULL;
+	struct LMetrics {
+		double ascender = 0.0;
+		double descender = 0.0;
+		double lineGap = 0.0;
+	};
 
-		file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (file == INVALID_HANDLE_VALUE) {
-			return -1;
+	struct GMetrics {
+		double advanceWidth = 0.0;
+		double leftSideBearing = 0.0;
+		int yOffset = 0;
+		int minWidth = 0;
+		int minHeight = 0;
+	};
+
+	struct SFT { // TODO make class // TODO rename
+		Font* font = nullptr;
+		double xScale = 0.0;
+		double yScale = 0.0;
+		double xOffset = 0.0;
+		double yOffset = 0.0;
+		int flags = 0;
+
+		int lmetrics(LMetrics* metrics) {
+			double factor;
+			uint_fast32_t hhea;
+			memset(metrics, 0, sizeof * metrics);
+			if (font->gettable((char*)"hhea", &hhea) < 0)
+				return -1;
+			if (!font->is_safe_offset(hhea, 36))
+				return -1;
+			factor = yScale / font->unitsPerEm;
+			metrics->ascender = font->geti16(hhea + 4) * factor;
+			metrics->descender = font->geti16(hhea + 6) * factor;
+			metrics->lineGap = font->geti16(hhea + 8) * factor;
+			return 0;
 		}
 
-		low = GetFileSize(file, &high);
-		if (low == INVALID_FILE_SIZE) {
-			CloseHandle(file);
+	};
+
+	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]) {
+		double xScale, yScale;
+		/* Read the bounding box from the font file verbatim. */
+		if (!sft->font->is_safe_offset(outline, 10))
 			return -1;
-		}
-
-		font->size = (size_t)high << (8 * sizeof(DWORD)) | low;
-
-		font->mapping = CreateFileMapping(file, NULL, PAGE_READONLY, high, low, NULL);
-		if (!font->mapping) {
-			CloseHandle(file);
+		box[0] = sft->font->geti16(outline + 2);
+		box[1] = sft->font->geti16(outline + 4);
+		box[2] = sft->font->geti16(outline + 6);
+		box[3] = sft->font->geti16(outline + 8);
+		if (box[2] <= box[0] || box[3] <= box[1])
 			return -1;
-		}
-
-		CloseHandle(file);
-
-		font->memory = (uint8_t*)MapViewOfFile(font->mapping, FILE_MAP_READ, 0, 0, 0);
-		if (!font->memory) {
-			CloseHandle(font->mapping);
-			font->mapping = NULL;
-			return -1;
-		}
-
+		/* Transform the bounding box into SFT coordinate space. */
+		xScale = sft->xScale / sft->font->unitsPerEm;
+		yScale = sft->yScale / sft->font->unitsPerEm;
+		box[0] = (int)floor(box[0] * xScale + sft->xOffset);
+		box[1] = (int)floor(box[1] * yScale + sft->yOffset);
+		box[2] = (int)ceil(box[2] * xScale + sft->xOffset);
+		box[3] = (int)ceil(box[3] * yScale + sft->yOffset);
 		return 0;
-	}
-
-	static void unmap_file(Font* font) {
-		if (font->memory) {
-			UnmapViewOfFile(font->memory);
-			font->memory = NULL;
-		}
-		if (font->mapping) {
-			CloseHandle(font->mapping);
-			font->mapping = NULL;
-		}
-	}
-
-	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
-
-	void freefont(Font* font) {
-		if (!font) return;
-		if (font->mapped)
-			unmap_file(font);
-		free(font);
-	}
-
-	Font* loadmem(const void* mem, size_t size) {
-		Font* font;
-		if (size > UINT32_MAX) {
-			return NULL;
-		}
-		if (!(font = (Font*)calloc(1, sizeof * font))) {
-			return NULL;
-		}
-		font->memory = (uint8_t*)mem;
-		font->size = (uint_fast32_t)size;
-		font->mapped = false;
-		if (font->init() < 0) {
-			freefont(font);
-			return NULL;
-		}
-		return font;
-	}
-
-	Font* loadfile(char const* filename) {
-		Font* font;
-		if (!(font = (Font*)calloc(1, sizeof * font))) {
-			return NULL;
-		}
-		if (map_file(font, filename) < 0) {
-			free(font);
-			return NULL;
-		}
-		if (font->init() < 0) {
-			freefont(font);
-			return NULL;
-		}
-		return font;
-	}
-
-	int lookup(const SFT* sft, UChar codepoint, Glyph* glyph) {
-		return sft->font->glyph_id(codepoint, glyph);
 	}
 
 	int gmetrics(const SFT* sft, Glyph glyph, GMetrics* metrics) {
@@ -1172,27 +1172,6 @@ namespace font { // TODO remove namespace
 		if (outl.render_outline(transform, image) < 0)
 			return -1;
 
-		return 0;
-	}
-
-	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]) {
-		double xScale, yScale;
-		/* Read the bounding box from the font file verbatim. */
-		if (!sft->font->is_safe_offset(outline, 10))
-			return -1;
-		box[0] = sft->font->geti16(outline + 2);
-		box[1] = sft->font->geti16(outline + 4);
-		box[2] = sft->font->geti16(outline + 6);
-		box[3] = sft->font->geti16(outline + 8);
-		if (box[2] <= box[0] || box[3] <= box[1])
-			return -1;
-		/* Transform the bounding box into SFT coordinate space. */
-		xScale = sft->xScale / sft->font->unitsPerEm;
-		yScale = sft->yScale / sft->font->unitsPerEm;
-		box[0] = (int)floor(box[0] * xScale + sft->xOffset);
-		box[1] = (int)floor(box[1] * yScale + sft->yOffset);
-		box[2] = (int)ceil(box[2] * xScale + sft->xOffset);
-		box[3] = (int)ceil(box[3] * yScale + sft->yOffset);
 		return 0;
 	}
 

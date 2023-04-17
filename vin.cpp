@@ -39,7 +39,7 @@ public:
 	};
 
 private:
-	font::Font* font = nullptr;
+	font::Font font;
 	font::SFT sft;
 	font::LMetrics lmtx;
 
@@ -47,7 +47,7 @@ private:
 
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
-		if (font::lookup(&sft, codepoint, &glyph.gid) == 0) {
+		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
 			if (font::gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
@@ -61,27 +61,16 @@ private:
 		return add_glyph(0);
 	}
 
-	font::Font* try_font(const std::string_view filename) {
-		if (auto* font = font::loadfile(filename.data()))
-			return font;
-		return nullptr;
-	}
-
 public:
 	Font() {
-		font = try_font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
-		if (font == nullptr)
-			font = try_font(get_system_font_path() + get_system_font_name("Consolas"));
-		if (font) {
+		font = font::Font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
+		if (!font.is_valid())
+			font = font::Font(get_system_font_path() + get_system_font_name("Consolas"));
+		if (font.is_valid()) {
 			memset(&sft, 0, sizeof sft);
-			sft.font = font;
+			sft.font = &font;
 			sft.flags = DOWNWARD_Y;
 		}
-	}
-
-	~Font() {
-		if (font)
-			font::freefont(font);
 	}
 
 	void set_size(double size) {
