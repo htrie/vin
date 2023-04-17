@@ -48,12 +48,6 @@ namespace font { // TODO remove namespace
 
 	#define SIGN(x)   (((x) > 0) - ((x) < 0))
 
-	#define STACK_ALLOC(var, type, thresh, count) \
-		type var##_stack_[thresh]; \
-		var = (count) <= (thresh) ? var##_stack_ : (type*)calloc(sizeof(type), count);
-	#define STACK_FREE(var) \
-		if (var != var##_stack_) free(var);
-
 	static inline int fast_floor(double x) {
 		int i = (int)x;
 		return i - (i > x);
@@ -856,8 +850,6 @@ namespace font { // TODO remove namespace
 		}
 
 		int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) {
-			uint_fast16_t* endPts = NULL;
-			uint8_t* flags = NULL;
 			uint_fast16_t numPts;
 			unsigned int i;
 
@@ -867,21 +859,20 @@ namespace font { // TODO remove namespace
 			uint_fast16_t beg = 0;
 
 			if (!font.is_safe_offset(offset, numContours * 2 + 2))
-				goto failure;
+				return -1;
 			numPts = font.getu16(offset + (numContours - 1) * 2);
 			if (numPts >= UINT16_MAX)
-				goto failure;
+				return -1;
 			numPts++;
 			if (points.size() > UINT16_MAX - numPts)
-				goto failure;
+				return -1;
 			points.resize(basePoint + numPts);
 
-			STACK_ALLOC(endPts, uint_fast16_t, 16, numContours);
-			if (endPts == NULL)
-				goto failure;
-			STACK_ALLOC(flags, uint8_t, 128, numPts);
-			if (flags == NULL)
-				goto failure;
+			std::vector<uint_fast16_t> endPts;
+			endPts.resize(numContours);
+
+			std::vector<uint8_t> flags;
+			flags.resize(numPts);
 
 			for (i = 0; i < numContours; ++i) {
 				endPts[i] = font.getu16(offset);
@@ -892,29 +883,23 @@ namespace font { // TODO remove namespace
 			 * Therefore, we bail, should we ever encounter such input. */
 			for (i = 0; i < numContours - 1; ++i) {
 				if (endPts[i + 1] < endPts[i] + 1)
-					goto failure;
+					return -1;
 			}
 			offset += 2U + font.getu16(offset);
 
-			if (font.simple_flags(&offset, numPts, flags) < 0)
-				goto failure;
-			if (font.simple_points(offset, numPts, flags, points.data() + basePoint) < 0)
-				goto failure;
+			if (font.simple_flags(&offset, numPts, flags.data()) < 0)
+				return -1;
+			if (font.simple_points(offset, numPts, flags.data(), points.data() + basePoint) < 0)
+				return -1;
 
 			for (i = 0; i < numContours; ++i) {
 				uint_fast16_t count = endPts[i] - beg + 1;
-				if (decode_contour(flags + beg, basePoint + beg, count) < 0)
-					goto failure;
+				if (decode_contour(flags.data() + beg, basePoint + beg, count) < 0)
+					return -1;
 				beg = endPts[i] + 1;
 			}
 
-			STACK_FREE(endPts);
-			STACK_FREE(flags);
 			return 0;
-		failure:
-			STACK_FREE(endPts);
-			STACK_FREE(flags);
-			return -1;
 		}
 
 		int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
@@ -1019,18 +1004,11 @@ namespace font { // TODO remove namespace
 		}
 
 		int render_outline(double transform[6], Image image) {
-			Cell* cells = NULL;
+			std::vector<Cell> cells;
+			cells.resize((unsigned int)image.width * (unsigned int)image.height);
+
 			Raster buf;
-			unsigned int numPixels;
-
-			numPixels = (unsigned int)image.width * (unsigned int)image.height;
-
-			STACK_ALLOC(cells, Cell, 128 * 128, numPixels);
-			if (!cells) {
-				return -1;
-			}
-			memset(cells, 0, numPixels * sizeof * cells);
-			buf.cells = cells;
+			buf.cells = cells.data();
 			buf.width = image.width;
 			buf.height = image.height;
 
@@ -1038,16 +1016,13 @@ namespace font { // TODO remove namespace
 
 			clip_points((unsigned)points.size(), points.data(), image.width, image.height);
 
-			if (tesselate_curves() < 0) {
-				STACK_FREE(cells);
+			if (tesselate_curves() < 0)
 				return -1;
-			}
 
 			draw_lines(buf);
 
 			post_process(buf, (uint8_t*)image.pixels);
 
-			STACK_FREE(cells);
 			return 0;
 		}
 	};
