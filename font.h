@@ -260,7 +260,7 @@ namespace font { // TODO remove namespace
 	typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
 	typedef uint_fast32_t Glyph;
 
-	struct Font {
+	struct Font { // TODO make class
 		const uint8_t* memory = nullptr;
 		uint_fast32_t size = 0;
 		HANDLE mapping = nullptr;
@@ -1053,61 +1053,60 @@ namespace font { // TODO remove namespace
 	};
 
 
-	struct LMetrics { // TODO merge with Font
+	struct LMetrics { // TODO merge with SFT
 		double ascender = 0.0;
 		double descender = 0.0;
 		double lineGap = 0.0;
 	};
 
 	struct GMetrics { // TODO merge with Glyph
-	double advanceWidth = 0.0;
+		double advanceWidth = 0.0;
 		double leftSideBearing = 0.0;
 		int yOffset = 0;
 		int minWidth = 0;
 		int minHeight = 0;
 	};
 
-	struct SFT { // TODO rename // TODO merge with Font
-		Font* font = nullptr;
+	struct SFT { // TODO rename // TODO merge with Font // TODO make class
 		double xScale = 0.0;
 		double yScale = 0.0;
 		double xOffset = 0.0;
 		double yOffset = 0.0;
 		int flags = 0;
 
-		int lmetrics(LMetrics* metrics) const {
+		int lmetrics(const Font& font, LMetrics* metrics) const {
 			double factor;
 			uint_fast32_t hhea;
 			memset(metrics, 0, sizeof * metrics);
-			if (font->gettable((char*)"hhea", &hhea) < 0)
+			if (font.gettable((char*)"hhea", &hhea) < 0)
 				return -1;
-			if (!font->is_safe_offset(hhea, 36))
+			if (!font.is_safe_offset(hhea, 36))
 				return -1;
-			factor = yScale / font->unitsPerEm;
-			metrics->ascender = font->geti16(hhea + 4) * factor;
-			metrics->descender = font->geti16(hhea + 6) * factor;
-			metrics->lineGap = font->geti16(hhea + 8) * factor;
+			factor = yScale / font.unitsPerEm;
+			metrics->ascender = font.geti16(hhea + 4) * factor;
+			metrics->descender = font.geti16(hhea + 6) * factor;
+			metrics->lineGap = font.geti16(hhea + 8) * factor;
 			return 0;
 		}
 
-		int gmetrics(Glyph glyph, GMetrics* metrics) const {
+		int gmetrics(const Font& font, Glyph glyph, GMetrics* metrics) const {
 			int adv, lsb;
-			double xscale = xScale / font->unitsPerEm;
+			double xscale = xScale / font.unitsPerEm;
 			uint_fast32_t outline;
 			int bbox[4];
 
 			memset(metrics, 0, sizeof * metrics);
 
-			if (font->hor_metrics(glyph, &adv, &lsb) < 0)
+			if (font.hor_metrics(glyph, &adv, &lsb) < 0)
 				return -1;
 			metrics->advanceWidth = adv * xscale;
 			metrics->leftSideBearing = lsb * xscale + xOffset;
 
-			if (font->outline_offset(glyph, &outline) < 0)
+			if (font.outline_offset(glyph, &outline) < 0)
 				return -1;
 			if (!outline)
 				return 0;
-			if (glyph_bbox(outline, bbox) < 0)
+			if (glyph_bbox(font, outline, bbox) < 0)
 				return -1;
 			metrics->minWidth = bbox[2] - bbox[0] + 1;
 			metrics->minHeight = bbox[3] - bbox[1] + 1;
@@ -1116,20 +1115,20 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int glyph_bbox(uint_fast32_t outline, int box[4]) const {
+		int glyph_bbox(const Font& font, uint_fast32_t outline, int box[4]) const {
 			double xscale, yscale;
 			/* Read the bounding box from the font file verbatim. */
-			if (!font->is_safe_offset(outline, 10))
+			if (!font.is_safe_offset(outline, 10))
 				return -1;
-			box[0] = font->geti16(outline + 2);
-			box[1] = font->geti16(outline + 4);
-			box[2] = font->geti16(outline + 6);
-			box[3] = font->geti16(outline + 8);
+			box[0] = font.geti16(outline + 2);
+			box[1] = font.geti16(outline + 4);
+			box[2] = font.geti16(outline + 6);
+			box[3] = font.geti16(outline + 8);
 			if (box[2] <= box[0] || box[3] <= box[1])
 				return -1;
 			/* Transform the bounding box into SFT coordinate space. */
-			xscale = xScale / font->unitsPerEm;
-			yscale = yScale / font->unitsPerEm;
+			xscale = xScale / font.unitsPerEm;
+			yscale = yScale / font.unitsPerEm;
 			box[0] = (int)floor(box[0] * xscale + xOffset);
 			box[1] = (int)floor(box[1] * yscale + yOffset);
 			box[2] = (int)ceil(box[2] * xscale + xOffset);
@@ -1137,35 +1136,35 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int render(Glyph glyph, Image image) const {
+		int render(const Font& font, Glyph glyph, Image image) const {
 			uint_fast32_t outline;
 			double transform[6];
 			int bbox[4];
 
-			if (font->outline_offset(glyph, &outline) < 0)
+			if (font.outline_offset(glyph, &outline) < 0)
 				return -1;
 			if (!outline)
 				return 0;
-			if (glyph_bbox(outline, bbox) < 0)
+			if (glyph_bbox(font, outline, bbox) < 0)
 				return -1;
 			/* Set up the transformation matrix such that
 			 * the transformed bounding boxes min corner lines
 			 * up with the (0, 0) point. */
-			transform[0] = xScale / font->unitsPerEm;
+			transform[0] = xScale / font.unitsPerEm;
 			transform[1] = 0.0;
 			transform[2] = 0.0;
 			transform[4] = xOffset - bbox[0];
 			if (flags & DOWNWARD_Y) {
-				transform[3] = -yScale / font->unitsPerEm;
+				transform[3] = -yScale / font.unitsPerEm;
 				transform[5] = bbox[3] - yOffset;
 			}
 			else {
-				transform[3] = +yScale / font->unitsPerEm;
+				transform[3] = +yScale / font.unitsPerEm;
 				transform[5] = yOffset - bbox[1];
 			}
 
 			Outline outl;
-			if (outl.decode_outline(*font, outline, 0) < 0)
+			if (outl.decode_outline(font, outline, 0) < 0)
 				return -1;
 			if (outl.render_outline(transform, image) < 0)
 				return -1;

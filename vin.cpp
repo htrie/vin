@@ -48,13 +48,13 @@ private:
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			if (sft.gmetrics(glyph.gid, &glyph.mtx) == 0) {
+			if (sft.gmetrics(font, glyph.gid, &glyph.mtx) == 0) {
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
-				sft.render(glyph.gid, image);
+				sft.render(font, glyph.gid, image);
 				return glyph;
 			}
 		}
@@ -68,7 +68,6 @@ public:
 			font = font::Font(get_system_font_path() + get_system_font_name("Consolas"));
 		if (font.is_valid()) {
 			memset(&sft, 0, sizeof sft);
-			sft.font = &font;
 			sft.flags = DOWNWARD_Y;
 		}
 	}
@@ -77,7 +76,7 @@ public:
 		if (size != sft.xScale) {
 			sft.xScale = size;
 			sft.yScale = size;
-			sft.lmetrics(&lmtx);
+			sft.lmetrics(font, &lmtx);
 			glyphs.clear();
 			add_glyph(0);
 		}
