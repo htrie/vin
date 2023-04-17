@@ -33,15 +33,15 @@ const unsigned version_minor = 3;
 class Font {
 public:
 	struct Glyph {
-		font::SFT_Glyph gid;
-		font::SFT_GMetrics mtx;
+		font::Glyph gid;
+		font::GMetrics mtx;
 		std::vector<uint8_t> pixels;
 	};
 
 private:
-	font::SFT_Font* font = nullptr;
+	font::Font* font = nullptr;
 	font::SFT sft;
-	font::SFT_LMetrics lmtx;
+	font::LMetrics lmtx;
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
 
@@ -49,7 +49,7 @@ private:
 		auto& glyph = glyphs[codepoint];
 		if (font::sft_lookup(&sft, codepoint, &glyph.gid) == 0) {
 			if (font::sft_gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
-				font::SFT_Image image;
+				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
@@ -61,7 +61,7 @@ private:
 		return add_glyph(0);
 	}
 
-	font::SFT_Font* try_font(const std::string_view filename) {
+	font::Font* try_font(const std::string_view filename) {
 		if (auto* font = font::sft_loadfile(filename.data()))
 			return font;
 		return nullptr;
@@ -75,7 +75,7 @@ public:
 		if (font) {
 			memset(&sft, 0, sizeof sft);
 			sft.font = font;
-			sft.flags = SFT_DOWNWARD_Y;
+			sft.flags = DOWNWARD_Y;
 		}
 	}
 

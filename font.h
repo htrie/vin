@@ -18,7 +18,7 @@
 
 namespace font { // TODO remove namespace
 
-	#define SFT_DOWNWARD_Y 0x01
+	#define DOWNWARD_Y 0x01
 
 	#define SCHRIFT_VERSION "0.10.2"
 
@@ -257,7 +257,7 @@ namespace font { // TODO remove namespace
 	}
 
 
-	struct SFT_Font { // TODO remove SFT_
+	struct Font {
 		const uint8_t* memory = nullptr;
 		uint_fast32_t size = 0;
 		HANDLE mapping = nullptr;
@@ -267,8 +267,8 @@ namespace font { // TODO remove namespace
 		uint_least16_t numLongHmtx = 0;
 	};
 
-	struct SFT { // TODO make class
-		SFT_Font* font = nullptr;
+	struct SFT { // TODO make class // TODO rename
+		Font* font = nullptr;
 		double xScale = 0.0;
 		double yScale = 0.0;
 		double xOffset = 0.0;
@@ -276,13 +276,13 @@ namespace font { // TODO remove namespace
 		int flags = 0;
 	};
 
-	struct SFT_LMetrics {
+	struct LMetrics {
 		double ascender = 0.0;
 		double descender = 0.0;
 		double lineGap = 0.0;
 	};
 
-	struct SFT_GMetrics {
+	struct GMetrics {
 		double advanceWidth = 0.0;
 		double leftSideBearing = 0.0;
 		int yOffset = 0;
@@ -290,31 +290,31 @@ namespace font { // TODO remove namespace
 		int minHeight = 0;
 	};
 
-	struct SFT_Kerning {
+	struct Kerning {
 		double xShift = 0.0;
 		double yShift = 0.0;
 	};
 
-	struct SFT_Image {
+	struct Image {
 		void* pixels = nullptr;
 		int width = 0;
 		int height = 0;
 	};
 
-	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin);
-	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset);
-	static inline int_least8_t geti8(SFT_Font* font, uint_fast32_t offset);
-	static inline uint_least16_t getu16(SFT_Font* font, uint_fast32_t offset);
-	static inline int_least16_t geti16(SFT_Font* font, uint_fast32_t offset);
-	static inline uint_least32_t getu32(SFT_Font* font, uint_fast32_t offset);
-	static int gettable(SFT_Font* font, char tag[4], uint_fast32_t* offset);
+	static inline int is_safe_offset(Font* font, uint_fast32_t offset, uint_fast32_t margin);
+	static inline uint_least8_t getu8(Font* font, uint_fast32_t offset);
+	static inline int_least8_t geti8(Font* font, uint_fast32_t offset);
+	static inline uint_least16_t getu16(Font* font, uint_fast32_t offset);
+	static inline int_least16_t geti16(Font* font, uint_fast32_t offset);
+	static inline uint_least32_t getu32(Font* font, uint_fast32_t offset);
+	static int gettable(Font* font, char tag[4], uint_fast32_t* offset);
 
-	static int outline_offset(SFT_Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
-	static int simple_flags(SFT_Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
-	static int simple_points(SFT_Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
+	static int outline_offset(Font* font, uint_fast32_t glyph, uint_fast32_t* offset);
+	static int simple_flags(Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags);
+	static int simple_points(Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points);
 
-	typedef uint_least32_t SFT_UChar; /* Guaranteed to be compatible with char32_t. */
-	typedef uint_fast32_t SFT_Glyph;
+	typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
+	typedef uint_fast32_t Glyph;
 
 	class Outline {
 		std::vector<Point> points;
@@ -445,7 +445,7 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int simple_outline(SFT_Font* font, uint_fast32_t offset, unsigned int numContours) {
+		int simple_outline(Font* font, uint_fast32_t offset, unsigned int numContours) {
 			uint_fast16_t* endPts = NULL;
 			uint8_t* flags = NULL;
 			uint_fast16_t numPts;
@@ -507,7 +507,7 @@ namespace font { // TODO remove namespace
 			return -1;
 		}
 
-		int compound_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
+		int compound_outline(Font* font, uint_fast32_t offset, int recDepth) {
 			double local[6];
 			uint_fast32_t outline;
 			unsigned int flags, glyph, basePoint;
@@ -590,7 +590,7 @@ namespace font { // TODO remove namespace
 			lines.reserve(64);
 		}
 
-		int decode_outline(SFT_Font* font, uint_fast32_t offset, int recDepth) {
+		int decode_outline(Font* font, uint_fast32_t offset, int recDepth) {
 			int numContours;
 			if (!is_safe_offset(font, offset, 10))
 				return -1;
@@ -608,7 +608,7 @@ namespace font { // TODO remove namespace
 			}
 		}
 
-		int render_outline(double transform[6], SFT_Image image) {
+		int render_outline(double transform[6], Image image) {
 			Cell* cells = NULL;
 			Raster buf;
 			unsigned int numPixels;
@@ -642,7 +642,7 @@ namespace font { // TODO remove namespace
 		}
 	};
 
-	int map_file(SFT_Font* font, const char* filename) {
+	int map_file(Font* font, const char* filename) {
 		HANDLE file;
 		DWORD high, low;
 
@@ -680,7 +680,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static void unmap_file(SFT_Font* font) {
+	static void unmap_file(Font* font) {
 		if (font->memory) {
 			UnmapViewOfFile(font->memory);
 			font->memory = NULL;
@@ -691,28 +691,28 @@ namespace font { // TODO remove namespace
 		}
 	}
 
-	static int init_font(SFT_Font* font);
+	static int init_font(Font* font);
 
-	static int cmap_fmt4(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, uint_fast32_t* glyph);
-	static int cmap_fmt6(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, uint_fast32_t* glyph);
-	static int glyph_id(SFT_Font* font, SFT_UChar charCode, uint_fast32_t* glyph);
+	static int cmap_fmt4(Font* font, uint_fast32_t table, UChar charCode, uint_fast32_t* glyph);
+	static int cmap_fmt6(Font* font, uint_fast32_t table, UChar charCode, uint_fast32_t* glyph);
+	static int glyph_id(Font* font, UChar charCode, uint_fast32_t* glyph);
 
-	static int hor_metrics(SFT_Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
+	static int hor_metrics(Font* font, uint_fast32_t glyph, int* advanceWidth, int* leftSideBearing);
 	static int glyph_bbox(const SFT* sft, uint_fast32_t outline, int box[4]);
 
-	void sft_freefont(SFT_Font* font) {
+	void sft_freefont(Font* font) {
 		if (!font) return;
 		if (font->mapped)
 			unmap_file(font);
 		free(font);
 	}
 
-	SFT_Font* sft_loadmem(const void* mem, size_t size) {
-		SFT_Font* font;
+	Font* sft_loadmem(const void* mem, size_t size) {
+		Font* font;
 		if (size > UINT32_MAX) {
 			return NULL;
 		}
-		if (!(font = (SFT_Font*)calloc(1, sizeof * font))) {
+		if (!(font = (Font*)calloc(1, sizeof * font))) {
 			return NULL;
 		}
 		font->memory = (uint8_t*)mem;
@@ -725,9 +725,9 @@ namespace font { // TODO remove namespace
 		return font;
 	}
 
-	SFT_Font * sft_loadfile(char const* filename) {
-		SFT_Font* font;
-		if (!(font = (SFT_Font*)calloc(1, sizeof * font))) {
+	Font * sft_loadfile(char const* filename) {
+		Font* font;
+		if (!(font = (Font*)calloc(1, sizeof * font))) {
 			return NULL;
 		}
 		if (map_file(font, filename) < 0) {
@@ -741,7 +741,7 @@ namespace font { // TODO remove namespace
 		return font;
 	}
 
-	int sft_lmetrics(const SFT* sft, SFT_LMetrics* metrics) {
+	int sft_lmetrics(const SFT* sft, LMetrics* metrics) {
 		double factor;
 		uint_fast32_t hhea;
 		memset(metrics, 0, sizeof * metrics);
@@ -756,11 +756,11 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int sft_lookup(const SFT* sft, SFT_UChar codepoint, SFT_Glyph* glyph) {
+	int sft_lookup(const SFT* sft, UChar codepoint, Glyph* glyph) {
 		return glyph_id(sft->font, codepoint, glyph);
 	}
 
-	int sft_gmetrics(const SFT* sft, SFT_Glyph glyph, SFT_GMetrics* metrics) {
+	int sft_gmetrics(const SFT* sft, Glyph glyph, GMetrics* metrics) {
 		int adv, lsb;
 		double xScale = sft->xScale / sft->font->unitsPerEm;
 		uint_fast32_t outline;
@@ -781,12 +781,12 @@ namespace font { // TODO remove namespace
 			return -1;
 		metrics->minWidth = bbox[2] - bbox[0] + 1;
 		metrics->minHeight = bbox[3] - bbox[1] + 1;
-		metrics->yOffset = sft->flags & SFT_DOWNWARD_Y ? -bbox[3] : bbox[1];
+		metrics->yOffset = sft->flags & DOWNWARD_Y ? -bbox[3] : bbox[1];
 
 		return 0;
 	}
 
-	int sft_kerning(const SFT* sft, SFT_Glyph leftGlyph, SFT_Glyph rightGlyph, SFT_Kerning* kerning) {
+	int sft_kerning(const SFT* sft, Glyph leftGlyph, Glyph rightGlyph, Kerning* kerning) {
 		void* match;
 		uint_fast32_t offset;
 		unsigned int numTables, numPairs, length, format, flags;
@@ -850,7 +850,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	int sft_render(const SFT* sft, SFT_Glyph glyph, SFT_Image image) {
+	int sft_render(const SFT* sft, Glyph glyph, Image image) {
 		uint_fast32_t outline;
 		double transform[6];
 		int bbox[4];
@@ -868,7 +868,7 @@ namespace font { // TODO remove namespace
 		transform[1] = 0.0;
 		transform[2] = 0.0;
 		transform[4] = sft->xOffset - bbox[0];
-		if (sft->flags & SFT_DOWNWARD_Y) {
+		if (sft->flags & DOWNWARD_Y) {
 			transform[3] = -sft->yScale / sft->font->unitsPerEm;
 			transform[5] = bbox[3] - sft->yOffset;
 		}
@@ -886,7 +886,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static int init_font(SFT_Font* font) {
+	static int init_font(Font* font) {
 		uint_fast32_t scalerType, head, hhea;
 
 		if (!is_safe_offset(font, 0, 12))
@@ -912,40 +912,40 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static inline int is_safe_offset(SFT_Font* font, uint_fast32_t offset, uint_fast32_t margin) {
+	static inline int is_safe_offset(Font* font, uint_fast32_t offset, uint_fast32_t margin) {
 		if (offset > font->size) return 0;
 		if (font->size - offset < margin) return 0;
 		return 1;
 	}
 
-	static inline uint_least8_t getu8(SFT_Font* font, uint_fast32_t offset) {
+	static inline uint_least8_t getu8(Font* font, uint_fast32_t offset) {
 		assert(offset + 1 <= font->size);
 		return *(font->memory + offset);
 	}
 
-	static inline int_least8_t geti8(SFT_Font* font, uint_fast32_t offset) {
+	static inline int_least8_t geti8(Font* font, uint_fast32_t offset) {
 		return (int_least8_t)getu8(font, offset);
 	}
 
-	static inline uint_least16_t getu16(SFT_Font* font, uint_fast32_t offset) {
+	static inline uint_least16_t getu16(Font* font, uint_fast32_t offset) {
 		assert(offset + 2 <= font->size);
 		const uint8_t* base = font->memory + offset;
 		uint_least16_t b1 = base[0], b0 = base[1];
 		return (uint_least16_t)(b1 << 8 | b0);
 	}
 
-	static inline int16_t geti16(SFT_Font* font, uint_fast32_t offset) {
+	static inline int16_t geti16(Font* font, uint_fast32_t offset) {
 		return (int_least16_t)getu16(font, offset);
 	}
 
-	static inline uint32_t getu32(SFT_Font* font, uint_fast32_t offset) {
+	static inline uint32_t getu32(Font* font, uint_fast32_t offset) {
 		assert(offset + 4 <= font->size);
 		const uint8_t* base = font->memory + offset;
 		uint_least32_t b3 = base[0], b2 = base[1], b1 = base[2], b0 = base[3];
 		return (uint_least32_t)(b3 << 24 | b2 << 16 | b1 << 8 | b0);
 	}
 
-	static int gettable(SFT_Font* font, char tag[4], uint_fast32_t* offset) {
+	static int gettable(Font* font, char tag[4], uint_fast32_t* offset) {
 		void* match;
 		unsigned int numTables;
 		/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
@@ -958,7 +958,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static int cmap_fmt4(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, SFT_Glyph* glyph) {
+	static int cmap_fmt4(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph) {
 		const uint8_t* segPtr;
 		uint_fast32_t segIdxX2;
 		uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
@@ -1005,7 +1005,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static int cmap_fmt6(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, SFT_Glyph* glyph) {
+	static int cmap_fmt6(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph) {
 		unsigned int firstCode, entryCount;
 		/* cmap format 6 only supports the Unicode BMP. */
 		if (charCode > 0xFFFF) {
@@ -1027,7 +1027,7 @@ namespace font { // TODO remove namespace
 		return 0;
 	}
 
-	static int cmap_fmt12_13(SFT_Font* font, uint_fast32_t table, SFT_UChar charCode, SFT_Glyph* glyph, int which) {
+	static int cmap_fmt12_13(Font* font, uint_fast32_t table, UChar charCode, Glyph* glyph, int which) {
 		uint32_t len, numEntries;
 		uint_fast32_t i;
 
@@ -1066,7 +1066,7 @@ namespace font { // TODO remove namespace
 	}
 
 	/* Maps Unicode code points to glyph indices. */
-	static int glyph_id(SFT_Font* font, SFT_UChar charCode, SFT_Glyph* glyph) {
+	static int glyph_id(Font* font, UChar charCode, Glyph* glyph) {
 		uint_fast32_t cmap, entry, table;
 		unsigned int idx, numEntries;
 		int type, format;
@@ -1127,7 +1127,7 @@ namespace font { // TODO remove namespace
 		return -1;
 	}
 
-	static int hor_metrics(SFT_Font* font, SFT_Glyph glyph, int* advanceWidth, int* leftSideBearing) {
+	static int hor_metrics(Font* font, Glyph glyph, int* advanceWidth, int* leftSideBearing) {
 		uint_fast32_t hmtx, offset, boundary;
 		if (gettable(font, (char*)"hmtx", &hmtx) < 0)
 			return -1;
@@ -1181,7 +1181,7 @@ namespace font { // TODO remove namespace
 	}
 
 	/* Returns the offset into the font that the glyph's outline is stored at. */
-	static int outline_offset(SFT_Font* font, SFT_Glyph glyph, uint_fast32_t* offset) {
+	static int outline_offset(Font* font, Glyph glyph, uint_fast32_t* offset) {
 		uint_fast32_t loca, glyf;
 		uint_fast32_t base, current, next;
 
@@ -1214,7 +1214,7 @@ namespace font { // TODO remove namespace
 	}
 
 	/* For a 'simple' outline, determines each point of the outline with a set of flags. */
-	static int simple_flags(SFT_Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) {
+	static int simple_flags(Font* font, uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) {
 		uint_fast32_t off = *offset;
 		uint_fast16_t i;
 		uint8_t value = 0, repeat = 0;
@@ -1239,7 +1239,7 @@ namespace font { // TODO remove namespace
 	}
 
 	/* For a 'simple' outline, decodes both X and Y coordinates for each point of the outline. */
-	static int simple_points(SFT_Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) {
+	static int simple_points(Font* font, uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) {
 		long accum, value, bit;
 		uint_fast16_t i;
 
