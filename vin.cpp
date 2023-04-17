@@ -48,13 +48,13 @@ private:
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			if (font::gmetrics(&sft, glyph.gid, &glyph.mtx) == 0) {
+			if (sft.gmetrics(glyph.gid, &glyph.mtx) == 0) {
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
-				font::render(&sft, glyph.gid, image);
+				sft.render(glyph.gid, image);
 				return glyph;
 			}
 		}
