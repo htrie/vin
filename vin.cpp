@@ -40,7 +40,7 @@ public:
 
 private:
 	font::Font font;
-	font::SFT sft;
+	font::Renderer renderer;
 	font::LMetrics lmtx;
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
@@ -48,13 +48,13 @@ private:
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			if (sft.gmetrics(font, glyph.gid, &glyph.mtx) == 0) {
+			if (renderer.gmetrics(font, glyph.gid, &glyph.mtx) == 0) {
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
 				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
-				sft.render(font, glyph.gid, image);
+				renderer.render(font, glyph.gid, image);
 				return glyph;
 			}
 		}
@@ -67,16 +67,15 @@ public:
 		if (!font.is_valid())
 			font = font::Font(get_system_font_path() + get_system_font_name("Consolas"));
 		if (font.is_valid()) {
-			memset(&sft, 0, sizeof sft);
-			sft.flags = DOWNWARD_Y;
+			renderer.flags = DOWNWARD_Y;
 		}
 	}
 
 	void set_size(double size) {
-		if (size != sft.xScale) {
-			sft.xScale = size;
-			sft.yScale = size;
-			sft.lmetrics(font, &lmtx);
+		if (size != renderer.xScale) {
+			renderer.xScale = size;
+			renderer.yScale = size;
+			renderer.lmetrics(font, &lmtx);
 			glyphs.clear();
 			add_glyph(0);
 		}
@@ -89,7 +88,7 @@ public:
 	}
 
 	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
-	unsigned get_line_height() const { return (unsigned)(sft.yScale - lmtx.descender); }
+	unsigned get_line_height() const { return (unsigned)(renderer.yScale - lmtx.descender); }
 	unsigned get_line_baseline() const { return (unsigned)lmtx.ascender; }
 };
 

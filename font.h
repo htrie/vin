@@ -1067,7 +1067,7 @@ namespace font { // TODO remove namespace
 		int minHeight = 0;
 	};
 
-	struct SFT { // TODO rename // TODO merge with Font // TODO make class
+	struct Renderer { // TODO make class
 		double xScale = 0.0;
 		double yScale = 0.0;
 		double xOffset = 0.0;
