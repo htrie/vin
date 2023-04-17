@@ -1,6 +1,6 @@
 #pragma once
 
-enum Glyph {
+enum Codepoint {
 	ESCAPE = 27,
 	SPACE = 9251,
 	TAB = 10230,
@@ -174,10 +174,10 @@ void push_number(Characters& characters, unsigned row, unsigned col, unsigned li
 
 void push_char(Characters& characters, Color color, unsigned row, unsigned& col, char c) {
 	switch (c) {
-		case ' ': characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col++); break;
-		case '\t': characters.emplace_back(Glyph::TAB, colors().whitespace, row, col++); break;
-		case '\r': characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col); break;
-		case '\n': characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col++); break;
+		case ' ': characters.emplace_back(Codepoint::SPACE, colors().whitespace, row, col++); break;
+		case '\t': characters.emplace_back(Codepoint::TAB, colors().whitespace, row, col++); break;
+		case '\r': characters.emplace_back(Codepoint::CARRIAGE, colors().whitespace, row, col); break;
+		case '\n': characters.emplace_back(Codepoint::RETURN, colors().whitespace, row, col++); break;
 		default: characters.emplace_back(c, color, row, col++); break;
 	}
 }
@@ -190,28 +190,28 @@ void push_string(Characters& characters, Color color, unsigned row, unsigned& co
 
 void push_line(Characters& characters, Color color, unsigned row, unsigned col_begin, unsigned col_end) {
 	for (unsigned i = col_begin; i < col_end; ++i) {
-		characters.emplace_back(Glyph::BLOCK, color, row, i);
+		characters.emplace_back(Codepoint::BLOCK, color, row, i);
 	}
 }
 
 void push_cursor(Characters& characters, Color color, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::LINE, color, row, col);
+	characters.emplace_back(Codepoint::LINE, color, row, col);
 };
 
 void push_carriage(Characters& characters, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::CARRIAGE, colors().whitespace, row, col);
+	characters.emplace_back(Codepoint::CARRIAGE, colors().whitespace, row, col);
 };
 
 void push_return(Characters& characters, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::RETURN, colors().whitespace, row, col);
+	characters.emplace_back(Codepoint::RETURN, colors().whitespace, row, col);
 };
 
 void push_tab(Characters& characters, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::TAB, colors().whitespace, row, col);
+	characters.emplace_back(Codepoint::TAB, colors().whitespace, row, col);
 };
 
 void push_space(Characters& characters, unsigned row, unsigned col) {
-	characters.emplace_back(Glyph::SPACE, colors().whitespace, row, col);
+	characters.emplace_back(Codepoint::SPACE, colors().whitespace, row, col);
 };
 
 class Range {

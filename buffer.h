@@ -213,7 +213,7 @@ class Buffer {
 	}
 
 	void process_insert(unsigned key) {
-		if (key == Glyph::ESCAPE) { end_record(key); mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { end_record(key); mode = Mode::normal; }
 		else if (key == '\b') { append_record(key); state().erase_back(); }
 		else if (key == '\t') { append_record(key); state().insert("\t"); }
 		else if (key == '\r') { append_record(key); state().insert("\n" + state().copy_line_whitespace()); }
@@ -288,30 +288,30 @@ class Buffer {
 	}
 
 	void process_normal_slash(unsigned key) {
-		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { highlight.clear(); mode = Mode::normal; }
 		else if (key == '\r') { word_find_partial(); mode = Mode::normal; }
 		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_find_partial(); } }
 		else { highlight += key; word_find_partial(); }
 	}
 
 	void process_normal_question(unsigned key) {
-		if (key == Glyph::ESCAPE) { highlight.clear(); mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { highlight.clear(); mode = Mode::normal; }
 		else if (key == '\r') { word_rfind_partial(); mode = Mode::normal; }
 		else if (key == '\b') { if (highlight.size() > 0) { highlight.pop_back(); word_rfind_partial(); } }
 		else { highlight += key; word_rfind_partial(); }
 	}
 	void process_normal_f(unsigned key) {
-		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { mode = Mode::normal; }
 		else { state().line_find(key); f_key = key; char_forward = true; mode = Mode::normal; }
 	}
 
 	void process_normal_F(unsigned key) {
-		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { mode = Mode::normal; }
 		else { state().line_rfind(key); f_key = key; char_forward = false; mode = Mode::normal; }
 	}
 
 	void process_normal_r(std::string& clipboard, unsigned key) {
-		if (key == Glyph::ESCAPE) { mode = Mode::normal; }
+		if (key == Codepoint::ESCAPE) { mode = Mode::normal; }
 		else { end_record(key); clipboard = state().erase(); state().insert(std::string((char*)&key, 1)); state().prev_char(); mode = Mode::normal; }
 	}
 
@@ -461,30 +461,30 @@ class Buffer {
 	}
 
 	void push_highlight_one(Characters& characters, unsigned row, unsigned col, bool last) const {
-		characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col);
+		characters.emplace_back(Codepoint::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col);
 	}
 
 	void push_highlight(Characters& characters, unsigned row, unsigned col) const {
 		for (unsigned i = 0; i < (unsigned)highlight.size(); ++i) {
-			characters.emplace_back(Glyph::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col + i);
+			characters.emplace_back(Codepoint::BLOCK, is_mode_search() ? colors().search : colors().highlight, row, col + i);
 		}
 	};
 
 	void push_column_indicator(Characters& characters, unsigned row, unsigned col) const {
-		characters.emplace_back(Glyph::BLOCK, colors().column_indicator, row, col);
+		characters.emplace_back(Codepoint::BLOCK, colors().column_indicator, row, col);
 	};
 
 	void push_cursor_line(Characters& characters, unsigned row, unsigned col_count) const {
 		for (unsigned i = 0; i < col_count - 7; ++i) {
-			characters.emplace_back(Glyph::BLOCK, colors().cursor_line, row, 7 + i);
+			characters.emplace_back(Codepoint::BLOCK, colors().cursor_line, row, 7 + i);
 		}
 	}
 
 	void push_cursor(Characters& characters, unsigned row, unsigned col) const {
 		characters.emplace_back(
-			mode == Mode::insert ? Glyph::LINE :
-			mode == Mode::normal ? Glyph::BLOCK :
-			Glyph::BOTTOM,
+			mode == Mode::insert ? Codepoint::LINE :
+			mode == Mode::normal ? Codepoint::BLOCK :
+			Codepoint::BOTTOM,
 			colors().cursor, row, col);
 	};
 
