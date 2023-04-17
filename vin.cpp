@@ -41,7 +41,6 @@ public:
 private:
 	font::Font font;
 	font::Renderer renderer;
-	font::LMetrics lmtx;
 
 	std::unordered_map<uint32_t, Glyph> glyphs;
 
@@ -75,7 +74,7 @@ public:
 		if (size != renderer.xScale) {
 			renderer.xScale = size;
 			renderer.yScale = size;
-			renderer.lmetrics(font, &lmtx);
+			renderer.lmetrics(font);
 			glyphs.clear();
 			add_glyph(0);
 		}
@@ -88,8 +87,8 @@ public:
 	}
 
 	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
-	unsigned get_line_height() const { return (unsigned)(renderer.yScale - lmtx.descender); }
-	unsigned get_line_baseline() const { return (unsigned)lmtx.ascender; }
+	unsigned get_line_height() const { return (unsigned)(renderer.yScale - renderer.descender); }
+	unsigned get_line_baseline() const { return (unsigned)renderer.ascender; }
 };
 
 class Window {

@@ -1053,12 +1053,6 @@ namespace font { // TODO remove namespace
 	};
 
 
-	struct LMetrics { // TODO merge with SFT
-		double ascender = 0.0;
-		double descender = 0.0;
-		double lineGap = 0.0;
-	};
-
 	struct GMetrics { // TODO merge with Glyph
 		double advanceWidth = 0.0;
 		double leftSideBearing = 0.0;
@@ -1074,18 +1068,21 @@ namespace font { // TODO remove namespace
 		double yOffset = 0.0;
 		int flags = 0;
 
-		int lmetrics(const Font& font, LMetrics* metrics) const {
+		double ascender = 0.0;
+		double descender = 0.0;
+		double lineGap = 0.0;
+
+		int lmetrics(const Font& font) {
 			double factor;
 			uint_fast32_t hhea;
-			memset(metrics, 0, sizeof * metrics);
 			if (font.gettable((char*)"hhea", &hhea) < 0)
 				return -1;
 			if (!font.is_safe_offset(hhea, 36))
 				return -1;
 			factor = yScale / font.unitsPerEm;
-			metrics->ascender = font.geti16(hhea + 4) * factor;
-			metrics->descender = font.geti16(hhea + 6) * factor;
-			metrics->lineGap = font.geti16(hhea + 8) * factor;
+			ascender = font.geti16(hhea + 4) * factor;
+			descender = font.geti16(hhea + 6) * factor;
+			lineGap = font.geti16(hhea + 8) * factor;
 			return 0;
 		}
 
