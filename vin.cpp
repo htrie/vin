@@ -47,11 +47,12 @@ private:
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			if (renderer.gmetrics(font, glyph.gid, &glyph.mtx) == 0) {
+			glyph.mtx = renderer.gmetrics(font, glyph.gid);
+			if (glyph.mtx.is_valid()) {
+				glyph.pixels.resize(glyph.mtx.minWidth * glyph.mtx.minHeight);
 				font::Image image;
 				image.width  = glyph.mtx.minWidth;
 				image.height = glyph.mtx.minHeight;
-				glyph.pixels.resize(image.width * image.height);
 				image.pixels = glyph.pixels.data();
 				renderer.render(font, glyph.gid, image);
 				return glyph;

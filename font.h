@@ -1034,6 +1034,8 @@ namespace font { // TODO remove namespace
 		int yOffset = 0;
 		int minWidth = 0;
 		int minHeight = 0;
+
+		bool is_valid() const { return advanceWidth > 0; }
 	};
 
 	struct Renderer { // TODO make class
@@ -1061,30 +1063,30 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int gmetrics(const Font& font, Glyph glyph, GMetrics* metrics) const {
+		GMetrics gmetrics(const Font& font, const Glyph glyph) const {
 			int adv, lsb;
-			double xscale = xScale / font.unitsPerEm;
-			uint_fast32_t outline;
-			int bbox[4];
-
-			memset(metrics, 0, sizeof * metrics);
-
 			if (font.hor_metrics(glyph, &adv, &lsb) < 0)
-				return -1;
-			metrics->advanceWidth = adv * xscale;
-			metrics->leftSideBearing = lsb * xscale + xOffset;
+				return {};
 
+			GMetrics metrics;
+			const double xscale = xScale / font.unitsPerEm;
+			metrics.advanceWidth = adv * xscale;
+			metrics.leftSideBearing = lsb * xscale + xOffset;
+
+			uint_fast32_t outline;
 			if (font.outline_offset(glyph, &outline) < 0)
-				return -1;
+				return {};
 			if (!outline)
-				return 0;
-			if (glyph_bbox(font, outline, bbox) < 0)
-				return -1;
-			metrics->minWidth = bbox[2] - bbox[0] + 1;
-			metrics->minHeight = bbox[3] - bbox[1] + 1;
-			metrics->yOffset = flags & DOWNWARD_Y ? -bbox[3] : bbox[1];
+				return metrics;
 
-			return 0;
+			int bbox[4];
+			if (glyph_bbox(font, outline, bbox) < 0)
+				return {};
+
+			metrics.minWidth = bbox[2] - bbox[0] + 1;
+			metrics.minHeight = bbox[3] - bbox[1] + 1;
+			metrics.yOffset = flags & DOWNWARD_Y ? -bbox[3] : bbox[1];
+			return metrics;
 		}
 
 		int glyph_bbox(const Font& font, uint_fast32_t outline, int box[4]) const {
