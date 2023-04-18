@@ -98,8 +98,7 @@ namespace font { // TODO remove namespace
 
 	static void transform_points(unsigned int numPts, Point* points, double trf[6]) {
 		Point pt;
-		unsigned int i;
-		for (i = 0; i < numPts; ++i) {
+		for (unsigned i = 0; i < numPts; ++i) {
 			pt = points[i];
 			points[i] = Point(
 				pt.x * trf[0] + pt.y * trf[2] + trf[4],
@@ -110,9 +109,7 @@ namespace font { // TODO remove namespace
 
 	static void clip_points(unsigned int numPts, Point* points, int width, int height) {
 		Point pt;
-		unsigned int i;
-
-		for (i = 0; i < numPts; ++i) {
+		for (unsigned i = 0; i < numPts; ++i) {
 			pt = points[i];
 
 			if (pt.x < 0.0) {
@@ -152,9 +149,8 @@ namespace font { // TODO remove namespace
 	static void post_process(const Raster& buf, uint8_t* image) {
 		Cell cell;
 		double accum = 0.0, value;
-		unsigned int i, num;
-		num = (unsigned int)buf.width * (unsigned int)buf.height;
-		for (i = 0; i < num; ++i) {
+		unsigned int num = (unsigned int)buf.width * (unsigned int)buf.height;
+		for (unsigned i = 0; i < num; ++i) {
 			cell = buf.cells[i];
 			value = fabs(accum + cell.area);
 			value = std::min(value, 1.0);
@@ -768,8 +764,7 @@ namespace font { // TODO remove namespace
 		}
 
 		int tesselate_curves() {
-			unsigned int i;
-			for (i = 0; i < curves.size(); ++i) {
+			for (unsigned i = 0; i < curves.size(); ++i) {
 				if (tesselate_curve(curves[i]) < 0)
 					return -1;
 			}
@@ -777,8 +772,7 @@ namespace font { // TODO remove namespace
 		}
 
 		void draw_lines(Raster& buf) const {
-			unsigned int i;
-			for (i = 0; i < lines.size(); ++i) {
+			for (unsigned i = 0; i < lines.size(); ++i) {
 				const Line& line = lines[i];
 				const Point& origin = points[line.beg];
 				const Point& goal = points[line.end];
@@ -850,9 +844,6 @@ namespace font { // TODO remove namespace
 		}
 
 		int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) {
-			uint_fast16_t numPts;
-			unsigned int i;
-
 			assert(numContours > 0);
 
 			uint_fast16_t basePoint = (uint_fast16_t)points.size();
@@ -860,7 +851,7 @@ namespace font { // TODO remove namespace
 
 			if (!font.is_safe_offset(offset, numContours * 2 + 2))
 				return -1;
-			numPts = font.getu16(offset + (numContours - 1) * 2);
+			uint_fast16_t numPts = font.getu16(offset + (numContours - 1) * 2);
 			if (numPts >= UINT16_MAX)
 				return -1;
 			numPts++;
@@ -874,14 +865,14 @@ namespace font { // TODO remove namespace
 			std::vector<uint8_t> flags;
 			flags.resize(numPts);
 
-			for (i = 0; i < numContours; ++i) {
+			for (unsigned i = 0; i < numContours; ++i) {
 				endPts[i] = font.getu16(offset);
 				offset += 2;
 			}
 			/* Ensure that endPts are never falling.
 			 * Falling endPts have no sensible interpretation and most likely only occur in malicious input.
 			 * Therefore, we bail, should we ever encounter such input. */
-			for (i = 0; i < numContours - 1; ++i) {
+			for (unsigned i = 0; i < numContours - 1; ++i) {
 				if (endPts[i + 1] < endPts[i] + 1)
 					return -1;
 			}
@@ -892,7 +883,7 @@ namespace font { // TODO remove namespace
 			if (font.simple_points(offset, numPts, flags.data(), points.data() + basePoint) < 0)
 				return -1;
 
-			for (i = 0; i < numContours; ++i) {
+			for (unsigned i = 0; i < numContours; ++i) {
 				uint_fast16_t count = endPts[i] - beg + 1;
 				if (decode_contour(flags.data() + beg, basePoint + beg, count) < 0)
 					return -1;
@@ -904,7 +895,6 @@ namespace font { // TODO remove namespace
 
 		int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 			double local[6];
-			uint_fast32_t outline;
 			unsigned int flags, glyph, basePoint;
 			/* Guard against infinite recursion (compound glyphs that have themselves as component). */
 			if (recDepth >= 4)
@@ -965,6 +955,7 @@ namespace font { // TODO remove namespace
 				 * But stb_truetype scales by the L2 norm. And FreeType2 doesn't scale at all.
 				 * Furthermore, Microsoft's spec doesn't even mention anything like this.
 				 * It's almost as if nobody ever uses this feature anyway. */
+				uint_fast32_t outline;
 				if (font.outline_offset(glyph, &outline) < 0)
 					return -1;
 				if (outline) {
@@ -986,10 +977,9 @@ namespace font { // TODO remove namespace
 		}
 
 		int decode_outline(const Font& font, uint_fast32_t offset, int recDepth) {
-			int numContours;
 			if (!font.is_safe_offset(offset, 10))
 				return -1;
-			numContours = font.geti16(offset);
+			const int numContours = font.geti16(offset);
 			if (numContours > 0) {
 				/* Glyph has a 'simple' outline consisting of a number of contours. */
 				return simple_outline(font, offset + 10, (unsigned int)numContours);
@@ -1004,6 +994,12 @@ namespace font { // TODO remove namespace
 		}
 
 		int render_outline(double transform[6], Image image) {
+			transform_points((unsigned)points.size(), points.data(), transform);
+			clip_points((unsigned)points.size(), points.data(), image.width, image.height);
+
+			if (tesselate_curves() < 0)
+				return -1;
+
 			std::vector<Cell> cells;
 			cells.resize((unsigned int)image.width * (unsigned int)image.height);
 
@@ -1011,16 +1007,7 @@ namespace font { // TODO remove namespace
 			buf.cells = cells.data();
 			buf.width = image.width;
 			buf.height = image.height;
-
-			transform_points((unsigned)points.size(), points.data(), transform);
-
-			clip_points((unsigned)points.size(), points.data(), image.width, image.height);
-
-			if (tesselate_curves() < 0)
-				return -1;
-
 			draw_lines(buf);
-
 			post_process(buf, (uint8_t*)image.pixels);
 
 			return 0;
@@ -1050,13 +1037,12 @@ namespace font { // TODO remove namespace
 		double lineGap = 0.0;
 
 		int lmetrics(const Font& font) {
-			double factor;
 			uint_fast32_t hhea;
 			if (font.gettable((char*)"hhea", &hhea) < 0)
 				return -1;
 			if (!font.is_safe_offset(hhea, 36))
 				return -1;
-			factor = yScale / font.unitsPerEm;
+			const double factor = yScale / font.unitsPerEm;
 			ascender = font.geti16(hhea + 4) * factor;
 			descender = font.geti16(hhea + 6) * factor;
 			lineGap = font.geti16(hhea + 8) * factor;
@@ -1090,7 +1076,6 @@ namespace font { // TODO remove namespace
 		}
 
 		int glyph_bbox(const Font& font, uint_fast32_t outline, int box[4]) const {
-			double xscale, yscale;
 			/* Read the bounding box from the font file verbatim. */
 			if (!font.is_safe_offset(outline, 10))
 				return -1;
@@ -1100,9 +1085,10 @@ namespace font { // TODO remove namespace
 			box[3] = font.geti16(outline + 8);
 			if (box[2] <= box[0] || box[3] <= box[1])
 				return -1;
+
 			/* Transform the bounding box into SFT coordinate space. */
-			xscale = xScale / font.unitsPerEm;
-			yscale = yScale / font.unitsPerEm;
+			const double xscale = xScale / font.unitsPerEm;
+			const double yscale = yScale / font.unitsPerEm;
 			box[0] = (int)floor(box[0] * xscale + xOffset);
 			box[1] = (int)floor(box[1] * yscale + yOffset);
 			box[2] = (int)ceil(box[2] * xscale + xOffset);
@@ -1112,18 +1098,19 @@ namespace font { // TODO remove namespace
 
 		int render(const Font& font, Glyph glyph, Image image) const {
 			uint_fast32_t outline;
-			double transform[6];
-			int bbox[4];
-
 			if (font.outline_offset(glyph, &outline) < 0)
 				return -1;
 			if (!outline)
 				return 0;
+
+			int bbox[4];
 			if (glyph_bbox(font, outline, bbox) < 0)
 				return -1;
+
 			/* Set up the transformation matrix such that
 			 * the transformed bounding boxes min corner lines
 			 * up with the (0, 0) point. */
+			double transform[6];
 			transform[0] = xScale / font.unitsPerEm;
 			transform[1] = 0.0;
 			transform[2] = 0.0;
