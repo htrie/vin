@@ -271,7 +271,7 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
-	font::Renderer renderer;
+	Renderer renderer;
 
 	bool minimized = false;
 	bool maximized = false;
