@@ -271,7 +271,7 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
-	Renderer renderer;
+	Book book;
 
 	bool minimized = false;
 	bool maximized = false;
@@ -288,8 +288,8 @@ class Application {
 
 	double get_default_font_size() const { return 30.0; } 
 
-	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)renderer.get_character_width()); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)renderer.get_line_height() - 0.5f); }
+	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height() - 0.5f); }
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
@@ -300,10 +300,10 @@ class Application {
 	void render(const Characters& characters) {
 		if (auto* pixels = window.get_pixels()) {
 			for (auto& character : characters) {
-				const auto& glyph = renderer.find_glyph(character.index);
+				const auto& glyph = book.find_glyph(character.index);
 				unsigned in = 0;
-				unsigned out = (renderer.get_line_baseline() + character.row * renderer.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-					(character.col * renderer.get_character_width() + (int)glyph.mtx.leftSideBearing);
+				unsigned out = (book.get_line_baseline() + character.row * book.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+					(character.col * book.get_character_width() + (int)glyph.mtx.leftSideBearing);
 				auto color = character.color;
 				for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
 					for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
@@ -336,7 +336,7 @@ class Application {
 		switcher.process(space_down, quit, maximize, zoom, key);
 		if (maximize)
 			window.maximize(!maximized);
-		renderer.set_size(zoom * get_default_font_size()); 
+		book.set_size(zoom * get_default_font_size()); 
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -417,7 +417,7 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
-		renderer.set_size(get_default_font_size());
+		book.set_size(get_default_font_size());
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
 	}

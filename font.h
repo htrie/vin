@@ -949,7 +949,7 @@ struct Glyph {
 	std::vector<uint8_t> pixels;
 };
 
-class Renderer { // TODO rename
+class Book {
 	Font font;
 
 	double xScale = 0.0;
@@ -1031,6 +1031,10 @@ class Renderer { // TODO rename
 		if (!outline)
 			return {};
 
+		Outline outl;
+		if (outl.decode_outline(font, outline, 0) < 0)
+			return {};
+
 		int bbox[4];
 		if (glyph_bbox(outline, bbox) < 0)
 			return {};
@@ -1051,10 +1055,6 @@ class Renderer { // TODO rename
 			transform[3] = +yScale / font.unitsPerEm;
 			transform[5] = yOffset - bbox[1];
 		}
-
-		Outline outl;
-		if (outl.decode_outline(font, outline, 0) < 0)
-			return {};
 
 		std::vector<uint8_t> pixels;
 		pixels.resize(metrics.minWidth * metrics.minHeight);
