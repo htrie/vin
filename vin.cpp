@@ -21,50 +21,14 @@
 #include <shlobj.h>
 
 #include "resource.h"
-#include "font.h"
 #include "text.h"
 #include "state.h"
 #include "buffer.h"
 #include "file.h"
+#include "font.h"
 
 const unsigned version_major = 1;
 const unsigned version_minor = 3;
-
-class Font { // TODO merge all in font Font
-public:
-
-private:
-	font::Font font;
-	font::Renderer renderer;
-
-public:
-	Font() {
-		font = font::Font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
-		if (!font.is_valid())
-			font = font::Font(get_system_font_path() + get_system_font_name("Consolas"));
-		if (font.is_valid()) {
-			renderer.flags = DOWNWARD_Y;
-		}
-	}
-
-	void set_size(double size) {
-		if (size != renderer.xScale) {
-			renderer.xScale = size;
-			renderer.yScale = size;
-			renderer.lmetrics(font);
-			renderer.clear();
-			renderer.add_glyph(font, 0);
-		}
-	}
-
-	const font::Glyph& find_glyph(uint32_t codepoint) {
-		return renderer.find_glyph(font, codepoint);
-	}
-
-	unsigned get_character_width() const { return renderer.get_character_width(); }
-	unsigned get_line_height() const { return renderer.get_line_height(); }
-	unsigned get_line_baseline() const { return renderer.get_line_baseline(); }
-};
 
 class Window {
 	HWND hwnd = nullptr;
@@ -307,7 +271,7 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
-	Font font;
+	font::Renderer renderer;
 
 	bool minimized = false;
 	bool maximized = false;
@@ -324,8 +288,8 @@ class Application {
 
 	double get_default_font_size() const { return 30.0; } 
 
-	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width()); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height() - 0.5f); }
+	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)renderer.get_character_width()); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)renderer.get_line_height() - 0.5f); }
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
@@ -336,10 +300,10 @@ class Application {
 	void render(const Characters& characters) {
 		if (auto* pixels = window.get_pixels()) {
 			for (auto& character : characters) {
-				const auto& glyph = font.find_glyph(character.index);
+				const auto& glyph = renderer.find_glyph(character.index);
 				unsigned in = 0;
-				unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-					(character.col * font.get_character_width() + (int)glyph.mtx.leftSideBearing);
+				unsigned out = (renderer.get_line_baseline() + character.row * renderer.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+					(character.col * renderer.get_character_width() + (int)glyph.mtx.leftSideBearing);
 				auto color = character.color;
 				for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
 					for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
@@ -372,7 +336,7 @@ class Application {
 		switcher.process(space_down, quit, maximize, zoom, key);
 		if (maximize)
 			window.maximize(!maximized);
-		font.set_size(zoom * get_default_font_size()); 
+		renderer.set_size(zoom * get_default_font_size()); 
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -453,7 +417,7 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
-		font.set_size(get_default_font_size());
+		renderer.set_size(get_default_font_size());
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
 	}

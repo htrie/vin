@@ -1032,6 +1032,8 @@ namespace font { // TODO remove namespace
 	};
 
 	struct Renderer { // TODO make class // TODO rename
+		Font font;
+
 		double xScale = 0.0;
 		double yScale = 0.0;
 		double xOffset = 0.0;
@@ -1044,7 +1046,7 @@ namespace font { // TODO remove namespace
 
 		std::unordered_map<uint32_t, Glyph> glyphs;
 
-		int lmetrics(const Font& font) {
+		int lmetrics() {
 			uint_fast32_t hhea;
 			if (font.gettable((char*)"hhea", &hhea) < 0)
 				return -1;
@@ -1057,7 +1059,7 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		Metrics get_metrics(const Font& font, const uint_fast32_t glyph_id) const {
+		Metrics get_metrics(const uint_fast32_t glyph_id) const {
 			int adv, lsb;
 			if (font.hor_metrics(glyph_id, &adv, &lsb) < 0)
 				return {};
@@ -1074,7 +1076,7 @@ namespace font { // TODO remove namespace
 				return metrics;
 
 			int bbox[4];
-			if (glyph_bbox(font, outline, bbox) < 0)
+			if (glyph_bbox(outline, bbox) < 0)
 				return {};
 
 			metrics.minWidth = bbox[2] - bbox[0] + 1;
@@ -1083,7 +1085,7 @@ namespace font { // TODO remove namespace
 			return metrics;
 		}
 
-		int glyph_bbox(const Font& font, uint_fast32_t outline, int box[4]) const {
+		int glyph_bbox(uint_fast32_t outline, int box[4]) const {
 			/* Read the bounding box from the font file verbatim. */
 			if (!font.is_safe_offset(outline, 10))
 				return -1;
@@ -1104,7 +1106,7 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		std::vector<uint8_t> render(const Font& font, uint_fast32_t glyph_id, const Metrics& metrics) const {
+		std::vector<uint8_t> render(uint_fast32_t glyph_id, const Metrics& metrics) const {
 			uint_fast32_t outline;
 			if (font.outline_offset(glyph_id, &outline) < 0)
 				return {};
@@ -1112,7 +1114,7 @@ namespace font { // TODO remove namespace
 				return {};
 
 			int bbox[4];
-			if (glyph_bbox(font, outline, bbox) < 0)
+			if (glyph_bbox(outline, bbox) < 0)
 				return {};
 
 			/* Set up the transformation matrix such that
@@ -1149,26 +1151,45 @@ namespace font { // TODO remove namespace
 			return pixels;
 		}
 
+		Renderer() {
+			font = font::Font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
+			if (!font.is_valid())
+				font = font::Font(get_system_font_path() + get_system_font_name("Consolas"));
+			if (font.is_valid()) {
+				flags = DOWNWARD_Y;
+			}
+		}
+
+		void set_size(double size) {
+			if (size != xScale) {
+				xScale = size;
+				yScale = size;
+				lmetrics();
+				clear();
+				add_glyph(0);
+			}
+		}
+
 		void clear() {
 			glyphs.clear();
 		}
 
-		const Glyph& add_glyph(const Font& font, uint32_t codepoint) {
+		const Glyph& add_glyph(uint32_t codepoint) {
 			auto& glyph = glyphs[codepoint];
 			if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-				glyph.mtx = get_metrics(font, glyph.gid);
+				glyph.mtx = get_metrics(glyph.gid);
 				if (glyph.mtx.is_valid()) {
-					glyph.pixels = render(font, glyph.gid, glyph.mtx);
+					glyph.pixels = render(glyph.gid, glyph.mtx);
 					return glyph;
 				}
 			}
-			return add_glyph(font, 0);
+			return add_glyph(0);
 		}
 
-		const Glyph& find_glyph(const Font& font, uint32_t codepoint) {
+		const Glyph& find_glyph(uint32_t codepoint) {
 			if (auto found = glyphs.find(codepoint); found != glyphs.end())
 				return found->second;
-			return add_glyph(font, codepoint);
+			return add_glyph(codepoint);
 		}
 
 		unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
