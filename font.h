@@ -94,7 +94,7 @@ static Point midpoint(Point a, Point b) {
 	);
 }
 
-static void transform_points(unsigned int numPts, Point* points, double trf[6]) {
+static void transform_points(unsigned int numPts, Point* points, const double trf[6]) {
 	Point pt;
 	for (unsigned i = 0; i < numPts; ++i) {
 		pt = points[i];
@@ -245,12 +245,31 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 }
 
 
+struct Metrics {
+	double advanceWidth = 0.0;
+	double leftSideBearing = 0.0;
+	int yOffset = 0;
+	int minWidth = 0;
+	int minHeight = 0;
+
+	bool is_valid() const { return advanceWidth > 0; }
+};
+
 struct Font { // TODO make class
 	File file;
 
 	uint_least16_t unitsPerEm = 0;
 	int_least16_t  locaFormat = 0;
 	uint_least16_t numLongHmtx = 0;
+
+	double xScale = 0.0;
+	double yScale = 0.0;
+	double xOffset = 0.0;
+	double yOffset = 0.0;
+
+	double ascender = 0.0;
+	double descender = 0.0;
+	double lineGap = 0.0;
 
 	uint_least8_t getu8(uint_fast32_t offset) const {
 		assert(offset + 1 <= file.get_size());
@@ -298,6 +317,19 @@ struct Font { // TODO make class
 		return 0;
 	}
 
+	int lmetrics() {
+		uint_fast32_t hhea;
+		if (gettable((char*)"hhea", &hhea) < 0)
+			return -1;
+		if (!is_safe_offset(hhea, 36))
+			return -1;
+		const double factor = yScale / unitsPerEm;
+		ascender = geti16(hhea + 4) * factor;
+		descender = geti16(hhea + 6) * factor;
+		lineGap = geti16(hhea + 8) * factor;
+		return 0;
+	}
+
 	Font()
 		: file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") { //(get_system_font_path() + get_system_font_name("Consolas"))
 		if (!is_safe_offset(0, 12))
@@ -322,6 +354,45 @@ struct Font { // TODO make class
 		if (!is_safe_offset(hhea, 36))
 			return;
 		numLongHmtx = getu16(hhea + 34);
+	}
+
+	bool set_size(double size) {
+		if (size != xScale) {
+			xScale = size;
+			yScale = size;
+			lmetrics();
+			return true;
+		}
+		return false;
+	}
+
+	unsigned get_line_height() const { return (unsigned)(yScale - descender); }
+	unsigned get_line_baseline() const { return (unsigned)ascender; }
+
+	Metrics get_metrics(const uint_fast32_t glyph_id) const {
+		int adv, lsb;
+		if (hor_metrics(glyph_id, &adv, &lsb) < 0)
+			return {};
+
+		Metrics metrics;
+		const double xscale = xScale / unitsPerEm;
+		metrics.advanceWidth = adv * xscale;
+		metrics.leftSideBearing = lsb * xscale + xOffset;
+
+		uint_fast32_t outline;
+		if (outline_offset(glyph_id, &outline) < 0)
+			return {};
+		if (!outline)
+			return metrics;
+
+		int bbox[4];
+		if (glyph_bbox(outline, bbox) < 0)
+			return {};
+
+		metrics.minWidth = bbox[2] - bbox[0] + 1;
+		metrics.minHeight = bbox[3] - bbox[1] + 1;
+		metrics.yOffset = -bbox[3];
+		return metrics;
 	}
 
 	int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const {
@@ -626,9 +697,44 @@ struct Font { // TODO make class
 
 		return -1;
 	}
+
+	int glyph_bbox(uint_fast32_t outline, int box[4]) const {
+		/* Read the bounding box from the font file verbatim. */
+		if (!is_safe_offset(outline, 10))
+			return -1;
+		box[0] = geti16(outline + 2);
+		box[1] = geti16(outline + 4);
+		box[2] = geti16(outline + 6);
+		box[3] = geti16(outline + 8);
+		if (box[2] <= box[0] || box[3] <= box[1])
+			return -1;
+
+		/* Transform the bounding box into SFT coordinate space. */
+		const double xscale = xScale / unitsPerEm;
+		const double yscale = yScale / unitsPerEm;
+		box[0] = (int)floor(box[0] * xscale + xOffset);
+		box[1] = (int)floor(box[1] * yscale + yOffset);
+		box[2] = (int)ceil(box[2] * xscale + xOffset);
+		box[3] = (int)ceil(box[3] * yscale + yOffset);
+		return 0;
+	}
+
+	std::array<double, 6> glyph_transform(int* bbox) const {
+		/* Set up the transformation matrix such that
+		 * the transformed bounding boxes min corner segments
+		 * up with the (0, 0) point. */
+		std::array<double, 6> transform;
+		transform[0] = xScale / unitsPerEm;
+		transform[1] = 0.0;
+		transform[2] = 0.0;
+		transform[4] = xOffset - bbox[0];
+		transform[3] = -yScale / unitsPerEm;
+		transform[5] = bbox[3] - yOffset;
+		return transform;
+	}
 };
 
-struct Image {
+struct Image { // TODO remove
 	void* pixels = nullptr;
 	int width = 0;
 	int height = 0;
@@ -911,7 +1017,7 @@ public:
 		}
 	}
 
-	int render_outline(double transform[6], Image image) {
+	int render_outline(const double transform[6], Image image) {
 		transform_points((unsigned)points.size(), points.data(), transform);
 		clip_points((unsigned)points.size(), points.data(), image.width, image.height);
 
@@ -933,16 +1039,6 @@ public:
 };
 
 
-struct Metrics {
-	double advanceWidth = 0.0;
-	double leftSideBearing = 0.0;
-	int yOffset = 0;
-	int minWidth = 0;
-	int minHeight = 0;
-
-	bool is_valid() const { return advanceWidth > 0; }
-};
-
 struct Glyph {
 	uint_fast32_t gid;
 	Metrics mtx;
@@ -952,76 +1048,10 @@ struct Glyph {
 class Book {
 	Font font;
 
-	double xScale = 0.0;
-	double yScale = 0.0;
-	double xOffset = 0.0;
-	double yOffset = 0.0;
-	int flags = DOWNWARD_Y;
-
-	double ascender = 0.0;
-	double descender = 0.0;
-	double lineGap = 0.0;
-
 	std::unordered_map<uint32_t, Glyph> glyphs;
 
-	int lmetrics() {
-		uint_fast32_t hhea;
-		if (font.gettable((char*)"hhea", &hhea) < 0)
-			return -1;
-		if (!font.is_safe_offset(hhea, 36))
-			return -1;
-		const double factor = yScale / font.unitsPerEm;
-		ascender = font.geti16(hhea + 4) * factor;
-		descender = font.geti16(hhea + 6) * factor;
-		lineGap = font.geti16(hhea + 8) * factor;
-		return 0;
-	}
-
 	Metrics get_metrics(const uint_fast32_t glyph_id) const {
-		int adv, lsb;
-		if (font.hor_metrics(glyph_id, &adv, &lsb) < 0)
-			return {};
-
-		Metrics metrics;
-		const double xscale = xScale / font.unitsPerEm;
-		metrics.advanceWidth = adv * xscale;
-		metrics.leftSideBearing = lsb * xscale + xOffset;
-
-		uint_fast32_t outline;
-		if (font.outline_offset(glyph_id, &outline) < 0)
-			return {};
-		if (!outline)
-			return metrics;
-
-		int bbox[4];
-		if (glyph_bbox(outline, bbox) < 0)
-			return {};
-
-		metrics.minWidth = bbox[2] - bbox[0] + 1;
-		metrics.minHeight = bbox[3] - bbox[1] + 1;
-		metrics.yOffset = flags & DOWNWARD_Y ? -bbox[3] : bbox[1];
-		return metrics;
-	}
-
-	int glyph_bbox(uint_fast32_t outline, int box[4]) const {
-		/* Read the bounding box from the font file verbatim. */
-		if (!font.is_safe_offset(outline, 10))
-			return -1;
-		box[0] = font.geti16(outline + 2);
-		box[1] = font.geti16(outline + 4);
-		box[2] = font.geti16(outline + 6);
-		box[3] = font.geti16(outline + 8);
-		if (box[2] <= box[0] || box[3] <= box[1])
-			return -1;
-
-		/* Transform the bounding box into SFT coordinate space. */
-		const double xscale = xScale / font.unitsPerEm;
-		const double yscale = yScale / font.unitsPerEm;
-		box[0] = (int)floor(box[0] * xscale + xOffset);
-		box[1] = (int)floor(box[1] * yscale + yOffset);
-		box[2] = (int)ceil(box[2] * xscale + xOffset);
-		box[3] = (int)ceil(box[3] * yscale + yOffset);
-		return 0;
+		return font.get_metrics(glyph_id);
 	}
 
 	std::vector<uint8_t> render(uint_fast32_t glyph_id, const Metrics& metrics) const {
@@ -1036,25 +1066,10 @@ class Book {
 			return {};
 
 		int bbox[4];
-		if (glyph_bbox(outline, bbox) < 0)
+		if (font.glyph_bbox(outline, bbox) < 0)
 			return {};
 
-		/* Set up the transformation matrix such that
-		 * the transformed bounding boxes min corner segments
-		 * up with the (0, 0) point. */
-		double transform[6];
-		transform[0] = xScale / font.unitsPerEm;
-		transform[1] = 0.0;
-		transform[2] = 0.0;
-		transform[4] = xOffset - bbox[0];
-		if (flags & DOWNWARD_Y) {
-			transform[3] = -yScale / font.unitsPerEm;
-			transform[5] = bbox[3] - yOffset;
-		}
-		else {
-			transform[3] = +yScale / font.unitsPerEm;
-			transform[5] = yOffset - bbox[1];
-		}
+		const auto transform = font.glyph_transform(bbox);
 
 		std::vector<uint8_t> pixels;
 		pixels.resize(metrics.minWidth * metrics.minHeight);
@@ -1063,7 +1078,7 @@ class Book {
 		image.width = metrics.minWidth;
 		image.height = metrics.minHeight;
 		image.pixels = pixels.data();
-		if (outl.render_outline(transform, image) < 0)
+		if (outl.render_outline(transform.data(), image) < 0)
 			return {};
 
 		return pixels;
@@ -1071,10 +1086,7 @@ class Book {
 
 public:
 	void set_size(double size) {
-		if (size != xScale) {
-			xScale = size;
-			yScale = size;
-			lmetrics();
+		if (font.set_size(size)) {
 			clear();
 			add_glyph(0);
 		}
@@ -1103,6 +1115,6 @@ public:
 	}
 
 	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
-	unsigned get_line_height() const { return (unsigned)(yScale - descender); }
-	unsigned get_line_baseline() const { return (unsigned)ascender; }
+	unsigned get_line_height() const { return font.get_line_height(); }
+	unsigned get_line_baseline() const { return font.get_line_baseline(); }
 };
