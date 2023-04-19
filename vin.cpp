@@ -30,10 +30,10 @@
 const unsigned version_major = 1;
 const unsigned version_minor = 3;
 
-class Font {
+class Font { // TODO merge all in font Font
 public:
-	struct Glyph {
-		font::Glyph gid;
+	struct Glyph { // TODO merge all in font Glyph
+		uint_fast32_t gid;
 		font::GMetrics mtx;
 		std::vector<uint8_t> pixels;
 	};

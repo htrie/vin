@@ -248,7 +248,7 @@ namespace font { // TODO remove namespace
 
 
 	typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
-	typedef uint_fast32_t Glyph;
+	typedef uint_fast32_t uint_fast32_t;
 
 	struct Font { // TODO make class
 		const uint8_t* memory = nullptr;
@@ -406,13 +406,13 @@ namespace font { // TODO remove namespace
 			}
 		}
 
-		int hor_metrics(Glyph glyph, int* advanceWidth, int* leftSideBearing) const {
+		int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const {
 			uint_fast32_t hmtx, offset, boundary;
 			if (gettable((char*)"hmtx", &hmtx) < 0)
 				return -1;
-			if (glyph < numLongHmtx) {
+			if (glyph_id < numLongHmtx) {
 				/* glyph is inside long metrics segment. */
-				offset = hmtx + 4 * glyph;
+				offset = hmtx + 4 * glyph_id;
 				if (!is_safe_offset(offset, 4))
 					return -1;
 				*advanceWidth = getu16(offset);
@@ -430,7 +430,7 @@ namespace font { // TODO remove namespace
 					return -1;
 				*advanceWidth = getu16(offset);
 
-				offset = boundary + 2 * (glyph - numLongHmtx);
+				offset = boundary + 2 * (glyph_id - numLongHmtx);
 				if (!is_safe_offset(offset, 2))
 					return -1;
 				*leftSideBearing = geti16(offset);
@@ -439,7 +439,7 @@ namespace font { // TODO remove namespace
 		}
 
 		/* Returns the offset into the font that the glyph's outline is stored at. */
-		int outline_offset(Glyph glyph, uint_fast32_t* offset) const {
+		int outline_offset(uint_fast32_t glyph_id, uint_fast32_t* offset) const {
 			uint_fast32_t loca, glyf;
 			uint_fast32_t base, current, next;
 
@@ -449,7 +449,7 @@ namespace font { // TODO remove namespace
 				return -1;
 
 			if (locaFormat == 0) {
-				base = loca + 2 * glyph;
+				base = loca + 2 * glyph_id;
 
 				if (!is_safe_offset(base, 4))
 					return -1;
@@ -458,7 +458,7 @@ namespace font { // TODO remove namespace
 				next = 2U * (uint_fast32_t)getu16(base + 2);
 			}
 			else {
-				base = loca + 4 * glyph;
+				base = loca + 4 * glyph_id;
 
 				if (!is_safe_offset(base, 8))
 					return -1;
@@ -540,7 +540,7 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int cmap_fmt4(uint_fast32_t table, UChar charCode, Glyph* glyph) const {
+		int cmap_fmt4(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id) const {
 			const uint8_t* segPtr;
 			uint_fast32_t segIdxX2;
 			uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
@@ -548,7 +548,7 @@ namespace font { // TODO remove namespace
 			uint8_t key[2] = { (uint8_t)(charCode >> 8), (uint8_t)charCode };
 			/* cmap format 4 only supports the Unicode BMP. */
 			if (charCode > 0xFFFF) {
-				*glyph = 0;
+				*glyph_id = 0;
 				return 0;
 			}
 			shortCode = (uint_fast16_t)charCode;
@@ -574,7 +574,7 @@ namespace font { // TODO remove namespace
 			idDelta = getu16(idDeltas + segIdxX2);
 			if (!(idRangeOffset = getu16(idRangeOffsets + segIdxX2))) {
 				/* Intentional integer under- and overflow. */
-				*glyph = (shortCode + idDelta) & 0xFFFF;
+				*glyph_id = (shortCode + idDelta) & 0xFFFF;
 				return 0;
 			}
 			/* Calculate offset into glyph array and determine ultimate value. */
@@ -583,15 +583,15 @@ namespace font { // TODO remove namespace
 				return -1;
 			id = getu16(idOffset);
 			/* Intentional integer under- and overflow. */
-			*glyph = id ? (id + idDelta) & 0xFFFF : 0;
+			*glyph_id = id ? (id + idDelta) & 0xFFFF : 0;
 			return 0;
 		}
 
-		int cmap_fmt6(uint_fast32_t table, UChar charCode, Glyph* glyph) const {
+		int cmap_fmt6(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id) const {
 			unsigned int firstCode, entryCount;
 			/* cmap format 6 only supports the Unicode BMP. */
 			if (charCode > 0xFFFF) {
-				*glyph = 0;
+				*glyph_id = 0;
 				return 0;
 			}
 			if (!is_safe_offset(table, 4))
@@ -605,15 +605,15 @@ namespace font { // TODO remove namespace
 			charCode -= firstCode;
 			if (!(charCode < entryCount))
 				return -1;
-			*glyph = getu16(table + 4 + 2 * charCode);
+			*glyph_id = getu16(table + 4 + 2 * charCode);
 			return 0;
 		}
 
-		int cmap_fmt12_13(uint_fast32_t table, UChar charCode, Glyph* glyph, int which) const {
+		int cmap_fmt12_13(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id, int which) const {
 			uint32_t len, numEntries;
 			uint_fast32_t i;
 
-			*glyph = 0;
+			*glyph_id = 0;
 
 			/* check that the entire header is present */
 			if (!is_safe_offset(table, 16))
@@ -638,9 +638,9 @@ namespace font { // TODO remove namespace
 					continue;
 				glyphOffset = getu32(table + (i * 12) + 16 + 8);
 				if (which == 12)
-					*glyph = (charCode - firstCode) + glyphOffset;
+					*glyph_id = (charCode - firstCode) + glyphOffset;
 				else
-					*glyph = glyphOffset;
+					*glyph_id = glyphOffset;
 				return 0;
 			}
 
@@ -648,12 +648,12 @@ namespace font { // TODO remove namespace
 		}
 
 		/* Maps Unicode code points to glyph indices. */
-		int glyph_id(UChar charCode, Glyph* glyph) const {
+		int glyph_id(UChar charCode, uint_fast32_t* glyph_id) const {
 			uint_fast32_t cmap, entry, table;
 			unsigned int idx, numEntries;
 			int type, format;
 
-			*glyph = 0;
+			*glyph_id = 0;
 
 			if (gettable((char*)"cmap", &cmap) < 0)
 				return -1;
@@ -678,7 +678,7 @@ namespace font { // TODO remove namespace
 					format = getu16(table);
 					switch (format) {
 					case 12:
-						return cmap_fmt12_13(table, charCode, glyph, 12);
+						return cmap_fmt12_13(table, charCode, glyph_id, 12);
 					default:
 						return -1;
 					}
@@ -697,9 +697,9 @@ namespace font { // TODO remove namespace
 					/* Dispatch based on cmap format. */
 					switch (getu16(table)) {
 					case 4:
-						return cmap_fmt4(table + 6, charCode, glyph);
+						return cmap_fmt4(table + 6, charCode, glyph_id);
 					case 6:
-						return cmap_fmt6(table + 6, charCode, glyph);
+						return cmap_fmt6(table + 6, charCode, glyph_id);
 					default:
 						return -1;
 					}
@@ -895,7 +895,7 @@ namespace font { // TODO remove namespace
 
 		int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 			double local[6];
-			unsigned int flags, glyph, basePoint;
+			unsigned int flags, glyph_id, basePoint;
 			/* Guard against infinite recursion (compound glyphs that have themselves as component). */
 			if (recDepth >= 4)
 				return -1;
@@ -904,7 +904,7 @@ namespace font { // TODO remove namespace
 				if (!font.is_safe_offset(offset, 4))
 					return -1;
 				flags = font.getu16(offset);
-				glyph = font.getu16(offset + 2);
+				glyph_id = font.getu16(offset + 2);
 				offset += 4;
 				/* We don't implement point matching, and neither does stb_truetype for that matter. */
 				if (!(flags & ACTUAL_XY_OFFSETS))
@@ -956,7 +956,7 @@ namespace font { // TODO remove namespace
 				 * Furthermore, Microsoft's spec doesn't even mention anything like this.
 				 * It's almost as if nobody ever uses this feature anyway. */
 				uint_fast32_t outline;
-				if (font.outline_offset(glyph, &outline) < 0)
+				if (font.outline_offset(glyph_id, &outline) < 0)
 					return -1;
 				if (outline) {
 					basePoint = (unsigned)points.size();
@@ -1025,7 +1025,7 @@ namespace font { // TODO remove namespace
 		bool is_valid() const { return advanceWidth > 0; }
 	};
 
-	struct Renderer { // TODO make class
+	struct Renderer { // TODO make class // TODO rename
 		double xScale = 0.0;
 		double yScale = 0.0;
 		double xOffset = 0.0;
@@ -1049,9 +1049,9 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		GMetrics gmetrics(const Font& font, const Glyph glyph) const {
+		GMetrics gmetrics(const Font& font, const uint_fast32_t glyph_id) const {
 			int adv, lsb;
-			if (font.hor_metrics(glyph, &adv, &lsb) < 0)
+			if (font.hor_metrics(glyph_id, &adv, &lsb) < 0)
 				return {};
 
 			GMetrics metrics;
@@ -1060,7 +1060,7 @@ namespace font { // TODO remove namespace
 			metrics.leftSideBearing = lsb * xscale + xOffset;
 
 			uint_fast32_t outline;
-			if (font.outline_offset(glyph, &outline) < 0)
+			if (font.outline_offset(glyph_id, &outline) < 0)
 				return {};
 			if (!outline)
 				return metrics;
@@ -1096,9 +1096,9 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int render(const Font& font, Glyph glyph, Image image) const {
+		int render(const Font& font, uint_fast32_t glyph_id, Image image) const {
 			uint_fast32_t outline;
-			if (font.outline_offset(glyph, &outline) < 0)
+			if (font.outline_offset(glyph_id, &outline) < 0)
 				return -1;
 			if (!outline)
 				return 0;
