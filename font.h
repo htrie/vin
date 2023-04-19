@@ -245,46 +245,6 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 }
 
 
-class File { // TODO move to File.h
-	const uint8_t* memory = nullptr;
-	uint_fast32_t size = 0;
-	HANDLE mapping = nullptr;
-
-public:
-	File() {}
-	File(const std::string_view filename) {
-		const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (file != INVALID_HANDLE_VALUE) {
-			DWORD high = 0;
-			const auto low = GetFileSize(file, &high);
-			if (low != INVALID_FILE_SIZE) {
-				size = (size_t)high << (8 * sizeof(DWORD)) | low;
-				mapping = CreateFileMapping(file, NULL, PAGE_READONLY, high, low, NULL);
-				if (mapping) {
-					memory = (uint8_t*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-				}
-			}
-		}
-		CloseHandle(file);
-	}
-
-	~File() {
-		if (memory) {
-			UnmapViewOfFile(memory);
-		}
-		if (mapping) {
-			CloseHandle(mapping);
-		}
-	}
-
-	uint_fast32_t get_size() const { return size; }
-	const uint8_t* get_memory() const { return memory; }
-};
-
-
-typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
-typedef uint_fast32_t uint_fast32_t;
-
 struct Font { // TODO make class
 	const File& file;
 
@@ -498,7 +458,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt4(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id) const {
+	int cmap_fmt4(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		const uint8_t* segPtr;
 		uint_fast32_t segIdxX2;
 		uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
@@ -545,7 +505,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt6(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id) const {
+	int cmap_fmt6(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		unsigned int firstCode, entryCount;
 		/* cmap format 6 only supports the Unicode BMP. */
 		if (charCode > 0xFFFF) {
@@ -567,7 +527,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt12_13(uint_fast32_t table, UChar charCode, uint_fast32_t* glyph_id, int which) const {
+	int cmap_fmt12_13(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id, int which) const {
 		uint32_t len, numEntries;
 		uint_fast32_t i;
 
@@ -606,7 +566,7 @@ struct Font { // TODO make class
 	}
 
 	/* Maps Unicode code points to glyph indices. */
-	int glyph_id(UChar charCode, uint_fast32_t* glyph_id) const {
+	int glyph_id(uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		uint_fast32_t cmap, entry, table;
 		unsigned int idx, numEntries;
 		int type, format;
