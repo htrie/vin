@@ -246,7 +246,7 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 
 
 struct Font { // TODO make class
-	const File& file;
+	File file;
 
 	uint_least16_t unitsPerEm = 0;
 	int_least16_t  locaFormat = 0;
@@ -298,8 +298,8 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	Font(const File& file)
-		: file(file) {
+	Font()
+		: file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") { //(get_system_font_path() + get_system_font_name("Consolas"))
 		if (!is_safe_offset(0, 12))
 			return;
 		/* Check for a compatible scalerType (magic number). */
@@ -1070,10 +1070,6 @@ class Renderer { // TODO rename
 	}
 
 public:
-	Renderer(const File& file)
-		: font(file) {
-	}
-
 	void set_size(double size) {
 		if (size != xScale) {
 			xScale = size;

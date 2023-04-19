@@ -271,7 +271,6 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
-	File file;
 	Renderer renderer;
 
 	bool minimized = false;
@@ -417,9 +416,7 @@ class Application {
 
 public:
 	Application(HINSTANCE hinstance, int nshow)
-		: window(hinstance, proc, this)
-		, file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") //(get_system_font_path() + get_system_font_name("Consolas"))
-		, renderer(file) {
+		: window(hinstance, proc, this) {
 		renderer.set_size(get_default_font_size());
 		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
