@@ -1031,7 +1031,7 @@ namespace font { // TODO remove namespace
 		std::vector<uint8_t> pixels;
 	};
 
-	struct Renderer { // TODO make class // TODO rename
+	class Renderer { // TODO rename
 		Font font;
 
 		double xScale = 0.0;
@@ -1151,6 +1151,7 @@ namespace font { // TODO remove namespace
 			return pixels;
 		}
 
+	public:
 		Renderer() {
 			font = font::Font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
 			if (!font.is_valid())
