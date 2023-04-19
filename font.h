@@ -1015,7 +1015,7 @@ namespace font { // TODO remove namespace
 	};
 
 
-	struct Metrics { // TODO merge with Glyph
+	struct Metrics {
 		double advanceWidth = 0.0;
 		double leftSideBearing = 0.0;
 		int yOffset = 0;
@@ -1023,6 +1023,12 @@ namespace font { // TODO remove namespace
 		int minHeight = 0;
 
 		bool is_valid() const { return advanceWidth > 0; }
+	};
+
+	struct Glyph {
+		uint_fast32_t gid;
+		Metrics mtx;
+		std::vector<uint8_t> pixels;
 	};
 
 	struct Renderer { // TODO make class // TODO rename
@@ -1035,6 +1041,8 @@ namespace font { // TODO remove namespace
 		double ascender = 0.0;
 		double descender = 0.0;
 		double lineGap = 0.0;
+
+		std::unordered_map<uint32_t, Glyph> glyphs;
 
 		int lmetrics(const Font& font) {
 			uint_fast32_t hhea;
@@ -1141,6 +1149,31 @@ namespace font { // TODO remove namespace
 			return pixels;
 		}
 
+		void clear() {
+			glyphs.clear();
+		}
+
+		const Glyph& add_glyph(const Font& font, uint32_t codepoint) {
+			auto& glyph = glyphs[codepoint];
+			if (font.glyph_id(codepoint, &glyph.gid) == 0) {
+				glyph.mtx = get_metrics(font, glyph.gid);
+				if (glyph.mtx.is_valid()) {
+					glyph.pixels = render(font, glyph.gid, glyph.mtx);
+					return glyph;
+				}
+			}
+			return add_glyph(font, 0);
+		}
+
+		const Glyph& find_glyph(const Font& font, uint32_t codepoint) {
+			if (auto found = glyphs.find(codepoint); found != glyphs.end())
+				return found->second;
+			return add_glyph(font, codepoint);
+		}
+
+		unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
+		unsigned get_line_height() const { return (unsigned)(yScale - descender); }
+		unsigned get_line_baseline() const { return (unsigned)ascender; }
 	};
 
 }

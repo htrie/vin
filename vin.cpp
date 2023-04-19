@@ -32,29 +32,10 @@ const unsigned version_minor = 3;
 
 class Font { // TODO merge all in font Font
 public:
-	struct Glyph { // TODO merge all in font Glyph
-		uint_fast32_t gid;
-		font::Metrics mtx;
-		std::vector<uint8_t> pixels;
-	};
 
 private:
 	font::Font font;
 	font::Renderer renderer;
-
-	std::unordered_map<uint32_t, Glyph> glyphs;
-
-	const Glyph& add_glyph(uint32_t codepoint) {
-		auto& glyph = glyphs[codepoint];
-		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			glyph.mtx = renderer.get_metrics(font, glyph.gid);
-			if (glyph.mtx.is_valid()) {
-				glyph.pixels = renderer.render(font, glyph.gid, glyph.mtx);
-				return glyph;
-			}
-		}
-		return add_glyph(0);
-	}
 
 public:
 	Font() {
@@ -71,20 +52,18 @@ public:
 			renderer.xScale = size;
 			renderer.yScale = size;
 			renderer.lmetrics(font);
-			glyphs.clear();
-			add_glyph(0);
+			renderer.clear();
+			renderer.add_glyph(font, 0);
 		}
 	}
 
-	const Glyph& find_glyph(uint32_t codepoint) {
-		if (auto found = glyphs.find(codepoint); found != glyphs.end())
-			return found->second;
-		return add_glyph(codepoint);
+	const font::Glyph& find_glyph(uint32_t codepoint) {
+		return renderer.find_glyph(font, codepoint);
 	}
 
-	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
-	unsigned get_line_height() const { return (unsigned)(renderer.yScale - renderer.descender); }
-	unsigned get_line_baseline() const { return (unsigned)renderer.ascender; }
+	unsigned get_character_width() const { return renderer.get_character_width(); }
+	unsigned get_line_height() const { return renderer.get_line_height(); }
+	unsigned get_line_baseline() const { return renderer.get_line_baseline(); }
 };
 
 class Window {
