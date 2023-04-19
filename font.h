@@ -1015,7 +1015,7 @@ namespace font { // TODO remove namespace
 	};
 
 
-	struct GMetrics { // TODO merge with Glyph
+	struct Metrics { // TODO merge with Glyph
 		double advanceWidth = 0.0;
 		double leftSideBearing = 0.0;
 		int yOffset = 0;
@@ -1049,12 +1049,12 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		GMetrics gmetrics(const Font& font, const uint_fast32_t glyph_id) const {
+		Metrics get_metrics(const Font& font, const uint_fast32_t glyph_id) const {
 			int adv, lsb;
 			if (font.hor_metrics(glyph_id, &adv, &lsb) < 0)
 				return {};
 
-			GMetrics metrics;
+			Metrics metrics;
 			const double xscale = xScale / font.unitsPerEm;
 			metrics.advanceWidth = adv * xscale;
 			metrics.leftSideBearing = lsb * xscale + xOffset;

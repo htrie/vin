@@ -34,7 +34,7 @@ class Font { // TODO merge all in font Font
 public:
 	struct Glyph { // TODO merge all in font Glyph
 		uint_fast32_t gid;
-		font::GMetrics mtx;
+		font::Metrics mtx;
 		std::vector<uint8_t> pixels;
 	};
 
@@ -47,7 +47,7 @@ private:
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
-			glyph.mtx = renderer.gmetrics(font, glyph.gid);
+			glyph.mtx = renderer.get_metrics(font, glyph.gid);
 			if (glyph.mtx.is_valid()) {
 				glyph.pixels.resize(glyph.mtx.minWidth * glyph.mtx.minHeight);
 				font::Image image;
