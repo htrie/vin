@@ -734,11 +734,6 @@ struct Font { // TODO make class
 	}
 };
 
-struct Image { // TODO remove
-	void* pixels = nullptr;
-	int width = 0;
-	int height = 0;
-};
 
 class Outline {
 	std::vector<Point> points;
@@ -1017,24 +1012,27 @@ public:
 		}
 	}
 
-	int render_outline(const double transform[6], Image image) {
+	std::vector<uint8_t> render_outline(const double transform[6], unsigned width, unsigned height) {
 		transform_points((unsigned)points.size(), points.data(), transform);
-		clip_points((unsigned)points.size(), points.data(), image.width, image.height);
+		clip_points((unsigned)points.size(), points.data(), width, height);
 
 		if (tesselate_curves() < 0)
-			return -1;
+			return {};
 
 		std::vector<Cell> cells;
-		cells.resize((unsigned int)image.width * (unsigned int)image.height);
+		cells.resize(width * height);
 
 		Raster buf;
 		buf.cells = cells.data();
-		buf.width = image.width;
-		buf.height = image.height;
+		buf.width = width;
+		buf.height = height;
 		draw_lines(buf);
-		post_process(buf, (uint8_t*)image.pixels);
 
-		return 0;
+		std::vector<uint8_t> pixels;
+		pixels.resize(width * height);
+		post_process(buf, pixels.data());
+
+		return pixels;
 	}
 };
 
@@ -1070,18 +1068,7 @@ class Book {
 			return {};
 
 		const auto transform = font.glyph_transform(bbox);
-
-		std::vector<uint8_t> pixels;
-		pixels.resize(metrics.minWidth * metrics.minHeight);
-
-		Image image;
-		image.width = metrics.minWidth;
-		image.height = metrics.minHeight;
-		image.pixels = pixels.data();
-		if (outl.render_outline(transform.data(), image) < 0)
-			return {};
-
-		return pixels;
+		return outl.render_outline(transform.data(), metrics.minWidth, metrics.minHeight);
 	}
 
 public:
