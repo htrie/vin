@@ -1096,16 +1096,16 @@ namespace font { // TODO remove namespace
 			return 0;
 		}
 
-		int render(const Font& font, uint_fast32_t glyph_id, Image image) const {
+		std::vector<uint8_t> render(const Font& font, uint_fast32_t glyph_id, const Metrics& metrics) const {
 			uint_fast32_t outline;
 			if (font.outline_offset(glyph_id, &outline) < 0)
-				return -1;
+				return {};
 			if (!outline)
-				return 0;
+				return {};
 
 			int bbox[4];
 			if (glyph_bbox(font, outline, bbox) < 0)
-				return -1;
+				return {};
 
 			/* Set up the transformation matrix such that
 			 * the transformed bounding boxes min corner lines
@@ -1126,11 +1126,19 @@ namespace font { // TODO remove namespace
 
 			Outline outl;
 			if (outl.decode_outline(font, outline, 0) < 0)
-				return -1;
-			if (outl.render_outline(transform, image) < 0)
-				return -1;
+				return {};
 
-			return 0;
+			std::vector<uint8_t> pixels;
+			pixels.resize(metrics.minWidth * metrics.minHeight);
+
+			font::Image image;
+			image.width  = metrics.minWidth;
+			image.height = metrics.minHeight;
+			image.pixels = pixels.data();
+			if (outl.render_outline(transform, image) < 0)
+				return {};
+
+			return pixels;
 		}
 
 	};

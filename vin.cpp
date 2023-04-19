@@ -49,12 +49,7 @@ private:
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
 			glyph.mtx = renderer.get_metrics(font, glyph.gid);
 			if (glyph.mtx.is_valid()) {
-				glyph.pixels.resize(glyph.mtx.minWidth * glyph.mtx.minHeight);
-				font::Image image;
-				image.width  = glyph.mtx.minWidth;
-				image.height = glyph.mtx.minHeight;
-				image.pixels = glyph.pixels.data();
-				renderer.render(font, glyph.gid, image);
+				glyph.pixels = renderer.render(font, glyph.gid, glyph.mtx);
 				return glyph;
 			}
 		}
