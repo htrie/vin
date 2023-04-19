@@ -245,21 +245,56 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 }
 
 
+class File { // TODO move to File.h
+	const uint8_t* memory = nullptr;
+	uint_fast32_t size = 0;
+	HANDLE mapping = nullptr;
+
+public:
+	File() {}
+	File(const std::string_view filename) {
+		const auto file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if (file != INVALID_HANDLE_VALUE) {
+			DWORD high = 0;
+			const auto low = GetFileSize(file, &high);
+			if (low != INVALID_FILE_SIZE) {
+				size = (size_t)high << (8 * sizeof(DWORD)) | low;
+				mapping = CreateFileMapping(file, NULL, PAGE_READONLY, high, low, NULL);
+				if (mapping) {
+					memory = (uint8_t*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+				}
+			}
+		}
+		CloseHandle(file);
+	}
+
+	~File() {
+		if (memory) {
+			UnmapViewOfFile(memory);
+		}
+		if (mapping) {
+			CloseHandle(mapping);
+		}
+	}
+
+	uint_fast32_t get_size() const { return size; }
+	const uint8_t* get_memory() const { return memory; }
+};
+
+
 typedef uint_least32_t UChar; /* Guaranteed to be compatible with char32_t. */
 typedef uint_fast32_t uint_fast32_t;
 
 struct Font { // TODO make class
-	const uint8_t* memory = nullptr;
-	uint_fast32_t size = 0;
-	HANDLE mapping = nullptr;
-	bool mapped = false;
+	const File& file;
+
 	uint_least16_t unitsPerEm = 0;
 	int_least16_t  locaFormat = 0;
 	uint_least16_t numLongHmtx = 0;
 
 	uint_least8_t getu8(uint_fast32_t offset) const {
-		assert(offset + 1 <= size);
-		return *(memory + offset);
+		assert(offset + 1 <= file.get_size());
+		return *(file.get_memory() + offset);
 	}
 
 	int_least8_t geti8(uint_fast32_t offset) const {
@@ -267,8 +302,8 @@ struct Font { // TODO make class
 	}
 
 	uint_least16_t getu16(uint_fast32_t offset) const {
-		assert(offset + 2 <= size);
-		const uint8_t* base = memory + offset;
+		assert(offset + 2 <= file.get_size());
+		const uint8_t* base = file.get_memory() + offset;
 		uint_least16_t b1 = base[0], b0 = base[1];
 		return (uint_least16_t)(b1 << 8 | b0);
 	}
@@ -278,15 +313,15 @@ struct Font { // TODO make class
 	}
 
 	uint32_t getu32(uint_fast32_t offset) const {
-		assert(offset + 4 <= size);
-		const uint8_t* base = memory + offset;
+		assert(offset + 4 <= file.get_size());
+		const uint8_t* base = file.get_memory() + offset;
 		uint_least32_t b3 = base[0], b2 = base[1], b1 = base[2], b0 = base[3];
 		return (uint_least32_t)(b3 << 24 | b2 << 16 | b1 << 8 | b0);
 	}
 
 	int is_safe_offset(uint_fast32_t offset, uint_fast32_t margin) const {
-		if (offset > size) return 0;
-		if (size - offset < margin) return 0;
+		if (offset > file.get_size()) return 0;
+		if (file.get_size() - offset < margin) return 0;
 		return 1;
 	}
 
@@ -297,111 +332,36 @@ struct Font { // TODO make class
 		numTables = getu16(4);
 		if (!is_safe_offset(12, (uint_fast32_t)numTables * 16))
 			return -1;
-		if (!(match = bsearch(tag, memory + 12, numTables, 16, cmpu32)))
+		if (!(match = bsearch(tag, file.get_memory() + 12, numTables, 16, cmpu32)))
 			return -1;
-		*offset = getu32((uint_fast32_t)((uint8_t*)match - memory + 8));
+		*offset = getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
 		return 0;
 	}
 
-	Font() {}
-
-	Font(const void* mem, size_t size) {
-		if (size > UINT32_MAX) {
-			return;
-		}
-		memory = (uint8_t*)mem;
-		size = (uint_fast32_t)size;
-		mapped = false;
-		init();
-	}
-
-	Font(const std::string_view filename) {
-		if (map_file(filename) < 0) {
-			return;
-		}
-		init();
-	}
-
-	~Font() {
-		if (mapped)
-			unmap_file();
-	}
-
-	bool is_valid() const { return memory != nullptr; }
-
-	int init() {
-		uint_fast32_t scalerType, head, hhea;
-
+	Font(const File& file)
+		: file(file) {
 		if (!is_safe_offset(0, 12))
-			return -1;
+			return;
 		/* Check for a compatible scalerType (magic number). */
+		uint_fast32_t scalerType;
 		scalerType = getu32(0);
 		if (scalerType != FILE_MAGIC_ONE && scalerType != FILE_MAGIC_TWO)
-			return -1;
+			return;
 
+		uint_fast32_t head;
 		if (gettable((char*)"head", &head) < 0)
-			return -1;
+			return;
 		if (!is_safe_offset(head, 54))
-			return -1;
+			return;
 		unitsPerEm = getu16(head + 18);
 		locaFormat = geti16(head + 50);
 
+		uint_fast32_t hhea;
 		if (gettable((char*)"hhea", &hhea) < 0)
-			return -1;
+			return;
 		if (!is_safe_offset(hhea, 36))
-			return -1;
+			return;
 		numLongHmtx = getu16(hhea + 34);
-
-		return 0;
-	}
-
-	int map_file(const std::string_view filename) {
-		HANDLE file;
-		DWORD high, low;
-
-		mapping = NULL;
-		memory = NULL;
-
-		file = CreateFileA(filename.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (file == INVALID_HANDLE_VALUE) {
-			return -1;
-		}
-
-		low = GetFileSize(file, &high);
-		if (low == INVALID_FILE_SIZE) {
-			CloseHandle(file);
-			return -1;
-		}
-
-		size = (size_t)high << (8 * sizeof(DWORD)) | low;
-
-		mapping = CreateFileMapping(file, NULL, PAGE_READONLY, high, low, NULL);
-		if (!mapping) {
-			CloseHandle(file);
-			return -1;
-		}
-
-		CloseHandle(file);
-
-		memory = (uint8_t*)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-		if (!memory) {
-			CloseHandle(mapping);
-			mapping = NULL;
-			return -1;
-		}
-
-		return 0;
-	}
-
-	void unmap_file() {
-		if (memory) {
-			UnmapViewOfFile(memory);
-			memory = NULL;
-		}
-		if (mapping) {
-			CloseHandle(mapping);
-			mapping = NULL;
-		}
 	}
 
 	int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const {
@@ -564,8 +524,8 @@ struct Font { // TODO make class
 			return -1;
 		/* Find the segment that contains shortCode by binary searching over
 		 * the highest codes in the segments. */
-		segPtr = (uint8_t*)csearch(key, memory + endCodes, segCountX2 / 2, 2, cmpu16);
-		segIdxX2 = (uint_fast32_t)(segPtr - (memory + endCodes));
+		segPtr = (uint8_t*)csearch(key, file.get_memory() + endCodes, segCountX2 / 2, 2, cmpu16);
+		segIdxX2 = (uint_fast32_t)(segPtr - (file.get_memory() + endCodes));
 		/* Look up segment info from the arrays & short circuit if the spec requires. */
 		if ((startCode = getu16(startCodes + segIdxX2)) > shortCode)
 			return 0;
@@ -1036,7 +996,7 @@ class Renderer { // TODO rename
 	double yScale = 0.0;
 	double xOffset = 0.0;
 	double yOffset = 0.0;
-	int flags = 0;
+	int flags = DOWNWARD_Y;
 
 	double ascender = 0.0;
 	double descender = 0.0;
@@ -1150,13 +1110,8 @@ class Renderer { // TODO rename
 	}
 
 public:
-	Renderer() {
-		font = Font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf");
-		if (!font.is_valid())
-			font = Font(get_system_font_path() + get_system_font_name("Consolas"));
-		if (font.is_valid()) {
-			flags = DOWNWARD_Y;
-		}
+	Renderer(const File& file)
+		: font(file) {
 	}
 
 	void set_size(double size) {
