@@ -739,7 +739,7 @@ class Outline {
 		return area2 <= maxArea2;
 	}
 
-	int tesselate_curve(Curve curve) { // TODO remove return value
+	void tesselate_curve(Curve curve) {
 		/* From my tests I can conclude that this stack barely reaches a top height
 		 * of 4 elements even for the largest font sizes I'm willing to support. And
 		 * as space requirements should only grow logarithmically, I think 10 is
@@ -766,15 +766,12 @@ class Outline {
 				curve = Curve(pivot, curve.end, ctrl1);
 			}
 		}
-		return 0;
 	}
 
-	int tesselate_curves() { // TODO remove return value
+	void tesselate_curves() {
 		for (unsigned i = 0; i < curves.size(); ++i) {
-			if (tesselate_curve(curves[i]) < 0)
-				return -1;
+			tesselate_curve(curves[i]);
 		}
-		return 0;
 	}
 
 	void draw_lines(Raster& buf) const {
@@ -999,9 +996,7 @@ public:
 	std::vector<uint8_t> render_outline(const double transform[6], unsigned width, unsigned height) {
 		transform_points((unsigned)points.size(), points.data(), transform);
 		clip_points((unsigned)points.size(), points.data(), width, height);
-
-		if (tesselate_curves() < 0)
-			return {};
+		tesselate_curves();
 
 		std::vector<Cell> cells;
 		cells.resize(width * height);
