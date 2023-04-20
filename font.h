@@ -137,19 +137,13 @@ struct Cell {
 	double area = 0.0, cover = 0.0;
 };
 
-struct Raster { // TODO remove
-	Cell* cells = nullptr;
-	int width = 0;
-	int height = 0;
-};
-
 /* Integrate the values in the buffer to arrive at the final grayscale image. */
-static void post_process(const Raster& buf, uint8_t* image) {
+static void post_process(const std::vector<Cell>& cells, int width, int height, uint8_t* image) {
 	Cell cell;
 	double accum = 0.0, value;
-	unsigned int num = (unsigned int)buf.width * (unsigned int)buf.height;
+	unsigned int num = (unsigned int)width * (unsigned int)height;
 	for (unsigned i = 0; i < num; ++i) {
-		cell = buf.cells[i];
+		cell = cells[i];
 		value = fabs(accum + cell.area);
 		value = std::min(value, 1.0);
 		value = value * 255.0 + 0.5;
@@ -159,7 +153,7 @@ static void post_process(const Raster& buf, uint8_t* image) {
 }
 
 /* Draws a line into the buffer. Uses a custom 2D raycasting algorithm to do so. */
-static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
+static void draw_line(std::vector<Cell>& cells, int width, int height, const Point& origin, const Point& goal) {
 	Point delta;
 	Point nextCrossing;
 	Point crossingIncr;
@@ -219,7 +213,7 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 	for (step = 0; step < numSteps; ++step) {
 		xAverage = origin.x + (prevDistance + nextDistance) * halfDeltaX;
 		yDifference = (nextDistance - prevDistance) * delta.y;
-		cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+		cptr = &cells[pixel.y * width + pixel.x];
 		cell = *cptr;
 		cell.cover += yDifference;
 		xAverage -= (double)pixel.x;
@@ -236,7 +230,7 @@ static void draw_line(Raster& buf, const Point& origin, const Point& goal) {
 
 	xAverage = origin.x + (prevDistance + 1.0) * halfDeltaX;
 	yDifference = (1.0 - prevDistance) * delta.y;
-	cptr = &buf.cells[pixel.y * buf.width + pixel.x];
+	cptr = &cells[pixel.y * width + pixel.x];
 	cell = *cptr;
 	cell.cover += yDifference;
 	xAverage -= (double)pixel.x;
@@ -774,12 +768,12 @@ class Outline {
 		}
 	}
 
-	void draw_lines(Raster& buf) const {
+	void draw_lines(std::vector<Cell>& cells, int width, int height) const {
 		for (unsigned i = 0; i < segments.size(); ++i) {
 			const Segment& segment = segments[i];
 			const Point& origin = points[segment.beg];
 			const Point& goal = points[segment.end];
-			draw_line(buf, origin, goal);
+			draw_line(cells, width, height, origin, goal);
 		}
 	}
 
@@ -989,16 +983,11 @@ public:
 
 		std::vector<Cell> cells;
 		cells.resize(width * height);
-
-		Raster buf;
-		buf.cells = cells.data();
-		buf.width = width;
-		buf.height = height;
-		draw_lines(buf);
+		draw_lines(cells, width, height);
 
 		std::vector<uint8_t> pixels;
 		pixels.resize(width * height);
-		post_process(buf, pixels.data());
+		post_process(cells, width, height, pixels.data());
 
 		return pixels;
 	}
