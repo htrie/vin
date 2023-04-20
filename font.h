@@ -298,23 +298,20 @@ struct Font { // TODO make class
 		return true;
 	}
 
-	int gettable(char tag[4], uint_fast32_t* offset) const { // TODO remove return value
+	uint_fast32_t gettable(char tag[4]) const {
 		void* match;
 		unsigned int numTables;
 		/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
 		numTables = getu16(4);
 		if (!is_safe_offset(12, (uint_fast32_t)numTables * 16))
-			return -1;
+			return 0;
 		if (!(match = bsearch(tag, file.get_memory() + 12, numTables, 16, cmpu32)))
-			return -1;
-		*offset = getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
-		return 0;
+			return 0;
+		return getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
 	}
 
 	int lmetrics() { // TODO remove return value
-		uint_fast32_t hhea;
-		if (gettable((char*)"hhea", &hhea) < 0)
-			return -1;
+		const auto hhea = gettable((char*)"hhea");
 		if (!is_safe_offset(hhea, 36))
 			return -1;
 		const double factor = yScale / unitsPerEm;
@@ -334,17 +331,13 @@ struct Font { // TODO make class
 		if (scalerType != FILE_MAGIC_ONE && scalerType != FILE_MAGIC_TWO)
 			return;
 
-		uint_fast32_t head;
-		if (gettable((char*)"head", &head) < 0)
-			return;
+		const auto head = gettable((char*)"head");
 		if (!is_safe_offset(head, 54))
 			return;
 		unitsPerEm = getu16(head + 18);
 		locaFormat = geti16(head + 50);
 
-		uint_fast32_t hhea;
-		if (gettable((char*)"hhea", &hhea) < 0)
-			return;
+		const auto hhea = gettable((char*)"hhea");
 		if (!is_safe_offset(hhea, 36))
 			return;
 		numLongHmtx = getu16(hhea + 34);
@@ -385,9 +378,8 @@ struct Font { // TODO make class
 	}
 
 	int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const { // TODO remove return value
-		uint_fast32_t hmtx, offset, boundary;
-		if (gettable((char*)"hmtx", &hmtx) < 0)
-			return -1;
+		uint_fast32_t offset, boundary;
+		const auto hmtx = gettable((char*)"hmtx");
 		if (glyph_id < numLongHmtx) {
 			/* glyph is inside long metrics segment. */
 			offset = hmtx + 4 * glyph_id;
@@ -418,13 +410,10 @@ struct Font { // TODO make class
 
 	/* Returns the offset into the font that the glyph's outline is stored at. */
 	uint_fast32_t outline_offset(uint_fast32_t glyph_id) const {
-		uint_fast32_t loca, glyf;
 		uint_fast32_t base, current, next;
 
-		if (gettable((char*)"loca", &loca) < 0)
-			return 0;
-		if (gettable((char*)"glyf", &glyf) < 0)
-			return 0;
+		const auto loca = gettable((char*)"loca");
+		const auto glyf = gettable((char*)"glyf");
 
 		if (locaFormat == 0) {
 			base = loca + 2 * glyph_id;
@@ -618,13 +607,11 @@ struct Font { // TODO make class
 
 	/* Maps Unicode code points to glyph indices. */
 	uint_fast32_t glyph_id(uint_least32_t charCode) const {
-		uint_fast32_t cmap, entry, table;
+		uint_fast32_t entry, table;
 		unsigned int idx, numEntries;
 		int type, format;
 
-		if (gettable((char*)"cmap", &cmap) < 0)
-			return 0;
-
+		const auto cmap = gettable((char*)"cmap");
 		if (!is_safe_offset(cmap, 4))
 			return 0;
 		numEntries = getu16(cmap + 2);
