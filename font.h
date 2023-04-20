@@ -526,7 +526,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt4(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	uint_fast32_t cmap_fmt4(uint_fast32_t table, uint_least32_t charCode) const {
 		const uint8_t* segPtr;
 		uint_fast32_t segIdxX2;
 		uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
@@ -534,15 +534,14 @@ struct Font { // TODO make class
 		uint8_t key[2] = { (uint8_t)(charCode >> 8), (uint8_t)charCode };
 		/* cmap format 4 only supports the Unicode BMP. */
 		if (charCode > 0xFFFF) {
-			*glyph_id = 0;
 			return 0;
 		}
 		shortCode = (uint_fast16_t)charCode;
 		if (!is_safe_offset(table, 8))
-			return -1;
+			return 0;
 		segCountX2 = getu16(table);
 		if ((segCountX2 & 1) || !segCountX2)
-			return -1;
+			return 0;
 		/* Find starting positions of the relevant arrays. */
 		endCodes = table + 8;
 		startCodes = endCodes + segCountX2 + 2;
@@ -560,8 +559,7 @@ struct Font { // TODO make class
 		idDelta = getu16(idDeltas + segIdxX2);
 		if (!(idRangeOffset = getu16(idRangeOffsets + segIdxX2))) {
 			/* Intentional integer under- and overflow. */
-			*glyph_id = (shortCode + idDelta) & 0xFFFF;
-			return 0;
+			return (shortCode + idDelta) & 0xFFFF;
 		}
 		/* Calculate offset into glyph array and determine ultimate value. */
 		idOffset = idRangeOffsets + segIdxX2 + idRangeOffset + 2U * (unsigned int)(shortCode - startCode);
@@ -569,50 +567,45 @@ struct Font { // TODO make class
 			return -1;
 		id = getu16(idOffset);
 		/* Intentional integer under- and overflow. */
-		*glyph_id = id ? (id + idDelta) & 0xFFFF : 0;
-		return 0;
+		return id ? (id + idDelta) & 0xFFFF : 0;
 	}
 
-	int cmap_fmt6(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	uint_fast32_t cmap_fmt6(uint_fast32_t table, uint_least32_t charCode) const {
 		unsigned int firstCode, entryCount;
 		/* cmap format 6 only supports the Unicode BMP. */
 		if (charCode > 0xFFFF) {
-			*glyph_id = 0;
 			return 0;
 		}
 		if (!is_safe_offset(table, 4))
-			return -1;
+			return 0;
 		firstCode = getu16(table);
 		entryCount = getu16(table + 2);
 		if (!is_safe_offset(table, 4 + 2 * entryCount))
-			return -1;
+			return 0;
 		if (charCode < firstCode)
-			return -1;
+			return 0;
 		charCode -= firstCode;
 		if (!(charCode < entryCount))
-			return -1;
-		*glyph_id = getu16(table + 4 + 2 * charCode);
-		return 0;
+			return 0;
+		return getu16(table + 4 + 2 * charCode);
 	}
 
-	int cmap_fmt12_13(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id, int which) const { // TODO remove return value
+	uint_fast32_t cmap_fmt12_13(uint_fast32_t table, uint_least32_t charCode, int which) const {
 		uint32_t len, numEntries;
 		uint_fast32_t i;
 
-		*glyph_id = 0;
-
 		/* check that the entire header is present */
 		if (!is_safe_offset(table, 16))
-			return -1;
+			return 0;
 
 		len = getu32(table + 4);
 
 		/* A minimal header is 16 bytes */
 		if (len < 16)
-			return -1;
+			return 0;
 
 		if (!is_safe_offset(table, len))
-			return -1;
+			return 0;
 
 		numEntries = getu32(table + 12);
 
@@ -624,32 +617,29 @@ struct Font { // TODO make class
 				continue;
 			glyphOffset = getu32(table + (i * 12) + 16 + 8);
 			if (which == 12)
-				*glyph_id = (charCode - firstCode) + glyphOffset;
+				return (charCode - firstCode) + glyphOffset;
 			else
-				*glyph_id = glyphOffset;
-			return 0;
+				return glyphOffset;
 		}
 
 		return 0;
 	}
 
 	/* Maps Unicode code points to glyph indices. */
-	int glyph_id(uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	uint_fast32_t glyph_id(uint_least32_t charCode) const {
 		uint_fast32_t cmap, entry, table;
 		unsigned int idx, numEntries;
 		int type, format;
 
-		*glyph_id = 0;
-
 		if (gettable((char*)"cmap", &cmap) < 0)
-			return -1;
+			return 0;
 
 		if (!is_safe_offset(cmap, 4))
-			return -1;
+			return 0;
 		numEntries = getu16(cmap + 2);
 
 		if (!is_safe_offset(cmap, 4 + numEntries * 8))
-			return -1;
+			return 0;
 
 		/* First look for a 'full repertoire'/non-BMP map. */
 		for (idx = 0; idx < numEntries; ++idx) {
@@ -659,14 +649,14 @@ struct Font { // TODO make class
 			if (type == 0004 || type == 0312) {
 				table = cmap + getu32(entry + 4);
 				if (!is_safe_offset(table, 8))
-					return -1;
+					return 0;
 				/* Dispatch based on cmap format. */
 				format = getu16(table);
 				switch (format) {
 				case 12:
-					return cmap_fmt12_13(table, charCode, glyph_id, 12);
+					return cmap_fmt12_13(table, charCode, 12);
 				default:
-					return -1;
+					return 0;
 				}
 			}
 		}
@@ -679,20 +669,20 @@ struct Font { // TODO make class
 			if (type == 0003 || type == 0301) {
 				table = cmap + getu32(entry + 4);
 				if (!is_safe_offset(table, 6))
-					return -1;
+					return 0;
 				/* Dispatch based on cmap format. */
 				switch (getu16(table)) {
 				case 4:
-					return cmap_fmt4(table + 6, charCode, glyph_id);
+					return cmap_fmt4(table + 6, charCode);
 				case 6:
-					return cmap_fmt6(table + 6, charCode, glyph_id);
+					return cmap_fmt6(table + 6, charCode);
 				default:
-					return -1;
+					return 0;
 				}
 			}
 		}
 
-		return -1;
+		return 0;
 	}
 
 	int glyph_bbox(uint_fast32_t outline, int box[4]) const { // TODO remove return value
@@ -1077,7 +1067,8 @@ public:
 
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
-		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
+		glyph.gid = font.glyph_id(codepoint);
+		if (glyph.gid) {
 			glyph.mtx = get_metrics(glyph.gid);
 			if (glyph.mtx.is_valid()) {
 				glyph.pixels = render(glyph.gid, glyph.mtx);
