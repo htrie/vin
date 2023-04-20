@@ -95,9 +95,8 @@ static Point midpoint(Point a, Point b) {
 }
 
 static void transform_points(unsigned int numPts, Point* points, const double trf[6]) {
-	Point pt;
 	for (unsigned i = 0; i < numPts; ++i) {
-		pt = points[i];
+		const auto& pt = points[i];
 		points[i] = Point(
 			pt.x * trf[0] + pt.y * trf[2] + trf[4],
 			pt.x * trf[1] + pt.y * trf[3] + trf[5]
@@ -106,10 +105,8 @@ static void transform_points(unsigned int numPts, Point* points, const double tr
 }
 
 static void clip_points(unsigned int numPts, Point* points, int width, int height) {
-	Point pt;
 	for (unsigned i = 0; i < numPts; ++i) {
-		pt = points[i];
-
+		const auto& pt = points[i];
 		if (pt.x < 0.0) {
 			points[i].x = 0.0;
 		}
@@ -139,12 +136,11 @@ struct Cell {
 
 /* Integrate the values in the buffer to arrive at the final grayscale image. */
 static void post_process(const std::vector<Cell>& cells, int width, int height, uint8_t* image) {
-	Cell cell;
-	double accum = 0.0, value;
-	unsigned int num = (unsigned int)width * (unsigned int)height;
+	double accum = 0.0;
+	const unsigned int num = (unsigned int)width * (unsigned int)height;
 	for (unsigned i = 0; i < num; ++i) {
-		cell = cells[i];
-		value = fabs(accum + cell.area);
+		const auto& cell = cells[i];
+		double value = fabs(accum + cell.area);
 		value = std::min(value, 1.0);
 		value = value * 255.0 + 0.5;
 		image[i] = (uint8_t)value;
@@ -299,15 +295,12 @@ struct Font { // TODO make class
 	}
 
 	uint_fast32_t gettable(char tag[4]) const {
-		void* match;
-		unsigned int numTables;
 		/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
-		numTables = getu16(4);
-		if (!is_safe_offset(12, (uint_fast32_t)numTables * 16))
-			return 0;
-		if (!(match = bsearch(tag, file.get_memory() + 12, numTables, 16, cmpu32)))
-			return 0;
-		return getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
+		const unsigned int numTables = getu16(4);
+		if (is_safe_offset(12, (uint_fast32_t)numTables * 16))
+			if (const auto match = bsearch(tag, file.get_memory() + 12, numTables, 16, cmpu32))
+				return getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
+		return 0;
 	}
 
 	void lmetrics() {
