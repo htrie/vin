@@ -310,14 +310,15 @@ struct Font { // TODO make class
 		return getu32((uint_fast32_t)((uint8_t*)match - file.get_memory() + 8));
 	}
 
-	void lmetrics() {
+	int lmetrics() { // TODO remove return value
 		const auto hhea = gettable((char*)"hhea");
-		if (is_safe_offset(hhea, 36)) {
-			const double factor = yScale / unitsPerEm;
-			ascender = geti16(hhea + 4) * factor;
-			descender = geti16(hhea + 6) * factor;
-			lineGap = geti16(hhea + 8) * factor;
-		}
+		if (!is_safe_offset(hhea, 36))
+			return -1;
+		const double factor = yScale / unitsPerEm;
+		ascender = geti16(hhea + 4) * factor;
+		descender = geti16(hhea + 6) * factor;
+		lineGap = geti16(hhea + 8) * factor;
+		return 0;
 	}
 
 	Font() // TODO remove return value
