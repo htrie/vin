@@ -320,24 +320,26 @@ struct Font { // TODO make class
 		}
 	}
 
-	Font()
+	Font() // TODO remove return value
 		: file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") { //(get_system_font_path() + get_system_font_name("Consolas"))
-		if (is_safe_offset(0, 12)) {
-			/* Check for a compatible scalerType (magic number). */
-			uint_fast32_t scalerType;
-			scalerType = getu32(0);
-			if (scalerType == FILE_MAGIC_ONE || scalerType == FILE_MAGIC_TWO) {
-				const auto head = gettable((char*)"head");
-				if (is_safe_offset(head, 54)) {
-					unitsPerEm = getu16(head + 18);
-					locaFormat = geti16(head + 50);
-				}
-				const auto hhea = gettable((char*)"hhea");
-				if (is_safe_offset(hhea, 36)) {
-					numLongHmtx = getu16(hhea + 34);
-				}
-			}
-		}
+		if (!is_safe_offset(0, 12))
+			return;
+		/* Check for a compatible scalerType (magic number). */
+		uint_fast32_t scalerType;
+		scalerType = getu32(0);
+		if (scalerType != FILE_MAGIC_ONE && scalerType != FILE_MAGIC_TWO)
+			return;
+
+		const auto head = gettable((char*)"head");
+		if (!is_safe_offset(head, 54))
+			return;
+		unitsPerEm = getu16(head + 18);
+		locaFormat = geti16(head + 50);
+
+		const auto hhea = gettable((char*)"hhea");
+		if (!is_safe_offset(hhea, 36))
+			return;
+		numLongHmtx = getu16(hhea + 34);
 	}
 
 	bool set_size(double size) {
