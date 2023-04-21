@@ -383,7 +383,10 @@ struct Font { // TODO make class
 		if (!outline)
 			return metrics;
 
-		const auto bbox = glyph_bbox(outline);
+		int bbox[4];
+		if (glyph_bbox(outline, bbox) < 0)
+			return {};
+
 		metrics.minWidth = bbox[2] - bbox[0] + 1;
 		metrics.minHeight = bbox[3] - bbox[1] + 1;
 		metrics.yOffset = -bbox[3];
@@ -682,19 +685,16 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	std::array<int, 4> glyph_bbox(uint_fast32_t outline) const {
-		std::array<int, 4> box;
-		box.fill(0);
-
+	int glyph_bbox(uint_fast32_t outline, int box[4]) const { // TODO remove return value
 		/* Read the bounding box from the font file verbatim. */
 		if (!is_safe_offset(outline, 10))
-			return box;
+			return -1;
 		box[0] = geti16(outline + 2);
 		box[1] = geti16(outline + 4);
 		box[2] = geti16(outline + 6);
 		box[3] = geti16(outline + 8);
 		if (box[2] <= box[0] || box[3] <= box[1])
-			return box;
+			return -1;
 
 		/* Transform the bounding box into SFT coordinate space. */
 		const double xscale = xScale / unitsPerEm;
@@ -703,10 +703,10 @@ struct Font { // TODO make class
 		box[1] = (int)floor(box[1] * yscale + yOffset);
 		box[2] = (int)ceil(box[2] * xscale + xOffset);
 		box[3] = (int)ceil(box[3] * yscale + yOffset);
-		return box;
+		return 0;
 	}
 
-	std::array<double, 6> glyph_transform(const std::array<int, 4>& bbox) const {
+	std::array<double, 6> glyph_transform(int* bbox) const {
 		/* Set up the transformation matrix such that
 		 * the transformed bounding boxes min corner segments
 		 * up with the (0, 0) point. */
@@ -1045,7 +1045,10 @@ class Book {
 		if (outl.decode_outline(font, outline, 0) < 0)
 			return {};
 
-		const auto bbox = font.glyph_bbox(outline);
+		int bbox[4];
+		if (font.glyph_bbox(outline, bbox) < 0)
+			return {};
+
 		const auto transform = font.glyph_transform(bbox);
 		return outl.render_outline(transform.data(), metrics.minWidth, metrics.minHeight);
 	}
