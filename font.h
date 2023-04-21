@@ -298,10 +298,10 @@ struct Font { // TODO make class
 		return (uint_least32_t)(b3 << 24 | b2 << 16 | b1 << 8 | b0);
 	}
 
-	bool is_safe_offset(uint_fast32_t offset, uint_fast32_t margin) const {
-		if (offset > file.get_size()) return false;
-		if (file.get_size() - offset < margin) return false;
-		return true;
+	int is_safe_offset(uint_fast32_t offset, uint_fast32_t margin) const {
+		if (offset > file.get_size()) return 0;
+		if (file.get_size() - offset < margin) return 0;
+		return 1;
 	}
 
 	int gettable(char tag[4], uint_fast32_t* offset) const { // TODO remove return value
@@ -379,7 +379,9 @@ struct Font { // TODO make class
 		metrics.advanceWidth = adv * xscale;
 		metrics.leftSideBearing = lsb * xscale + xOffset;
 
-		const auto outline = outline_offset(glyph_id);
+		uint_fast32_t outline;
+		if (outline_offset(glyph_id, &outline) < 0)
+			return {};
 		if (!outline)
 			return metrics;
 
@@ -426,20 +428,20 @@ struct Font { // TODO make class
 	}
 
 	/* Returns the offset into the font that the glyph's outline is stored at. */
-	uint_fast32_t outline_offset(uint_fast32_t glyph_id) const {
+	int outline_offset(uint_fast32_t glyph_id, uint_fast32_t* offset) const { // TODO remove return value
 		uint_fast32_t loca, glyf;
 		uint_fast32_t base, current, next;
 
 		if (gettable((char*)"loca", &loca) < 0)
-			return 0;
+			return -1;
 		if (gettable((char*)"glyf", &glyf) < 0)
-			return 0;
+			return -1;
 
 		if (locaFormat == 0) {
 			base = loca + 2 * glyph_id;
 
 			if (!is_safe_offset(base, 4))
-				return 0;
+				return -1;
 
 			current = 2U * (uint_fast32_t)getu16(base);
 			next = 2U * (uint_fast32_t)getu16(base + 2);
@@ -448,13 +450,14 @@ struct Font { // TODO make class
 			base = loca + 4 * glyph_id;
 
 			if (!is_safe_offset(base, 8))
-				return 0;
+				return -1;
 
 			current = getu32(base);
 			next = getu32(base + 4);
 		}
 
-		return current == next ? 0 : glyf + current;
+		*offset = current == next ? 0 : glyf + current;
+		return 0;
 	}
 
 	/* For a 'simple' outline, determines each point of the outline with a set of flags. */
@@ -971,7 +974,10 @@ class Outline {
 			 * But stb_truetype scales by the L2 norm. And FreeType2 doesn't scale at all.
 			 * Furthermore, Microsoft's spec doesn't even mention anything like this.
 			 * It's almost as if nobody ever uses this feature anyway. */
-			if (const auto outline = font.outline_offset(glyph_id)) {
+			uint_fast32_t outline;
+			if (font.outline_offset(glyph_id, &outline) < 0)
+				return -1;
+			if (outline) {
 				basePoint = (unsigned)points.size();
 				if (decode_outline(font, outline, recDepth + 1) < 0)
 					return -1;
@@ -1047,7 +1053,9 @@ class Book {
 	}
 
 	std::vector<uint8_t> render(uint_fast32_t glyph_id, const Metrics& metrics) const {
-		const auto outline = font.outline_offset(glyph_id);
+		uint_fast32_t outline;
+		if (font.outline_offset(glyph_id, &outline) < 0)
+			return {};
 		if (!outline)
 			return {};
 
