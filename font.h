@@ -783,14 +783,14 @@ class Outline {
 		}
 	}
 
-	void decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count) {
+	int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count) { // TODO remove return value
 		uint_fast16_t i;
 		uint_least16_t looseEnd, beg, ctrl, center, cur;
 		unsigned int gotCtrl;
 
 		/* Skip contours with less than two points, since the following algorithm can't handle them and
 		 * they should appear invisible either way (because they don't have any area). */
-		if (count < 2) return;
+		if (count < 2) return 0;
 
 		assert(basePoint <= UINT16_MAX - count);
 
@@ -842,22 +842,24 @@ class Outline {
 		else {
 			segments.emplace_back(beg, looseEnd);
 		}
+
+		return 0;
 	}
 
-	void simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) {
+	int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) { // TODO remove return value
 		assert(numContours > 0);
 
 		uint_fast16_t basePoint = (uint_fast16_t)points.size();
 		uint_fast16_t beg = 0;
 
 		if (!font.is_safe_offset(offset, numContours * 2 + 2))
-			return;
+			return -1;
 		uint_fast16_t numPts = font.getu16(offset + (numContours - 1) * 2);
 		if (numPts >= UINT16_MAX)
-			return;
+			return -1;
 		numPts++;
 		if (points.size() > UINT16_MAX - numPts)
-			return;
+			return -1;
 		points.resize(basePoint + numPts);
 
 		std::vector<uint_fast16_t> endPts;
@@ -875,70 +877,73 @@ class Outline {
 		 * Therefore, we bail, should we ever encounter such input. */
 		for (unsigned i = 0; i < numContours - 1; ++i) {
 			if (endPts[i + 1] < endPts[i] + 1)
-				return;
+				return -1;
 		}
 		offset += 2U + font.getu16(offset);
 
 		if (font.simple_flags(&offset, numPts, flags.data()) < 0)
-			return;
+			return -1;
 		if (font.simple_points(offset, numPts, flags.data(), points.data() + basePoint) < 0)
-			return;
+			return -1;
 
 		for (unsigned i = 0; i < numContours; ++i) {
 			uint_fast16_t count = endPts[i] - beg + 1;
-			decode_contour(flags.data() + beg, basePoint + beg, count);
+			if (decode_contour(flags.data() + beg, basePoint + beg, count) < 0)
+				return -1;
 			beg = endPts[i] + 1;
 		}
+
+		return 0;
 	}
 
-	void compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
+	int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) { // TODO remove return value
 		double local[6];
 		unsigned int flags, glyph_id, basePoint;
 		/* Guard against infinite recursion (compound glyphs that have themselves as component). */
 		if (recDepth >= 4)
-			return;
+			return -1;
 		do {
 			memset(local, 0, sizeof local);
 			if (!font.is_safe_offset(offset, 4))
-				return;
+				return -1;
 			flags = font.getu16(offset);
 			glyph_id = font.getu16(offset + 2);
 			offset += 4;
 			/* We don't implement point matching, and neither does stb_truetype for that matter. */
 			if (!(flags & ACTUAL_XY_OFFSETS))
-				return;
+				return -1;
 			/* Read additional X and Y offsets (in FUnits) of this component. */
 			if (flags & OFFSETS_ARE_LARGE) {
 				if (!font.is_safe_offset(offset, 4))
-					return;
+					return -1;
 				local[4] = font.geti16(offset);
 				local[5] = font.geti16(offset + 2);
 				offset += 4;
 			}
 			else {
 				if (!font.is_safe_offset(offset, 2))
-					return;
+					return -1;
 				local[4] = font.geti8(offset);
 				local[5] = font.geti8(offset + 1);
 				offset += 2;
 			}
 			if (flags & GOT_A_SINGLE_SCALE) {
 				if (!font.is_safe_offset(offset, 2))
-					return;
+					return -1;
 				local[0] = font.geti16(offset) / 16384.0;
 				local[3] = local[0];
 				offset += 2;
 			}
 			else if (flags & GOT_AN_X_AND_Y_SCALE) {
 				if (!font.is_safe_offset(offset, 4))
-					return;
+					return -1;
 				local[0] = font.geti16(offset + 0) / 16384.0;
 				local[3] = font.geti16(offset + 2) / 16384.0;
 				offset += 4;
 			}
 			else if (flags & GOT_A_SCALE_MATRIX) {
 				if (!font.is_safe_offset(offset, 8))
-					return;
+					return -1;
 				local[0] = font.geti16(offset + 0) / 16384.0;
 				local[1] = font.geti16(offset + 2) / 16384.0;
 				local[2] = font.geti16(offset + 4) / 16384.0;
@@ -955,10 +960,13 @@ class Outline {
 			 * It's almost as if nobody ever uses this feature anyway. */
 			if (const auto outline = font.outline_offset(glyph_id)) {
 				basePoint = (unsigned)points.size();
-				decode_outline(font, outline, recDepth + 1);
+				if (decode_outline(font, outline, recDepth + 1) < 0)
+					return -1;
 				transform_points((unsigned)points.size() - basePoint, points.data() + basePoint, local);
 			}
 		} while (flags & THERE_ARE_MORE_COMPONENTS);
+
+		return 0;
 	}
 
 public:
@@ -968,17 +976,20 @@ public:
 		segments.reserve(64);
 	}
 
-	void decode_outline(const Font& font, uint_fast32_t offset, int recDepth) {
+	int decode_outline(const Font& font, uint_fast32_t offset, int recDepth) { // TODO remove return value
 		if (!font.is_safe_offset(offset, 10))
-			return;
+			return -1;
 		const int numContours = font.geti16(offset);
 		if (numContours > 0) {
 			/* Glyph has a 'simple' outline consisting of a number of contours. */
-			simple_outline(font, offset + 10, (unsigned int)numContours);
+			return simple_outline(font, offset + 10, (unsigned int)numContours);
 		}
 		else if (numContours < 0) {
 			/* Glyph has a compound outline combined from mutiple other outlines. */
-			compound_outline(font, offset + 10, recDepth);
+			return compound_outline(font, offset + 10, recDepth);
+		}
+		else {
+			return 0;
 		}
 	}
 
@@ -1026,7 +1037,8 @@ class Book {
 			return {};
 
 		Outline outl;
-		outl.decode_outline(font, outline, 0);
+		if (outl.decode_outline(font, outline, 0) < 0)
+			return {};
 
 		const auto bbox = font.glyph_bbox(outline);
 		const auto transform = font.glyph_transform(bbox);
