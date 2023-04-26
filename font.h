@@ -137,7 +137,7 @@ struct Cell {
 	double area = 0.0, cover = 0.0;
 };
 
-struct Raster { // TODO remove
+struct Raster {
 	Cell* cells = nullptr;
 	int width = 0;
 	int height = 0;
@@ -255,7 +255,7 @@ struct Metrics {
 	bool is_valid() const { return advanceWidth > 0; }
 };
 
-struct Font { // TODO make class
+struct Font {
 	File file;
 
 	uint_least16_t unitsPerEm = 0;
@@ -304,7 +304,7 @@ struct Font { // TODO make class
 		return 1;
 	}
 
-	int gettable(char tag[4], uint_fast32_t* offset) const { // TODO remove return value
+	int gettable(char tag[4], uint_fast32_t* offset) const {
 		void* match;
 		unsigned int numTables;
 		/* No need to bounds-check access to the first 12 bytes - this gets already checked by init_font(). */
@@ -317,7 +317,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int lmetrics() { // TODO remove return value
+	int lmetrics() {
 		uint_fast32_t hhea;
 		if (gettable((char*)"hhea", &hhea) < 0)
 			return -1;
@@ -330,8 +330,8 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	Font() // TODO remove return value
-		: file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") { //(get_system_font_path() + get_system_font_name("Consolas"))
+	Font()
+		: file(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf") { //(get_system_font_path() + get_system_font_name("Consolas")) // TODO fallback
 		if (!is_safe_offset(0, 12))
 			return;
 		/* Check for a compatible scalerType (magic number). */
@@ -395,7 +395,7 @@ struct Font { // TODO make class
 		return metrics;
 	}
 
-	int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const { // TODO remove return value
+	int hor_metrics(uint_fast32_t glyph_id, int* advanceWidth, int* leftSideBearing) const {
 		uint_fast32_t hmtx, offset, boundary;
 		if (gettable((char*)"hmtx", &hmtx) < 0)
 			return -1;
@@ -428,7 +428,7 @@ struct Font { // TODO make class
 	}
 
 	/* Returns the offset into the font that the glyph's outline is stored at. */
-	int outline_offset(uint_fast32_t glyph_id, uint_fast32_t* offset) const { // TODO remove return value
+	int outline_offset(uint_fast32_t glyph_id, uint_fast32_t* offset) const {
 		uint_fast32_t loca, glyf;
 		uint_fast32_t base, current, next;
 
@@ -461,7 +461,7 @@ struct Font { // TODO make class
 	}
 
 	/* For a 'simple' outline, determines each point of the outline with a set of flags. */
-	int simple_flags(uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) const { // TODO remove return value
+	int simple_flags(uint_fast32_t* offset, uint_fast16_t numPts, uint8_t* flags) const {
 		uint_fast32_t off = *offset;
 		uint_fast16_t i;
 		uint8_t value = 0, repeat = 0;
@@ -486,7 +486,7 @@ struct Font { // TODO make class
 	}
 
 	/* For a 'simple' outline, decodes both X and Y coordinates for each point of the outline. */
-	int simple_points(uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) const { // TODO remove return value
+	int simple_points(uint_fast32_t offset, uint_fast16_t numPts, uint8_t* flags, Point* points) const {
 		long accum, value, bit;
 		uint_fast16_t i;
 
@@ -529,7 +529,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt4(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	int cmap_fmt4(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		const uint8_t* segPtr;
 		uint_fast32_t segIdxX2;
 		uint_fast32_t endCodes, startCodes, idDeltas, idRangeOffsets, idOffset;
@@ -576,7 +576,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt6(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	int cmap_fmt6(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		unsigned int firstCode, entryCount;
 		/* cmap format 6 only supports the Unicode BMP. */
 		if (charCode > 0xFFFF) {
@@ -598,7 +598,7 @@ struct Font { // TODO make class
 		return 0;
 	}
 
-	int cmap_fmt12_13(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id, int which) const { // TODO remove return value
+	int cmap_fmt12_13(uint_fast32_t table, uint_least32_t charCode, uint_fast32_t* glyph_id, int which) const {
 		uint32_t len, numEntries;
 		uint_fast32_t i;
 
@@ -637,7 +637,7 @@ struct Font { // TODO make class
 	}
 
 	/* Maps Unicode code points to glyph indices. */
-	int glyph_id(uint_least32_t charCode, uint_fast32_t* glyph_id) const { // TODO remove return value
+	int glyph_id(uint_least32_t charCode, uint_fast32_t* glyph_id) const {
 		uint_fast32_t cmap, entry, table;
 		unsigned int idx, numEntries;
 		int type, format;
@@ -698,7 +698,7 @@ struct Font { // TODO make class
 		return -1;
 	}
 
-	int glyph_bbox(uint_fast32_t outline, int box[4]) const { // TODO remove return value
+	int glyph_bbox(uint_fast32_t outline, int box[4]) const {
 		/* Read the bounding box from the font file verbatim. */
 		if (!is_safe_offset(outline, 10))
 			return -1;
@@ -752,7 +752,7 @@ class Outline {
 		return area2 <= maxArea2;
 	}
 
-	int tesselate_curve(Curve curve) { // TODO remove return value
+	int tesselate_curve(Curve curve) {
 		/* From my tests I can conclude that this stack barely reaches a top height
 		 * of 4 elements even for the largest font sizes I'm willing to support. And
 		 * as space requirements should only grow logarithmically, I think 10 is
@@ -782,7 +782,7 @@ class Outline {
 		return 0;
 	}
 
-	int tesselate_curves() { // TODO remove return value
+	int tesselate_curves() {
 		for (unsigned i = 0; i < curves.size(); ++i) {
 			if (tesselate_curve(curves[i]) < 0)
 				return -1;
@@ -799,7 +799,7 @@ class Outline {
 		}
 	}
 
-	int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count) { // TODO remove return value
+	int decode_contour(uint8_t* flags, uint_fast16_t basePoint, uint_fast16_t count) {
 		uint_fast16_t i;
 		uint_least16_t looseEnd, beg, ctrl, center, cur;
 		unsigned int gotCtrl;
@@ -862,7 +862,7 @@ class Outline {
 		return 0;
 	}
 
-	int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) { // TODO remove return value
+	int simple_outline(const Font& font, uint_fast32_t offset, unsigned int numContours) {
 		assert(numContours > 0);
 
 		uint_fast16_t basePoint = (uint_fast16_t)points.size();
@@ -912,7 +912,7 @@ class Outline {
 		return 0;
 	}
 
-	int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) { // TODO remove return value
+	int compound_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 		double local[6];
 		unsigned int flags, glyph_id, basePoint;
 		/* Guard against infinite recursion (compound glyphs that have themselves as component). */
@@ -995,7 +995,7 @@ public:
 		segments.reserve(64);
 	}
 
-	int decode_outline(const Font& font, uint_fast32_t offset, int recDepth) { // TODO remove return value
+	int decode_outline(const Font& font, uint_fast32_t offset, int recDepth) {
 		if (!font.is_safe_offset(offset, 10))
 			return -1;
 		const int numContours = font.geti16(offset);
