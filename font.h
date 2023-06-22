@@ -1114,6 +1114,6 @@ public:
 	}
 
 	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }
-	unsigned get_line_height() const { return font.get_line_height(); }
+	unsigned get_line_height() const { return font.get_line_height() * 95 / 100; }
 	unsigned get_line_baseline() const { return font.get_line_baseline(); }
 };
