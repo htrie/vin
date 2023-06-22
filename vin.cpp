@@ -1,5 +1,4 @@
 #pragma comment(lib, "dwmapi.lib")
-#pragma comment(lib, "winhttp.lib")
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -17,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dwmapi.h>
-#include <winhttp.h>
 #include <shlobj.h>
 
 #include "resource.h"
@@ -286,7 +284,7 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	double get_default_font_size() const { return 30.0; } 
+	double get_default_font_size() const { return 20.0; } 
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height() - 0.5f); }
@@ -418,7 +416,7 @@ public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
 		book.set_size(get_default_font_size());
-		window.set_size(7 * window.get_dpi(), 5 * window.get_dpi());
+		window.set_size(8 * window.get_dpi(), 5 * window.get_dpi());
 		window.show(nshow);
 	}
 
