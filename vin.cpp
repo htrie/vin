@@ -26,7 +26,7 @@
 #include "font.h"
 
 const unsigned version_major = 1;
-const unsigned version_minor = 3;
+const unsigned version_minor = 4;
 
 class Window {
 	HWND hwnd = nullptr;
