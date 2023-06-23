@@ -21,6 +21,30 @@ std::string readable_size(size_t size) {
 	else return std::to_string(size) + "B";
 }
 
+class Timer {
+	long long performance_frequency = 0;
+	int64_t start_time = 0;
+
+	int64_t get_time_ms() const {
+		LARGE_INTEGER counter;
+		QueryPerformanceCounter(&counter);
+		return (counter.QuadPart * 1000) / performance_frequency;
+	}
+
+public:
+	Timer() {
+		LARGE_INTEGER perf_freq;
+		QueryPerformanceFrequency(&perf_freq);
+		performance_frequency = perf_freq.QuadPart;
+		start_time = get_time_ms();
+	}
+
+	int64_t get_elapsed_time_ms() const {
+		return get_time_ms() - start_time;
+	}
+
+};
+
 bool ignore_file(const std::string_view path) {
 	if (path.ends_with(".db")) return true;
 	if (path.ends_with(".aps")) return true;

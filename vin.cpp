@@ -298,6 +298,8 @@ class Application {
 
 	double zoom = 1.0;
 
+	int64_t render_time_ms = 0;
+
 	void set_minimized(bool b) { minimized = b; }
 	void set_maximized(bool b) { maximized = b; }
 	void set_dirty(bool b) { dirty = b; }
@@ -311,7 +313,7 @@ class Application {
 	std::string get_status_text() const {
 		return readable_size(System::get_memory_usage()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
-			" " + "16ms"; // TODO Get render time.
+			" " + std::to_string(render_time_ms) + "ms";
 	}
 
 	void resize(unsigned width, unsigned height) {
@@ -343,10 +345,12 @@ class Application {
 
 	void redraw() {
 		if (!minimized && dirty) {
+			Timer timer;
 			const auto characters = switcher.cull(get_col_count(), get_row_count(), get_status_text());
 			window.clear(colors().clear.as_uint());
 			render(characters);
 			window.blit();
+			render_time_ms = timer.get_elapsed_time_ms();
 		}
 		else {
 			Sleep(1); // Avoid busy loop when minimized.
