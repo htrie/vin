@@ -20,67 +20,6 @@ bool ignore_file(const std::string_view path) {
 	return false;
 }
 
-std::string get_error_string() {
-	const DWORD error = GetLastError();
-	std::string res = "(error " + std::to_string((unsigned)error);
-	char* message = NULL;
-	if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&message, 0, NULL)) {
-		res += ": " + std::string(message);
-		LocalFree(message);
-	}
-	res += ")";
-	return res;
-}
-
-std::wstring convert(const std::string_view url) {
-	if (const auto len = mbstowcs(nullptr, url.data(), 0); len == url.length()) {
-		std::wstring res;
-		res.resize(len);
-		if (const auto converted = mbstowcs(res.data(), url.data(), len + 1); converted == len)
-			return res;
-	}
-	return {};
-}
-
-std::string download(const HINTERNET request) {
-	std::string contents;
-	DWORD size = 0;
-	do {
-		if (WinHttpQueryDataAvailable(request, &size)) {
-			std::vector<char> partial(size);
-			DWORD downloaded = 0;
-			if (WinHttpReadData(request, (LPVOID)partial.data(), (DWORD)partial.size(), &downloaded) && downloaded == size) {
-				contents += std::string(partial.begin(), partial.end());
-			}
-		}
-	} while (size > 0);
-	return contents;
-}
-
-std::string request(const std::string_view url) {
-	std::string contents;
-	const auto server = convert(extract_server(url));
-	const auto payload = convert(extract_payload(url));
-	if (const auto session = WinHttpOpen(L"Vin", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0)) {
-		if (const auto connection = WinHttpConnect(session, server.data(), INTERNET_DEFAULT_HTTPS_PORT, 0)) {
-			if (const auto request = WinHttpOpenRequest(connection, L"GET", payload.data(), NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE)) {
-				if (WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0)) {
-					if (WinHttpReceiveResponse(request, NULL))
-						contents = download(request);
-				}
-				else { contents = std::string(url) + " Failed to send request " + get_error_string(); }
-				WinHttpCloseHandle(request);
-			}
-			else { contents = std::string(url) + " Failed to open request " + get_error_string(); }
-			WinHttpCloseHandle(connection);
-		}
-		else { contents = std::string(url) + " Failed to establish connection " + get_error_string(); }
-		WinHttpCloseHandle(session);
-	}
-	else { contents = std::string(url) + " Failed to open session " + get_error_string(); }
-	return contents;
-}
-
 template<typename F>
 void process_files(const std::string& path, F func) {
 	const auto filter = path + "/*";
@@ -192,13 +131,7 @@ std::string prettify_html(const std::string_view contents) {
 
 std::string load(const std::string_view filename) {
 	std::string text = "\n";
-	if (filename.starts_with("www")) {
-		text = prettify_html(request(filename)); }
-	else if (filename.starts_with("https")) {
-		text = prettify_html(request(filename.substr(sizeof("https://") - 1))); }
-	else if (filename.starts_with("http")) {
-		text = prettify_html(request(filename.substr(sizeof("http://") - 1))); }
-	else if (std::filesystem::exists(filename)) {
+	if (std::filesystem::exists(filename)) {
 		map(filename, [&](const char* mem, size_t size) {
 			text = std::string(mem, size);
 		});

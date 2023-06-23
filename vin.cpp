@@ -1,5 +1,4 @@
 #pragma comment(lib, "dwmapi.lib")
-#pragma comment(lib, "winhttp.lib")
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -17,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dwmapi.h>
-#include <winhttp.h>
 #include <shlobj.h>
 
 #include "resource.h"
