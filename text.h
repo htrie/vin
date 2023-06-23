@@ -476,13 +476,3 @@ unsigned extract_location(const std::string_view url) {
 	return 0;
 }
 
-std::string extract_server(const std::string_view url) {
-	const auto pos = url.find("/");
-	return std::string(pos != std::string::npos ? url.substr(0, pos) : url);
-}
-
-std::string extract_payload(const std::string_view url) {
-	const auto pos = url.find("/");
-	return std::string(pos != std::string::npos ? url.substr(pos) : "");
-}
-
