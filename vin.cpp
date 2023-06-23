@@ -83,7 +83,7 @@ class Window {
 		BITMAPINFO info = {};
 		info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 		info.bmiHeader.biWidth = width;
-		info.bmiHeader.biHeight = -(LONG)height;  //negative so (0,0) is at top left
+		info.bmiHeader.biHeight = -(LONG)height; // Negative so (0,0) is at top left.
 		info.bmiHeader.biPlanes = 1;
 		info.bmiHeader.biBitCount = 32;
 		bitmap = CreateDIBSection(GetDC(hwnd), &info, DIB_RGB_COLORS, (void**)&bits, NULL, 0);
