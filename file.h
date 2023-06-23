@@ -123,12 +123,6 @@ std::string find(const std::string_view pattern) {
 	return list;
 }
 
-std::string prettify_html(const std::string_view contents) {
-	std::string out = std::string(contents);
-	// TODO parse html <p> and <a>
-	return out;
-}
-
 std::string load(const std::string_view filename) {
 	std::string text = "\n";
 	if (std::filesystem::exists(filename)) {
