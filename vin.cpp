@@ -15,6 +15,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
+#include <psapi.h>
 #include <dwmapi.h>
 #include <shlobj.h>
 
@@ -27,6 +29,15 @@
 
 const unsigned version_major = 1;
 const unsigned version_minor = 4;
+
+class System {
+public:
+	static size_t get_memory_usage() {
+		PROCESS_MEMORY_COUNTERS_EX counters;
+		GetProcessMemoryInfo(GetCurrentProcess(), (PPROCESS_MEMORY_COUNTERS)&counters, sizeof(PROCESS_MEMORY_COUNTERS_EX));
+		return (size_t)counters.PrivateUsage;
+	}
+};
 
 class Window {
 	HWND hwnd = nullptr;
@@ -298,7 +309,7 @@ class Application {
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
 
 	std::string get_status_text() const {
-		return std::string("4MB") + // TODO Get memory usage. 
+		return readable_size(System::get_memory_usage()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
 			" " + "16ms"; // TODO Get render time.
 	}
