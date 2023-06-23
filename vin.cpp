@@ -234,11 +234,11 @@ class Switcher {
 		}
 	}
 
-	void push_status(Characters& characters, unsigned col_count) const {
+	void push_status(Characters& characters, unsigned col_count, const std::string_view text) const {
 		const unsigned row = 0;
 		unsigned col = 0;
 		push_line(characters, colors().status, row, col, col_count);
-		push_string(characters, colors().status_text, row, col, "4MB 800x600 4ms 16ms");
+		push_string(characters, colors().status_text, row, col, text);
 	}
 
 	void push_tabs(Characters& characters) const {
@@ -265,9 +265,9 @@ public:
 		else { process_normal(key); }
 	}
 
-	Characters cull(unsigned col_count, unsigned row_count) {
+	Characters cull(unsigned col_count, unsigned row_count, const std::string_view text) {
 		Characters characters;
-		push_status(characters, col_count);
+		push_status(characters, col_count, text);
 		push_tabs(characters);
 		current().set_line_count(current().cull(characters, col_count, row_count));
 		return characters;
@@ -296,6 +296,12 @@ class Application {
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
+
+	std::string get_status_text() const {
+		return std::string("4MB") + // TODO Get memory usage. 
+			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
+			" " + "16ms"; // TODO Get render time.
+	}
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
@@ -326,7 +332,7 @@ class Application {
 
 	void redraw() {
 		if (!minimized && dirty) {
-			const auto characters = switcher.cull(get_col_count(), get_row_count());
+			const auto characters = switcher.cull(get_col_count(), get_row_count(), get_status_text());
 			window.clear(colors().clear.as_uint());
 			render(characters);
 			window.blit();
