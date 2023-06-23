@@ -169,7 +169,7 @@ class Switcher {
 		if (auto index = find_buffer(filename); index != (size_t)-1) {
 			active = index;
 		}
-		else {
+		else if (buffers.size() < 10) { // No more than 10 tabs so we can use numbered fast switch.
 			buffers.emplace_back(filename);
 			active = buffers.size() - 1;
 			current().init(load(filename));
