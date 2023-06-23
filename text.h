@@ -47,6 +47,8 @@ struct Colors {
 	Color highlight = Color::rgba(180, 0, 180, 255);
 	Color search = Color::rgba(0, 180, 180, 255);
 	Color whitespace = Color::gray(30);
+	Color status = Color::rgba(20, 10, 0, 255);
+	Color status_text = Color::rgba(89, 86, 84, 255);
 	Color bar = Color::rgba(59, 56, 54, 255);
 	Color bar_text = Color::rgba(120, 110, 100, 255);
 	Color text = Color::rgba(229, 218, 184, 255);

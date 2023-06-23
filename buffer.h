@@ -521,13 +521,13 @@ class Buffer {
 		const unsigned begin_row = state().get_begin_row();
 		unsigned absolute_row = 0;
 		unsigned index = 0;
-		unsigned row = 1;
+		unsigned row = 2;
 		unsigned col = 0;
 		for (auto& c : state().get_text()) {
 			if (absolute_row < begin_row) {
 				if (c == '\n') { absolute_row++; }
 			}
-			else if (absolute_row >= begin_row && (row - 1) <= row_count) {
+			else if (absolute_row >= begin_row && (row - 1) <= row_count - 2) {
 				if (col == col_count) { row++; col = 7; }
 				if (col == 0) { push_column_indicator(characters, row, 87); }
 				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }

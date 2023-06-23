@@ -234,12 +234,19 @@ class Switcher {
 		}
 	}
 
+	void push_status(Characters& characters, unsigned col_count) const {
+		const unsigned row = 0;
+		unsigned col = 0;
+		push_line(characters, colors().status, row, col, col_count);
+		push_string(characters, colors().status_text, row, col, "4MB 800x600 4ms 16ms");
+	}
+
 	void push_tabs(Characters& characters) const {
 		std::vector<std::string> tabs;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
 		}
-		const unsigned row = 0;
+		const unsigned row = 1;
 		unsigned col = 0;
 		for (size_t i = 0; i < buffers.size(); ++i) {
 			push_line(characters, i == active ? colors().bar_text : colors().bar, row, col, col + (int)tabs[i].size());
@@ -260,8 +267,9 @@ public:
 
 	Characters cull(unsigned col_count, unsigned row_count) {
 		Characters characters;
+		push_status(characters, col_count);
 		push_tabs(characters);
-		current().set_line_count(current().cull(characters, col_count, row_count - 1)); // Remove 1 for tabs bar.
+		current().set_line_count(current().cull(characters, col_count, row_count));
 		return characters;
 	}
 };
@@ -287,7 +295,7 @@ class Application {
 	double get_default_font_size() const { return window.get_dpi() / 7.0; } 
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height() - 0.5f); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
 
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
