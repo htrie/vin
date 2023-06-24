@@ -11,6 +11,10 @@ enum Codepoint {
 	LINE = 9615,
 };
 
+uint16_t box_number_codepoint(unsigned index) {
+	return 8320 + index;
+}
+
 struct Color {
 	uint8_t b = 0, g = 0, r = 0, a = 0;
 
