@@ -260,7 +260,7 @@ class Switcher {
 			const auto fore_color = i == active ? colors().bar : colors().bar_text;
 			const auto text = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
 			push_line(characters, back_color, row, col, col + (int)(1 + text.size()));
-			characters.emplace_back(box_number_codepoint(i), fore_color, row, col++);
+			characters.emplace_back(superscript_codepoint(i), fore_color, row, col++);
 			push_string(characters, fore_color, row, col, text);
 			col += 1;
 		}

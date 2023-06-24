@@ -11,8 +11,20 @@ enum Codepoint {
 	LINE = 9615,
 };
 
-uint16_t box_number_codepoint(unsigned index) {
-	return 8320 + index;
+uint16_t superscript_codepoint(unsigned index) {
+	switch (index) {
+	default:
+	case 0: return 8304;
+	case 1: return 185;
+	case 2: return 178;
+	case 3: return 179;
+	case 4: return 8308;
+	case 5: return 8309;
+	case 6: return 8310;
+	case 7: return 8311;
+	case 8: return 8312;
+	case 9: return 8313;
+	}
 }
 
 struct Color {
