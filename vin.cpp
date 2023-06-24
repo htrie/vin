@@ -253,15 +253,12 @@ class Switcher {
 	}
 
 	void push_tabs(Characters& characters) const {
-		std::vector<std::string> tabs;
-		for (size_t i = 0; i < buffers.size(); ++i) {
-			tabs.push_back(std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : ""));
-		}
 		const unsigned row = 1;
 		unsigned col = 0;
 		for (size_t i = 0; i < buffers.size(); ++i) {
-			push_line(characters, i == active ? colors().bar_text : colors().bar, row, col, col + (int)tabs[i].size());
-			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tabs[i]);
+			const auto tab = std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
+			push_line(characters, i == active ? colors().bar_text : colors().bar, row, col, col + (int)tab.size());
+			push_string(characters, i == active ? colors().bar : colors().bar_text, row, col, tab);
 			col += 1;
 		}
 	}
