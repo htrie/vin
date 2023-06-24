@@ -258,8 +258,9 @@ class Switcher {
 		for (unsigned i = 0; i < buffers.size(); ++i) {
 			const auto back_color = i == active ? colors().bar_text : colors().bar;
 			const auto fore_color = i == active ? colors().bar : colors().bar_text;
-			const auto text = std::to_string(i) + ":" + std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
-			push_line(characters, back_color, row, col, col + (int)text.size());
+			const auto text = std::string(buffers[i].get_filename()) + (buffers[i].is_dirty() ? "*" : "");
+			push_line(characters, back_color, row, col, col + (int)(1 + text.size()));
+			characters.emplace_back(superscript_codepoint(i), fore_color, row, col++);
 			push_string(characters, fore_color, row, col, text);
 			col += 1;
 		}
