@@ -305,7 +305,7 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	double get_default_font_size() const { return window.get_dpi() / 7.0; } 
+	double get_default_font_size() const { return window.get_dpi() / 6.4; } 
 
 	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
