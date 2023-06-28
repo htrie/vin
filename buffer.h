@@ -575,6 +575,15 @@ public:
 		return push_text(characters, col_count, row_count);
 	}
 
+	const std::string status() const {
+		switch (mode) {
+		case Mode::normal_question: return "?" + highlight;
+		case Mode::normal_slash: return "/" + highlight;
+		case Mode::insert: return "insert";
+		default: return "";
+		}
+	}
+
 	void jump(size_t position) {
 		state().set_cursor(position);
 		state().cursor_center();

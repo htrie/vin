@@ -245,11 +245,13 @@ class Switcher {
 		}
 	}
 
-	void push_status(Characters& characters, unsigned col_count, const std::string_view text) const {
+	void push_status(Characters& characters, unsigned col_count, const std::string_view text, const std::string_view status) const {
 		const unsigned row = 0;
 		unsigned col = 0;
 		push_line(characters, colors().status, row, col, col_count);
 		push_string(characters, colors().status_text, row, col, text);
+		push_string(characters, colors().status_text, row, col, "  ");
+		push_string(characters, colors().status_text, row, col, status);
 	}
 
 	void push_tabs(Characters& characters) const {
@@ -278,7 +280,7 @@ public:
 
 	Characters cull(unsigned col_count, unsigned row_count, const std::string_view text) {
 		Characters characters;
-		push_status(characters, col_count, text);
+		push_status(characters, col_count, text, current().status());
 		push_tabs(characters);
 		current().set_line_count(current().cull(characters, col_count, row_count));
 		return characters;
