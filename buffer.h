@@ -51,7 +51,6 @@ class Buffer {
 	bool word_strict = false;
 
 	bool needs_save = false;
-	bool is_code = false;
 
 	size_t last_cursor = 0;
 
@@ -495,28 +494,10 @@ class Buffer {
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
-		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().diff_note, row, col); }
-		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().diff_add, row, col); }
-		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().diff_remove, row, col); }
-		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
-	};
-
-	void push_char_code(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
-		const Word word(state().get_text(), index);
-		const Comment comment(state().get_text(), index);
-		const Quote single_quote(state().get_text(), index, '\'');
-		const Quote double_quote(state().get_text(), index, '"');
-		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else if (comment.valid() && comment.contains(index)) { characters.emplace_back((uint16_t)c, colors().comment, row, col); }
-		else if (single_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
-		else if (double_quote.valid()) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
-		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
-		else if (word.check_function()) { characters.emplace_back((uint16_t)c, colors().function, row, col); }
-		else if (word.check_class()) { characters.emplace_back((uint16_t)c, colors().clas, row, col); }
-		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
-		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col); }
-		else if (is_whitespace(c)) { characters.emplace_back((uint16_t)c, colors().whitespace, row, col); }
+		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
+		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
+		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().add, row, col); }
+		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().remove, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
@@ -544,7 +525,6 @@ class Buffer {
 				else if (c == '\t') { push_tab(characters, row, col); col += 3; }
 				else if (c == '\r') { push_carriage(characters, row, col); col++; }
 				else if (c == ' ') { push_space(characters, row, col); col++; }
-				else if (is_code) { push_char_code(characters, row, col, c, index); col++; }
 				else { push_char_text(characters, row, col, c, index); col++; }
 			}
 			else {
@@ -557,8 +537,7 @@ class Buffer {
 
 public:
 	Buffer(const std::string_view filename)
-		: filename(filename)
-		, is_code(is_code_extension(filename)) {
+		: filename(filename) {
 	}
 
 	void init(const std::string_view text) {

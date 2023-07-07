@@ -69,18 +69,11 @@ struct Colors {
 	Color bar_text = Color::rgba(120, 110, 100, 255);
 	Color text = Color::rgba(229, 218, 184, 255);
 	Color text_cursor = Color::gray(30);
-	Color keyword = Color::rgba(199, 146, 234, 255);
-	Color clas = Color::rgba(255, 203, 139, 255);
-	Color function = Color::rgba(130, 170, 255, 255);
-	Color punctuation = Color::rgba(127, 219, 202, 255);
-	Color number = Color::rgba(247, 140, 84, 255);
 	Color line_number = Color::gray(80);
 	Color context = Color::gray(140);
-	Color quote = Color::rgba(255, 0, 128, 255);
-	Color comment = Color::rgba(255, 255, 0, 255);
-	Color diff_note = Color::rgba(255, 200, 0, 255);
-	Color diff_add = Color::rgba(0, 200, 0, 255);
-	Color diff_remove = Color::rgba(200, 0, 0, 255);
+	Color note = Color::rgba(255, 200, 0, 255);
+	Color add = Color::rgba(229, 218, 184, 255);
+	Color remove = Color::rgba(120, 110, 100, 255);
 };
 
 Colors& colors() {
@@ -107,43 +100,6 @@ constexpr bool is_url_punctuation(char c) { return
 	c == '&' || c == '%' || c == '^' || c == '!' || c == '~' ||
 	c == '?' || c == '#';
 }
-
-bool is_code_extension(const std::string_view filename) {
-	if (filename.ends_with(".cpp")) return true;
-	if (filename.ends_with(".hpp")) return true;
-	if (filename.ends_with(".c")) return true;
-	if (filename.ends_with(".h")) return true;
-	return false;
-}
-
-static inline const std::vector<std::vector<std::string_view>> cpp_keywords = {
-	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
-	{ "bitand", "bitor", "bool", "break" },
-	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
-	{ "decltype", "default", "define", "delete", "do", "double", "dynamic_cast" },
-	{ "else", "elsif", "endif", "enum", "explicit", "export", "extern" },
-	{ "false", "float", "for", "friend" },
-	{ "goto" },
-	{ },
-	{ "include", "if", "ifdef", "ifndef", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
-	{ },
-	{ },
-	{ "long" },
-	{ "mutable" },
-	{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
-	{ "operator", "or", "or_eq" },
-	{ "pragma", "private", "protected", "public" },
-	{ },
-	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
-	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
-	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
-	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
-	{ "virtual", "void", "volatile" },
-	{ "wchar_t", "while" },
-	{ "xor", "xor_eq" },
-	{ },
-	{ }
-};
 
 std::string to_lower(const std::string_view s) {
 	auto res = std::string(s);
@@ -248,8 +204,6 @@ public:
 
 class Word : public Range {
 	size_t finish_no_whitespace = 0;
-	bool is_class = false;
-	bool is_function = false;
 
 	bool test_letter_or_number(const std::string_view text, size_t pos) {
 		if (pos < text.size()) {
@@ -295,28 +249,11 @@ public:
 				while(test_whitespace(text, finish + 1)) { finish++; } // Include next whitespace.
 				while(test_punctuation(text, start - 1)) { start--; }
 			}
-			is_class = is_uppercase_letter(text[start]) || text[start] == '_';
-			is_function = finish < text.size() - 1 ? text[finish + 1] == '(' : false;
 		}
 	}
 
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
-	}
-
-	bool check_class() const { return is_class; }
-	bool check_function() const { return is_function; }
-
-	bool check_keyword(const std::string_view text) const {
-		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
-			const auto& keywords = cpp_keywords[letter_index];
-			const std::string word(text.substr(start, finish_no_whitespace - start + 1));
-			for (const auto& keyword : keywords) {
-				if (word == keyword)
-					return true;
-			}
-		}
-		return false;
 	}
 };
 
@@ -364,50 +301,6 @@ public:
 	}
 };
 
-class Quote : public Range {
-	size_t find_prev(const std::string_view text, size_t pos, uint16_t quote) {
-		unsigned count = 0;
-		size_t last = pos;
-		size_t index = pos;
-		while (index < text.size() && text[index] != '\n') {
-			if (text[index] == quote) {
-				last = index;
-				count++;
-			}
-			index--;
-		}
-		return count % 2 != 0 ? last : std::string::npos;
-	}
-
-	size_t find_next(const std::string_view text, size_t pos, uint16_t quote) {
-		unsigned count = 0;
-		size_t last = pos;
-		size_t index = pos;
-		while (index < text.size() && text[index] != '\n') {
-			if (text[index] == quote) {
-				last = index;
-				count++;
-			}
-			index++;
-		}
-		return count % 2 != 0 ? last : std::string::npos;
-	}
-
-public:
-	Quote(const std::string_view text, size_t pos, uint16_t quote) {
-		if (text.size() > 0 && pos < text.size()) {
-			start = pos;
-			finish = pos;
-			const auto prev = find_prev(text, pos, quote);
-			const auto next = find_next(text, pos, quote);
-			if (prev != std::string::npos && next != std::string::npos) {
-				start = prev != std::string::npos ? prev : pos;
-				finish = next != std::string::npos ? next : pos;
-			}
-		}
-	}
-};
-
 class Line : public Range {
 public:
 	Line(const std::string_view text, size_t pos) {
@@ -437,23 +330,6 @@ public:
 		if (start + s.size() <= text.size())
 			return strncmp(&text[start], s.data(), s.size()) == 0;
 		return false;
-	}
-};
-
-class Comment : public Range {
-public:
-	Comment(const std::string_view text, size_t pos) {
-		if (text.size() > 0 && pos < text.size()) {
-			const auto pn = text.rfind("\n", pos > 0 && text[pos] == '\n' ? pos - 1 : pos);
-			const auto nn = text.find("\n", pos);
-			const auto begin = pn != std::string::npos && pn < pos ? pn : 0;
-			const auto end = nn != std::string::npos && nn > pos ? nn : text.size() - 1; 
-			const auto n = text.find("//", begin);
-			if (n != std::string::npos && n < end) {
-				start = n;
-				finish = end;
-			}
-		}
 	}
 };
 
