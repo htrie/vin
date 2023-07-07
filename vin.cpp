@@ -447,7 +447,7 @@ public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
 		book.set_size(get_default_font_size());
-		window.set_size(8 * window.get_dpi(), 5 * window.get_dpi());
+		window.set_size(9 * window.get_dpi(), 6 * window.get_dpi());
 		window.show(nshow);
 	}
 
