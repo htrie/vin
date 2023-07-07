@@ -74,8 +74,7 @@ class Window {
 	}
 
 	static void set_title(HWND hwnd) {
-		const auto title  = std::string("Vin ") + std::to_string(version_major) + "." + std::to_string(version_minor);
-		SetWindowTextA(hwnd, title.data());
+		SetWindowTextA(hwnd, "");
 	}
 
 	static void set_dark(HWND hwnd) {
@@ -313,7 +312,8 @@ class Application {
 	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
 
 	std::string get_status_text() const {
-		return readable_size(System::get_memory_usage()) + 
+		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
+			" " + readable_size(System::get_memory_usage()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
 			" " + std::to_string(render_time_ms) + "ms";
 	}
@@ -447,7 +447,7 @@ public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this) {
 		book.set_size(get_default_font_size());
-		window.set_size(9 * window.get_dpi(), 6 * window.get_dpi());
+		window.set_size(8 * window.get_dpi(), 26 * window.get_dpi() / 5);
 		window.show(nshow);
 	}
 
