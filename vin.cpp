@@ -316,7 +316,7 @@ class Application {
 		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
 			" " + readable_size(System::get_memory_usage()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
-			" " + std::to_string(process_time_ms) + "ms " + std::to_string(render_time_ms) + "ms";
+			" " + std::to_string(process_time_ms) + "ms:" + std::to_string(render_time_ms) + "ms";
 	}
 
 	void resize(unsigned width, unsigned height) {
