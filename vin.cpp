@@ -300,6 +300,7 @@ class Application {
 	double zoom = 1.0;
 
 	int64_t render_time_ms = 0;
+	int64_t process_time_ms = 0;
 
 	void set_minimized(bool b) { minimized = b; }
 	void set_maximized(bool b) { maximized = b; }
@@ -315,7 +316,7 @@ class Application {
 		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
 			" " + readable_size(System::get_memory_usage()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
-			" " + std::to_string(render_time_ms) + "ms";
+			" " + std::to_string(process_time_ms) + "ms " + std::to_string(render_time_ms) + "ms";
 	}
 
 	void resize(unsigned width, unsigned height) {
@@ -361,11 +362,13 @@ class Application {
 	}
 
 	void process(unsigned key) {
+		Timer timer;
 		bool maximize = false;
 		switcher.process(space_down, quit, maximize, zoom, key);
 		if (maximize)
 			window.maximize(!maximized);
 		book.set_size(zoom * get_default_font_size()); 
+		process_time_ms = timer.get_elapsed_time_ms();
 	}
 
 	static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
