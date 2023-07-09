@@ -327,6 +327,7 @@ class Application {
 
 	void render(const Characters& characters) {
 		if (auto* pixels = window.get_pixels()) {
+			window.clear(colors().clear.as_uint());
 			for (auto& character : characters) {
 				const auto& glyph = book.find_glyph(character.index);
 				unsigned in = 0;
@@ -343,16 +344,14 @@ class Application {
 					out += window.get_width();
 				}
 			}
+			window.blit();
 		}
 	}
 
 	void redraw() {
 		if (!minimized && dirty) {
 			Timer timer;
-			const auto characters = switcher.cull(get_col_count(), get_row_count(), get_status_text());
-			window.clear(colors().clear.as_uint());
-			render(characters);
-			window.blit();
+			render(switcher.cull(get_col_count(), get_row_count(), get_status_text()));
 			render_time_ms = timer.get_elapsed_time_ms();
 		}
 		else {
