@@ -227,12 +227,12 @@ class Switcher {
 		else if (key == 's') { save(); }
 		else if (key == 'e') { process_space_e(); }
 		else if (key == 'f') { process_space_f(); }
-		else if (key == 'i') { current().window_down(); }
-		else if (key == 'o') { current().window_up(); }
-		else if (key >= '0' && key <= '9') { select_index(key - '0'); }
+		else if (key == 'j') { current().window_down(); }
+		else if (key == 'k') { current().window_up(); }
 		else if (key == 'h') { select_previous(); }
 		else if (key == 'l') { select_next(); }
 		else if (key == 'n') { current().clear_highlight(); }
+		else if (key >= '0' && key <= '9') { select_index(key - '0'); }
 	}
 
 	void process_normal(unsigned key) {
