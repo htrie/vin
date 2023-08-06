@@ -326,28 +326,31 @@ class Application {
 		}
 	}
 
+	void render_character(Color* pixels, const Character& character) {
+		const auto& glyph = book.find_glyph(character.index);
+		unsigned in = 0;
+		unsigned out = (book.get_line_baseline() + character.row * book.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
+			(character.col * book.get_character_width() + (int)glyph.mtx.leftSideBearing);
+		auto color = character.color;
+		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
+			for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
+				if (out + i < window.get_width() * window.get_height()) {
+					pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
+				}
+			}
+			in += glyph.mtx.minWidth;
+			out += window.get_width();
+		}
+	}
+
 	void render(const Characters& characters) {
 		if (auto* pixels = window.get_pixels()) {
 			window.clear(colors().clear.as_uint());
 			const auto col_count = get_col_count();
 			const auto row_count = get_row_count();
 			for (auto& character : characters) {
-				if (character.col < col_count && character.row < row_count) {
-					const auto& glyph = book.find_glyph(character.index);
-					unsigned in = 0;
-					unsigned out = (book.get_line_baseline() + character.row * book.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-						(character.col * book.get_character_width() + (int)glyph.mtx.leftSideBearing);
-					auto color = character.color;
-					for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
-						for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
-							if (out + i < window.get_width() * window.get_height()) {
-								pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
-							}
-						}
-						in += glyph.mtx.minWidth;
-						out += window.get_width();
-					}
-				}
+				if (character.col < col_count && character.row < row_count)
+					render_character(pixels, character);
 			}
 			window.blit();
 		}
