@@ -1084,13 +1084,6 @@ class Book {
 	}
 
 public:
-	void set_size(double size) {
-		if (font.set_size(size)) {
-			clear();
-			add_glyph(0);
-		}
-	}
-
 	void clear() {
 		glyphs.clear();
 	}
@@ -1111,6 +1104,13 @@ public:
 		if (auto found = glyphs.find(codepoint); found != glyphs.end())
 			return found->second;
 		return add_glyph(codepoint);
+	}
+
+	void set_font_size(double size) {
+		if (font.set_size(size)) {
+			clear();
+			add_glyph(0);
+		}
 	}
 
 	unsigned get_character_width() const { return (unsigned)glyphs.find(0)->second.mtx.advanceWidth; }

@@ -217,11 +217,11 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void process_space(bool& quit, bool& maximize, double& zoom, unsigned key) {
+	void process_space(bool& quit, bool& maximize, double& font_size, unsigned key) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'm') { maximize = true; }
-		else if (key == '+') { zoom *= 1.05; }
-		else if (key == '-') { zoom *= 0.95; }
+		else if (key == '+') { font_size = std::min(font_size + 1.0, 80.0); }
+		else if (key == '-') { font_size = std::max(font_size - 1.0, 8.0); }
 		else if (key == 'w') { close(); }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
@@ -272,8 +272,8 @@ public:
 		open("scratch");
 	}
 
-	void process(bool space_down, bool& quit, bool& maximize, double& zoom, unsigned key) {
-		if (space_down && current().is_normal()) { process_space(quit, maximize, zoom, key); }
+	void process(bool space_down, bool& quit, bool& maximize, double& font_size, unsigned key) {
+		if (space_down && current().is_normal()) { process_space(quit, maximize, font_size, key); }
 		else { process_normal(key); }
 	}
 
@@ -297,7 +297,7 @@ class Application {
 	bool space_down = false;
 	bool quit = false;
 
-	double zoom = 1.0;
+	double font_size = 1.0;
 
 	int64_t render_time_ms = 0;
 	int64_t process_time_ms = 0;
@@ -315,6 +315,7 @@ class Application {
 	std::string get_status_text() const {
 		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
 			" " + readable_size(System::get_memory_usage()) + 
+			" " + std::to_string(unsigned(font_size)) + "pt" + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
 			" " + std::to_string(process_time_ms) + "ms:" + std::to_string(render_time_ms) + "ms";
 	}
@@ -363,10 +364,10 @@ class Application {
 	void process(unsigned key) {
 		Timer timer;
 		bool maximize = false;
-		switcher.process(space_down, quit, maximize, zoom, key);
+		switcher.process(space_down, quit, maximize, font_size, key);
 		if (maximize)
 			window.maximize(!maximized);
-		book.set_size(zoom * get_default_font_size()); 
+		book.set_font_size(font_size); 
 		process_time_ms = timer.get_elapsed_time_ms();
 	}
 
@@ -447,8 +448,9 @@ class Application {
 
 public:
 	Application(HINSTANCE hinstance, int nshow)
-		: window(hinstance, proc, this) {
-		book.set_size(get_default_font_size());
+		: window(hinstance, proc, this)
+		, font_size(get_default_font_size()) {
+		book.set_font_size(font_size);
 		window.set_size(8 * window.get_dpi(), 26 * window.get_dpi() / 5);
 		window.show(nshow);
 	}
