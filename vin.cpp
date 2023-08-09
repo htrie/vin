@@ -157,7 +157,6 @@ class Switcher {
 	std::vector<Buffer> buffers;
 	size_t active = 0;
 
-	std::string url;
 	std::string clipboard;
 
 	Buffer& current() { return buffers[active]; }
@@ -173,6 +172,16 @@ class Switcher {
 				return i;
 		}
 		return (size_t)-1;
+	}
+
+	bool open_and_jump(const std::string_view url) {
+		const auto filename = extract_filename(url);
+		if (std::filesystem::exists(filename)) {
+			open(filename);
+			current().jump(extract_location(url));
+			return true;
+		}
+		return false;
 	}
 
 	void open(const std::string_view filename) {
@@ -236,11 +245,11 @@ class Switcher {
 	}
 
 	void process_normal(unsigned key) {
-		current().process(clipboard, url, key);
-		if (!url.empty()) {
-			open(extract_filename(url));
-			current().jump(extract_location(url));
-			url.clear();
+		bool jump = false;
+		current().process(clipboard, jump, key);
+		if (jump) {
+			if (!open_and_jump(current().get_url()))
+				open_and_jump(current().get_line_url());
 		}
 	}
 

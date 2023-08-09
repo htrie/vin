@@ -86,10 +86,10 @@ class Buffer {
 		end_record(key);
 	}
 
-	void replay(std::string& clipboard, std::string& url) {
+	void replay(std::string& clipboard, bool& jump) {
 		const auto s = record; // Cache since process_key will modify it.
 		for (const auto& c : s) {
-			process_key(clipboard, url, c);
+			process_key(clipboard, jump, c);
 		}
 	}
 
@@ -172,13 +172,13 @@ class Buffer {
 		state().cursor_center();
 	}
 
-	void process_key(std::string& clipboard, std::string& url, unsigned key) {
+	void process_key(std::string& clipboard, bool& jump, unsigned key) {
 		if (mode != Mode::insert) {
 			stack.push();
 		}
 
 		switch (mode) {
-		case Mode::normal: process_normal(clipboard, url, key); break;
+		case Mode::normal: process_normal(clipboard, jump, key); break;
 		case Mode::normal_number: process_normal_number(key); break;
 		case Mode::normal_slash: process_normal_slash(key); break;
 		case Mode::normal_question: process_normal_question(key); break;
@@ -219,7 +219,7 @@ class Buffer {
 		else { append_record(key); state().insert(std::string((char*)&key, 1)); }
 	}
 
-	void process_normal(std::string& clipboard, std::string& url, unsigned key) {
+	void process_normal(std::string& clipboard, bool& jump, unsigned key) {
 		if (key == 'u') { stack.set_undo(); }
 		else if (key >= '0' && key <= '9') { accumulate(key); mode = Mode::normal_number; }
 		else if (key == '>') { begin_record(key); mode = Mode::normal_gt; }
@@ -275,7 +275,7 @@ class Buffer {
 		else if (key == 'N') { word_rfind_again(); }
 		else if (key == '.') { repeat = true; }
 		else if (key == '\'') { load_cursor(); state().cursor_center(); }
-		else if (key == '\r') { url = state().get_url(); }
+		else if (key == '\r') { jump = true; }
 	}
 
 	void process_normal_number(unsigned key) {
@@ -550,9 +550,9 @@ public:
 		set_dirty(true);
 	}
 
-	void process(std::string& clipboard, std::string& url, unsigned key) {
-		process_key(clipboard, url, key);
-		if (repeat) { repeat = false; replay(clipboard, url); }
+	void process(std::string& clipboard, bool& jump, unsigned key) {
+		process_key(clipboard, jump, key);
+		if (repeat) { repeat = false; replay(clipboard, jump); }
 	}
 
 	unsigned cull(Characters& characters, unsigned col_count, unsigned row_count) const {
@@ -583,6 +583,8 @@ public:
 
 	const std::string_view get_filename() const { return filename; }
 
+	std::string get_url() const { return state().get_url(); }
+	std::string get_line_url() const { return state().get_line_url(); }
 	std::string get_word() const { return state().get_word(); }
 	std::string_view get_text() const { return state().get_text(); }
 
