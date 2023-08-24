@@ -503,8 +503,8 @@ class Buffer {
 			}
 			else if (absolute_row >= begin_row && (row - 1) <= row_count - 2) {
 				if (col == col_count) { row++; col = 7; }
-				if (col == 0) { push_column_indicator(characters, row, 87); }
 				if (col == 0 && absolute_row == cursor_row) { push_cursor_line(characters, row, col_count); }
+				if (col == 0 && absolute_row != cursor_row) { push_column_indicator(characters, row, 87); }
 				if (col == 0) { push_line_number(characters, row, col, absolute_row, cursor_row); col += 6; }
 				if (col == 6) { push_line_indicator(characters, row, col); col += 1; }
 				if (word_strict) { if (auto match = check_highlight_strict(index); match.first) { push_highlight_one(characters, row, col, match.second); } }
