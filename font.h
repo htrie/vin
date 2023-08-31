@@ -1083,11 +1083,6 @@ class Book {
 		return outl.render_outline(transform.data(), metrics.minWidth, metrics.minHeight);
 	}
 
-public:
-	void clear() {
-		glyphs.clear();
-	}
-
 	const Glyph& add_glyph(uint32_t codepoint) {
 		auto& glyph = glyphs[codepoint];
 		if (font.glyph_id(codepoint, &glyph.gid) == 0) {
@@ -1098,6 +1093,11 @@ public:
 			}
 		}
 		return add_glyph(0);
+	}
+
+public:
+	void clear() {
+		glyphs.clear();
 	}
 
 	const Glyph& find_glyph(uint32_t codepoint) {
