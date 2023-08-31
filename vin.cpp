@@ -278,7 +278,7 @@ class Switcher {
 
 public:
 	Switcher() {
-		open("scratch");
+		open("");
 	}
 
 	void process(bool space_down, bool& quit, bool& maximize, double& font_size, unsigned key) {
