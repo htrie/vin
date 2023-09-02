@@ -1050,7 +1050,7 @@ public:
 
 
 struct Glyph {
-	uint_fast32_t gid;
+	uint_fast32_t gid = 0;
 	Metrics mtx;
 	std::vector<uint8_t> pixels;
 };

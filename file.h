@@ -187,10 +187,12 @@ std::string get_user_font_path() {
 
 std::string get_system_font_path() {
 	char win_dir[MAX_PATH];
-	GetWindowsDirectoryA(win_dir, MAX_PATH);
-	std::stringstream ss;
-	ss << win_dir << "\\Fonts\\";
-	return ss.str();
+	if (const auto len = GetWindowsDirectoryA(win_dir, MAX_PATH)) {
+		std::stringstream ss;
+		ss << win_dir << "\\Fonts\\";
+		return ss.str();
+	}
+	return "";
 }
 
 std::string get_system_font_name(const std::string& face_name) {

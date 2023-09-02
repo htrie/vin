@@ -33,8 +33,8 @@ const unsigned version_minor = 4;
 class System {
 public:
 	static size_t get_memory_usage() {
-		PROCESS_MEMORY_COUNTERS_EX counters;
-		GetProcessMemoryInfo(GetCurrentProcess(), (PPROCESS_MEMORY_COUNTERS)&counters, sizeof(PROCESS_MEMORY_COUNTERS_EX));
+		PROCESS_MEMORY_COUNTERS_EX counters = {};
+ 		GetProcessMemoryInfo(GetCurrentProcess(), (PPROCESS_MEMORY_COUNTERS)&counters, sizeof(PROCESS_MEMORY_COUNTERS_EX));
 		return (size_t)counters.PrivateUsage;
 	}
 };
@@ -51,7 +51,7 @@ class Window {
 	static HWND create(HINSTANCE hinstance, WNDPROC proc, void* data) {
 		const char* name = "vin";
 		const auto hicon = LoadIcon(hinstance, MAKEINTRESOURCE(IDI_ICON1));
-		WNDCLASSEX win_class;
+		WNDCLASSEX win_class = {};
 		win_class.cbSize = sizeof(WNDCLASSEX);
 		win_class.style = CS_HREDRAW | CS_VREDRAW;
 		win_class.lpfnWndProc = proc;

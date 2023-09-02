@@ -123,7 +123,7 @@ static unsigned compute_letter_index(const uint16_t c) {
 }
 
 struct Character {
-	uint16_t index;
+	uint16_t index = 0;
 	Color color = Color::rgba(255, 0, 0, 255);
 	unsigned row = 0;
 	unsigned col = 0;
