@@ -32,15 +32,6 @@
 const unsigned version_major = 1;
 const unsigned version_minor = 4;
 
-class System {
-public:
-	static size_t get_memory_usage() {
-		PROCESS_MEMORY_COUNTERS_EX counters = {};
- 		GetProcessMemoryInfo(GetCurrentProcess(), (PPROCESS_MEMORY_COUNTERS)&counters, sizeof(PROCESS_MEMORY_COUNTERS_EX));
-		return (size_t)counters.PrivateUsage;
-	}
-};
-
 class Window {
 	HWND hwnd = nullptr;
 	HDC hdc = nullptr;
@@ -293,6 +284,8 @@ public:
 		current().set_line_count(current().cull(characters, col_count, row_count));
 		return characters;
 	}
+
+	size_t get_current_size() const { return current().get_text().size(); }
 };
 
 class Application {
@@ -319,7 +312,7 @@ class Application {
 
 	std::string get_status_text() const {
 		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
-			" " + readable_size(System::get_memory_usage()) + 
+			" " + readable_size(switcher.get_current_size()) + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
 			" " + std::to_string(process_time_ms) + "ms:" + std::to_string(render_time_ms) + "ms";
 	}

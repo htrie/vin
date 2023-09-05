@@ -15,10 +15,10 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 }
 
 std::string readable_size(size_t size) {
-	if (size > GB) return to_string_with_precision((float)size / (float)GB, 2) + "GB";
-	else if (size > MB) return to_string_with_precision((float)size / (float)MB, 1) + "MB";
-	else if (size > KB) return to_string_with_precision((float)size / (float)KB, 1) + "KB";
-	else return std::to_string(size) + "B";
+	if (size > GB) return to_string_with_precision((float)size / (float)GB, 2) + "gb";
+	else if (size > MB) return to_string_with_precision((float)size / (float)MB, 1) + "mb";
+	else if (size > KB) return to_string_with_precision((float)size / (float)KB, 1) + "kb";
+	else return std::to_string(size) + "b";
 }
 
 class Timer {
