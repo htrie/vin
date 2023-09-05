@@ -8,9 +8,11 @@
 #include <stdint.h>
 #include <assert.h>
 #include <array>
+#include <map>
 #include <unordered_map>
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <math.h>
 #include <stdio.h>
@@ -226,11 +228,9 @@ class Switcher {
 		current().set_highlight(seed);
 	}
 
-	void process_space(bool& quit, bool& maximize, double& font_size, unsigned key) {
+	void process_space(bool& quit, bool& maximize, unsigned key) {
 		if (key == 'q') { quit = true; }
 		else if (key == 'm') { maximize = true; }
-		else if (key == '+') { font_size = std::min(font_size + 1.0, 80.0); }
-		else if (key == '-') { font_size = std::max(font_size - 1.0, 8.0); }
 		else if (key == 'w') { close(); }
 		else if (key == 'r') { reload(); }
 		else if (key == 's') { save(); }
@@ -281,8 +281,8 @@ public:
 		open("");
 	}
 
-	void process(bool space_down, bool& quit, bool& maximize, double& font_size, unsigned key) {
-		if (space_down && current().is_normal()) { process_space(quit, maximize, font_size, key); }
+	void process(bool space_down, bool& quit, bool& maximize, unsigned key) {
+		if (space_down && current().is_normal()) { process_space(quit, maximize, key); }
 		else { process_normal(key); }
 	}
 
@@ -298,15 +298,13 @@ public:
 class Application {
 	Switcher switcher;
 	Window window;
-	Book book;
+	Font font;
 
 	bool minimized = false;
 	bool maximized = false;
 	bool dirty = true;
 	bool space_down = false;
 	bool quit = false;
-
-	double font_size = 1.0;
 
 	int64_t render_time_ms = 0;
 	int64_t process_time_ms = 0;
@@ -316,15 +314,12 @@ class Application {
 	void set_dirty(bool b) { dirty = b; }
 	void set_space_down(bool b) { space_down = b; }
 
-	double get_default_font_size() const { return window.get_dpi() / 6.0; } 
-
-	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)book.get_character_width()); }
-	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)book.get_line_height()); }
+	unsigned get_col_count() const { return (unsigned)((float)window.get_width() / (float)font.get_character_width()); }
+	unsigned get_row_count() const { return (unsigned)((float)window.get_height() / (float)font.get_line_height()); }
 
 	std::string get_status_text() const {
 		return "v" + std::to_string(version_major) + "." + std::to_string(version_minor) +
 			" " + readable_size(System::get_memory_usage()) + 
-			" " + std::to_string(unsigned(font_size)) + "pt" + 
 			" " + std::to_string(window.get_width()) + "x" + std::to_string(window.get_height()) + 
 			" " + std::to_string(process_time_ms) + "ms:" + std::to_string(render_time_ms) + "ms";
 	}
@@ -336,18 +331,18 @@ class Application {
 	}
 
 	void render_character(Color* pixels, const Character& character) {
-		const auto& glyph = book.find_glyph(character.index);
+		const auto& glyph = font.find_glyph(character.index);
 		unsigned in = 0;
-		unsigned out = (book.get_line_baseline() + character.row * book.get_line_height() + glyph.mtx.yOffset) * window.get_width() +
-			(character.col * book.get_character_width() + (int)glyph.mtx.leftSideBearing);
+		unsigned out = (font.get_line_baseline() + character.row * font.get_line_height() + glyph.y_offset) * window.get_width() +
+			(character.col * font.get_character_width() + (int)glyph.x_bearing);
 		auto color = character.color;
-		for (unsigned j = 0; j < (unsigned)glyph.mtx.minHeight; ++j) {
-			for (unsigned i = 0; i < (unsigned)glyph.mtx.minWidth; ++i) {
+		for (unsigned j = 0; j < (unsigned)glyph.h; ++j) {
+			for (unsigned i = 0; i < (unsigned)glyph.w; ++i) {
 				if (out + i < window.get_width() * window.get_height()) {
 					pixels[out + i].blend(color.set_alpha(glyph.pixels[in + i]));
 				}
 			}
-			in += glyph.mtx.minWidth;
+			in += glyph.w;
 			out += window.get_width();
 		}
 	}
@@ -380,10 +375,9 @@ class Application {
 	void process(unsigned key) {
 		Timer timer;
 		bool maximize = false;
-		switcher.process(space_down, quit, maximize, font_size, key);
+		switcher.process(space_down, quit, maximize, key);
 		if (maximize)
 			window.maximize(!maximized);
-		book.set_font_size(font_size); 
 		process_time_ms = timer.get_elapsed_time_ms();
 	}
 
@@ -464,9 +458,7 @@ class Application {
 
 public:
 	Application(HINSTANCE hinstance, int nshow)
-		: window(hinstance, proc, this)
-		, font_size(get_default_font_size()) {
-		book.set_font_size(font_size);
+		: window(hinstance, proc, this) {
 		window.set_size(8 * window.get_dpi(), 26 * window.get_dpi() / 5);
 		window.show(nshow);
 	}

@@ -178,60 +178,6 @@ std::string load(const std::string_view filename) {
 	return text;
 }
 
-std::string get_user_font_path() {
-	char path[MAX_PATH];
-	if (const auto res = SHGetSpecialFolderPathA(NULL, path, CSIDL_LOCAL_APPDATA, FALSE))
-		return std::string(path) + "\\Microsoft\\Windows\\Fonts\\";
-	return "";
-}
-
-std::string get_system_font_path() {
-	char win_dir[MAX_PATH];
-	if (const auto len = GetWindowsDirectoryA(win_dir, MAX_PATH)) {
-		std::stringstream ss;
-		ss << win_dir << "\\Fonts\\";
-		return ss.str();
-	}
-	return "";
-}
-
-std::string get_system_font_name(const std::string& face_name) {
-	HKEY hkey;
-	static const char* registry = "Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts";
-	auto result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, registry, 0, KEY_READ, &hkey);
-	if (result != ERROR_SUCCESS)
-		return "";
-
-	DWORD name_max_size, data_max_size;
-	result = RegQueryInfoKey(hkey, 0, 0, 0, 0, 0, 0, 0, &name_max_size, &data_max_size, 0, 0);
-	if (result != ERROR_SUCCESS)
-		return "";
-
-	DWORD index = 0;
-	std::vector<char> name(name_max_size);
-	std::vector<BYTE> data(data_max_size);
-	std::string font;
-
-	do {
-		DWORD data_size = data_max_size;
-		DWORD name_size = name_max_size;
-		DWORD type;
-		const auto result = RegEnumValueA(hkey, index++, name.data(), &name_size, 0, &type, data.data(), &data_size);
-		if (result != ERROR_SUCCESS || type != REG_SZ)
-			continue;
-
-		std::string font_name(name.data(), name_size);
-		if (_strnicmp(face_name.c_str(), font_name.c_str(), face_name.length()) == 0) {
-			font.assign((LPSTR)data.data(), data_size);
-			break;
-		}
-	} while (result != ERROR_NO_MORE_ITEMS);
-
-	RegCloseKey(hkey);
-
-	return font;
-}
-
 class File {
 	const uint8_t* memory = nullptr;
 	uint_fast32_t size = 0;
