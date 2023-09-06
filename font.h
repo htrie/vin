@@ -295,7 +295,8 @@ class Font {
 	};
 
 	public:
-		const Glyph& find_glyph(uint32_t codepoint) const {
+		const Glyph& find_glyph(uint32_t codepoint) const
+		{
 			if (const auto& glyph = glyphs.find(codepoint); glyph != glyphs.end())
 				return glyph->second;
 			return glyphs.find(0)->second;
