@@ -1,6 +1,6 @@
-+use ctrl instead of space
 +cpp keywords coloring
 +cpp keywords bold font
 +large index
 +async index
 +index progress
+-use ctrl instead of space: not great, issues with refresh
