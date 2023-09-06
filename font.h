@@ -302,6 +302,6 @@ class Font {
 		}
 
 		unsigned get_character_width() const { return 8; }
-		unsigned get_line_height() const { return 18; }
+		unsigned get_line_height() const { return 16; }
 		unsigned get_line_baseline() const { return 16; }
 	};
