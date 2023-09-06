@@ -1,4 +1,7 @@
++hard-code font
+	char width 8
+	line baseline ~16
+	line height 16
 +cpp keywords coloring
 +large indexer
 +tree sitter functions extra motions
--hard-code font
