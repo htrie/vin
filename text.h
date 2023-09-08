@@ -48,7 +48,7 @@ static inline const std::vector<std::vector<std::string_view>> cpp_keywords = {
 	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
 	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
 	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
-	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
+	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t" },
 	{ "virtual", "void", "volatile" },
 	{ "wchar_t", "while" },
 	{ "xor", "xor_eq" },
@@ -104,6 +104,10 @@ struct Colors {
 	Color add = Color::rgba(229, 218, 184, 255);
 	Color remove = Color::rgba(120, 110, 100, 255);
 	Color keyword = Color::rgba(199, 146, 234, 255);
+	Color clas = Color::rgba(255, 203, 139, 255);
+	Color function = Color::rgba(130, 170, 255, 255);
+	Color punctuation = Color::rgba(127, 219, 202, 255);
+	Color number = Color::rgba(247, 140, 84, 255);
 };
 
 Colors& colors() {

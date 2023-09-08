@@ -489,6 +489,8 @@ class Buffer {
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().remove, row, col); }
 		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+		else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
+		else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
