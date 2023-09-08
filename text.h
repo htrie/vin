@@ -108,6 +108,7 @@ struct Colors {
 	Color function = Color::rgba(130, 170, 255, 255);
 	Color punctuation = Color::rgba(127, 219, 202, 255);
 	Color number = Color::rgba(247, 140, 84, 255);
+	Color quote = Color::rgba(255, 40, 84, 255);
 };
 
 Colors& colors() {
@@ -121,6 +122,7 @@ constexpr bool is_lowercase_letter(uint16_t c) { return (c >= 'a' && c <= 'z'); 
 constexpr bool is_uppercase_letter(uint16_t c) { return (c >= 'A' && c <= 'Z'); }
 constexpr bool is_whitespace(char c) { return c == '\n' || c == '\t' || c == ' '; }
 constexpr bool is_line_whitespace(char c) { return c == '\t' || c == ' '; }
+constexpr bool is_quote(char c) { return c == '\'' || c == '"'; }
 constexpr bool is_punctuation(char c) { return 
 	c == '-' || c == '+' || c == '*' || c == '/' || c == '=' || c == '\\' ||
 	c == ',' || c == '.' || c == '<' || c == '>' || c == ';' || c == ':' ||

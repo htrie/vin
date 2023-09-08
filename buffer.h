@@ -491,6 +491,7 @@ class Buffer {
 			else {
 				const Word word(state().get_text(), index);
 				if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
+				else if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
 				else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
 				else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col); }
 				else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
