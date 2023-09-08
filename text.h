@@ -27,6 +27,35 @@ uint16_t superscript_codepoint(unsigned index) {
 	}
 }
 
+static inline const std::vector<std::vector<std::string_view>> cpp_keywords = {
+	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
+	{ "bitand", "bitor", "bool", "break" },
+	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
+	{ "decltype", "default", "define", "delete", "do", "double", "dynamic_cast" },
+	{ "else", "elsif", "endif", "enum", "explicit", "export", "extern" },
+	{ "false", "float", "for", "friend" },
+	{ "goto" },
+	{ },
+	{ "include", "if", "ifdef", "ifndef", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
+	{ },
+	{ },
+	{ "long" },
+	{ "mutable" },
+	{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
+	{ "operator", "or", "or_eq" },
+	{ "pragma", "private", "protected", "public" },
+	{ },
+	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
+	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
+	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
+	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t" },
+	{ "virtual", "void", "volatile" },
+	{ "wchar_t", "while" },
+	{ "xor", "xor_eq" },
+	{ },
+	{ }
+};
+
 struct Color {
 	uint8_t b = 0, g = 0, r = 0, a = 0;
 
@@ -74,6 +103,7 @@ struct Colors {
 	Color note = Color::rgba(255, 200, 0, 255);
 	Color add = Color::rgba(229, 218, 184, 255);
 	Color remove = Color::rgba(120, 110, 100, 255);
+	Color keyword = Color::rgba(199, 146, 234, 255);
 };
 
 Colors& colors() {
@@ -254,6 +284,18 @@ public:
 
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
+	}
+
+	bool check_keyword(const std::string_view text) const {
+		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
+			const auto& keywords = cpp_keywords[letter_index];
+			const std::string word(text.substr(start, finish_no_whitespace - start + 1));
+			for (const auto& keyword : keywords) {
+				if (word == keyword)
+					return true;
+			}
+		}
+		return false;
 	}
 };
 

@@ -481,12 +481,14 @@ class Buffer {
 	};
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
+		const Word word(state().get_text(), index);
 		const Line line(state().get_text(), index);
 		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
 		else if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
 		else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
 		else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().add, row, col); }
 		else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().remove, row, col); }
+		else if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
 		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
