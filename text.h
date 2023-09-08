@@ -104,7 +104,6 @@ struct Colors {
 	Color add = Color::rgba(229, 218, 184, 255);
 	Color remove = Color::rgba(120, 110, 100, 255);
 	Color keyword = Color::rgba(199, 146, 234, 255);
-	Color uppercase = Color::rgba(255, 183, 139, 255);
 	Color function = Color::rgba(130, 170, 255, 255);
 	Color punctuation = Color::rgba(127, 219, 202, 255);
 	Color number = Color::rgba(247, 140, 84, 255);
@@ -300,14 +299,6 @@ public:
 				if (word == keyword)
 					return true;
 			}
-		}
-		return false;
-	}
-
-	bool contains_uppercase(const std::string_view text) const {
-		for (size_t index = start; index < finish; ++index) {
-			if (is_uppercase_letter(text[start]))
-				return true;
 		}
 		return false;
 	}
