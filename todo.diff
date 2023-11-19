@@ -1,5 +1,5 @@
 -use ctrl instead of space: not great, issues with refresh
 -cpp keywords coloring
-+large index
-+async index
-+index progress
++faster index?
++tree sitter integration?
++LSP integration?
