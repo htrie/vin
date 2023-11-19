@@ -329,6 +329,18 @@ class Application {
 			" " + std::to_string(process_time_ms) + "ms:" + std::to_string(render_time_ms) + "ms";
 	}
 
+	std::string check_font(const std::string& font) {
+		if (std::filesystem::exists(font))
+			return font;
+		return {};
+	}
+
+	std::string find_font() {
+		if (const auto font = check_font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf"); !font.empty())
+			return font;
+		return check_font(get_system_font_path() + get_system_font_name("Consolas"));
+	}
+
 	void resize(unsigned width, unsigned height) {
 		if (!minimized) {
 			window.resize(width, height);
@@ -465,7 +477,8 @@ class Application {
 public:
 	Application(HINSTANCE hinstance, int nshow)
 		: window(hinstance, proc, this)
-		, font_size(get_default_font_size()) {
+		, font_size(get_default_font_size())
+		, book(find_font()) {
 		book.set_font_size(font_size);
 		window.set_size(8 * window.get_dpi(), 26 * window.get_dpi() / 5);
 		window.show(nshow);

@@ -330,20 +330,8 @@ struct Font {
 		return 0;
 	}
 
-	std::string check_font(const std::string& font) {
-		if (std::filesystem::exists(font))
-			return font;
-		return {};
-	}
-
-	std::string find_font() {
-		if (const auto font = check_font(get_user_font_path() + "PragmataPro_Mono_R_liga.ttf"); !font.empty())
-			return font;
-		return check_font(get_system_font_path() + get_system_font_name("Consolas"));
-	}
-
-	Font()
-		: file(find_font()) {
+	Font(const std::string_view path)
+		: file(path) {
 		if (!is_safe_offset(0, 12))
 			return;
 		/* Check for a compatible scalerType (magic number). */
@@ -1096,6 +1084,10 @@ class Book {
 	}
 
 public:
+	Book(const std::string_view path)
+		: font(path)
+	{}
+
 	void clear() {
 		glyphs.clear();
 	}
