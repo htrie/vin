@@ -480,7 +480,7 @@ public:
 		, font_size(get_default_font_size())
 		, book(find_font()) {
 		book.set_font_size(font_size);
-		window.set_size(8 * window.get_dpi(), 26 * window.get_dpi() / 5);
+		window.set_size(12 * window.get_dpi(), 8 * window.get_dpi());
 		window.show(nshow);
 	}
 
