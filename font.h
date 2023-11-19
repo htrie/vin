@@ -16,17 +16,10 @@
 
 #pragma once
 
-#define DOWNWARD_Y 0x01
-
 #define SCHRIFT_VERSION "0.10.2"
 
 #define FILE_MAGIC_ONE             0x00010000
 #define FILE_MAGIC_TWO             0x74727565
-
-#define HORIZONTAL_KERNING         0x01
-#define MINIMUM_KERNING            0x02
-#define CROSS_STREAM_KERNING       0x04
-#define OVERRIDE_KERNING           0x08
 
 #define POINT_IS_ON_CURVE          0x01
 #define X_CHANGE_IS_SMALL          0x02
