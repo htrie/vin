@@ -119,7 +119,7 @@ std::string list() {
 	process_files(".", [&](const auto& path) {
 		if (!ignore_file(path))
 			list += path + "\n";
-		});
+	});
 	return list;
 }
 
@@ -152,7 +152,7 @@ std::string scan(const std::string_view path, const std::string_view pattern) {
 				}
 			}
 		}
-		});
+	});
 	return list;
 }
 
@@ -163,7 +163,7 @@ std::string find(const std::string_view pattern) {
 			if (!ignore_file(path)) {
 				list += scan(path, pattern);
 			}
-			});
+		});
 	}
 	return list;
 }
