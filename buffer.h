@@ -244,8 +244,9 @@ class Buffer {
 		else if (key == 'b') { state().prev_word(); }
 		else if (key == 'w') { state().next_word(); }
 		else if (key == 'e') { state().word_end(); }
-		else if (key == '[') { state().enclosure_start(); }
-		else if (key == ']') { state().enclosure_end(); }
+		else if (key == '[') { state().enclosure_start('{', '}'); }
+		else if (key == ']') { state().enclosure_end('{', '}'); }
+		else if (key == '%') { state().enclosure_match(); }
 		else if (key == 'g') { state().buffer_start(); }
 		else if (key == 'G') { state().buffer_end(); }
 		else if (key == 'H') { state().window_top(); }

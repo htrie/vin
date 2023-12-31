@@ -170,18 +170,31 @@ public:
 		}
 	}
 
-	void enclosure_start() {
+	void enclosure_start(uint16_t left, uint16_t right) {
 		const auto pos = text[cursor] == '{' && cursor > 1 ? cursor - 1 : cursor;
-		const Enclosure current(text, pos, '{', '}');
+		const Enclosure current(text, pos, left, right);
 		if (current.valid())
 			cursor = current.begin();
+		cursor_clamp();
 	}
 
-	void enclosure_end() {
-		const auto pos = text[cursor] == '}' && cursor < text.size() - 1 ? cursor - 1 : cursor;
-		const Enclosure current(text, pos, '{', '}');
+	void enclosure_end(uint16_t left, uint16_t right) {
+		const auto pos = text[cursor] == right && cursor < text.size() - 1 ? cursor - 1 : cursor;
+		const Enclosure current(text, pos, left, right);
 		if (current.valid())
 			cursor = current.end();
+		cursor_clamp();
+	}
+	
+	void enclosure_match() {
+		switch (text[cursor]) {
+		case '[': enclosure_end('[', ']'); break;
+		case ']': enclosure_start('[', ']'); break;
+		case '{': enclosure_end('{', '}'); break;
+		case '}': enclosure_start('{', '}'); break;
+		case '(': enclosure_end('(', ')'); break;
+		case ')': enclosure_start('(', ')'); break;
+		}
 	}
 
 	void change_case() {

@@ -1,5 +1,6 @@
 -use ctrl instead of space: not great, issues with refresh
 -cpp keywords coloring
+-support % move (matching enclosure)
 +faster index? (search takes 15s then 5s on my machine for full trunk)
 +tree sitter integration? (for code objects)
 +LSP integration? (for code completion and more)
