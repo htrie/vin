@@ -483,23 +483,7 @@ class Buffer {
 
 	void push_char_text(Characters& characters, unsigned row, unsigned col, char c, unsigned index) const {
 		if (index == state().get_cursor() && mode == Mode::normal) { characters.emplace_back((uint16_t)c, colors().text_cursor, row, col); }
-		else {
-			const Line line(state().get_text(), index);
-			if (line.check_string(state().get_text(), "+++")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
-			else if (line.check_string(state().get_text(), "---")) { characters.emplace_back((uint16_t)c, colors().note, row, col); }
-			else if (line.check_string(state().get_text(), "+")) { characters.emplace_back((uint16_t)c, colors().add, row, col); }
-			else if (line.check_string(state().get_text(), "-")) { characters.emplace_back((uint16_t)c, colors().remove, row, col); }
-			else {
-				const Word word(state().get_text(), index);
-				if (word.check_keyword(state().get_text())) { characters.emplace_back((uint16_t)c, colors().keyword, row, col); }
-				else {
-					if (is_quote(c)) { characters.emplace_back((uint16_t)c, colors().quote, row, col); }
-					else if (is_punctuation(c)) { characters.emplace_back((uint16_t)c, colors().punctuation, row, col); }
-					else if (is_number(c)) { characters.emplace_back((uint16_t)c, colors().number, row, col); }
-					else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
-				}
-			}
-		}
+		else { characters.emplace_back((uint16_t)c, colors().text, row, col); }
 	};
 
 	unsigned push_text(Characters& characters, unsigned col_count, unsigned row_count) const {

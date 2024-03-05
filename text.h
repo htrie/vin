@@ -27,35 +27,6 @@ uint16_t superscript_codepoint(unsigned index) {
 	}
 }
 
-static inline const std::vector<std::vector<std::string_view>> cpp_keywords = {
-	{ "alignas", "alignof", "and", "and_eq", "asm", "atomic_cancel", "atomic_commit", "atomic_noexcept", "auto" },
-	{ "bitand", "bitor", "bool", "break" },
-	{ "case", "catch", "char", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue" },
-	{ "decltype", "default", "define", "delete", "do", "double", "dynamic_cast" },
-	{ "else", "elsif", "endif", "enum", "explicit", "export", "extern" },
-	{ "false", "float", "for", "friend" },
-	{ "goto" },
-	{ },
-	{ "include", "if", "ifdef", "ifndef", "inline", "int","int8_t",  "int16_t", "int32_t",  "int64_t" },
-	{ },
-	{ },
-	{ "long" },
-	{ "mutable" },
-	{ "namespace", "new", "noexcept", "not", "not_eq", "nullptr" },
-	{ "operator", "or", "or_eq" },
-	{ "pragma", "private", "protected", "public" },
-	{ },
-	{ "reflexpr", "register", "reinterpret_cast", "requires", "return" },
-	{ "short", "signed", "size_t", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "synchronized" },
-	{ "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename" },
-	{ "union", "unsigned", "using", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "uint_fast8_t", "uint_fast16_t", "uint_fast32_t", "uint_fast64_t" },
-	{ "virtual", "void", "volatile" },
-	{ "wchar_t", "while" },
-	{ "xor", "xor_eq" },
-	{ },
-	{ }
-};
-
 struct Color {
 	uint8_t b = 0, g = 0, r = 0, a = 0;
 
@@ -99,15 +70,6 @@ struct Colors {
 	Color text = Color::rgba(229, 218, 184, 255);
 	Color text_cursor = Color::gray(30);
 	Color line_number = Color::gray(80);
-	Color context = Color::gray(140);
-	Color note = Color::rgba(255, 200, 0, 255);
-	Color add = Color::rgba(229, 218, 184, 255);
-	Color remove = Color::rgba(120, 110, 100, 255);
-	Color keyword = Color::rgba(199, 146, 234, 255);
-	Color function = Color::rgba(130, 170, 255, 255);
-	Color punctuation = Color::rgba(127, 219, 202, 255);
-	Color number = Color::rgba(247, 140, 84, 255);
-	Color quote = Color::rgba(247, 40, 84, 255);
 };
 
 Colors& colors() {
@@ -289,18 +251,6 @@ public:
 
 	std::string_view to_string(const std::string_view text) const {
 		return text.substr(start, finish_no_whitespace - start + 1);
-	}
-
-	bool check_keyword(const std::string_view text) const {
-		if (const auto letter_index = compute_letter_index(text[start]); letter_index != (unsigned)-1) {
-			const auto& keywords = cpp_keywords[letter_index];
-			const std::string word(text.substr(start, finish_no_whitespace - start + 1));
-			for (const auto& keyword : keywords) {
-				if (word == keyword)
-					return true;
-			}
-		}
-		return false;
 	}
 };
 
